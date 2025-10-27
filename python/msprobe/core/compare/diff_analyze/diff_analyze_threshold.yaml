@@ -1,0 +1,14 @@
+compare_metrics:
+  - MaxRelativeErr
+  - MinRelativeErr
+  - MeanRelativeErr
+  - NormRelativeErr
+
+MaxRelativeErr:
+  - 0.5
+MinRelativeErr:
+  - 0.5
+MeanRelativeErr:
+  - 0.5
+NormRelativeErr:
+  - 0.5

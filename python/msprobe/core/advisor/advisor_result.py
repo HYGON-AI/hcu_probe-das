@@ -1,0 +1,58 @@
+# Copyright (c) 2022-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+import time
+
+from python.msprobe.core.advisor.advisor_const import AdvisorConst
+from python.msprobe.core.common.log import logger
+from python.msprobe.core.common.const import FileCheckConst
+from python.msprobe.core.common.file_utils import change_mode, FileOpen
+
+
+class AdvisorResult:
+    """
+    Class for generate advisor result
+    """
+
+    def __init__(self, node, line, message):
+        self.suspect_node = node
+        self.line = line
+        self.advisor_message = message
+
+    @staticmethod
+    def gen_summary_file(out_path, message_list, suffix):
+        file_name = 'advisor{}_{}.txt'.format(suffix, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+        result_file = os.path.join(out_path, file_name)
+        try:
+            with FileOpen(result_file, 'w+') as output_file:
+                output_file.truncate(0)
+                message_list = [message + AdvisorConst.NEW_LINE for message in message_list]
+                output_file.writelines(message_list)
+            change_mode(result_file, FileCheckConst.DATA_FILE_AUTHORITY)
+        except IOError as io_error:
+            logger.error("Failed to save %s, the reason is %s." % (result_file, io_error))
+        else:
+            logger.info("The advisor summary is saved in: %s" % result_file)
+
+    def print_advisor_log(self):
+        logger.info("The summary of the expert advice is as follows: ")
+        message_list = [
+            AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
+            AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
+            AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message
+        ]
+        for message in message_list:
+            logger.info(message)
+        return message_list

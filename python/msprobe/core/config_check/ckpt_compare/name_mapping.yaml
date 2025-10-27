@@ -1,0 +1,12 @@
+self_attention.linear_qkv.layer_norm_: input_layernorm.
+language_model.: ''
+encoder: decoder
+.input_norm.: .input_layernorm.
+query_key_value: linear_qkv
+.dense.: .linear_proj.
+post_attention_norm: pre_mlp_layernorm
+dense_h_to_4h: linear_fc1
+dense_4h_to_h: linear_fc2
+mlp.local_experts: mlp.experts.local_experts
+final_norm: final_layernorm
+word_embeddings_for_head: output_layer
