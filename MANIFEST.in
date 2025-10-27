@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+recursive-include python/msprobe *
+recursive-exclude test *
+recursive-exclude ccsrc *
+

@@ -1,0 +1,55 @@
+ignore_nan_inf:
+  # Create an uninitialized memory
+  - api_name: "torch.empty"
+    description: "Creates a tensor with uninitialized data. The values may contain NaN or Inf because the memory is not cleared or set to zero."
+    output_ignore:
+      - index: 0
+
+  - api_name: "torch.empty_like"
+    description: "Creates an uninitialized tensor with the same size, dtype, and device as the input tensor. The values may contain NaN or Inf due to uninitialized memory."
+    output_ignore:
+      - index: 0
+
+  - api_name: "torch.empty_strided"
+    description: "Creates a tensor with uninitialized data using specified strides. NaN or Inf may be present due to uninitialized memory."
+    output_ignore:
+      - index: 0
+
+  # Distributed func
+  - api_name: "distributed.recv"
+    description: "Receives a tensor from another process. The input tensor may contain uninitialized data before the recv call, but it will be overwritten with received data."
+    input_ignore:
+      - index: 0  # tensor (the input buffer, which may be uninitialized before receiving)
+      - name: tensor
+
+  - api_name: "distributed.all_gather"
+    description: "Gathers tensors from all processes and distributes them to each process. The tensors in tensor_list may contain uninitialized data before the all_gather call, but they will be overwritten with collected data from all processes."
+    input_ignore:
+      - index: 0  # tensor_list (the input list of tensors, which may contain uninitialized data before the all_gather call)
+
+  - api_name: "distributed.reduce_scatter"
+    description: "Combines reduction and scatter operations. The output tensor may contain uninitialized data before the reduce_scatter call, but it will be overwritten with the reduced and scattered data from all processes."
+    input_ignore:
+      - index: 0
+      - name: output
+
+  - api_name: "distributed._reduce_scatter_base"
+    description: "Performs a combined reduction and scatter operation using a single input tensor. The output tensor may contain uninitialized data before the _reduce_scatter_base call, but it will be overwritten with the reduced and scattered data."
+    input_ignore:
+      - index: 0
+
+  - api_name: "distributed.all_gather_into_tensor"
+    description: "Gathers tensors from all processes into a single output tensor. The output tensor may contain uninitialized data before the all_gather_into_tensor call, but it will be overwritten with collected data from all processes."
+    input_ignore:
+      - index: 0
+
+  - api_name: "distributed.reduce_scatter_tensor"
+    description: "Performs a reduction operation across all processes and scatters the result into the output tensor. The output tensor may contain uninitialized data before the reduce_scatter_tensor call, but it will be overwritten with the reduced and scattered data."
+    input_ignore:
+      - index: 0
+
+  # Tensor inplace func
+  - api_name: "tensor.masked_fill_"
+    description: "Inplace fill tensor with given value by filtered mask"
+    input_ignore:
+      - index: 0

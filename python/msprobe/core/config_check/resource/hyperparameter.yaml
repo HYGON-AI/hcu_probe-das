@@ -1,0 +1,31 @@
+learning_rate:
+  - lr
+  - learningrate
+
+batch_size:
+  - batch
+  - bs
+  - batch_size_per_gpu
+
+epochs:
+  - num_epochs
+  - max_epochs
+  - epoch
+
+weight_decay:
+  - wd
+  - weightdecay
+
+dropout_rate:
+  - dropout
+  - drop_rate
+
+compute_dtype:
+  - bf16
+  - fp32
+
+residual_dtype:
+  - fp32_residual_connection
+
+softmax_compute_dtype:
+  - attention_softmax_in_fp32
