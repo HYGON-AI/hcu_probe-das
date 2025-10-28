@@ -3,8 +3,9 @@ import tempfile
 import os
 import numpy as np
 import pandas as pd
-from pathlib import Path
+
 from python.msprobe.mindspore.compare.common_dir_compare import common_dir_compare
+
 
 class TestCommonDirCompare(unittest.TestCase):
     def setUp(self):

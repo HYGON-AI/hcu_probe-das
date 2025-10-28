@@ -20,6 +20,7 @@ import os
 import re
 import threading
 import time
+import importlib.util
 from collections import OrderedDict
 from datetime import datetime, timezone
 
@@ -215,23 +216,23 @@ def check_compare_param(input_param, output_path, dump_mode, stack_mode):
             logger.error(f"Invalid {json_path_str}: {json_path}, please check!")
             raise CompareException(CompareException.INVALID_PATH_ERROR)
 
-    check_json_path("npu_json_path")
-    check_json_path("bench_json_path")
+    check_json_path("npu_path")
+    check_json_path("bench_path")
     if stack_mode:
-        check_json_path("stack_json_path")
+        check_json_path("stack_path")
 
     if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
 
-    with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
-            FileOpen(input_param.get("bench_json_path"), "r") as bench_json:
-        _check_json(npu_json, input_param.get("npu_json_path"))
-        _check_json(bench_json, input_param.get("bench_json_path"))
+    with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
+            FileOpen(input_param.get("bench_path"), "r") as bench_json:
+        _check_json(npu_json, input_param.get("npu_path"))
+        _check_json(bench_json, input_param.get("bench_path"))
     if stack_mode:
-        with FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
-            _check_json(stack_json, input_param.get("stack_json_path"))
+        with FileOpen(input_param.get("stack_path"), "r") as stack_json:
+            _check_json(stack_json, input_param.get("stack_path"))
 
 
 def _check_json(json_file_handle, file_name):
@@ -243,9 +244,9 @@ def _check_json(json_file_handle, file_name):
 
 
 def check_json_file(input_param, npu_json, bench_json, stack_json):
-    _check_json(npu_json, input_param.get("npu_json_path"))
-    _check_json(bench_json, input_param.get("bench_json_path"))
-    _check_json(stack_json, input_param.get("stack_json_path"))
+    _check_json(npu_json, input_param.get("npu_path"))
+    _check_json(bench_json, input_param.get("bench_path"))
+    _check_json(stack_json, input_param.get("stack_path"))
 
 
 def check_regex_prefix_format_valid(prefix):
@@ -365,8 +366,8 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 
 
 def set_dump_path(input_param):
-    npu_path = input_param.get("npu_json_path", None)
-    bench_path = input_param.get("bench_json_path", None)
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
     dump_json_path_valid = npu_path is not None and npu_path.endswith("dump.json") and \
                            bench_path is not None and bench_path.endswith("dump.json")
     debug_json_path_valid = npu_path is not None and npu_path.endswith("debug.json") and \
@@ -405,8 +406,8 @@ def check_dump_json_key(json_data, device_type):
 
 
 def get_dump_mode(input_param):
-    npu_path = input_param.get("npu_json_path", None)
-    bench_path = input_param.get("bench_json_path", None)
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
     json_type = get_file_type(file_path=npu_path)
@@ -708,3 +709,8 @@ def check_process_num(process_num):
         raise ValueError(f"process_num({process_num}) is not a positive integer")
     if process_num > Const.MAX_PROCESS_NUM:
         raise ValueError(f"The maximum supported process_num is {Const.MAX_PROCESS_NUM}, current value: {process_num}.")
+
+
+def is_module_available(module_name):
+    spec = importlib.util.find_spec(module_name)
+    return spec is not None

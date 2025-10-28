@@ -20,8 +20,8 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 
 from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.compare.merge_result.merge_result import check_compare_result_name, reorder_path, get_result_path, \
-    get_dump_mode, check_index_dump_mode_consistent, extract_api_full_name, search_api_index_result, \
+from python.msprobe.core.compare.merge_result.merge_result import check_compare_result_name, reorder_path, \
+    get_result_path, get_dump_mode, check_index_dump_mode_consistent, extract_api_full_name, search_api_index_result, \
     table_value_check, result_process, handle_multi_process, generate_result_df, generate_merge_result, df_merge, \
     initialize_compare_index, merge_result
 

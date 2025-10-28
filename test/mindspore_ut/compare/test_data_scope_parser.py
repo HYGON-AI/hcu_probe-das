@@ -1,6 +1,5 @@
 import os
 import unittest
-import tempfile
 from python.msprobe.core.compare.layer_mapping.data_scope_parser import (
     find_regard_scope,
     find_stack_func_list,

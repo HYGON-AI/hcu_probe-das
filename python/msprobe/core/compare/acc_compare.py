@@ -107,9 +107,9 @@ class Comparator:
         file_path = self.process_output_file(output_path, suffix, self.mode_config.compared_file_type)
 
         # initialize the compare result table and compare general data(name, dtype, shape, statistics/md5, etc.)
-        npu_json = input_param.get("npu_json_path")
-        bench_json = input_param.get("bench_json_path")
-        stack_json = input_param.get("stack_json_path")
+        npu_json = input_param.get("npu_path")
+        bench_json = input_param.get("bench_path")
+        stack_json = input_param.get("stack_path")
         parse_data = ParseData(self.mode_config, rank)  # load and parse json data
         npu_df, bench_df = parse_data.parse([npu_json, bench_json, stack_json])
         result_df = self.compare_statistics(npu_df, bench_df)
@@ -776,10 +776,10 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
 
         set_dump_path(input_param)
         config.dump_mode = get_dump_mode(input_param)
-        config.compared_file_type = get_file_type(input_param.get("npu_json_path", None))
+        config.compared_file_type = get_file_type(input_param.get("npu_path", None))
 
-        # set stack_mode and set "stack_json_path" in input_param
-        if 'stack_json_path' in input_param:
+        # set stack_mode and set "stack_path" in input_param
+        if 'stack_path' in input_param:
             config.stack_mode = kwargs.get('stack_mode', False)
         else:
             config.stack_mode = set_stack_json_path(input_param)

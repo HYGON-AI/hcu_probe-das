@@ -9,9 +9,8 @@ from unittest.mock import patch, MagicMock, mock_open
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))))
 
 from python.msprobe.core.compare.find_first.analyzer import DiffAnalyzer
-from python.msprobe.core.compare.find_first.utils import RankPath, FileCache, DiffAnalyseConst
+from python.msprobe.core.compare.find_first.utils import RankPath, FileCache
 from python.msprobe.core.compare.find_first.graph import DataNode, CommunicationNode
-from python.msprobe.core.common.const import Const
 
 
 class TestDiffAnalyzer(unittest.TestCase):

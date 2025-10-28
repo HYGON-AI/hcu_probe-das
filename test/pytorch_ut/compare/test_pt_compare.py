@@ -7,7 +7,7 @@ import torch
 
 from python.msprobe.core.common.utils import CompareException
 from python.msprobe.pytorch.compare.pt_compare import compare
-from python.msprobe.test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
+from test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_pt_compare1')
 base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_pt_compare2')

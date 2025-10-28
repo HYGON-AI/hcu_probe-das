@@ -156,7 +156,7 @@ class CompareRealData:
         :param npu_op_name: excel中的NPU_Name，例如：MintFunctional.conv2d.0.forward.input.3.0
         :param bench_op_name: excel中的Bench_Name，例如：Functional.conv2d.0.forward.input.3.0
         :param op_name_mapping_dict: op_name和npy或pt文件的映射关系
-        :param input_param: npu_json_path/bench_json_path/stack_json_path等参数
+        :param input_param: npu_path/bench_path/stack_path等参数
         :return: result_list，包含余弦相似度、最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率和错误信息
         用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、欧式距离
         最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息

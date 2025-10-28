@@ -9,8 +9,8 @@ import numpy as np
 
 from python.msprobe.pytorch.compare import utils
 from python.msprobe.pytorch.compare.utils import read_pt_data
-from python.msprobe.test.core_ut.compare.test_acc_compare import generate_pt
 from python.msprobe.core.common.utils import CompareException
+from test.core_ut.compare.test_acc_compare import generate_pt
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_pt_compare_utils_data')
