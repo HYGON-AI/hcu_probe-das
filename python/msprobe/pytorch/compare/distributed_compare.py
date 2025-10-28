@@ -14,8 +14,7 @@
 # limitations under the License.
 
 from python.msprobe.core.compare.utils import compare_distributed_inner
-from python.msprobe.pytorch.compare.pt_compare import compare
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
-    compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare, **kwargs)
+    compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwargs)

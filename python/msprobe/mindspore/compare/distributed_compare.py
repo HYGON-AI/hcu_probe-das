@@ -17,20 +17,19 @@ from python.msprobe.core.common.utils import CompareException
 from python.msprobe.core.common.file_utils import create_directory
 from python.msprobe.core.common.exceptions import FileCheckException
 from python.msprobe.mindspore.common.log import logger
-from python.msprobe.mindspore.compare.ms_compare import ms_compare
 from python.msprobe.core.compare.utils import compare_distributed_inner
 from python.msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
 
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
-    compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, ms_compare, **kwargs)
+    compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 
 
-def ms_graph_compare(inputs, outputs):
+def ms_graph_compare(input_param, outputs):
     try:
         create_directory(outputs)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         return
-    ms_comparator = GraphMSComparator(inputs, outputs)
+    ms_comparator = GraphMSComparator(input_param, outputs)
     ms_comparator.compare_core()

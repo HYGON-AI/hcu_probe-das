@@ -24,8 +24,10 @@ import numpy as np
 import pandas as pd
 
 from python.msprobe.core.common.const import Const, CompareConst, FileCheckConst
-from python.msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
+from python.msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, \
+    safe_get_value, is_module_available
 from python.msprobe.core.common.file_utils import check_file_or_directory_path, load_json
+
 
 json_file_mapping = {
     Const.DUMP_JSON_FILE: "dump.json",
@@ -58,9 +60,9 @@ def extract_json(dirname, json_file_type):
 
 
 def set_stack_json_path(input_param):
-    npu_data_dir = os.path.dirname(input_param.get("npu_json_path"))
+    npu_data_dir = os.path.dirname(input_param.get("npu_path"))
     stack_path = extract_json(npu_data_dir, json_file_type=Const.STACK_JSON_FILE)
-    input_param["stack_json_path"] = stack_path if stack_path else None
+    input_param["stack_path"] = stack_path if stack_path else None
     return bool(stack_path)
 
 
@@ -767,7 +769,7 @@ def compare_entry(compare_func, input_param, output_path, nr, kwargs):
             logger.error(f"Invalid or missing 'task' in dump.json. Skipping {nr} comparison.")
 
 
-def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare_func, **kwargs):
+def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     def extract_compare_param(_file_type):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
         bench_data_dir = os.path.join(bench_dump_dir, br)
@@ -777,8 +779,8 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             logger.debug(f'Did not find paired {_file_type} in {nr} and {br}, skip comparing.')
             return {}, True
         _input_param = {
-            'npu_json_path': npu_path,
-            'bench_json_path': bench_path,
+            'npu_path': npu_path,
+            'bench_path': bench_path,
             'is_print_compare_log': kwargs.get('is_print_compare_log', True)
         }
         return _input_param, False
@@ -789,11 +791,23 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
 
     npu_ranks, bench_ranks = get_sorted_ranks(npu_dump_dir, bench_dump_dir)
 
+    # 预检查
     # 统计量、md5比对
     pre_check_dump_path = os.path.join(npu_dump_dir, npu_ranks[0], 'dump.json') if npu_ranks else ''
     if not pre_check_dump_path:
         return
     dump_data = load_json(pre_check_dump_path)
+    compare_framework = dump_data.get("framework", None)
+    if compare_framework == Const.PT_FRAMEWORK:
+        from python.msprobe.pytorch.compare.pt_compare import compare
+        compare_func = compare
+    elif compare_framework == Const.MS_FRAMEWORK:
+        from python.msprobe.mindspore.compare.ms_compare import ms_compare
+        compare_func = ms_compare
+    else:
+        logger.error(f"Unrecognized framework, now is {compare_framework}, please check dump.json.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+
     if dump_data.get('task') == Const.STATISTICS:
         # dump数据为统计量或md5时，多进程加速比对
         input_param_nr_list = []
@@ -811,3 +825,51 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, compare
             input_param, skip = extract_compare_param(file_type)
             if not skip:
                 compare_entry(compare_func, input_param, output_path, nr, kwargs)
+
+
+def check_input_param_path(input_param):
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
+    check_file_or_directory_path(npu_path)
+    check_file_or_directory_path(bench_path)
+    if "stack_path" not in input_param:
+        logger.warning(f"Missing stack_path in the configuration file. "
+                       f"Automatically detecting stack.json to determine whether to display NPU_Stack_Info.")
+
+
+def get_compare_framework(input_param):
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
+    npu_dump_json_content = load_json(npu_path)
+    bench_dump_json_content = load_json(bench_path)
+    npu_framework = npu_dump_json_content.get("framework", None)
+    bench_framework = bench_dump_json_content.get("framework", None)
+    if npu_framework == Const.PT_FRAMEWORK and bench_framework == Const.PT_FRAMEWORK:
+        frame_name = Const.PT_FRAMEWORK
+    elif (npu_framework in [Const.MS_FRAMEWORK, Const.MT_FRAMEWORK] and
+          bench_framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]):
+        frame_name = Const.MS_FRAMEWORK
+    else:
+        logger.error(f"Unrecognized framework, npu now is {npu_framework}, bench now is {bench_framework},"
+                     f" please check dump.json.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    return frame_name
+
+
+def check_input_param_path_and_framework(input_param, target_framework):
+    if not isinstance(input_param, dict):
+        logger.error("input_param should be dict, please check!")
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+
+    check_input_param_path(input_param)
+    compare_framework = get_compare_framework(input_param)
+    if compare_framework != target_framework:
+        logger.error(f"Expected frame to be {target_framework}, actual is {compare_framework}, please check dump.json.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    if target_framework == Const.PT_FRAMEWORK and not is_module_available("torch"):
+        logger.error("PyTorch does not exist, please install PyTorch library")
+        raise Exception("PyTorch does not exist, please install PyTorch library")
+    if target_framework == Const.MS_FRAMEWORK and not is_module_available("mindspore"):
+        logger.error("MindSpore does not exist, please install MindSpore library")
+        raise Exception("MindSpore does not exist, please install MindSpore library")

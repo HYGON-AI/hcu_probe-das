@@ -4,7 +4,7 @@ import os
 import shutil
 from python.msprobe.pytorch.compare.distributed_compare import compare_distributed
 from python.msprobe.core.common.utils import CompareException
-from python.msprobe.test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
+from test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_compare_distributed', f'rank')

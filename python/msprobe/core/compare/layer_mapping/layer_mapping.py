@@ -248,8 +248,8 @@ def generate_data_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
 
 
 def generate_data_mapping_by_layer_mapping(input_param, layer_mapping_path=None, output_path=None):
-    npu_json_path = input_param.get("npu_json_path")
-    bench_json_path = input_param.get("bench_json_path")
+    npu_json_path = input_param.get("npu_path")
+    bench_json_path = input_param.get("bench_path")
     api_mapping = generate_api_mapping_by_layer_mapping(
         npu_json_path, bench_json_path, layer_mapping_path)
     data_mapping = generate_data_mapping(

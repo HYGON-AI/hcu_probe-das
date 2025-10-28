@@ -18,22 +18,20 @@ from collections import defaultdict
 import os
 from itertools import dropwhile, chain
 
-from python.msprobe.core.common import const
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, save_json, make_dir
+from python.msprobe.core.common.file_utils import save_json, make_dir
 from python.msprobe.core.common.log import logger
 from python.msprobe.core.common.const import Const
-from python.msprobe.core.compare.find_first.data_processor import DataProcessor
+from python.msprobe.core.compare.utils import compare_distributed_inner
 from python.msprobe.core.compare.find_first.utils import (RankPath, FileCache, is_communication_op, is_ignore_op,
                                                    DiffAnalyseConst, analyze_diff_in_group)
 from python.msprobe.core.compare.find_first.graph import DataNode, CommunicationNode
 
 
 class DiffAnalyzer:
-    def __init__(self, npu_path, bench_path, output_path, data_frame=Const.PT_FRAMEWORK):
+    def __init__(self, npu_path, bench_path, output_path):
         self._bench_path = bench_path
         self._npu_path = npu_path
         self._output_path = output_path
-        self.pre_processor = DataProcessor(data_frame)
         self._paths = {}
         self._diff_nodes = []  # 记录所有异常节点
         self._cache = FileCache()
@@ -51,7 +49,8 @@ class DiffAnalyzer:
         logger.info('Cannot find any diff node, no need to generate analyze file.')
 
     def _pre_process(self):
-        self.pre_processor.process(self._npu_path, self._bench_path, self._output_path)
+        logger.info("Start comparing data ......")
+        compare_distributed_inner(self._npu_path, self._bench_path, self._output_path, first_diff_analyze=True)
         self._resolve_input_path(self._output_path)
         logger.info("Pre Process completed.")
 

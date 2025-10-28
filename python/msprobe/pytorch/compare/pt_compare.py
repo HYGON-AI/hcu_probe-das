@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.log import logger
+from python.msprobe.core.common.const import Const
 from python.msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
 from python.msprobe.pytorch.compare.utils import read_pt_data
+from python.msprobe.core.compare.utils import check_input_param_path_and_framework
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tuple:
@@ -26,9 +26,8 @@ def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tup
 
 
 def compare(input_param, output_path, **kwargs):
-    if not isinstance(input_param, dict):
-        logger.error("input_param should be dict, please check!")
-        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+    check_input_param_path_and_framework(input_param, target_framework=Const.PT_FRAMEWORK)
+
     config = setup_comparison(input_param, output_path, **kwargs)
 
     config_dict = {

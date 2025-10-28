@@ -10,9 +10,8 @@ import numpy as np
 
 from python.msprobe.mindspore.compare.ms_compare import check_cross_framework, read_real_data, ms_compare
 from python.msprobe.core.common.const import Const
-from python.msprobe.test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 from python.msprobe.core.common.utils import CompareException
-
+from test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],

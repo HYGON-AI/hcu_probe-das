@@ -1,10 +1,7 @@
 import os
 import unittest
-from pathlib import Path
 
-from python.msprobe.core.compare.layer_mapping import (
-    generate_api_mapping_by_layer_mapping,
-    generate_data_mapping_by_layer_mapping)
+from python.msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 
 
 class TestLayerMapping(unittest.TestCase):

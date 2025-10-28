@@ -18,18 +18,10 @@ import unittest
 from unittest.mock import MagicMock, patch, call
 import numpy as np
 import mindspore as ms
-import os
-import random
 
-from python.msprobe.core.common.exceptions import DistributedNotInitializedError
-from python.msprobe.mindspore.common.utils import (get_rank_if_initialized,
-    convert_bf16_to_fp32,
-    save_tensor_as_npy,
-    convert_to_int,
-    list_lowest_level_directories,
-    seed_all,
-    remove_dropout,
-    MsprobeStep)
+from python.msprobe.mindspore.common.utils import get_rank_if_initialized, convert_bf16_to_fp32, convert_to_int, \
+    list_lowest_level_directories, seed_all, remove_dropout, MsprobeStep
+
 
 class MockCell:
     def __init__(self):

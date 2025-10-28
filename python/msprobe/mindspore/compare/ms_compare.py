@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from python.msprobe.core.common.const import Const
 from python.msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
 from python.msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 from python.msprobe.mindspore.compare.utils import read_npy_data, check_cross_framework
+from python.msprobe.core.compare.utils import check_input_param_path_and_framework
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, cross_frame) -> tuple:
@@ -29,12 +31,14 @@ def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, cross_fra
 
 
 def ms_compare(input_param, output_path, **kwargs):
+    check_input_param_path_and_framework(input_param, target_framework=Const.MS_FRAMEWORK)
+
     config = setup_comparison(input_param, output_path, **kwargs)
 
     if config.layer_mapping:
         config.data_mapping = generate_data_mapping_by_layer_mapping(input_param, config.layer_mapping, output_path)
 
-    is_cross_framework = check_cross_framework(input_param.get('bench_json_path'))
+    is_cross_framework = check_cross_framework(input_param.get('bench_path'))
 
     config_dict = {
         'stack_mode': config.stack_mode,

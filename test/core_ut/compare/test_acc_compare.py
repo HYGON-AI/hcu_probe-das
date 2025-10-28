@@ -13,8 +13,8 @@ import torch
 from python.msprobe.core.common.file_utils import load_json
 from python.msprobe.core.common.const import CompareConst, Const
 from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.compare.acc_compare import ModeConfig, MappingConfig, MappingDict, Comparator, ParseData, ProcessDf, \
-    Match, CreateTable, CalcStatsDiff
+from python.msprobe.core.compare.acc_compare import ModeConfig, MappingConfig, MappingDict, Comparator, ParseData, \
+    ProcessDf, Match, CreateTable, CalcStatsDiff
 
 npu_op_item_data_fuzzy = {
     'op_name': 'Functional.conv2d.0.forward.input.0',
