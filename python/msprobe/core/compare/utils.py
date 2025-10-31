@@ -23,10 +23,10 @@ import multiprocessing
 import numpy as np
 import pandas as pd
 
-from python.msprobe.core.common.const import Const, CompareConst, FileCheckConst
-from python.msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, \
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, \
     safe_get_value, is_module_available
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, load_json
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
 
 
 json_file_mapping = {
@@ -799,10 +799,10 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
     dump_data = load_json(pre_check_dump_path)
     compare_framework = dump_data.get("framework", None)
     if compare_framework == Const.PT_FRAMEWORK:
-        from python.msprobe.pytorch.compare.pt_compare import compare
+        from msprobe.pytorch.compare.pt_compare import compare
         compare_func = compare
     elif compare_framework == Const.MS_FRAMEWORK:
-        from python.msprobe.mindspore.compare.ms_compare import ms_compare
+        from msprobe.mindspore.compare.ms_compare import ms_compare
         compare_func = ms_compare
     else:
         logger.error(f"Unrecognized framework, now is {compare_framework}, please check dump.json.")

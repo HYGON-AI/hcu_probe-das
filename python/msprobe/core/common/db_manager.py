@@ -17,9 +17,9 @@ import sqlite3
 from typing import List, Tuple, Dict, Any
 from functools import wraps
 
-from python.msprobe.pytorch.common.log import logger
-from python.msprobe.core.common.file_utils import check_path_before_create, change_mode
-from python.msprobe.core.common.const import FileCheckConst
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_utils import check_path_before_create, change_mode
+from msprobe.core.common.const import FileCheckConst
 
 SAFE_SQL_PATTERN = re.compile(r'^[a-zA-Z0-9_]+$')
 

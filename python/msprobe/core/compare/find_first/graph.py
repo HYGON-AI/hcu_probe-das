@@ -14,10 +14,10 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.const import CompareConst
-from python.msprobe.core.compare.find_first.utils import RankPath, DiffAnalyseConst
+from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import CompareConst
+from msprobe.core.compare.find_first.utils import RankPath, DiffAnalyseConst
 
 
 @dataclass

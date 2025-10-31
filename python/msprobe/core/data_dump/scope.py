@@ -16,8 +16,8 @@
 from abc import ABC, abstractmethod
 import re
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.exceptions import ScopeException
+from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import ScopeException
 
 
 class ScopeFactory:

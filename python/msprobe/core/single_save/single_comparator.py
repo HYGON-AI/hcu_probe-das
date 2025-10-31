@@ -22,9 +22,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, load_npy, save_excel
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import check_process_num
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, load_npy, save_excel
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import check_process_num
 
 
 @dataclass

@@ -16,13 +16,13 @@
 import os
 import json
 import pandas as pd
-from python.msprobe.core.common.file_utils import create_file_in_zip, load_json
-from python.msprobe.core.config_check.checkers.base_checker import BaseChecker
-from python.msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
-from python.msprobe.core.config_check.utils.utils import config_checking_print, get_tensor_features
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import create_file_in_zip, load_json
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
+from msprobe.core.config_check.utils.utils import config_checking_print, get_tensor_features
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.const import Const
 
 
 @recursion_depth_decorator("config_check: process_obj")

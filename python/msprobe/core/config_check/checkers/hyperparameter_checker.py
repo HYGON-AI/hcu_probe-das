@@ -20,14 +20,14 @@ from difflib import SequenceMatcher
 from typing import Union, List, Dict, Any
 import pandas as pd
 
-from python.msprobe.core.common.utils import check_extern_input_list
-from python.msprobe.core.config_check.checkers.base_checker import BaseChecker
-from python.msprobe.core.config_check.config_checker import register_checker_item
-from python.msprobe.core.config_check.utils.utils import compare_dict, config_checking_print, update_dict, \
+from msprobe.core.common.utils import check_extern_input_list
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.config_checker import register_checker_item
+from msprobe.core.config_check.utils.utils import compare_dict, config_checking_print, update_dict, \
     process_pass_check
-from python.msprobe.core.config_check.utils.hyperparameter_parser import ParserFactory
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, create_file_in_zip, load_json, load_yaml
-from python.msprobe.core.common.const import Const
+from msprobe.core.config_check.utils.hyperparameter_parser import ParserFactory
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_file_in_zip, load_json, load_yaml
+from msprobe.core.common.const import Const
 
 
 dirpath = os.path.dirname(__file__)

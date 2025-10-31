@@ -24,13 +24,13 @@ from mindspore import ops
 from mindspore.common.jit_config import JitConfig
 from mindspore.mint import nn
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.exceptions import DistributedNotInitializedError
-from python.msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
-from python.msprobe.mindspore.common.const import Const as MsConst
+from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException, check_seed_all, is_save_variable_valid
+from msprobe.mindspore.common.const import Const as MsConst
 
 try:
     from mindspore._c_expression import _set_init_iter
@@ -200,7 +200,7 @@ def set_register_backward_hook_functions():
 
     if is_mindtorch():
         import torch
-        from python.msprobe.mindspore.mindtorch import (_call_impl,
+        from msprobe.mindspore.mindtorch import (_call_impl,
                                                         register_full_backward_pre_hook,
                                                         register_full_backward_hook)
         if not hasattr(torch.nn.Module, "register_full_backward_hook"):

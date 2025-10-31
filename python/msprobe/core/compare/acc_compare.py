@@ -22,21 +22,21 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from python.msprobe.core.advisor.advisor import Advisor
-from python.msprobe.core.common.const import CompareConst, Const
-from python.msprobe.core.common.exceptions import FileCheckException
-from python.msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
+from msprobe.core.advisor.advisor import Advisor
+from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
     set_dump_path, get_dump_mode, check_compare_param, load_stack_json, get_file_type, add_time_with_json
-from python.msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
+from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
     check_configuration_param
-from python.msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, set_stack_json_path, \
+from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, set_stack_json_path, \
     reorder_index
-from python.msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
-from python.msprobe.core.compare.multiprocessing_compute import CompareRealData
-from python.msprobe.core.compare.highlight import HighLight
-from python.msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
+from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
+from msprobe.core.compare.multiprocessing_compute import CompareRealData
+from msprobe.core.compare.highlight import HighLight
+from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 
 
 @dataclass

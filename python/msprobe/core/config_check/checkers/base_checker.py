@@ -15,9 +15,9 @@
 
 import os
 
-from python.msprobe.core.common.file_utils import check_path_pattern_valid
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import check_path_pattern_valid
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.const import FileCheckConst
 
 
 class PackInput:

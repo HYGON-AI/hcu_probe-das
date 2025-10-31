@@ -15,8 +15,8 @@
 
 from typing import List
 
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class RankGroupGenerator(object):

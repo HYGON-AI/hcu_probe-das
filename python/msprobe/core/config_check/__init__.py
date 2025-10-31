@@ -14,4 +14,4 @@
 # limitations under the License.
 
 import python.msprobe.core.config_check.checkers
-from python.msprobe.core.config_check.config_checker import ConfigChecker
+from msprobe.core.config_check.config_checker import ConfigChecker

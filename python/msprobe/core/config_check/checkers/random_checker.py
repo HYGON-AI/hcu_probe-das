@@ -25,13 +25,13 @@ import difflib
 
 import numpy as np
 import pandas as pd
-from python.msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
-from python.msprobe.core.common.file_utils import create_file_in_zip, load_json
-from python.msprobe.core.config_check.checkers.base_checker import BaseChecker
-from python.msprobe.core.config_check.utils.utils import config_checking_print
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.log import logger
+from msprobe.core.config_check.config_checker import register_checker_item, register_pre_forward_fun_list
+from msprobe.core.common.file_utils import create_file_in_zip, load_json
+from msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
 
 
 # 数据结构：{随机操作名字: [{count: 调用次数, stack: 调用栈列表}]}

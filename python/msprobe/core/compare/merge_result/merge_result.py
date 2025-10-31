@@ -21,12 +21,12 @@ from functools import partial
 import pandas as pd
 from tqdm import tqdm
 
-from python.msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory, \
+from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory, \
     remove_path
-from python.msprobe.core.common.const import FileCheckConst, Const, CompareConst
-from python.msprobe.core.common.utils import CompareException, add_time_with_xlsx
-from python.msprobe.core.compare.utils import table_value_is_valid
-from python.msprobe.core.compare.merge_result.utils import replace_compare_index_dict, check_config
+from msprobe.core.common.const import FileCheckConst, Const, CompareConst
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx
+from msprobe.core.compare.utils import table_value_is_valid
+from msprobe.core.compare.merge_result.utils import replace_compare_index_dict, check_config
 
 
 def check_compare_result_name(file_name):

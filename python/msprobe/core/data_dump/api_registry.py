@@ -16,9 +16,9 @@
 import inspect
 from typing import Dict, Any, Optional, Callable, Union, List, Tuple
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import load_yaml
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.log import logger
 
 
 def _get_attr(module, attr_name):

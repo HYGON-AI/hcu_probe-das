@@ -30,11 +30,11 @@ import yaml
 import numpy as np
 import pandas as pd
 
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.exceptions import FileCheckException
-from python.msprobe.core.common.const import FileCheckConst, CompareConst, Const
-from python.msprobe.core.common.global_lock import global_lock, is_main_process
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.const import FileCheckConst, CompareConst, Const
+from msprobe.core.common.global_lock import global_lock, is_main_process
 
 proc_lock = multiprocessing.Lock()
 

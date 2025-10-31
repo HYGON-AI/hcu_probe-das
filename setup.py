@@ -68,12 +68,12 @@ setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
     description="Ascend Probe Utils",
-    long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU, "
-                     "including API acc checker, ptdbg, grad tool etc.",
-    url="https://gitcode.com/Ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
+    long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU.",
+    url="https://gitcode.com/Ascend/MindStudio-Probe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
-    packages=setuptools.find_namespace_packages(exclude=EXCLUDE_PKGS, include=["python.msprobe", "python.msprobe*"]),
+    packages=setuptools.find_packages(where="python"),  # 在python目录下查找包
+    package_dir={"": "python"},
     include_package_data=True,
     python_requires=">=3.6.2",
     install_requires=INSTALL_REQUIRED,
@@ -95,5 +95,5 @@ setuptools.setup(
     ext_modules=[],
     zip_safe=False,
     entry_points={
-        'console_scripts': ['msprobe=python.msprobe.msprobe:main'],
+        'console_scripts': ['msprobe=msprobe.msprobe:main'],
     }, )

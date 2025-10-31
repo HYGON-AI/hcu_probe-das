@@ -20,7 +20,7 @@ import time
 import atexit
 import os
 
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.log import logger
 
 
 def is_main_process():

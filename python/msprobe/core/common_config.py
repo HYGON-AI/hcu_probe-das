@@ -15,10 +15,10 @@
 
 import re
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common.utils import get_real_step_or_rank
+from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.utils import get_real_step_or_rank
 
 
 class CommonConfig:

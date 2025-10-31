@@ -17,11 +17,11 @@ import os
 
 from tqdm import tqdm
 
-from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.common.utils import logger, CompareException
-from python.msprobe.core.common.file_utils import load_yaml
-from python.msprobe.core.compare.config import ModeConfig
-from python.msprobe.core.compare.utils import gen_api_batches
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.utils import logger, CompareException
+from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.compare.config import ModeConfig
+from msprobe.core.compare.utils import gen_api_batches
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__))

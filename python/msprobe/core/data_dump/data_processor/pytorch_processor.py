@@ -27,15 +27,15 @@ import torch
 from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import convert_tuple, is_int
-from python.msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
+from msprobe.core.common.const import Const
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple, is_int
+from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from python.msprobe.pytorch.common.utils import save_pt, is_recomputation
-from python.msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
+from msprobe.pytorch.common.utils import save_pt, is_recomputation
+from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 is_gpu = False
 try:

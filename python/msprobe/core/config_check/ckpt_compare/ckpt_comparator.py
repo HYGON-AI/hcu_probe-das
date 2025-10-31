@@ -16,11 +16,11 @@
 from typing import Dict
 from tqdm import tqdm
 
-from python.msprobe.core.common.file_utils import save_json, check_path_before_create, check_path_not_exists, \
+from msprobe.core.common.file_utils import save_json, check_path_before_create, check_path_not_exists, \
     check_file_or_directory_path
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.config_check.ckpt_compare.megatron_loader import load_megatron_weights
-from python.msprobe.core.config_check.ckpt_compare.metrics import METRIC_FUNC
+from msprobe.core.common.log import logger
+from msprobe.core.config_check.ckpt_compare.megatron_loader import load_megatron_weights
+from msprobe.core.config_check.ckpt_compare.metrics import METRIC_FUNC
 
 
 

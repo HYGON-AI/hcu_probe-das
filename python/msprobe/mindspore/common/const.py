@@ -17,7 +17,7 @@ import numpy as np
 import mindspore as ms
 from mindspore import dtype as mstype
 
-from python.msprobe.core.common.const import Const as CoreConst
+from msprobe.core.common.const import Const as CoreConst
 
 
 class Const:

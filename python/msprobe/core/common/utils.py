@@ -26,11 +26,11 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json, load_construct_json)
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json, load_construct_json)
+from msprobe.core.common.log import logger
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']

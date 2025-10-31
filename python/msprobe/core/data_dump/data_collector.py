@@ -18,12 +18,12 @@ import os
 import threading
 import traceback
 
-from python.msprobe.core.data_dump.scope import ScopeFactory
-from python.msprobe.core.data_dump.json_writer import DataWriter
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
-from python.msprobe.core.common.megatron_utils import MegatronStepInfo, get_micro_step, is_megatron
+from msprobe.core.data_dump.scope import ScopeFactory
+from msprobe.core.data_dump.json_writer import DataWriter
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
+from msprobe.core.common.megatron_utils import MegatronStepInfo, get_micro_step, is_megatron
 
 
 def build_data_collector(config):

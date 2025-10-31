@@ -17,9 +17,9 @@ import os
 
 import torch
 
-from python.msprobe.core.common.utils import logger, CompareException
-from python.msprobe.core.common.file_utils import FileChecker, FileCheckConst
-from python.msprobe.pytorch.common.utils import load_pt
+from msprobe.core.common.utils import logger, CompareException
+from msprobe.core.common.file_utils import FileChecker, FileCheckConst
+from msprobe.pytorch.common.utils import load_pt
 
 
 def read_pt_data(dir_path, file_name):

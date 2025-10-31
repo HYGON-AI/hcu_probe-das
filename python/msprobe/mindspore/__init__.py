@@ -16,11 +16,11 @@
 import os
 
 try:
-    from python.msprobe.lib import _msprobe_c
+    from msprobe.lib import _msprobe_c
     os.environ["HOOK_TOOL_PATH"] = _msprobe_c.__file__
 except ImportError:
     from .common.log import logger
     logger.info("Module _msprobe_c has not been installed. L2-Dump may not work normally.")
 
 
-from python.msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep
+from msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep

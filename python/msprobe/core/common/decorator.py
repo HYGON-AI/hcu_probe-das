@@ -16,9 +16,9 @@
 from collections import defaultdict
 from functools import wraps
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.log import logger
 
 # 记录工具函数递归的深度
 recursion_depth = defaultdict(int)

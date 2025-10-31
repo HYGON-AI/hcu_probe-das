@@ -15,13 +15,13 @@
 
 import os
 
-from python.msprobe.core.common.file_utils import check_file_type, load_json, check_file_or_directory_path
-from python.msprobe.core.common.const import FileCheckConst, Const
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.compare.utils import get_paired_dirs
-from python.msprobe.core.compare.utils import check_input_param_path, get_compare_framework
-from python.msprobe.core.compare.utils import compare_distributed_inner
+from msprobe.core.common.file_utils import check_file_type, load_json, check_file_or_directory_path
+from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.log import logger
+from msprobe.core.compare.utils import get_paired_dirs
+from msprobe.core.compare.utils import check_input_param_path, get_compare_framework
+from msprobe.core.compare.utils import compare_distributed_inner
 
 
 def compare_cli(args, depth=1):
@@ -66,7 +66,7 @@ def compare_cli(args, depth=1):
                 logger.error("Argument -cm or -am is not supported in PyTorch framework")
                 raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             kwargs = {**common_kwargs, "stack_mode": args.stack_mode}
-            from python.msprobe.pytorch.compare.pt_compare import compare
+            from msprobe.pytorch.compare.pt_compare import compare
             compare(input_param, args.output_path, **kwargs)
         else:
             kwargs = {
@@ -76,7 +76,7 @@ def compare_cli(args, depth=1):
                 "api_mapping": args.api_mapping,
                 "layer_mapping": args.layer_mapping
             }
-            from python.msprobe.mindspore.compare.ms_compare import ms_compare
+            from msprobe.mindspore.compare.ms_compare import ms_compare
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         check_file_or_directory_path(npu_path, isdir=True)
@@ -96,18 +96,18 @@ def compare_cli(args, depth=1):
             "layer_mapping": args.layer_mapping
         }
         if input_param.get("rank_id") is not None:
-            from python.msprobe.mindspore.compare.distributed_compare import ms_graph_compare
+            from msprobe.mindspore.compare.distributed_compare import ms_graph_compare
             ms_graph_compare(input_param, args.output_path)
             return
         common = input_param.get("common", False)
         if isinstance(common, bool) and common:
-            from python.msprobe.mindspore.compare.common_dir_compare import common_dir_compare
+            from msprobe.mindspore.compare.common_dir_compare import common_dir_compare
             common_dir_compare(input_param, args.output_path)
             return
 
         if common_kwargs.get('diff_analyze', False):
             logger.info("Start finding first diff node......")
-            from python.msprobe.core.compare.find_first.analyzer import DiffAnalyzer
+            from msprobe.core.compare.find_first.analyzer import DiffAnalyzer
             DiffAnalyzer(npu_path, bench_path, args.output_path).analyze()
             return
 

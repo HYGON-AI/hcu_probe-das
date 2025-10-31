@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 from typing import Dict, List
 
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.const import Const
 
 
 @dataclass

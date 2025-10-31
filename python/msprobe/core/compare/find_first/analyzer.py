@@ -18,13 +18,13 @@ from collections import defaultdict
 import os
 from itertools import dropwhile, chain
 
-from python.msprobe.core.common.file_utils import save_json, make_dir
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.compare.utils import compare_distributed_inner
-from python.msprobe.core.compare.find_first.utils import (RankPath, FileCache, is_communication_op, is_ignore_op,
+from msprobe.core.common.file_utils import save_json, make_dir
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.compare.utils import compare_distributed_inner
+from msprobe.core.compare.find_first.utils import (RankPath, FileCache, is_communication_op, is_ignore_op,
                                                    DiffAnalyseConst, analyze_diff_in_group)
-from python.msprobe.core.compare.find_first.graph import DataNode, CommunicationNode
+from msprobe.core.compare.find_first.graph import DataNode, CommunicationNode
 
 
 class DiffAnalyzer:

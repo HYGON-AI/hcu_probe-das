@@ -23,12 +23,12 @@ from openpyxl.styles import PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
 
-from python.msprobe.core.common.const import CompareConst, Const
-from python.msprobe.core.common.file_utils import save_workbook
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import get_header_index, CompareException
-from python.msprobe.core.compare.utils import table_value_is_valid, gen_api_batches
-from python.msprobe.core.compare.config import ModeConfig
+from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.file_utils import save_workbook
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import get_header_index, CompareException
+from msprobe.core.compare.utils import table_value_is_valid, gen_api_batches
+from msprobe.core.compare.config import ModeConfig
 
 
 def add_highlight_row_info(color_list, num, highlight_err_msg):

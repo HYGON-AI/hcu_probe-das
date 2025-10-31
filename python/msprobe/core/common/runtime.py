@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.const import Const
 
 
 class Runtime:

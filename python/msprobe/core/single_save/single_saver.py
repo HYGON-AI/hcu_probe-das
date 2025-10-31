@@ -16,10 +16,10 @@
 import os
 from collections import defaultdict
 
-from python.msprobe.core.common.file_utils import create_directory, save_json
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import create_directory, save_json
+from msprobe.core.common.const import Const
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.log import logger
 
 
 support_nested_data_type = (list, tuple, dict)

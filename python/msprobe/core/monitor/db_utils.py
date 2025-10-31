@@ -16,8 +16,8 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Dict, List, Optional, Set, Tuple
 
-from python.msprobe.core.common.const import MonitorConst
-from python.msprobe.core.common.db_manager import DBManager
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.db_manager import DBManager
 
 
 def update_ordered_dict(main_dict: OrderedDict, new_list: List) -> OrderedDict:

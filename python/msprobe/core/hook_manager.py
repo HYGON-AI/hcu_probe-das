@@ -19,9 +19,9 @@ import threading
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-from python.msprobe.core.common.runtime import Runtime
-from python.msprobe.core.common.utils import Const, ThreadSafe
-from python.msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs)
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import Const, ThreadSafe
+from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs)
 
 
 class HookSet:

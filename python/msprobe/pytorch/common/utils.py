@@ -25,11 +25,11 @@ import numpy as np
 import torch
 import torch.distributed as dist
 
-from python.msprobe.core.common.exceptions import DistributedNotInitializedError
-from python.msprobe.core.common.file_utils import (FileCheckConst, change_mode,
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
                                             check_file_or_directory_path, check_path_before_create, FileOpen)
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import check_seed_all, is_save_variable_valid
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import check_seed_all, is_save_variable_valid
 from packaging import version
 
 try:

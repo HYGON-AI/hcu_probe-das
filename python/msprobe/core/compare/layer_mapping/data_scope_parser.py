@@ -20,11 +20,11 @@ from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Optional, Tuple
 
 import yaml
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import save_yaml
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException, add_time_with_yaml
-from python.msprobe.core.compare.layer_mapping.postprocess_pass import postprocess_pass
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import save_yaml
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException, add_time_with_yaml
+from msprobe.core.compare.layer_mapping.postprocess_pass import postprocess_pass
 
 
 @dataclass

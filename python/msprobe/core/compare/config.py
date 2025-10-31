@@ -15,8 +15,8 @@
 
 import os
 
-from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.file_utils import load_yaml
 
 
 class ModeConfig:

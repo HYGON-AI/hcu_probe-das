@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.config_check.config_checker import ConfigChecker
-from python.msprobe.core.config_check.ckpt_compare.ckpt_comparator import compare_checkpoints
-from python.msprobe.core.common.log import logger
+from msprobe.core.config_check.config_checker import ConfigChecker
+from msprobe.core.config_check.ckpt_compare.ckpt_comparator import compare_checkpoints
+from msprobe.core.common.log import logger
 
 
 def pack(shell_path, output_path, framework):

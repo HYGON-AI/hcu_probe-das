@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.compare.utils import compare_distributed_inner
+from msprobe.core.compare.utils import compare_distributed_inner
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):

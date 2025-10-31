@@ -15,11 +15,11 @@
 
 import os
 
-from python.msprobe.core.common.const import Const, FileCheckConst, MsgConst
-from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common.file_utils import FileChecker, load_json
-from python.msprobe.core.common.utils import get_real_step_or_rank, check_init_step, ThreadSafe
-from python.msprobe.core.common_config import CommonConfig
+from msprobe.core.common.const import Const, FileCheckConst, MsgConst
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import FileChecker, load_json
+from msprobe.core.common.utils import get_real_step_or_rank, check_init_step, ThreadSafe
+from msprobe.core.common_config import CommonConfig
 
 
 class BasePrecisionDebugger:

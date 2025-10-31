@@ -17,7 +17,7 @@ import os
 import time
 import sys
 from functools import wraps
-from python.msprobe.core.common.const import MsgConst
+from msprobe.core.common.const import MsgConst
 
 
 def filter_special_chars(func):

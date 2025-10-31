@@ -15,8 +15,8 @@
 
 import numpy as np
 
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.compare.npy_compare import CompareOps
+from msprobe.core.common.log import logger
+from msprobe.core.compare.npy_compare import CompareOps
 
 
 

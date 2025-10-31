@@ -15,10 +15,10 @@
 
 import os
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import load_npy, FileChecker, FileCheckConst
-from python.msprobe.core.common.utils import detect_framework_by_dump_json, CompareException, check_op_str_pattern_valid
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import load_npy, FileChecker, FileCheckConst
+from msprobe.core.common.utils import detect_framework_by_dump_json, CompareException, check_op_str_pattern_valid
+from msprobe.core.common.log import logger
 
 
 def read_npy_data(dir_path, file_name):
