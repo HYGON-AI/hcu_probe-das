@@ -21,10 +21,10 @@ import threading
 import traceback
 from datetime import datetime, timezone, timedelta
 
-from python.msprobe.core.common.const import Const, FileCheckConst
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.file_utils import change_mode, FileOpen, save_json, check_path_before_create
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json, check_path_before_create
+from msprobe.core.common.log import logger
 
 lock = threading.Lock()
 

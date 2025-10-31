@@ -15,13 +15,13 @@
 
 from typing import Dict, List, Optional, Any
 
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.const import Const
 
-from python.msprobe.core.overflow_check.abnormal_scene import InputAnomalyOutputNormalScene, InputAnomalyOutputAnomalyScene, \
+from msprobe.core.overflow_check.abnormal_scene import InputAnomalyOutputNormalScene, InputAnomalyOutputAnomalyScene, \
     InputNormalOutputAnomalyScene, NumericalMutationScene, AnomalyScene
-from python.msprobe.core.overflow_check.api_info import APIInfo
-from python.msprobe.core.overflow_check.filter import IgnoreFilter
-from python.msprobe.core.overflow_check.level import OverflowLevel
+from msprobe.core.overflow_check.api_info import APIInfo
+from msprobe.core.overflow_check.filter import IgnoreFilter
+from msprobe.core.overflow_check.level import OverflowLevel
 
 
 class StatisticsFields:

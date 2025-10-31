@@ -18,11 +18,11 @@ import re
 from collections import defaultdict
 from typing import Dict
 import numpy as np
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import FileOpen, load_yaml
-from python.msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.log import logger
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import FileOpen, load_yaml
+from msprobe.core.common.framework_adapter import FmkAdp
 
 # both weights and bias are partitioned in column parallel
 COLUMN_PARALLEL_PARAMS = ['linear_qkv', 'linear_fc1', 'word_embeddings.weight', 'output_layer.weight'] 

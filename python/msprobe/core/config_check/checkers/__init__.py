@@ -22,4 +22,4 @@ import python.msprobe.core.config_check.checkers.weights_checker
 import python.msprobe.core.config_check.checkers.hyperparameter_checker
 import python.msprobe.core.config_check.checkers.random_checker
 
-from python.msprobe.core.config_check.checkers.base_checker import BaseChecker
+from msprobe.core.config_check.checkers.base_checker import BaseChecker

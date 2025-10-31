@@ -15,7 +15,7 @@
 import re
 import math
 
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.const import Const
 
 
 def postprocess_pass(data_items, name2item):

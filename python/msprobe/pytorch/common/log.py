@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.exceptions import DistributedNotInitializedError
-from python.msprobe.core.common.log import BaseLogger
-from python.msprobe.pytorch.common.utils import get_rank_if_initialized
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.log import BaseLogger
+from msprobe.pytorch.common.utils import get_rank_if_initialized
 
 
 class PyTorchLogger(BaseLogger):

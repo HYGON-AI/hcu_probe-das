@@ -17,10 +17,10 @@ from typing import List, Dict, Union, Any
 
 import numpy as np
 
-from python.msprobe.core.overflow_check.api_info import APIInfo
-from python.msprobe.core.overflow_check.level import OverflowLevel
-from python.msprobe.core.overflow_check.utils import has_nan_inf
-from python.msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.overflow_check.api_info import APIInfo
+from msprobe.core.overflow_check.level import OverflowLevel
+from msprobe.core.overflow_check.utils import has_nan_inf
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 
 class AnomalyScene:

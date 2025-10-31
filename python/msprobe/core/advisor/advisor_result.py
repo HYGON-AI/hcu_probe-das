@@ -15,10 +15,10 @@
 import os
 import time
 
-from python.msprobe.core.advisor.advisor_const import AdvisorConst
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.const import FileCheckConst
-from python.msprobe.core.common.file_utils import change_mode, FileOpen
+from msprobe.core.advisor.advisor_const import AdvisorConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import change_mode, FileOpen
 
 
 class AdvisorResult:

@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
-from python.msprobe.pytorch.compare.utils import read_pt_data
-from python.msprobe.core.compare.utils import check_input_param_path_and_framework
+from msprobe.core.common.const import Const
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
+from msprobe.pytorch.compare.utils import read_pt_data
+from msprobe.core.compare.utils import check_input_param_path_and_framework
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tuple:

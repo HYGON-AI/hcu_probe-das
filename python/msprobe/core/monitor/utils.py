@@ -19,10 +19,10 @@ from datetime import datetime
 import os
 import re
 
-from python.msprobe.core.common.const import MonitorConst
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import is_int
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import is_int
+from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
 
 beijing_tz = timezone(timedelta(hours=8))

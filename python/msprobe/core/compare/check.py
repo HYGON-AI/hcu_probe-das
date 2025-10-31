@@ -15,9 +15,9 @@
 
 import os
 
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
+from msprobe.core.common.const import Const
 
 cross_dtype_mapping = {
     "Int8": "int",

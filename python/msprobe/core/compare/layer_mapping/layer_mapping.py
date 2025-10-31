@@ -16,14 +16,14 @@
 import os
 from collections import defaultdict
 
-from python.msprobe.core.common.const import CompareConst, Const
-from python.msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
-from python.msprobe.core.common.utils import add_time_with_yaml, detect_framework_by_dump_json, \
+from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
+from msprobe.core.common.utils import add_time_with_yaml, detect_framework_by_dump_json, \
     get_stack_construct_by_dump_json_path, CompareException
-from python.msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
-from python.msprobe.core.compare.utils import read_op, reorder_op_name_list
-from python.msprobe.core.common.decorator import recursion_depth_decorator
-from python.msprobe.core.common.log import logger
+from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
+from msprobe.core.compare.utils import read_op, reorder_op_name_list
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.log import logger
 
 
 class LayerTrie:

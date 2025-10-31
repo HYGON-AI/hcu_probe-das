@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.compare.layer_mapping.layer_mapping import (
+from msprobe.core.compare.layer_mapping.layer_mapping import (
     generate_data_mapping_by_layer_mapping,
     generate_api_mapping_by_layer_mapping,
 )

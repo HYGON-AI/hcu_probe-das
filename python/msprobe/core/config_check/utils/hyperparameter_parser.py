@@ -16,9 +16,9 @@
 import re
 from abc import ABC, abstractmethod
 
-from python.msprobe.core.config_check.utils.utils import config_checking_print
-from python.msprobe.core.common.file_utils import FileOpen, load_yaml
-from python.msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.common.file_utils import FileOpen, load_yaml
+from msprobe.core.common.const import Const, FileCheckConst
 
 
 class Parser(ABC):

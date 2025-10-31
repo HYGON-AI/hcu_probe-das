@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import os
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import load_yaml
 
 
 class AtenIrMapping():

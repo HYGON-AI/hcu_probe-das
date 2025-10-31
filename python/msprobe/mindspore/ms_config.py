@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.utils import is_int
-from python.msprobe.core.common_config import BaseConfig, CommonConfig
-from python.msprobe.core.grad_probe.constant import level_adp
-from python.msprobe.core.grad_probe.utils import check_numeral_list_ascend
-from python.msprobe.mindspore.common.const import FreeBenchmarkConst
-from python.msprobe.mindspore.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import is_int
+from msprobe.core.common_config import BaseConfig, CommonConfig
+from msprobe.core.grad_probe.constant import level_adp
+from msprobe.core.grad_probe.utils import check_numeral_list_ascend
+from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.mindspore.common.log import logger
 
 
 class TensorConfig(BaseConfig):

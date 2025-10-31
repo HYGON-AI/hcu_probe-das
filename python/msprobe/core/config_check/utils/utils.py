@@ -17,9 +17,9 @@ import os
 import re
 import hashlib
 
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
 
 
 def merge_keys(dir_0, dir_1):

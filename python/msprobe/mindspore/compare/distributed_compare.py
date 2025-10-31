@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.file_utils import create_directory
-from python.msprobe.core.common.exceptions import FileCheckException
-from python.msprobe.mindspore.common.log import logger
-from python.msprobe.core.compare.utils import compare_distributed_inner
-from python.msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.mindspore.common.log import logger
+from msprobe.core.compare.utils import compare_distributed_inner
+from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
 
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):

@@ -16,9 +16,9 @@ import os.path
 from dataclasses import dataclass, field
 from typing import Set
 
-from python.msprobe.core.common.file_utils import load_yaml
-from python.msprobe.core.overflow_check.api_info import APIInfo
-from python.msprobe.core.overflow_check.utils import has_nan_inf
+from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.overflow_check.api_info import APIInfo
+from msprobe.core.overflow_check.utils import has_nan_inf
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 

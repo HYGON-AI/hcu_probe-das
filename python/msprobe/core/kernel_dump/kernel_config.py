@@ -15,7 +15,7 @@
 
 import os
 
-from python.msprobe.core.common.file_utils import save_json
+from msprobe.core.common.file_utils import save_json
 
 
 def create_kernel_config_json(dump_path, cur_rank):

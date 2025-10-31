@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.exceptions import ParseJsonException
-from python.msprobe.core.common.file_utils import load_json
-from python.msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import ParseJsonException
+from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.log import logger
 
 
 def parse_json_info_forward_backward(json_path):

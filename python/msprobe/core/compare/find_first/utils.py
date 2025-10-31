@@ -19,8 +19,8 @@ import sys
 import time
 import psutil
 
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, load_json
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
+from msprobe.core.common.const import Const
 
 
 @dataclass

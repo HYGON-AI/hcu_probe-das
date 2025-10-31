@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
-from python.msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
-from python.msprobe.mindspore.compare.utils import read_npy_data, check_cross_framework
-from python.msprobe.core.compare.utils import check_input_param_path_and_framework
+from msprobe.core.common.const import Const
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
+from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
+from msprobe.mindspore.compare.utils import read_npy_data, check_cross_framework
+from msprobe.core.compare.utils import check_input_param_path_and_framework
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, cross_frame) -> tuple:
     n_value = read_npy_data(npu_dir, npu_data_name)
     if cross_frame:
-        from python.msprobe.pytorch.compare.utils import read_pt_data
+        from msprobe.pytorch.compare.utils import read_pt_data
         b_value = read_pt_data(bench_dir, bench_data_name)
     else:
         b_value = read_npy_data(bench_dir, bench_data_name)

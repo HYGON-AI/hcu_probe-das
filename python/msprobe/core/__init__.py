@@ -13,5 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.single_save.single_saver import SingleSave
-from python.msprobe.core.single_save.single_comparator import SingleComparator
+from msprobe.core.single_save.single_saver import SingleSave
+from msprobe.core.single_save.single_comparator import SingleComparator

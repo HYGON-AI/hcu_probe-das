@@ -19,14 +19,14 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-from python.msprobe.core.common.exceptions import DistributedNotInitializedError
-from python.msprobe.core.common.file_utils import create_directory
-from python.msprobe.core.common.runtime import Runtime
-from python.msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
-from python.msprobe.core.data_dump.api_registry import ApiRegistry
-from python.msprobe.core.data_dump.data_collector import build_data_collector
-from python.msprobe.core.kernel_dump.kernel_config import create_kernel_config_json
-from python.msprobe.core.common.megatron_utils import MegatronStepInfo
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
+from msprobe.core.data_dump.api_registry import ApiRegistry
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.core.common.megatron_utils import MegatronStepInfo
 
 
 class BaseService(ABC):

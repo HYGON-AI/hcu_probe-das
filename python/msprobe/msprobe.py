@@ -17,11 +17,9 @@ import argparse
 import sys
 import importlib.util
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.compare.utils import _compare_parser
-from python.msprobe.core.compare.compare_cli import compare_cli
-from python.msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
+from msprobe.core.compare.utils import _compare_parser
+from msprobe.core.compare.compare_cli import compare_cli
+from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 
 
 def main():

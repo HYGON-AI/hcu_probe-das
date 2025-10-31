@@ -22,13 +22,13 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import pytz
-from python.msprobe.core.common.const import MonitorConst
-from python.msprobe.core.common.file_utils import (create_directory, read_csv,
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.file_utils import (create_directory, read_csv,
                                             recursive_chmod, remove_path)
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import is_int
-from python.msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict
-from python.msprobe.core.monitor.utils import get_target_output_dir
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import is_int
+from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict
+from msprobe.core.monitor.utils import get_target_output_dir
 from tqdm import tqdm
 
 # Constants

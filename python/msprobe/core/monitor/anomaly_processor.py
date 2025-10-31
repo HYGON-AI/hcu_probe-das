@@ -22,9 +22,9 @@ from abc import ABC
 from dataclasses import dataclass, field
 from typing import List
 
-from python.msprobe.core.common.const import MonitorConst
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.file_utils import save_json, create_directory, remove_path, \
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import save_json, create_directory, remove_path, \
     check_file_or_directory_path, load_json
 
 

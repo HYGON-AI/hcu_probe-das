@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.import functools
 import functools
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import check_file_or_directory_path
-from python.msprobe.core.common.file_utils import save_npy
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import save_npy
 
 
 class FrameworkDescriptor:

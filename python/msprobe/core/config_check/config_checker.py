@@ -18,12 +18,12 @@ import shutil
 
 import pandas as pd
 
-from python.msprobe.core.common.file_utils import save_excel, split_zip_file_path, \
+from msprobe.core.common.file_utils import save_excel, split_zip_file_path, \
     create_directory, extract_zip
-from python.msprobe.core.common.framework_adapter import FmkAdp
-from python.msprobe.core.config_check.checkers.base_checker import PackInput
-from python.msprobe.core.config_check.utils.utils import config_checking_print
-from python.msprobe.core.common.const import Const
+from msprobe.core.common.framework_adapter import FmkAdp
+from msprobe.core.config_check.checkers.base_checker import PackInput
+from msprobe.core.config_check.utils.utils import config_checking_print
+from msprobe.core.common.const import Const
 
 
 class ConfigChecker:

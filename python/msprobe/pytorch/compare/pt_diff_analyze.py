@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-from python.msprobe.pytorch.compare.distributed_compare import compare_distributed
+from msprobe.pytorch.compare.distributed_compare import compare_distributed
 
 
 def pt_diff_analyze(npu_dump_dir, bench_dump_dir, output_path, first_diff_analyze):

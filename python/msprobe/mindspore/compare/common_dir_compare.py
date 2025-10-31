@@ -25,16 +25,16 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.exceptions import FileCheckException
-from python.msprobe.core.common.file_utils import check_file_or_directory_path, write_df_to_csv, create_directory, \
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.file_utils import check_file_or_directory_path, write_df_to_csv, create_directory, \
                                            check_path_before_create, load_npy
-from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.compare.npy_compare import compare_ops_apply
-from python.msprobe.core.compare.utils import check_input_param_path_and_framework
-from python.msprobe.core.compare.multiprocessing_compute import check_accuracy
-from python.msprobe.mindspore.compare.utils import check_name_map_dict
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.compare.npy_compare import compare_ops_apply
+from msprobe.core.compare.utils import check_input_param_path_and_framework
+from msprobe.core.compare.multiprocessing_compute import check_accuracy
+from msprobe.mindspore.compare.utils import check_name_map_dict
 
 
 def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataFrame]:

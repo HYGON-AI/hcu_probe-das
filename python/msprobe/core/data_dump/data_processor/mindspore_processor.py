@@ -24,18 +24,18 @@ from mindspore.mint import distributed
 from mindspore._c_expression.typing import Number
 import numpy as np
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
-from python.msprobe.core.common.file_utils import path_len_exceeds_limit
-from python.msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
-from python.msprobe.mindspore.common.log import logger
-from python.msprobe.mindspore.dump.hook_cell.api_register import get_api_register
-from python.msprobe.mindspore.common.utils import is_mindtorch
+from msprobe.core.common.file_utils import path_len_exceeds_limit
+from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
+from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.dump.hook_cell.api_register import get_api_register
+from msprobe.mindspore.common.utils import is_mindtorch
 
 has_adump = True
 try:
-    from python.msprobe.lib import _msprobe_c
+    from msprobe.lib import _msprobe_c
 except ImportError:
     has_adump = False
 

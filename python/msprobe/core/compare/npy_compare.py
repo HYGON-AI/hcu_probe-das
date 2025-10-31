@@ -17,9 +17,9 @@ import abc
 
 import numpy as np
 
-from python.msprobe.core.common.const import Const, CompareConst
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException, format_value
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException, format_value
 
 
 def handle_inf_nan(n_value, b_value):

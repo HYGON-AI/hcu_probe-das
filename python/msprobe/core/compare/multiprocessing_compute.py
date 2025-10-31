@@ -20,12 +20,12 @@ from functools import partial
 import pandas as pd
 from tqdm import tqdm
 
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import CompareException
-from python.msprobe.core.common.const import CompareConst
-from python.msprobe.core.common.exceptions import FileCheckException
-from python.msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
-from python.msprobe.core.compare.config import ModeConfig
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
+from msprobe.core.compare.config import ModeConfig
 
 
 @dataclass

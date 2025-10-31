@@ -9,7 +9,7 @@
 为方便使用，本工具提供了统一、简易的程序接口：**PrecisionDebugger**。以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可以轻松使用各种功能。
 
 ```python
-from python.msprobe.pytorch import PrecisionDebugger
+from msprobe.pytorch import PrecisionDebugger
 
 debugger = PrecisionDebugger(config_path='./config.json')
 ...

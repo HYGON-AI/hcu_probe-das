@@ -22,10 +22,10 @@ from typing import Tuple, Dict, Optional, Any, Union
 
 import numpy as np
 
-from python.msprobe.core.common.const import Const
-from python.msprobe.core.common.file_utils import save_npy
-from python.msprobe.core.common.log import logger
-from python.msprobe.core.common.utils import convert_tuple, CompareException
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import save_npy
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple, CompareException
 
 
 @dataclass

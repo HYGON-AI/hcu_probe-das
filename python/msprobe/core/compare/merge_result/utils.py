@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.common.const import CompareConst
-from python.msprobe.core.common.file_utils import logger
-from python.msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst
+from msprobe.core.common.file_utils import logger
+from msprobe.core.common.utils import CompareException
 
 
 def replace_compare_index_dict(compare_index_dict, compare_index_list, rank_num):

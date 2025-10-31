@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from python.msprobe.core.compare.merge_result.merge_result import merge_result
+from msprobe.core.compare.merge_result.merge_result import merge_result
 
 
 def _merge_result_parser(parser):
