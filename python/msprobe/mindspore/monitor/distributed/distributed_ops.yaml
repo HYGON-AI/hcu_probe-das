@@ -1,0 +1,15 @@
+communication.comm_func:
+  - all_reduce
+  - all_gather_into_tensor
+  - reduce
+  - reduce_scatter_tensor
+  - all_to_all_single_with_output_shape
+  - all_to_all_with_output_shape
+  - batch_isend_irecv
+  - broadcast
+  - gather_into_tensor
+  - scatter_tensor
+  - send
+  - recv
+  - isend
+  - irecv

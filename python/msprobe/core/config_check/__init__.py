@@ -13,5 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import python.msprobe.core.config_check.checkers
+import msprobe.core.config_check.checkers
 from msprobe.core.config_check.config_checker import ConfigChecker

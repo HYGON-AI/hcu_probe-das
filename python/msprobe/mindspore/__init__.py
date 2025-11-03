@@ -24,3 +24,4 @@ except ImportError:
 
 
 from msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep
+from msprobe.mindspore.monitor.module_hook import TrainerMon
