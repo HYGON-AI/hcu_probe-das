@@ -15,11 +15,11 @@
 
 __all__ = ['BaseChecker', 'apply_patches']
 
-import python.msprobe.core.config_check.checkers.env_args_checker
-import python.msprobe.core.config_check.checkers.pip_checker
-import python.msprobe.core.config_check.checkers.dataset_checker
-import python.msprobe.core.config_check.checkers.weights_checker
-import python.msprobe.core.config_check.checkers.hyperparameter_checker
-import python.msprobe.core.config_check.checkers.random_checker
+import msprobe.core.config_check.checkers.env_args_checker
+import msprobe.core.config_check.checkers.pip_checker
+import msprobe.core.config_check.checkers.dataset_checker
+import msprobe.core.config_check.checkers.weights_checker
+import msprobe.core.config_check.checkers.hyperparameter_checker
+import msprobe.core.config_check.checkers.random_checker
 
 from msprobe.core.config_check.checkers.base_checker import BaseChecker

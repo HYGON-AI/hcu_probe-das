@@ -1,0 +1,5 @@
+stack:
+- msprobe/mindspore/monitor/distributed
+- site-packages/mindspore/nn/cell.py
+- multiprocessing
+- debugpy

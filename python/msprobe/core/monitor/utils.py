@@ -24,7 +24,6 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path, recursive_chmod
 
-
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
 
@@ -96,7 +95,7 @@ def validate_targets(targets):
             raise TypeError('key of targets should be module_name[str] in config.json')
         if not isinstance(field, dict):
             raise TypeError('values of targets should be cared filed e.g. {"input": "tensor"} in config.json')
-        
+
 
 def validate_l2_targets(targets):
     if not isinstance(targets, dict):
@@ -114,15 +113,15 @@ def validate_l2_targets(targets):
 def validate_recording_l2_features(recording_l2_features):
     if not isinstance(recording_l2_features, bool):
         raise TypeError("recording_l2_features should be a bool")
-    
+
 
 def validate_sa_order(sa_order):
     if isinstance(sa_order, str):
         sa_order = sa_order.replace(' ', '')
     if sa_order not in MonitorConst.SA_ORDERS:
         raise TypeError(f'sa_order must be in {MonitorConst.SA_ORDERS}, got {sa_order}')
-    
-    
+
+
 def validate_print_struct(print_struct):
     if not isinstance(print_struct, bool):
         raise TypeError("print_struct should be a bool")
@@ -246,7 +245,7 @@ def validate_config(config):
 
     recording_l2_features = config.get("recording_l2_features", False)
     validate_recording_l2_features(recording_l2_features)
-    
+
     sa_order = config.get("sa_order", "s,b,h,d")
     validate_sa_order(sa_order)
 

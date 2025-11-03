@@ -1,0 +1,9 @@
+{
+    "targets": {
+    },
+    "print_struct": true,
+    "xy_distribution": true,
+    "all_xy": true,
+    "format": "csv",
+    "ops": ["norm"]
+}
