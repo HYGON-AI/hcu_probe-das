@@ -1,0 +1,6 @@
+{
+  "task": "statistics",
+  "level": "mix",
+  "dump_data_dir": null,
+  "data": {"api": {"input": [{}]}}
+}
