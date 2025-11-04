@@ -20,7 +20,10 @@ import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
+from msprobe.core.common.log import logger
+from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
+
 
 
 def main():
@@ -38,6 +41,10 @@ def main():
     _compare_parser(compare_cmd_parser)
     merge_result_parser = subparsers.add_parser('merge_result')
     _merge_result_parser(merge_result_parser)
+    graph_service_cmd_parser = subparsers.add_parser('graph_visualize')
+    _graph_service_parser(graph_service_cmd_parser)
+    graph_service_cmd_parser_deprecated = subparsers.add_parser('graph')
+    _graph_service_parser(graph_service_cmd_parser_deprecated)
     config_checking_parser = subparsers.add_parser('config_check')
     _config_checking_parser(config_checking_parser)
 
@@ -50,6 +57,12 @@ def main():
         compare_cli(args)
     elif sys.argv[1] == "merge_result":
         merge_result_cli(args)
+    elif sys.argv[1] == "graph_visualize":
+        _graph_service_command(args)
+    elif sys.argv[1] == "graph":
+        logger.warning('The "graph" parameter has been deprecated and will be removed in future versions. '
+                       'Please use the "graph_visualize" parameter instead.')
+        _graph_service_command(args)
     elif sys.argv[1] == "config_check":
         _run_config_checking_command(args)
 
