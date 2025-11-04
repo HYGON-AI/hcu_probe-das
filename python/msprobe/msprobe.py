@@ -15,7 +15,6 @@
 
 import argparse
 import sys
-import importlib.util
 
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
@@ -23,7 +22,7 @@ from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_par
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
-
+from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
 
 
 def main():
@@ -37,8 +36,8 @@ def main():
     parser.set_defaults(print_help=parser.print_help)
     subparsers = parser.add_subparsers()
 
-    compare_cmd_parser = subparsers.add_parser('compare')
-    _compare_parser(compare_cmd_parser)
+    compare_parser = subparsers.add_parser('compare')
+    _compare_parser(compare_parser)
     merge_result_parser = subparsers.add_parser('merge_result')
     _merge_result_parser(merge_result_parser)
     graph_service_cmd_parser = subparsers.add_parser('graph_visualize')
@@ -47,6 +46,9 @@ def main():
     _graph_service_parser(graph_service_cmd_parser_deprecated)
     config_checking_parser = subparsers.add_parser('config_check')
     _config_checking_parser(config_checking_parser)
+
+    offline_dump_parser = subparsers.add_parser('offline_dump')
+    _offline_dump_parser(offline_dump_parser)
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -65,6 +67,8 @@ def main():
         _graph_service_command(args)
     elif sys.argv[1] == "config_check":
         _run_config_checking_command(args)
+    elif sys.argv[1] == "offline_dump":
+        offline_dump_cli(args)
 
 
 if __name__ == "__main__":
