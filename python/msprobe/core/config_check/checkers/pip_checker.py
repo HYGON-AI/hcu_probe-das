@@ -50,9 +50,8 @@ def collect_pip_data():
     return result
 
 
-def compare_pip_data(bench_pip_path, cmp_pip_path, fmk):
+def compare_pip_data(bench_pip_path, cmp_pip_path):
     necessary_dependency = load_yaml(depend_path)["dependency"]
-    necessary_dependency.append(fmk)
     bench_data = load_pip_txt(bench_pip_path)
     cmp_data = load_pip_txt(cmp_pip_path)
     data = []
@@ -83,9 +82,9 @@ class PipPackageChecker(BaseChecker):
         config_checking_print(f"add pip info to zip")
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         bench_pip_path = os.path.join(bench_dir, PipPackageChecker.target_name_in_zip)
         cmp_pip_path = os.path.join(cmp_dir, PipPackageChecker.target_name_in_zip)
-        df = compare_pip_data(bench_pip_path, cmp_pip_path, fmk)
+        df = compare_pip_data(bench_pip_path, cmp_pip_path)
         pass_check = process_pass_check(df['level'].values)
         return PipPackageChecker.target_name_in_zip, pass_check, df

@@ -88,7 +88,7 @@ class EnvArgsChecker(BaseChecker):
         config_checking_print(f"add env args to zip")
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         bench_env_data = os.path.join(bench_dir, EnvArgsChecker.target_name_in_zip)
         cmp_env_data = os.path.join(cmp_dir, EnvArgsChecker.target_name_in_zip)
         df = compare_env_data(bench_env_data, cmp_env_data)

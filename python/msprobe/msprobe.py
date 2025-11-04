@@ -20,6 +20,7 @@ import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
+from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
 
 
 def main():
@@ -37,6 +38,8 @@ def main():
     _compare_parser(compare_cmd_parser)
     merge_result_parser = subparsers.add_parser('merge_result')
     _merge_result_parser(merge_result_parser)
+    config_checking_parser = subparsers.add_parser('config_check')
+    _config_checking_parser(config_checking_parser)
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -47,6 +50,8 @@ def main():
         compare_cli(args)
     elif sys.argv[1] == "merge_result":
         merge_result_cli(args)
+    elif sys.argv[1] == "config_check":
+        _run_config_checking_command(args)
 
 
 if __name__ == "__main__":

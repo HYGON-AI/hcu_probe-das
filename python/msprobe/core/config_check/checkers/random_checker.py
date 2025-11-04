@@ -325,7 +325,7 @@ class RandomChecker(BaseChecker):
         register_pre_forward_fun_list(collect_input)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         """比较两组随机调用统计"""
         bench_stats_path = os.path.join(bench_dir, RandomChecker.target_name_in_zip)
         cmp_stats_path = os.path.join(cmp_dir, RandomChecker.target_name_in_zip)

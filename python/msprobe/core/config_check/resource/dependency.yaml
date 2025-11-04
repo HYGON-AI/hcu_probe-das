@@ -20,3 +20,5 @@ dependency:
   - numpy
   - datasets
   - peft
+  - mindspore
+  - torch

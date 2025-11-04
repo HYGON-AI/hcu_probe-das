@@ -130,7 +130,7 @@ class DatasetChecker(BaseChecker):
         register_pre_forward_fun_list(collect_input)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         bench_dataset_pack_path = os.path.join(bench_dir, DatasetChecker.target_name_in_zip)
         cmp_dataset_pack_path = os.path.join(cmp_dir, DatasetChecker.target_name_in_zip)
 

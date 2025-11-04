@@ -34,7 +34,8 @@ class ConfigChecker:
     step = 0
 
     def __init__(self, model=None, shell_path=None, output_zip_path="./config_check_pack.zip", fmk="pytorch"):
-        FmkAdp.set_fmk(fmk)
+        if model:
+            FmkAdp.set_fmk(fmk)
         self.pack_input = PackInput(output_zip_path, model, shell_path)
         file_path, file_name = split_zip_file_path(self.pack_input.output_zip_path)
         if not os.path.exists(file_path):
@@ -42,7 +43,7 @@ class ConfigChecker:
         self.pack()
 
     @staticmethod
-    def compare(bench_zip_path, cmp_zip_path, output_path, fmk=Const.PT_FRAMEWORK):
+    def compare(bench_zip_path, cmp_zip_path, output_path):
         create_directory(output_path)
         bench_dir = os.path.join(output_path, "bench")
         cmp_dir = os.path.join(output_path, "cmp")
@@ -54,7 +55,7 @@ class ConfigChecker:
         result = []
         summary_result = []
         for checker in ConfigChecker.checkers.values():
-            checker_name, pass_check, df = checker.compare_ex(bench_dir, cmp_dir, output_path, fmk)
+            checker_name, pass_check, df = checker.compare_ex(bench_dir, cmp_dir, output_path)
             if checker_name:
                 summary_result.append([checker_name, pass_check])
             if df is not None:
