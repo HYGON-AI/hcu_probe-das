@@ -89,7 +89,7 @@ class HyperparameterChecker(BaseChecker):
             config_checking_print(f"add dynamic hyperparameters args to zip")
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         all_diffs = []
         for file_name in HyperparameterChecker.hyperparameters_file_list:
             bench_model_dir = os.path.join(bench_dir, HyperparameterChecker.target_name_in_zip, file_name)

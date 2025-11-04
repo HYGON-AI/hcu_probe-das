@@ -46,7 +46,7 @@ class BaseChecker:
         pass
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         pass
 
     @staticmethod
@@ -54,9 +54,9 @@ class BaseChecker:
         pass
 
     @classmethod
-    def compare_ex(cls, bench_dir, cmp_dir, output_path, fmk):
+    def compare_ex(cls, bench_dir, cmp_dir, output_path):
         bench_filepath = os.path.join(bench_dir, cls.target_name_in_zip)
         cmp_filepath = os.path.join(cmp_dir, cls.target_name_in_zip)
         if not os.path.exists(bench_filepath) or not os.path.exists(cmp_filepath):
             return None, None, None
-        return cls.compare(bench_dir, cmp_dir, output_path, fmk)
+        return cls.compare(bench_dir, cmp_dir, output_path)

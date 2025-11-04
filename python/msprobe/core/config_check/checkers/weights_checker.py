@@ -140,7 +140,7 @@ class WeightsChecker(BaseChecker):
         register_pre_forward_fun_list(collect_weights)
 
     @staticmethod
-    def compare(bench_dir, cmp_dir, output_path, fmk):
+    def compare(bench_dir, cmp_dir, output_path):
         bench_weight_pack_path = os.path.join(bench_dir, WeightsChecker.target_name_in_zip)
         cmp_weight_pack_path = os.path.join(cmp_dir, WeightsChecker.target_name_in_zip)
         df = compare_weight(bench_weight_pack_path, cmp_weight_pack_path)

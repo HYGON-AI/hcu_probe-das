@@ -18,12 +18,12 @@ from msprobe.core.config_check.ckpt_compare.ckpt_comparator import compare_check
 from msprobe.core.common.log import logger
 
 
-def pack(shell_path, output_path, framework):
-    ConfigChecker(shell_path=shell_path, output_zip_path=output_path, fmk=framework)
+def pack(shell_path, output_path):
+    ConfigChecker(shell_path=shell_path, output_zip_path=output_path)
 
 
-def compare(bench_zip_path, cmp_zip_path, output_path, framework):
-    ConfigChecker.compare(bench_zip_path, cmp_zip_path, output_path, framework)
+def compare(bench_zip_path, cmp_zip_path, output_path):
+    ConfigChecker.compare(bench_zip_path, cmp_zip_path, output_path)
 
 
 def _config_checking_parser(parser):
@@ -35,12 +35,12 @@ def _config_checking_parser(parser):
 def _run_config_checking_command(args):
     if args.dump is not None:
         output_dirpath = args.output if args.output else "./config_check_pack.zip"
-        pack(args.dump, output_dirpath, args.framework)
+        pack(args.dump, output_dirpath)
     elif args.compare:
         if args.compare[0].endswith('zip'):
             logger.info('The input paths is zip files, comparing packed config.')
             output_dirpath = args.output if args.output else "./config_check_result"
-            compare(args.compare[0], args.compare[1], output_dirpath, args.framework)
+            compare(args.compare[0], args.compare[1], output_dirpath)
         else:
             logger.info('Comparing model checkpoint.')
             output_dirpath = args.output if args.output else "./ckpt_similarity.json"
