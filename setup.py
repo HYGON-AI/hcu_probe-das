@@ -40,42 +40,30 @@ INSTALL_REQUIRED = [
     "pwinput",
     "psutil",
     "onnx >= 1.14.0",
-    "numpy >= 1.21.6",
     "onnxruntime >= 1.14.1, < 1.16.0",
     "skl2onnx >= 1.14.1",
-    "protobuf == 3.20.2"
-]
-
-EXCLUDE_PKGS = [
-    "python.msprobe.ccsrc*",
-    "test*",
-    "examples*",
-    "build.sh",
-    "build_dependency*",
-    "cmake*",
-    "output*",
-    "third_party*",
-]
+    "protobuf == 3.20.2"]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
     raise SystemError("Specifing platforms or python version is not supported.")
 
-if platform.system() != "Linux":
-    raise SystemError("MsProbe is only supported on Linux platforms.")
-
+no_check = False
+if "no-check" in sys.argv:
+    no_check = True
 
 setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
-    description="Ascend Probe Utils",
+    description="Ascend MindStudio Probe Utils",
     long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU.",
     url="https://gitcode.com/Ascend/MindStudio-Probe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
     packages=setuptools.find_packages(where="python"),  # 在python目录下查找包
     package_dir={"": "python"},
+    platforms=["Linux"],
     include_package_data=True,
-    python_requires=">=3.6.2",
+    python_requires=">=3.7",
     install_requires=INSTALL_REQUIRED,
     classifiers=[
         'Intended Audience :: Developers',
