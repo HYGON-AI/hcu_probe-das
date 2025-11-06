@@ -49,6 +49,11 @@ def main():
     offline_dump_parser = subparsers.add_parser('offline_dump')
     _offline_dump_parser(offline_dump_parser)
 
+    graph_service_cmd_parser = subparsers.add_parser('graph_visualize')
+    _graph_service_parser(graph_service_cmd_parser)
+    graph_service_cmd_parser_deprecated = subparsers.add_parser('graph')
+    _graph_service_parser(graph_service_cmd_parser_deprecated)
+
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(0)
