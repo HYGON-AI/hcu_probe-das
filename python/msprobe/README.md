@@ -132,7 +132,7 @@ MindSpore 动态图场景的[离线预检](../../docs/09.accuracy_checker_MindSp
 
 该功能收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
 
-[兼容 PyTorch 和 MindSpore 框架的训练状态监控](../../docs/19.monitor.md)
+[兼容 PyTorch 和 MindSpore 框架的训练状态监控](../../docs/msprobe/19.monitor.md)
 
 ### 10 单算子API自动生成脚本
 
