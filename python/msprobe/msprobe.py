@@ -19,8 +19,8 @@ import sys
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
-from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command, \
-    _overflow_check_parser, _run_overflow_check
+from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
+from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflow_check
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
