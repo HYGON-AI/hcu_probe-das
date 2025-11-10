@@ -63,7 +63,7 @@ def set_stack_json_path(input_param):
     npu_data_dir = os.path.dirname(input_param.get("npu_path"))
     stack_path = extract_json(npu_data_dir, json_file_type=Const.STACK_JSON_FILE)
     input_param["stack_path"] = stack_path if stack_path else None
-    return bool(stack_path)
+    return bool(stack_path), input_param
 
 
 def check_and_return_dir_contents(dump_dir, prefix):
@@ -652,16 +652,14 @@ def get_paired_dirs(npu_path, bench_path):
 
 
 def _compare_parser(parser):
-    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.", required=True)
+    parser.add_argument("-tp", "--target_path", dest="target_path", type=str,
+                        help="<Required> The compare target device path", required=True)
+    parser.add_argument("-gp", "--golden_path", dest="golden_path", type=str,
+                        help="<Required> The compare golden device path", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path. Default path: ./output",
                         required=False, default="./output", nargs="?", const="./output")
-    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
-                        help="<optional> Whether to save stack info.", required=False)
-    parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
-                        help="<optional> Whether to give advisor.", required=False)
-    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+    parser.add_argument("-fm", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
     parser.add_argument("-hl", "--highlight", dest="highlight", action="store_true",
                         help="<optional> Whether to set result highlighting.", required=False)
@@ -675,6 +673,10 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
+    parser.add_argument("--rank", dest="rank", type=str,
+                        help="<optional> Ranks to compare when compare kernel of Mindspore.", required=False)
+    parser.add_argument("--step", dest="step", type=str,
+                        help="<optional> Steps to compare when compare kernel of Mindspore.", required=False)
 
 
 def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
@@ -832,9 +834,6 @@ def check_input_param_path(input_param):
     bench_path = input_param.get("bench_path", None)
     check_file_or_directory_path(npu_path)
     check_file_or_directory_path(bench_path)
-    if "stack_path" not in input_param:
-        logger.warning(f"Missing stack_path in the configuration file. "
-                       f"Automatically detecting stack.json to determine whether to display NPU_Stack_Info.")
 
 
 def get_compare_framework(input_param):
@@ -856,12 +855,8 @@ def get_compare_framework(input_param):
     return frame_name
 
 
-def check_input_param_path_and_framework(input_param, target_framework):
-    if not isinstance(input_param, dict):
-        logger.error("input_param should be dict, please check!")
-        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
-
-    check_input_param_path(input_param)
+def check_input_param_path_and_framework(args, target_framework):
+    input_param = {"npu_path": args.target_path, "bench_path": args.golden_path}
     compare_framework = get_compare_framework(input_param)
     if compare_framework != target_framework:
         logger.error(f"Expected frame to be {target_framework}, actual is {compare_framework}, please check dump.json.")

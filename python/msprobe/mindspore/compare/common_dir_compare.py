@@ -37,21 +37,15 @@ from msprobe.core.compare.multiprocessing_compute import check_accuracy
 from msprobe.mindspore.compare.utils import check_name_map_dict
 
 
-def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataFrame]:
+def common_dir_compare(args) -> Optional[pd.DataFrame]:
     """
     高级目录比对函数，完全镜像输入目录结构
-    
-    Args:
-        input_params: 包含npu_path和bench_path的字典
-        output_dir: 输出根目录
-        
-    Returns:
-        当输入目录是平铺npy文件时返回DataFrame，否则返回None
     """
-    check_input_param_path_and_framework(input_params, target_framework=Const.MS_FRAMEWORK)
 
-    npu_root = Path(input_params.get('npu_path'))
-    bench_root = Path(input_params.get('bench_path'))
+    check_input_param_path_and_framework(args, target_framework=Const.MS_FRAMEWORK)
+
+    npu_root = Path(args.target_path)
+    bench_root = Path(args.golden_path)
     name_map_dict = input_params.get('map_dict', {})
     check_name_map_dict(name_map_dict)
     file_tree = build_mirror_file_tree(npu_root, bench_root)
@@ -60,7 +54,7 @@ def common_dir_compare(input_params: Dict, output_dir: str) -> Optional[pd.DataF
     with ProcessPoolExecutor() as executor:
         results = list(tqdm(
             executor.map(
-                partial(process_directory_pair, name_map_dict=name_map_dict, output_dir=output_dir),
+                partial(process_directory_pair, name_map_dict=name_map_dict, output_dir=args.output_path),
                 file_tree.items()
             ),
             total=len(file_tree),

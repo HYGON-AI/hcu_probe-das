@@ -22,7 +22,6 @@ from msprobe.core.common.file_utils import load_yaml
 class ModeConfig:
     def __init__(self, **kwargs):
         self.stack_mode = kwargs.get('stack_mode', False)
-        self.auto_analyze = kwargs.get('auto_analyze', True)
         self.fuzzy_match = kwargs.get('fuzzy_match', False)
         self.highlight = kwargs.get('highlight', False)
         self.dump_mode = kwargs.get('dump_mode', Const.SUMMARY)

@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import load_json, remove_path, create_directory, save_excel, save_json
@@ -31,8 +30,7 @@ from msprobe.core.common.utils import CompareException, add_time_with_xlsx, chec
     set_dump_path, get_dump_mode, check_compare_param, load_stack_json, get_file_type, add_time_with_json
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
     check_configuration_param
-from msprobe.core.compare.utils import merge_tensor, print_compare_ends_info, read_op, set_stack_json_path, \
-    reorder_index
+from msprobe.core.compare.utils import print_compare_ends_info, read_op, set_stack_json_path, reorder_index
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.highlight import HighLight
@@ -43,7 +41,6 @@ from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyz
 class ComparisonConfig:
     dump_mode: str
     stack_mode: bool
-    auto_analyze: bool
     fuzzy_match: bool
     highlight: bool
     data_mapping: dict
@@ -149,11 +146,6 @@ class Comparator:
             # fallback to simple save without highlight
             result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
             save_excel(file_path, result_df)
-
-        # output compare analysis suggestions
-        if self.mode_config.auto_analyze:
-            advisor = Advisor(result_df, output_path, suffix)
-            advisor.analysis()
 
         print_compare_ends_info()
 
@@ -761,7 +753,6 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         config = ComparisonConfig(
             dump_mode='',
             stack_mode=False,
-            auto_analyze=kwargs.get('auto_analyze', True),
             fuzzy_match=kwargs.get('fuzzy_match', False),
             highlight=kwargs.get('highlight', False),
             data_mapping=kwargs.get('data_mapping', {}),
@@ -779,10 +770,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         config.compared_file_type = get_file_type(input_param.get("npu_path", None))
 
         # set stack_mode and set "stack_path" in input_param
-        if 'stack_path' in input_param:
-            config.stack_mode = kwargs.get('stack_mode', False)
-        else:
-            config.stack_mode = set_stack_json_path(input_param)
+        config.stack_mode, input_param = set_stack_json_path(input_param)
 
         check_configuration_param(config)
         create_directory(output_path)
