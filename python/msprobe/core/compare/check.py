@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
 from msprobe.core.common.const import Const
@@ -111,9 +109,9 @@ def check_stack_json_str(stack_info, op_name):
 
 
 def check_configuration_param(config):
-    arg_list = [config.stack_mode, config.auto_analyze, config.fuzzy_match,
+    arg_list = [config.stack_mode, config.fuzzy_match,
                 config.highlight, config.first_diff_analyze, config.is_print_compare_log]
-    arg_names = ['stack_mode', 'auto_analyze', 'fuzzy_match',
+    arg_names = ['stack_mode', 'fuzzy_match',
                  'highlight', 'first_diff_analyze', 'is_print_compare_log']
     for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):

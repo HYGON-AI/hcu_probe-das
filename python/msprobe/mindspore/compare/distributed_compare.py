@@ -25,11 +25,11 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 
 
-def ms_graph_compare(input_param, outputs):
+def ms_graph_compare(args):
     try:
-        create_directory(outputs)
+        create_directory(args.output_path)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         return
-    ms_comparator = GraphMSComparator(input_param, outputs)
+    ms_comparator = GraphMSComparator(args)
     ms_comparator.compare_core()

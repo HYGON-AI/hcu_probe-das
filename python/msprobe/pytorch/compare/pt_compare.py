@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.core.common.const import Const
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
 from msprobe.pytorch.compare.utils import read_pt_data
-from msprobe.core.compare.utils import check_input_param_path_and_framework
 
 
 def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tuple:
@@ -26,13 +24,10 @@ def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tup
 
 
 def compare(input_param, output_path, **kwargs):
-    check_input_param_path_and_framework(input_param, target_framework=Const.PT_FRAMEWORK)
-
     config = setup_comparison(input_param, output_path, **kwargs)
 
     config_dict = {
         'stack_mode': config.stack_mode,
-        'auto_analyze': config.auto_analyze,
         'fuzzy_match': config.fuzzy_match,
         'highlight': config.highlight,
         'dump_mode': config.dump_mode,

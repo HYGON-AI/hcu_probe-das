@@ -167,15 +167,20 @@ def transform_special_string_into_float(data_frame):
 
 
 class GraphMSComparator:
-    def __init__(self, input_param, output_path):
-        self.output_path = output_path
-        self.base_npu_path = input_param.get('npu_path', None)
-        self.base_bench_path = input_param.get('bench_path', None)
-        rank_id_list = input_param.get('rank_id', [])
-        step_id_list = input_param.get('step_id', [])
-        if not isinstance(rank_id_list, list) or not isinstance(step_id_list, list):
-            logger.error("'rank_id' and 'step_id' should both be lists, please check!")
-            raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+    def __init__(self, args):
+        self.output_path = args.output_path
+        self.base_npu_path = args.target_path
+        self.base_bench_path = args.golden_path
+        if args.rank:
+            rank_id_list = args.rank.split(',')
+            rank_id_list = [item.strip() for item in rank_id_list]
+        else:
+            rank_id_list = []
+        if args.step:
+            step_id_list = args.step.split(',')
+            step_id_list = [item.strip() for item in step_id_list]
+        else:
+            step_id_list = []
         self.rank_list = [convert_to_int(rank_id) for rank_id in rank_id_list]
         self.step_list = [convert_to_int(step_id) for step_id in step_id_list]
         # split by rank and step, generate rank step path

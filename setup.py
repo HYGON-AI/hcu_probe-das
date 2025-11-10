@@ -31,7 +31,9 @@ INSTALL_REQUIRED = [
     "tqdm",
     "openpyxl >= 3.0.6",
     "matplotlib",
-    "tensorboard"]
+    "tensorboard",
+    "protobuf <= 3.20.3"
+]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
     raise SystemError("Specifing platforms or python version is not supported.")
