@@ -25,24 +25,13 @@ import setuptools
 
 INSTALL_REQUIRED = [
     "wheel",
-    "einops",
     "numpy >=1.23.0, < 2.0",
     "pandas >= 1.3.5, < 2.1",
     "pyyaml",
-    "rich",
     "tqdm",
     "openpyxl >= 3.0.6",
-    "pyopenssl==24.2.1",
-    "twisted",
     "matplotlib",
-    "tensorboard",
-    "tabulate",
-    "pwinput",
-    "psutil",
-    "onnx >= 1.14.0",
-    "onnxruntime >= 1.14.1, < 1.16.0",
-    "skl2onnx >= 1.14.1",
-    "protobuf == 3.20.2"]
+    "tensorboard"]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
     raise SystemError("Specifing platforms or python version is not supported.")
