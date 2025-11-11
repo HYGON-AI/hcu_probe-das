@@ -92,9 +92,9 @@ MindSpore 动态图场景的[离线预检](../../docs/09.accuracy_checker_MindSp
 
 该功能将msprobe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
 
-[PyTorch 场景的分级可视化构图比对](../../docs/21.visualization_PyTorch.md)
+[PyTorch 场景的分级可视化构图比对](../../docs/msprobe/21.visualization_PyTorch.md)
 
-[MindSpore 场景的分级可视化构图比对](../../docs/22.visualization_MindSpore.md)
+[MindSpore 场景的分级可视化构图比对](../../docs/msprobe/22.visualization_MindSpore.md)
 
 ### 4 精度比对
 
