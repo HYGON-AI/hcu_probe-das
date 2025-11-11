@@ -659,6 +659,9 @@ def _compare_parser(parser):
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path. Default path: ./output",
                         required=False, default="./output", nargs="?", const="./output")
+    parser.add_argument("-m", "--mode", dest="mode", type=str, default="auto",
+                        help="<optional> Comparison mode: 'auto' (default), 'file', 'dir', 'distributed', 'diff'",
+                        required=False)
     parser.add_argument("-fm", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
     parser.add_argument("-hl", "--highlight", dest="highlight", action="store_true",
