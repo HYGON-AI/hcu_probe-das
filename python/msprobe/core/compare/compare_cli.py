@@ -13,22 +13,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 
-from msprobe.core.common.file_utils import check_file_type, check_file_or_directory_path
-from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
-from msprobe.core.compare.utils import get_paired_dirs
-from msprobe.core.compare.utils import get_compare_framework
-from msprobe.core.compare.utils import compare_distributed_inner
-from msprobe.core.compare.mode_dispatcher import dispatch_compare_mode
+from msprobe.core.compare.auto_compare import compare_auto_mode
 
 
-def compare_cli(args, depth=1):
+MODE_DISPATCHER = {
+    'auto': compare_auto_mode,
+}
+
+
+def compare_cli(args):
     """
-    Main comparison CLI entry point
-    Uses mode-based dispatch system
+    Dispatch comparison based on mode parameter
     """
-    return dispatch_compare_mode(args, depth)
+    mode = getattr(args, 'mode', 'auto')
 
+    # Get the appropriate function based on mode
+    compare_func = MODE_DISPATCHER.get(mode)
+    if compare_func is None:
+        logger.error(f"Invalid mode '{mode}'. Available modes: {list(MODE_DISPATCHER.keys())}")
+        raise CompareException(CompareException.INVALID_COMPARE_MODE)
+    
+    # Execute the comparison function
+    return compare_func(args)
