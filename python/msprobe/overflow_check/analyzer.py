@@ -52,7 +52,7 @@ class OverFlowCheck:
         for path in contents:
             if not path.startswith('rank'):
                 continue
-            rank_str = path.removeprefix('rank')
+            rank_str = path[len('rank'):]
             if not rank_str:
                 rank = 0
             elif not rank_str.isdigit():
