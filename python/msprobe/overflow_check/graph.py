@@ -46,6 +46,8 @@ class DataNode:
         seen = set(op_name)
         while True:
             op_name = construct_info.get(op_name)
+            if isinstance(op_name, list):
+                op_name = op_name[0]
             if not op_name or op_name in seen:
                 return construct
             construct.insert(0, op_name)
