@@ -713,3 +713,21 @@ def check_process_num(process_num):
 def is_module_available(module_name):
     spec = importlib.util.find_spec(module_name)
     return spec is not None
+
+
+def check_compare_validate_args(args, allowed_keys, compare_mode: str):
+    """
+    example:
+        auto_compare_allowed_keys = {
+            'mode',
+            'target_path', 'golden_path', 'output_path', 'fuzzy_match', 'highlight',
+            'cell_mapping', 'api_mapping', 'data_mapping', 'layer_mapping',
+            'diff_analyze',
+            'rank', 'step'
+        }
+    """
+    allowed_keys.add('print_help')
+    # 检查 args 是否是允许的参数的子集
+    args_dict = vars(args)
+    if not set(args_dict.keys()).issubset(allowed_keys):
+        raise ValueError(f"Invalid args for {compare_mode}: {set(args_dict.keys()) - allowed_keys}")
