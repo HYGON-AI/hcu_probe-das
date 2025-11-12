@@ -183,7 +183,7 @@ MindSpore 动态图场景的[离线预检](../../docs/09.accuracy_checker_MindSp
 
 多rank场景下通过dump数据找到首个出现Nan或Inf的节点。
 
-[PyTorch 场景整网首个溢出节点分析](../../docs/35.nan_analyze.md)
+[PyTorch 场景整网首个溢出节点分析](../../docs/msprobe/overflow_check.md)
 
 
 ## 📑 补充材料
