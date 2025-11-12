@@ -43,6 +43,36 @@ class StatisticsConfig(BaseConfig):
         self._check_str_list_config(self.tensor_list, "tensor_list")
 
 
+class StructureConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+
+
+TaskDict = {
+    Const.TENSOR: TensorConfig,
+    Const.STATISTICS: StatisticsConfig,
+    Const.STRUCTURE: StructureConfig
+}
+
+
+def parse_task_config(task, json_config):
+    task_map = json_config.get(task, dict())
+    return TaskDict.get(task)(task_map)
+
+
+def parse_json_config(json_file_path, task):
+    if not json_file_path:
+        config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        json_file_path = os.path.join(config_dir, "../../config.json")
+    json_config = load_json(json_file_path)
+    common_config = CommonConfig(json_config)
+    if task:
+        task_config = parse_task_config(task, json_config)
+    else:
+        task_config = parse_task_config(common_config.task, json_config)
+    return common_config, task_config
+
+
 class RunUTConfig(BaseConfig):
     WrapApi = get_ops()
 
@@ -74,33 +104,3 @@ class RunUTConfig(BaseConfig):
         RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
         RunUTConfig.check_error_data_path_config(self.error_data_path)
 
-
-class StructureConfig(BaseConfig):
-    def __init__(self, json_config):
-        super().__init__(json_config)
-
-
-TaskDict = {
-    Const.TENSOR: TensorConfig,
-    Const.STATISTICS: StatisticsConfig,
-    Const.RUN_UT: RunUTConfig,
-    Const.STRUCTURE: StructureConfig
-}
-
-
-def parse_task_config(task, json_config):
-    task_map = json_config.get(task, dict())
-    return TaskDict.get(task)(task_map)
-
-
-def parse_json_config(json_file_path, task):
-    if not json_file_path:
-        config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        json_file_path = os.path.join(config_dir, "../../config.json")
-    json_config = load_json(json_file_path)
-    common_config = CommonConfig(json_config)
-    if task:
-        task_config = parse_task_config(task, json_config)
-    else:
-        task_config = parse_task_config(common_config.task, json_config)
-    return common_config, task_config

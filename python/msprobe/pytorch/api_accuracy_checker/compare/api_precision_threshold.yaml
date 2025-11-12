@@ -1,0 +1,390 @@
+mul:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+mul_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__mul__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__imul__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__rmul__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+add:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+add_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__add__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__iadd__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__radd__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+div:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+div_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__div__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__idiv__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+divide:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+divide_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+leaky_relu:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+leaky_relu_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+prelu:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+reciprocal:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+reciprocal_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+rsqrt:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+rsqrt_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+square:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+square_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+sub:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+sub_:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+rsub:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__isub__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+__sub__:
+  torch.float32:
+    rtol: 1.0e-6
+    small_value: 1.0e-6
+    small_value_atol: 1.0e-9
+  torch.float16:
+    rtol: 1.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5
+  torch.bfloat16:
+    rtol: 4.0e-3
+    small_value: 1.0e-3
+    small_value_atol: 1.0e-5

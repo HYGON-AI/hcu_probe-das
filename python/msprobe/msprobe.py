@@ -21,6 +21,7 @@ from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
 from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflow_check
+from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
@@ -39,6 +40,8 @@ def main():
 
     compare_parser = subparsers.add_parser('compare')
     _compare_parser(compare_parser)
+    acc_check_cmd_parser = subparsers.add_parser('acc_check')
+    multi_acc_check_cmd_parser = subparsers.add_parser('multi_acc_check')
     merge_result_parser = subparsers.add_parser('merge_result')
     _merge_result_parser(merge_result_parser)
     overflow_check_parse = subparsers.add_parser('overflow_check')
@@ -54,7 +57,11 @@ def main():
     graph_service_cmd_parser_deprecated = subparsers.add_parser('graph')
     _graph_service_parser(graph_service_cmd_parser_deprecated)
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) >= 2 and sys.argv[1] == "acc_check":
+        acc_check_cli(sys.argv[2:])
+    elif len(sys.argv) >= 2 and sys.argv[1] == "multi_acc_check":
+        multi_acc_check_cli(sys.argv[2:])
+    elif len(sys.argv) < 2:
         parser.print_help()
         sys.exit(0)
 
