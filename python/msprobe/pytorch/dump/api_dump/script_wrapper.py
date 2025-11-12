@@ -67,7 +67,10 @@ def wrap_compile_script_func():
 
         # 保留原属性以兼容
         _wrapped._torchdynamo_orig_callable = compiler_fn  # type: ignore[attr-defined]
-        _wrapped._clone_with_backend = lambda backend: _patched_convert_frame(backend, hooks)
+
+        _wrapped._clone_with_backend =\
+            lambda backend: _patched_convert_frame(backend, hooks)  # type: ignore[attr-defined]
+
         return _wrapped
 
     import torch._dynamo.convert_frame as _cf_mod

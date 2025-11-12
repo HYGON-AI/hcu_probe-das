@@ -1,0 +1,8 @@
+{
+  "topk": {
+    "grad_index": 0
+  },
+  "npu_fusion_attention": {
+    "grad_index": 0
+  }
+}
