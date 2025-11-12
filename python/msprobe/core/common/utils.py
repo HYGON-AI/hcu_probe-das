@@ -626,7 +626,6 @@ class DumpPathAggregation:
     stack_file_path = None
     construct_file_path = None
     dump_tensor_data_dir = None
-    free_benchmark_file_path = None
     debug_file_path = None
 
 

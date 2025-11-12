@@ -17,10 +17,10 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from python.msprobe.core.common.log import logger
 from python.msprobe.core.common.const import Const
 from python.msprobe.core.common.exceptions import MsprobeException
-from python.msprobe.core.common_config import CommonConfig, BaseConfig
+from python.msprobe.core.common.log import logger
+from python.msprobe.core.dump.common_config import CommonConfig, BaseConfig
 
 
 class TestCommonConfig(TestCase):

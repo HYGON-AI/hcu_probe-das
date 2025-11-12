@@ -22,6 +22,7 @@ except ImportError:
     from .common.log import logger
     logger.info("Module _msprobe_c has not been installed. L2-Dump may not work normally.")
 
-
+from msprobe.mindspore.dump.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.common.utils import seed_all, MsprobeStep, MsprobeInitStep
 from msprobe.mindspore.monitor.module_hook import TrainerMon
+from msprobe.mindspore.dump.dump_processor.graph_tensor_dump import save, save_grad, step

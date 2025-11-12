@@ -25,6 +25,7 @@ import setuptools
 
 INSTALL_REQUIRED = [
     "wheel",
+    "einops",
     "numpy >=1.23.0, < 2.0",
     "pandas >= 1.3.5, < 2.1",
     "pyyaml",
@@ -32,15 +33,43 @@ INSTALL_REQUIRED = [
     "openpyxl >= 3.0.6",
     "matplotlib",
     "tensorboard",
-    "protobuf <= 3.20.3"
+    "protobuf <= 3.20.3",
 ]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
-    raise SystemError("Specifing platforms or python version is not supported.")
+    raise SystemError("Specifying platforms or python version is not supported.")
 
-no_check = False
-if "no-check" in sys.argv:
-    no_check = True
+if platform.system() != "Linux":
+    raise SystemError("MindStudio-Probe is only supported on Linux platforms.")
+
+mod_list_range = {"adump", }
+mod_list = []
+for i, arg in enumerate(sys.argv):
+    if arg.startswith("--include-mod"):
+        if "--no-check" in sys.argv:
+            os.environ["INSTALL_WITHOUT_CHECK"] = "1"
+            sys.argv.remove("--no-check")
+        if arg.startswith("--include-mod="):
+            mod_list = arg[len("--include-mod="):].split(',')
+            sys.argv.remove(arg)
+        elif i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("--"):
+            mod_list = sys.argv[i + 1].split(',')
+            sys.argv.remove(sys.argv[i + 1])
+            sys.argv.remove(arg)
+        mod_list = list(set(mod_list) & mod_list_range)
+        break
+
+# 当前只有adump一个mod
+if mod_list:
+    arch = platform.machine()
+    sys.argv.append("--plat-name")
+    sys.argv.append(f"linux_{arch}")
+    sys.argv.append("--python-tag")
+    sys.argv.append(f"cp{sys.version_info.major}{sys.version_info.minor}")
+    build_cmd = f"bash ./build.sh -j16 -a {arch} -v {sys.version_info.major}.{sys.version_info.minor}"
+    p = subprocess.run(build_cmd.split(), shell=False)
+    if p.returncode != 0:
+        raise RuntimeError(f"Failed to build source({p.returncode})")
 
 setuptools.setup(
     name="mindstudio-probe",

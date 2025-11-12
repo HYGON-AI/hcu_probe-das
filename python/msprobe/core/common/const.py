@@ -114,12 +114,11 @@ class Const:
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
-    GRAD_PROBE = "grad_probe"
     STRUCTURE = "structure"
     EXCEPTION_DUMP = "exception_dump"
     DUMP_PRECISION_HIGH = "high"
     DUMP_PRECISION_LOW = "low"
-    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE, STRUCTURE, EXCEPTION_DUMP]
+    TASK_LIST = [TENSOR, STATISTICS, RUN_UT, STRUCTURE, OVERFLOW_CHECK, EXCEPTION_DUMP]
     DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR, STRUCTURE]
     DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     DUMP_PRECISION_LIST = [DUMP_PRECISION_LOW, DUMP_PRECISION_HIGH]
@@ -216,7 +215,7 @@ class Const:
 
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
     STACK_FILTER_KEYWORDS = ["msprobe/core", "msprobe/pytorch", "msprobe/mindspore"]
-    CALL_STACK_FLAG = "data_dump/api_registry"
+    CALL_STACK_FLAG = "api_dump/api_registry"
     NEW_STACK_FLAG = "0"
 
     STEP = "step"
@@ -238,6 +237,8 @@ class Const:
     TYPE = 'type'
     DTYPE = 'dtype'
     SHAPE = 'shape'
+    LAYOUT = 'layout'
+    SHARD_SIZE = 'hsdp_shard_size'
     STACK_INFO = 'stack_info'
     MAX = 'Max'
     MIN = 'Min'
