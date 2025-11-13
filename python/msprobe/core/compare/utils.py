@@ -653,7 +653,7 @@ def get_paired_dirs(npu_path, bench_path):
 
 def _compare_parser(parser):
     parser.add_argument("-m", "--mode", dest="mode", type=str, default="auto",
-                        help="<optional> Comparison mode: 'auto' (default), 'file', 'dir', 'distributed', 'diff'",
+                        help="<optional> Comparison mode: 'auto' (default) or 'torchair' for torchair accuracy compare",
                         required=False)
     parser.add_argument("-tp", "--target_path", dest="target_path", type=str,
                         help="<Required> The compare target device path", required=True)
@@ -676,8 +676,11 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
-    parser.add_argument("--rank", dest="rank", type=str,
-                        help="<optional> Ranks to compare when compare kernel of Mindspore.", required=False)
+    parser.add_argument(
+        "--rank", dest="rank", type=str,
+        help="<optional> Ranks to compare when compare kernel of Mindspore or torchair dumps.",
+        required=False
+    )
     parser.add_argument("--step", dest="step", type=str,
                         help="<optional> Steps to compare when compare kernel of Mindspore.", required=False)
 
