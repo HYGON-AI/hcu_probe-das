@@ -62,7 +62,7 @@
 
 # 2 精度预检(PyTorch)
 
-1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
+1. 预检工具在 dump 和 acc_check 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
 
    答：是。
 
