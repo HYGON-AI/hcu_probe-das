@@ -250,3 +250,5 @@ dump 数据保存路径为 `{dump_path}/msit_fx_dump`。其中 `{dump_path}` 为
   ```
 - dump 结果文件的目录结构与含义可见“[1.1.3 dump 结果文件介绍](#113-dump-结果文件介绍)”小节。
 
+完整精度比对案例和使用方法请参考《[基于 torch 图模式（torchair）整网算子精度比对](torchair_compare.md)》。
+
