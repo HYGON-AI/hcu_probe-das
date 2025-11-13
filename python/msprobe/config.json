@@ -16,5 +16,10 @@
         "list":[], 
         "data_mode": ["all"],
         "file_format": "npy" 
+    },
+    "acc_check": {
+        "white_list": [],
+        "black_list": [],
+        "error_data_path": "./"
     }
 }

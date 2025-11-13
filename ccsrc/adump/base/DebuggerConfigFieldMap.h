@@ -31,7 +31,7 @@ constexpr const char* TASK_STATISTICS = "statistics";
 constexpr const char* TASK_DUMP_TENSOR = "tensor";
 constexpr const char* TASK_OVERFLOW_CHECK = "overflow_check";
 constexpr const char* TASK_FREE_BENCHMARK = "free_benchmark";
-constexpr const char* TASK_RUN_UT = "run_ut";
+constexpr const char* TASK_ACC_CHECK = "acc_check";
 constexpr const char* TASK_GRAD_PROBE = "grad_probe";
 
 constexpr const char* LEVEL0 = "L0";
@@ -98,7 +98,7 @@ const std::map<int32_t, std::string> TASK_TYPE_ENUM_2_NAME = {
     {static_cast<int32_t>(DebuggerTaskType::TASK_DUMP_STATISTICS), TASK_STATISTICS},
     {static_cast<int32_t>(DebuggerTaskType::TASK_OVERFLOW_CHECK), TASK_OVERFLOW_CHECK},
     {static_cast<int32_t>(DebuggerTaskType::TASK_FREE_BENCHMARK), TASK_FREE_BENCHMARK},
-    {static_cast<int32_t>(DebuggerTaskType::TASK_RUN_UT), TASK_RUN_UT},
+    {static_cast<int32_t>(DebuggerTaskType::TASK_ACC_CHECK), TASK_ACC_CHECK},
     {static_cast<int32_t>(DebuggerTaskType::TASK_GRAD_PROBE), TASK_GRAD_PROBE},
 };
 

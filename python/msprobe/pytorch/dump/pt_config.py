@@ -82,7 +82,7 @@ class RunUTConfig(BaseConfig):
         self.black_list = json_config.get("black_list", Const.DEFAULT_LIST)
         self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
 
-        self.check_run_ut_config()
+        self.check_acc_check_config()
 
     @classmethod
     def check_filter_list_config(cls, key, filter_list):
@@ -99,7 +99,7 @@ class RunUTConfig(BaseConfig):
         if not os.path.exists(error_data_path):
             raise Exception("error_data_path: %s does not exist" % error_data_path)
 
-    def check_run_ut_config(self):
+    def check_acc_check_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
         RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
         RunUTConfig.check_error_data_path_config(self.error_data_path)

@@ -82,11 +82,11 @@ msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 
 
 ### 2 精度预检
 
-精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 "run_ut" task。
+精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 "acc_check" task。
 
-PyTorch 场景的[离线预检](../../docs/07.accuracy_checker_PyTorch.md)
+PyTorch 场景的[离线预检](../../docs/msprobe/07.accuracy_checker_PyTorch.md)
 
-MindSpore 动态图场景的[离线预检](../../docs/09.accuracy_checker_MindSpore.md)
+MindSpore 动态图场景的[离线预检](../../docs/msprobe/09.accuracy_checker_MindSpore.md)
 
 ### 3 分级可视化构图比对
 
