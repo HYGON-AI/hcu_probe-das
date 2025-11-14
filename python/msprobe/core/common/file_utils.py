@@ -12,29 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import atexit
 import csv
 import fcntl
 import io
+import json
+import multiprocessing
 import os
 import pickle
-from multiprocessing import shared_memory
-import stat
-import json
 import re
 import shutil
+import stat
 import sys
 import zipfile
-import multiprocessing
-import yaml
+from multiprocessing import shared_memory
+
 import numpy as np
 import pandas as pd
+import yaml
 
-from msprobe.core.common.decorator import recursion_depth_decorator
-from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst, CompareConst, Const
+from msprobe.core.common.decorator import recursion_depth_decorator
+from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.global_lock import global_lock, is_main_process
+from msprobe.core.common.log import logger
 
 proc_lock = multiprocessing.Lock()
 
@@ -44,18 +46,23 @@ class FileChecker:
     The class for check file.
 
     Attributes:
-        file_path: The file or dictionary path to be verified.
-        path_type: file or dictionary
-        ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
+        file_path: The file or dictionary path to be verified
+        path_type: file or dictionary type
+        ability(str): one of ["r", "w", "x", "rw", "rx", "wx", "rwx"], r: read, w: write, x: execute
         file_type(str): The correct file type for file
     """
 
-    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
+    def __init__(
+        self,
+        file_path,
+        path_type,
+        ability=None,
+        file_type=None
+    ):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
-        self.ability = ability
+        self.ability = self._check_ability_type(ability)
         self.file_type = file_type
-        self.is_script = is_script
 
     @staticmethod
     def _check_path_type(path_type):
@@ -64,9 +71,16 @@ class FileChecker:
             raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         return path_type
 
+    @staticmethod
+    def _check_ability_type(ability):
+        if ability and ability not in FileCheckConst.PERM_OPTIONS:
+            logger.error(f'The ability must be one of {FileCheckConst.PERM_OPTIONS}.')
+            raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
+        return ability
+
     def common_check(self):
         """
-        功能：用户校验基本文件权限：软连接、文件长度、是否存在、读写权限、文件属组、文件特殊字符
+        功能：基本文件权限校验，包括文件存在性、软连接、文件长度、文件类型、文件读写权限、文件属组、文件路径特殊字符、文件后缀名等
         注意：文件后缀的合法性，非通用操作，可使用其他独立接口实现
         """
         check_path_exists(self.file_path)
@@ -75,23 +89,25 @@ class FileChecker:
         check_path_length(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
-        if self.is_script:
-            check_path_owner_consistent(self.file_path)
+        check_path_owner_consistent(self.file_path)
         check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
+        check_path_no_others_write(self.file_path)
         if self.path_type == FileCheckConst.FILE:
-            check_dirpath_before_read(self.file_path)
+            check_dirpath_permission(self.file_path)
         return self.file_path
 
     def check_path_ability(self):
-        if self.ability == FileCheckConst.WRITE_ABLE:
-            check_path_writability(self.file_path)
-        if self.ability == FileCheckConst.READ_ABLE:
+        if not self.ability:
+            return
+
+        if FileCheckConst.READ_ABLE in self.ability:
             check_path_readability(self.file_path)
-        if self.ability == FileCheckConst.READ_WRITE_ABLE:
-            check_path_readability(self.file_path)
+        if FileCheckConst.WRITE_ABLE in self.ability:
             check_path_writability(self.file_path)
+        if FileCheckConst.EXECUTE_ABLE in self.ability:
+            check_path_executable(self.file_path)
 
 
 class FileOpen:
@@ -137,7 +153,8 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
-            check_dirpath_before_read(self.file_path)
+            check_path_no_others_write(self.file_path)
+            check_dirpath_permission(self.file_path)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
@@ -256,12 +273,15 @@ def check_path_type(file_path, file_type):
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
-def check_others_writable(directory):
-    dir_stat = os.stat(directory)
-    is_writable = (
-            bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
-            bool(dir_stat.st_mode & stat.S_IWOTH)  # 其他用户可写
-    )
+def check_group_writable(file_path):
+    path_stat = os.stat(file_path)
+    is_writable = bool(path_stat.st_mode & stat.S_IWGRP)
+    return is_writable
+
+
+def check_others_writable(file_path):
+    path_stat = os.stat(file_path)
+    is_writable = bool(path_stat.st_mode & stat.S_IWOTH)
     return is_writable
 
 
@@ -309,7 +329,7 @@ def check_path_before_create(path):
                                  'The file path {} contains special characters.'.format(path))
 
 
-def check_dirpath_before_read(path):
+def check_dirpath_permission(path):
     path = os.path.realpath(path)
     dirpath = os.path.dirname(path)
     if dedup_log('check_dirpath_before_read', dirpath):
@@ -321,13 +341,14 @@ def check_dirpath_before_read(path):
             logger.warning(f"The directory {dirpath} is not yours.")
 
 
-def check_file_or_directory_path(path, isdir=False):
+def check_file_or_directory_path(path, isdir=False, is_strict=False):
     """
     Function Description:
         check whether the path is valid
     Parameter:
         path: the path to check
         isdir: the path is dir or file
+        is_strict: whether to perform stricter validation (e.g., verify group cannot write to path)
     Exception Description:
         when invalid data throw exception
     """
@@ -336,6 +357,33 @@ def check_file_or_directory_path(path, isdir=False):
     else:
         path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
     path_checker.common_check()
+
+    if is_strict:
+        if check_group_writable(path):
+            raise FileCheckException(
+                FileCheckException.FILE_PERMISSION_ERROR,
+                f"The directory/file must not allow write access to group. Directory/File path: {path}"
+            )
+
+
+def check_path_no_others_write(file_path):
+    if dedup_log('check_path_no_others_write', file_path):
+        if check_group_writable(file_path):
+            logger.warning(f"The directory/file path is writable by group: {file_path}.")
+
+    if check_others_writable(file_path):
+        raise FileCheckException(
+            FileCheckException.FILE_PERMISSION_ERROR,
+            f"The directory/file must not allow write access to others. Directory/File path: {file_path}"
+        )
+
+
+def check_path_no_group_others_write(file_path):
+    if check_group_writable(file_path) or check_others_writable(file_path):
+        raise FileCheckException(
+            FileCheckException.FILE_PERMISSION_ERROR,
+            f"The directory/file must not allow write access to group or others. Directory/File path: {file_path}"
+        )
 
 
 def change_mode(path, mode):
@@ -386,6 +434,14 @@ def check_file_type(path):
     else:
         logger.error(f'path does not exist, please check!')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+
+def root_privilege_warning():
+    if os.getuid() == 0:
+        logger.warning(
+            "msprobe is being run as root. "
+            "To avoid security risks, it is recommended to switch to a regular user to run it."
+        )
 
 
 def load_yaml(yaml_path):
@@ -968,7 +1024,13 @@ class SharedDict:
     def _safe_load(self):
         with io.BytesIO(self._shm.buf[:]) as buff:
             try:
-                self._dict = SafeUnpickler(buff).load()
+                data = SafeUnpickler(buff).load()
+                if not isinstance(data, dict):
+                    logger.debug(f"Data from shared memory is '{type(data)}' type, expected 'dict'.")
+                    self._dict = {}
+                    self._changed = True
+                else:
+                    self._dict = data
             except Exception as e:
                 logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
                 self._dict = {}
@@ -983,6 +1045,50 @@ class SafeUnpickler(pickle.Unpickler):
         if module in self.WHITELIST and name in self.WHITELIST[module]:
             return super().find_class(module, name)
         raise pickle.PicklingError(f'Unpickling {module}.{name} is illegal!')
+
+
+class DeserializationScanner:
+    """反序列化风险扫描器"""
+
+    DANGEROUS_METHODS = {
+        '__reduce__', '__reduce_ex__', '__setstate__', '__getstate__',
+        '__new__', '__init__', '__del__',
+        '__call__', '__enter__', '__exit__',
+        'eval', 'exec', 'compile', '__import__', 'open'
+        'os.system', 'os.popen', 'subprocess.call', 'subprocess.Popen',
+    }
+
+    DANGEROUS_MODULES = {
+        'os', 'sys', 'subprocess', 'shutil', 'socket',
+        'requests', 'urllib', 'ftplib', 'smtplib',
+    }
+
+    @classmethod
+    def scan_pickle_content(cls, filepath: str) -> bool:
+        with FileOpen(filepath, 'rb') as f:
+            content = f.read()
+
+        try:
+            text_content = content.decode('latin-1')
+        except Exception as e:
+            text_content = str(content)
+
+        for method in cls.DANGEROUS_METHODS:
+            if re.fullmatch(method, text_content):
+                logger.warning(f"Insecure method found: {method}")
+                return False
+
+        for module in cls.DANGEROUS_MODULES:
+            patterns = [
+                f"import {module}",
+                f"from {module} import",
+                f"{module}.",
+            ]
+            for pattern in patterns:
+                if pattern in text_content:
+                    logger.warning(f"Insecure module found: {module}")
+                    return False
+        return True
 
 
 atexit.register(SharedDict.destroy_shared_memory)

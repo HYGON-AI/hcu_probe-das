@@ -40,8 +40,8 @@ from msprobe.mindspore.dump.mindspore_service import MindsporeService
 from msprobe.mindspore.dump.task_handler_factory import TaskHandlerFactory
 
 try:
-    from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
     import mindspore as ms
+    from mindspore._c_expression import _dump_start, _dump_stop, _dump_step, _set_init_iter, _dump_set_dynamic
 except ImportError:
     enable_dynamic_kbyk_dump = False
 else:

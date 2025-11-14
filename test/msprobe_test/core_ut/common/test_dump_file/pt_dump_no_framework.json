@@ -1,0 +1,4 @@
+{
+  "task": "tensor",
+  "type": "torch.float16"
+}
