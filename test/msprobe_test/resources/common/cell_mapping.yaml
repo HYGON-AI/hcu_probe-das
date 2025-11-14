@@ -1,0 +1,2 @@
+fc1.Dense: fc1.Linear
+conv1.Conv2d: conv3.Conv2d

@@ -1,0 +1,4 @@
+{
+  "task": "tensor",
+  "type": "mindspore.float16"
+}

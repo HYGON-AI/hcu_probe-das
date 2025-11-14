@@ -1,0 +1,9 @@
+NPU Name,Bench Name,NPU Tensor Dtype,Bench Tensor Dtype,NPU Tensor Shape,Bench Tensor Shape,Cosine,MaxAbsErr,NPU max,NPU min,NPU mean,Bench max,Bench min,Bench mean,Accuracy Reached or Not,Err_message
+,Functional_linear_0_forward_input.0,torch.float32,torch.float32,"[3, 2]","[3, 2]",1,0,1.9482584,-1.005229712,-0.200359523,1.9482584,-1.005229712,-0.200359523,,
+,Functional_linear_0_forward_input.1,torch.float32,torch.float32,"[3, 2]","[3, 2]",1,0,0.283754498,-0.666123927,-0.278998673,0.283754498,-0.666123927,-0.278998673,,
+,Functional_linear_0_forward_input.2,torch.float32,torch.float32,[3],[3],1,0,0.24579899,-0.63385421,-0.144371063,0.24579899,-0.63385421,-0.144371063,,
+,Functional_linear_0_forward_output,torch.float32,torch.float32,"[3, 3]","[3, 3]",1,0,0.827886879,-0.872916996,0.167905405,0.827886879,-0.872916996,0.167905405,,
+,Torch_relu_0_forward_input.0,torch.float32,torch.float32,"[3, 3]","[3, 3]",1,0,0.827886879,-0.872916996,0.167905405,0.827886879,-0.872916996,0.167905405,,
+,Torch_relu_0_forward_output,torch.float32,torch.float32,"[3, 3]","[3, 3]",1,0,0.827886879,0,0.313675523,0.827886879,0,0.313675523,,
+,Functional_relu_0_forward_input.0,torch.float32,torch.float32,"[3, 3]","[3, 3]",1,0,0.827886879,-0.872916996,0.167905405,0.827886879,-0.872916996,0.167905405,,
+,Functional_relu_0_forward_output,torch.float32,torch.float32,"[3, 3]","[3, 3]",1,0,0.827886879,0,0.313675523,0.827886879,0,0.313675523,,
