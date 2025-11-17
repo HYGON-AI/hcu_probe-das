@@ -123,7 +123,7 @@ def list_lowest_level_directories(root_dir):
             full_path = os.path.join(current_dir, entry)
             if os.path.isdir(full_path):
                 if any(os.path.isdir(os.path.join(full_path, subentry)) for subentry in os.listdir(full_path)):
-                    recurse_dirs(full_path, depth=depth+1)
+                    recurse_dirs(full_path, depth=depth + 1)
                 else:
                     lowest_level_dirs.append(full_path)
 
@@ -200,9 +200,11 @@ def set_register_backward_hook_functions():
 
     if is_mindtorch():
         import torch
-        from msprobe.mindspore.dump.mindtorch import (_call_impl,
-                                                        register_full_backward_pre_hook,
-                                                        register_full_backward_hook)
+        from msprobe.mindspore.dump.mindtorch import (
+            _call_impl,
+            register_full_backward_pre_hook,
+            register_full_backward_hook
+        )
         if not hasattr(torch.nn.Module, "register_full_backward_hook"):
             setattr(torch.nn.Module, "_call_impl", _call_impl)
             setattr(torch.nn.Module, "register_full_backward_pre_hook", register_full_backward_pre_hook)
@@ -370,6 +372,18 @@ def wrap_backward_hook_call_func(call_func):
                 if isinstance(item, ms.Tensor):
                     executor.set_creation_type(item, CreationType.DEFAULT)
         return outputs
+
     new_call.__name__ = '__call__'
 
     return new_call
+
+
+def cast_to_float_if_fp8(tensor):
+    dtype = str(tensor.dtype)
+    if dtype in MsConst.FP8_TYPE_LIST:
+        logger.debug(
+            f"The {dtype} tensor analyzing/saving is unsupported in dump function."
+            f"Casting to a float for processing"
+        )
+        tensor = tensor.to(ms.float32)
+    return tensor

@@ -58,7 +58,6 @@ class BaseHookManager(ABC):
     def reset_status():
         BaseHookManager.inner_switch = defaultdict(bool)
         BaseHookManager.inner_api_count = defaultdict(int)
-        BaseHookManager.hook_handle_dict.clear()
         BaseHookManager.params_grad_info.clear()
 
     @staticmethod

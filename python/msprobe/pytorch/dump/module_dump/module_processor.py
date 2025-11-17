@@ -63,16 +63,18 @@ def wrap_forward_with_hook_safety(module):
         except _StopRecomputationError as e:
             exception_output = None
             if len(module._forward_hooks.values()) > 0:
-                # msprobe的forward_hook会出现在第一个，仅执行msprobe的forward_hook
-                hook_fn = list(module._forward_hooks.values())[0]
-                hook_fn(module, args, kwargs, exception_output)
+                # 仅执行msprobe的forward_hook, hook名称必然包含'ModuleProcessor.'
+                for hook_fn in module._forward_hooks.values():
+                    if 'ModuleProcessor' in str(hook_fn):
+                        hook_fn(module, args, kwargs, exception_output)
+                        break
             raise e
 
     if torch_version_above_or_equal_21:
         module.forward = wrapped_forward
 
 
-class ModuleProcesser:
+class ModuleProcessor:
     module_queue = ModuleQueue()
     module_count = {}
     module_stack = {}
@@ -107,11 +109,11 @@ class ModuleProcesser:
 
     @staticmethod
     def set_and_get_calls_number(module_name):
-        if module_name not in ModuleProcesser.module_count:
-            ModuleProcesser.module_count[module_name] = 0
+        if module_name not in ModuleProcessor.module_count:
+            ModuleProcessor.module_count[module_name] = 0
         else:
-            ModuleProcesser.module_count[module_name] += 1
-        return ModuleProcesser.module_count[module_name]
+            ModuleProcessor.module_count[module_name] += 1
+        return ModuleProcessor.module_count[module_name]
 
     @staticmethod
     def has_register_backward_hook(module):
@@ -188,7 +190,7 @@ class ModuleProcesser:
                         f"The {prefix_name[:-1]} has registered deprecated register_backward_hook,"
                         f"which may cause abnormal data dump. The backward data dump for this module will be skipped."
                     )
-                    ModuleProcesser.module_with_backward_hook[prefix_name] = True
+                    ModuleProcessor.module_with_backward_hook[prefix_name] = True
                 wrap_forward_with_hook_safety(module)
                 register_forward_pre_hook(module, forward_pre_hook)
 
@@ -204,7 +206,7 @@ class ModuleProcesser:
             if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
                 return (args, kwargs) if torch_version_above_or_equal_2 else args
 
-            index = ModuleProcesser.set_and_get_calls_number(module_name)
+            index = ModuleProcessor.set_and_get_calls_number(module_name)
             full_forward_name = f'{module_name}{Const.FORWARD}{Const.SEP}{index}'
             full_backward_name = f'{module_name}{Const.BACKWARD}{Const.SEP}{index}'
 
@@ -239,14 +241,14 @@ class ModuleProcesser:
 
                 return backward_hook_fn
 
-            if not ModuleProcesser.module_with_backward_hook.get(module_name):
+            if not ModuleProcessor.module_with_backward_hook.get(module_name):
                 backward_pre_hook = get_backward_pre_hook(full_backward_name)
                 backward_hook = get_backward_hook(hook_set.backward_hook, full_backward_name)
                 if torch_version_above_or_equal_2:
                     bw_hook = BackwardHook(module, [backward_hook], [backward_pre_hook])
                 else:
                     bw_hook = BackwardHook(module, [backward_hook])
-                ModuleProcesser.module_bw_hook_kernels[full_forward_name] = bw_hook
+                ModuleProcessor.module_bw_hook_kernels[full_forward_name] = bw_hook
                 args = bw_hook.setup_input_hook(args)
             return (args, kwargs) if torch_version_above_or_equal_2 else args
 
@@ -255,7 +257,7 @@ class ModuleProcesser:
             if hasattr(module, 'msprobe_module_dump') and not self.enable_module_dump:
                 return output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
 
-            index = ModuleProcesser.module_count.get(module_name)
+            index = ModuleProcessor.module_count.get(module_name)
             full_name = f'{module_name}{Const.FORWARD}{Const.SEP}{index}'
 
             hook_set = build_data_hook(BaseScope.Module_Type_Module, full_name)
@@ -267,7 +269,7 @@ class ModuleProcesser:
             else:
                 result = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
 
-            bw_hook = ModuleProcesser.module_bw_hook_kernels.get(full_name)
+            bw_hook = ModuleProcessor.module_bw_hook_kernels.get(full_name)
             if bw_hook:
                 result = bw_hook.setup_output_hook(result)
 
@@ -278,35 +280,35 @@ class ModuleProcesser:
     def set_construct_info_in_pre_hook(self, full_name):
         tid = threading.get_ident()
         if tid not in self.module_stack:
-            ModuleProcesser.module_stack[tid] = []
+            ModuleProcessor.module_stack[tid] = []
 
         if self.module_stack[tid]:
-            ModuleProcesser.module_node[full_name] = self.module_stack[tid][-1] if not is_megatron() \
+            ModuleProcessor.module_node[full_name] = self.module_stack[tid][-1] if not is_megatron() \
                 else [self.module_stack[tid][-1], get_micro_step()]
         else:
-            parent_name = ModuleProcesser.module_queue.find_last(full_name)
-            ModuleProcesser.module_node[full_name] = parent_name if not is_megatron() \
+            parent_name = ModuleProcessor.module_queue.find_last(full_name)
+            ModuleProcessor.module_node[full_name] = parent_name if not is_megatron() \
                 else [parent_name, get_micro_step()]
 
-        ModuleProcesser.module_queue.add_name(full_name)
-        ModuleProcesser.module_stack[tid].append(full_name)
-        ModuleProcesser.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]
+        ModuleProcessor.module_queue.add_name(full_name)
+        ModuleProcessor.module_stack[tid].append(full_name)
+        ModuleProcessor.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]
         if self.scope:
             self.scope.begin_module(full_name)
 
     def set_construct_info_in_hook(self, full_name, is_forward=True):
         tid = threading.get_ident()
         if torch_version_above_or_equal_2 or is_forward:
-            ModuleProcesser.module_queue.remove_name(full_name)
-            ModuleProcesser.api_parent_node[tid] = None if not is_megatron() else [None, get_micro_step()]
+            ModuleProcessor.module_queue.remove_name(full_name)
+            ModuleProcessor.api_parent_node[tid] = None if not is_megatron() else [None, get_micro_step()]
             if self.module_stack.get(tid):
-                ModuleProcesser.module_stack[tid].pop()
+                ModuleProcessor.module_stack[tid].pop()
             if self.module_stack.get(tid):
-                ModuleProcesser.api_parent_node[tid] = ModuleProcesser.module_stack[tid][-1] if not is_megatron() \
-                    else [ModuleProcesser.module_stack[tid][-1], get_micro_step()]
+                ModuleProcessor.api_parent_node[tid] = ModuleProcessor.module_stack[tid][-1] if not is_megatron() \
+                    else [ModuleProcessor.module_stack[tid][-1], get_micro_step()]
             if self.scope:
                 self.scope.end_module(full_name)
         else:
             if self.scope:
                 self.scope.begin_module(full_name)
-            ModuleProcesser.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]
+            ModuleProcessor.api_parent_node[tid] = full_name if not is_megatron() else [full_name, get_micro_step()]

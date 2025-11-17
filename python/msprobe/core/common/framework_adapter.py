@@ -151,7 +151,7 @@ class FmkAdp:
 
     @classmethod
     def load_checkpoint(cls, path, to_cpu=True, weights_only=True):
-        check_file_or_directory_path(path)
+        check_file_or_directory_path(path, is_strict=not weights_only)
         if cls.fmk == Const.PT_FRAMEWORK:
             try:
                 if to_cpu:

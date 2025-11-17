@@ -27,8 +27,7 @@ def read_pt_data(dir_path, file_name):
         return None
 
     data_path = os.path.join(dir_path, file_name)
-    path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                               FileCheckConst.PT_SUFFIX, False)
+    path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.PT_SUFFIX)
     data_path = path_checker.common_check()
     try:
         # detach because numpy can not process gradient information

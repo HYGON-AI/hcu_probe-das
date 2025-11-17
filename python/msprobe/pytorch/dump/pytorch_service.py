@@ -17,7 +17,7 @@ from msprobe.core.common.utils import Const
 from msprobe.core.dump.service import BaseService
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
-from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
+from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
 from msprobe.pytorch.dump.api_dump.api_register import get_api_register, ApiTemplate, redirect_wait
 from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
 from msprobe.pytorch.dump.api_dump.pt_hook_manager import PytorchHookManager
@@ -40,7 +40,7 @@ class PytorchService(BaseService):
     def _init_specific_components(self):
         self.logger = logger
         self.api_register = get_api_register()
-        self.module_processor = ModuleProcesser(self.data_collector.scope)
+        self.module_processor = ModuleProcessor(self.data_collector.scope)
         self.hook_manager = PytorchHookManager(self.data_collector, self.config)
         self.api_template = ApiTemplate
 
@@ -55,11 +55,11 @@ class PytorchService(BaseService):
         redirect_wait()
 
     def _register_module_hook(self):
-        ModuleProcesser.enable_module_dump = True
+        ModuleProcessor.enable_module_dump = True
         self.module_processor.register_module_hook(self.model, self.build_hook)
         self.logger.info(f"The module {self.config.task} hook function is successfully mounted to the model.")
 
     def _reset_status(self):
         super()._reset_status()
-        ModuleProcesser.reset_module_stats()
+        ModuleProcessor.reset_module_stats()
         HOOKModule.reset_module_stats()

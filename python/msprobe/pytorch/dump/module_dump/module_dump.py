@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
+from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
 from msprobe.pytorch.dump.api_dump.api_register import get_api_register
 
 
@@ -28,7 +28,7 @@ class ModuleDumper:
             logger.info_on_rank_0("The init dump is enabled, and the module dump function will not be available.")
             return
 
-        ModuleProcesser.enable_module_dump = True
+        ModuleProcessor.enable_module_dump = True
         self.api_register.restore_all_api()
         if not hasattr(module, 'msprobe_module_dump'):
             self.service.module_processor.register_module_hook(module, self.service.build_hook,
@@ -36,5 +36,5 @@ class ModuleDumper:
             setattr(module, 'msprobe_module_dump', True)
 
     def stop_module_dump(self):
-        ModuleProcesser.enable_module_dump = False
+        ModuleProcessor.enable_module_dump = False
         self.api_register.register_all_api()

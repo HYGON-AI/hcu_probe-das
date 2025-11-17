@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import mindspore as ms
 from mindspore import dtype as mstype
 
 from msprobe.core.common.const import Const as CoreConst
@@ -83,6 +81,8 @@ class Const:
         mstype.int32, mstype.intc, mstype.uint32, mstype.uintc,
         mstype.int64, mstype.intp, mstype.uint64, mstype.uintp
     )
+
+    FP8_TYPE_LIST = ["Float8E5M2", "Float8E4M3FN", "HiFloat8"]
 
 
 class MsCompareConst:
