@@ -17,7 +17,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from msprobe.pytorch.dump.pytorch_service import PytorchService
 from msprobe.core.common.utils import Const
-from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
+from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
 from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
 
 
@@ -89,7 +89,7 @@ class TestPytorchService(unittest.TestCase):
     
    
     @patch.object(HOOKModule, 'reset_module_stats')
-    @patch.object(ModuleProcesser, 'reset_module_stats')
+    @patch.object(ModuleProcessor, 'reset_module_stats')
     def test_reset_status(self, mock_reset_module_processor, mock_reset_hook_module):
         self.service._reset_status()
         mock_reset_hook_module.assert_called_once()

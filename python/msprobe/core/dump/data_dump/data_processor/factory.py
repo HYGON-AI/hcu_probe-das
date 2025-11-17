@@ -34,7 +34,7 @@ class DataProcessorFactory:
     def get_module_processor(cls, framework):
         processor_class = cls._module_processor.get(framework)
         if not processor_class:
-            raise ValueError(f"ModuleProcesser not found for framework: {framework}")
+            raise ValueError(f"ModuleProcessor not found for framework: {framework}")
         return processor_class
 
     @classmethod
@@ -55,12 +55,12 @@ class DataProcessorFactory:
                 TensorDataProcessor as PytorchTensorDataProcessor,
                 KernelDumpDataProcessor as PytorchKernelDumpDataProcessor
             )
-            from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
+            from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
             cls.register_processor(Const.PT_FRAMEWORK, Const.STATISTICS, PytorchStatisticsDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.TENSOR, PytorchTensorDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.KERNEL_DUMP, PytorchKernelDumpDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.STRUCTURE, BaseDataProcessor)
-            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)
+            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcessor)
         elif framework == Const.MS_FRAMEWORK:
             from msprobe.core.dump.data_dump.data_processor.mindspore_processor import (
                 StatisticsDataProcessor as MindsporeStatisticsDataProcessor,

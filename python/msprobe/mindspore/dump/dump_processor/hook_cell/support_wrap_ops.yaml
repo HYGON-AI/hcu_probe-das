@@ -516,6 +516,7 @@ ops:
   - vander
   - is_nonzero
   - rotary_position_embedding
+  - auto_generate.quant_matmul
 
 tensor:
   - __abs__

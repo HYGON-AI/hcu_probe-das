@@ -215,7 +215,7 @@ class Const:
 
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
     STACK_FILTER_KEYWORDS = ["msprobe/core", "msprobe/pytorch", "msprobe/mindspore"]
-    CALL_STACK_FLAG = "data_dump/api_registry"
+    CALL_STACK_FLAG = "api_dump/api_registry"
     NEW_STACK_FLAG = "0"
 
     STEP = "step"
