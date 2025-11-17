@@ -23,6 +23,8 @@ from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflo
 from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
+    _api_precision_compare_command
 
 
 def main():
@@ -45,7 +47,8 @@ def main():
     _overflow_check_parser(overflow_check_parse)
     config_checking_parser = subparsers.add_parser('config_check')
     _config_checking_parser(config_checking_parser)
-
+    api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
+    _api_precision_compare_parser(api_precision_compare_cmd_parser)
     graph_service_cmd_parser = subparsers.add_parser('graph_visualize')
     _graph_service_parser(graph_service_cmd_parser)
     graph_service_cmd_parser_deprecated = subparsers.add_parser('graph')
@@ -66,6 +69,8 @@ def main():
         _run_overflow_check(args)
     elif sys.argv[1] == "graph_visualize":
         _graph_service_command(args)
+    elif sys.argv[1] == "api_precision_compare":
+        _api_precision_compare_command(args)
     elif sys.argv[1] == "graph":
         logger.warning('The "graph" parameter has been deprecated and will be removed in future versions. '
                        'Please use the "graph_visualize" parameter instead.')
