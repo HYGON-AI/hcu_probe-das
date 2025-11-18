@@ -1,0 +1,42 @@
+{
+  "task": "statistics",
+  "level": "mix",
+  "framework": "pytorch",
+  "dump_data_dir": null,
+  "data": {
+    "Module.module.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": 165558.0,
+                    "Min": 0.0,
+                    "Mean": 16050.638671875,
+                    "Norm": 2257767.75,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                }
+            ]
+        }
+  }
+}

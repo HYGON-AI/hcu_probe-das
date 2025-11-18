@@ -21,6 +21,7 @@ This class mainly dump model ops inputs and outputs.
 import os
 import time
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.args_check import is_saved_model_valid
 from msprobe.infer.offline.compare.msquickcmp.common.convert import convert_npy_to_bin
@@ -40,8 +41,8 @@ def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
         from msprobe.infer.offline.compare.msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
         return OnnxDumpData(args, npu_dump_npy_path)
     else:
-        utils.logger.error("cpu dump model files whose names end with .pb or .onnx or saved_model are "
-                           "supported, Please check your model type")
+        logger.error("cpu dump model files whose names end with .pb or .onnx or saved_model are supported, "
+                     "Please check your model type")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
@@ -50,7 +51,7 @@ def _generate_model_adapter(args: DumpArgsAdapter):
         from msprobe.infer.offline.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
         return NpuTfAdapterDumpData(args, args.model_path)
     else:
-        utils.logger.error("Currently, npu dump supports only saved_model, Please check your model type")
+        logger.error("Currently, npu dump supports only saved_model, Please check your model type")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 

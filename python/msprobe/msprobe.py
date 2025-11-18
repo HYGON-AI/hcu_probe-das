@@ -16,12 +16,13 @@
 import argparse
 import sys
 
+from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
+from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 from msprobe.core.config_check.config_check_cli import _config_checking_parser, _run_config_checking_command
 from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflow_check
 from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
-from msprobe.core.common.log import logger
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
     _api_precision_compare_command
@@ -42,7 +43,8 @@ def main():
     _compare_parser(compare_parser)
     acc_check_cmd_parser = subparsers.add_parser('acc_check')
     multi_acc_check_cmd_parser = subparsers.add_parser('multi_acc_check')
-
+    merge_result_parser = subparsers.add_parser('merge_result')
+    _merge_result_parser(merge_result_parser)
     overflow_check_parse = subparsers.add_parser('overflow_check')
     _overflow_check_parser(overflow_check_parse)
     config_checking_parser = subparsers.add_parser('config_check')
@@ -65,6 +67,8 @@ def main():
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[1] == "compare":
         compare_cli(args)
+    elif sys.argv[1] == "merge_result":
+        merge_result_cli(args)
     elif sys.argv[1] == "overflow_check":
         _run_overflow_check(args)
     elif sys.argv[1] == "graph_visualize":

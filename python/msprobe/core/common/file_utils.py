@@ -695,6 +695,15 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def save_numpy_to_bin(numpy_data, saved_path):
+    try:
+        numpy_data.tofile(saved_path)
+    except Exception as e:
+        logger.error(f"Save numpy data to {saved_path} failed")
+        raise RuntimeError from e
+    change_mode(saved_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def read_csv(filepath, as_pd=True, header='infer'):
     check_file_or_directory_path(filepath)
     try:

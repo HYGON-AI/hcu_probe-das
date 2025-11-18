@@ -24,9 +24,9 @@ import shutil
 
 import numpy as np
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.atc import atc_utils
 from msprobe.infer.offline.compare.msquickcmp.common import utils, tf_common
-
 from msprobe.infer.utils.util import load_file_to_read_common_check
 from msprobe.infer.offline.compare.msquickcmp.common.tf_common import load_file_to_read_common_check_with_walk
 from msprobe.infer.utils.check.rule import Rule
@@ -35,19 +35,19 @@ try:
     import tensorflow as tf
     from tensorflow.core.protobuf.rewriter_config_pb2 import RewriterConfig
 except ImportError as e:
-    utils.logger.error("TensorFlow is not installed.")
+    logger.error("TensorFlow is not installed.")
     raise ImportError from e
 
 try:
     import npu_device
 except ImportError as e:
-    utils.logger.error("npu_device is not installed.")
+    logger.error("npu_device is not installed.")
     raise ImportError from e
 
 try:
     import acl
 except ImportError as e:
-    utils.logger.error("Please verify that the CANN environment is properly configured.")
+    logger.error("Please verify that the CANN environment is properly configured.")
     raise ImportError from e
 
 
@@ -98,7 +98,7 @@ class NpuTfAdapterDumpData(object):
             input_path = self.input_path.split(",")
             for input_file in input_path:
                 if not os.path.isfile(input_file):
-                    utils.logger.error("no such file exists: {}".format(input_file))
+                    logger.error(f"no such file exists: {input_file}")
                     raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
                 file_name = os.path.basename(input_file)
                 dest_file = os.path.join(self.input, file_name)
@@ -153,7 +153,7 @@ class NpuTfAdapterDumpData(object):
                 output_op_names.append(output_tensor_info.name.split(':')[0])
             output_tensors.extend(sess.graph.get_operation_by_name(output_op_names[-1]).outputs)
             sess.run(output_tensors, feed_dict=feed_dict)
-        utils.logger.info("Dump tf adapter data success, data saved in: %s", self.dump_data_npu)
+        logger.info(f"Dump tf adapter data success, data saved in: {self.dump_data_npu}")
         self.dump_data_npu = self._change_dump_data_path()
         graph_txt = self.get_graph_txt(self.model_json_path)
         output_json_path = atc_utils.convert_model_to_json(self.cann_path, graph_txt, self.output_path)

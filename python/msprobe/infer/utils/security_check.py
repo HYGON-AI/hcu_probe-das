@@ -21,7 +21,7 @@ import shutil
 
 from msprobe.infer.utils.file_open_check import FileStat
 from msprobe.infer.utils.constants import PATH_WHITE_LIST_REGEX
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.utils.util import safe_int
 
 
@@ -270,9 +270,11 @@ def check_input_path_legality(value):
     try:
         file_stat = FileStat(input_path)
     except Exception as err:
-        raise argparse.ArgumentTypeError("input path:%r is illegal, Please check." % input_path) from err
+        logger.error(f"input path:{input_path} is illegal, Please check.")
+        raise argparse.ArgumentTypeError from err
     if not file_stat.is_basically_legal('read', strict_permission=True):
-        raise argparse.ArgumentTypeError("The current user cannot read the input path: %r." % input_path)
+        logger.error(f"The current user cannot read the input path: {input_path}.")
+        raise argparse.ArgumentTypeError
     return input_path
 
 
@@ -290,9 +292,11 @@ def check_output_path_legality(value):
     try:
         file_stat = FileStat(path_value)
     except Exception as err:
-        raise argparse.ArgumentTypeError("Output path is illegal, please check.") from err
+        logger.error("Output path is illegal, please check.")
+        raise argparse.ArgumentTypeError from err
     if not file_stat.is_basically_legal("write", strict_permission=False):
-        raise argparse.ArgumentTypeError("The current output path does not have right write permission, please check.")
+        logger.error("The current output path does not have right write permission, please check.")
+        raise argparse.ArgumentTypeError
     return path_value
 
 
@@ -303,11 +307,14 @@ def check_input_opsummary_legality(value):
     try:
         file_stat = FileStat(file_path)
     except Exception as err:
-        raise argparse.ArgumentTypeError("Check permissions failed when load op_summary file, please check.") from err
+        logger.error("Check permissions failed when load op_summary file, please check.")
+        raise argparse.ArgumentTypeError from err
     if not file_stat.is_basically_legal('read', strict_permission=True):
-        raise argparse.ArgumentTypeError("Op_summary file: %r cannot be read, please check." % file_path)
+        logger.error(f"Op_summary file: {file_path} cannot be read, please check.")
+        raise argparse.ArgumentTypeError
     if not file_stat.is_legal_file_type(["csv"]):
-        raise argparse.ArgumentTypeError("Op_summary file muse be 'csv' type, please check.")
+        logger.error("Op_summary file muse be 'csv' type, please check.")
+        raise argparse.ArgumentTypeError
     return file_path
 
 
@@ -318,14 +325,16 @@ def valid_ops_map_file(value):
     try:
         file_stat = FileStat(file_path)
     except Exception as err:
-        raise argparse.ArgumentTypeError("Input path: %r is illegal." % file_path) from err
+        logger.error(f"Input path: {file_path} is illegal.")
+        raise argparse.ArgumentTypeError from err
     if not file_stat.is_basically_legal('read', strict_permission=True):
-        raise argparse.ArgumentTypeError("GE graph file: %r cannot be read, please check." % file_path)
-
+        logger.error(f"GE graph file: {file_path} %r cannot be read, please check.")
+        raise argparse.ArgumentTypeError
     if file_stat.is_dir:
-        raise argparse.ArgumentTypeError("We need GE graph file, bug you give a path!")
+        logger.error("We need GE graph file, bug you give a path!")
+        raise argparse.ArgumentTypeError
     if not file_stat.is_legal_file_type(["txt"]):
-        err_msg = "Please make sure that the file you provide is correct, " \
-                  "we need files similar to ge_proto_xx_graph_Build.txt"
-        raise argparse.ArgumentTypeError(err_msg)
+        logger.error("Please make sure that the file you provide is correct, "
+                     "we need files similar to ge_proto_xx_graph_Build.txt")
+        raise argparse.ArgumentTypeError
     return file_path

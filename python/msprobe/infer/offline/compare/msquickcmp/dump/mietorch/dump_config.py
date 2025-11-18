@@ -16,8 +16,8 @@
 import json
 import os.path
 
+from msprobe.core.common.log import logger
 from msprobe.infer.utils.file_open_check import ms_open
-from msprobe.infer.offline.compare.msquickcmp.common import utils
 
 
 class DumpConfig:
@@ -45,10 +45,10 @@ class DumpConfig:
             with ms_open(config_path, "w") as f:
                 json.dump(self.config, f, indent=4)
         except FileNotFoundError:
-            utils.logger.error("File not found.")
+            logger.error("File not found.")
             raise
         except json.JSONDecodeError as e:
-            utils.logger.error(f"JSON decode error:{e}")
+            logger.error(f"JSON decode error:{e}")
             raise
 
 

@@ -24,7 +24,7 @@ import sys
 import numpy as np
 import torch
 
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.llm.msit_llm.common.utils import check_output_path_legality
 from msprobe.infer.llm.msit_llm.common.tool import TensorBinFile
 from msprobe.infer.utils.check.rule import Rule
@@ -56,7 +56,7 @@ def get_bin_data_from_dir(dump_data_dir, max_depth=20):
     for root, _, files in os.walk(dump_data_dir):
         root_len = len(root.split('/'))
         if root_len - dump_data_dir_len >= max_depth:
-            logger.error("Parse of bin dump data depth exceeds the max recursion limit %d." % (max_depth))
+            logger.error(f"Parse of bin dump data depth exceeds the max recursion limit {max_depth}.")
             raise RecursionError("Maximum recursion depth exceeded in comparison.")
         for filename in files:
             if filename.endswith(".bin"):

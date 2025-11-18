@@ -23,10 +23,10 @@ from typing import Union, List
 
 import numpy as np
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
-
 from msprobe.infer.utils.util import load_file_to_read_common_check
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
@@ -107,10 +107,10 @@ class OmParser(object):
                 try:
                     return json.load(input_file)
                 except Exception as exc:
-                    utils.logger.error('Load Json {} failed, {}'.format(json_file_path, str(exc)))
+                    logger.error(f"Load Json {json_file_path} failed, {str(exc)}")
                     raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PARSER_JSON_FILE_ERROR) from exc
         except IOError as input_file_open_except:
-            utils.logger.error('Failed to open"' + json_file_path + '", ' + str(input_file_open_except))
+            logger.error('Failed to open"' + json_file_path + '", ' + str(input_file_open_except))
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR) from input_file_open_except
 
     @staticmethod
@@ -212,7 +212,7 @@ class OmParser(object):
                 batch_index_in_operator = utils.get_batch_index_from_name(operator.get(NAME_OBJECT))
                 if cur_batch_index == batch_index_in_operator:
                     return self._parse_net_output_node_attr(operator)
-        utils.logger.error("get npu output node info failed.")
+        logger.error("get npu output node info failed.")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PARSER_JSON_FILE_ERROR)
 
     def get_dynamic_scenario_info(self):
@@ -285,7 +285,7 @@ class OmParser(object):
         atc_cmd_with_range = " ".join(atc_cmd_with_range_split)
 
         if not self.shape_range:  # Only print once, just if shape_range is False
-            utils.logger.info(
+            logger.info(
                 f"Convert atc arg '{INPUT_SHAPE} {input_shape_args}' -> '{INPUT_SHAPE_RANGE} {input_shape_range_args}'"
             )
         self.shape_range = True
@@ -376,7 +376,7 @@ class OmParser(object):
                 continue
             data_type = DTYPE_MAP.get(input_object.get(DTYPE_OBJECT))
             if not data_type:
-                utils.logger.error("The dtype attribute does not support {} value.".format(input_object[DTYPE_OBJECT]))
+                logger.error(f"The dtype attribute does not support {input_object[DTYPE_OBJECT]} value.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_KEY_ERROR)
             data_type_size = np.dtype(data_type).itemsize
             if self.shape_range:
@@ -395,14 +395,14 @@ class OmParser(object):
         for input_object in input_desc_array:
             shape_list = []
             if SHAPE_OBJECT not in input_object:
-                utils.logger.error("Please specify the input shape of om model through -is param")
+                logger.error("Please specify the input shape of om model through -is param")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             data_type = DTYPE_MAP.get(input_object.get(DTYPE_OBJECT))
             if not data_type:
-                utils.logger.error("The dtype attribute does not support {} value.".format(input_object[DTYPE_OBJECT]))
+                logger.error(f"The dtype attribute does not support {input_object[DTYPE_OBJECT]} value.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_KEY_ERROR)
             if self.shape_range:
-                utils.logger.error("Please specify the input shape of om model through -is param")
+                logger.error("Please specify the input shape of om model through -is param")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             else:
                 input_format = input_object.get(LAYOUT_OBJECT, "NCHW")

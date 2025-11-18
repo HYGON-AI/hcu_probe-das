@@ -27,8 +27,8 @@ import numpy as np
 import pandas as pd
 
 from msprobe.infer.utils.constants import FileCheckConst
-from msprobe.infer.utils.log import logger
-from msprobe.infer.utils.util import recursion_depth_decorator
+from msprobe.core.common.log import logger
+from msprobe.core.common.decorator import recursion_depth_decorator
 
 proc_lock = multiprocessing.Lock()
 
@@ -164,7 +164,7 @@ class FileOpen:
     def check_file_path(self):
         support_mode = self.SUPPORT_READ_MODE + self.SUPPORT_WRITE_MODE + self.SUPPORT_READ_WRITE_MODE
         if self.mode not in support_mode:
-            logger.error("File open not support %s mode" % self.mode)
+            logger.error(f"File open not support {self.mode} mode")
             raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         check_link(self.file_path)
         self.file_path = os.path.realpath(self.file_path)
@@ -193,7 +193,7 @@ class FileOpen:
 def check_link(path):
     abs_path = os.path.abspath(path)
     if os.path.islink(abs_path):
-        logger.error('The file path {} is a soft link.'.format(path))
+        logger.error(f"The file path {path} is a soft link.")
         raise FileCheckException(FileCheckException.SOFT_LINK_ERROR)
 
 
@@ -207,51 +207,51 @@ def check_path_length(path, name_length=None):
 
 def check_path_exists(path):
     if not os.path.exists(path):
-        logger.error('The file path %s does not exist.' % path)
+        logger.error(f"The file path {path} does not exist.")
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_not_exists(path):
     if os.path.exists(path):
-        logger.error('The file path %s already exist.' % path)
+        logger.error(f"The file path {path} already exist.")
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_readability(path):
     if not os.access(path, os.R_OK):
-        logger.error('The file path %s is not readable.' % path)
+        logger.error(f"The file path {path} is not readable.")
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_writability(path):
     if not os.access(path, os.W_OK):
-        logger.error('The file path %s is not writable.' % path)
+        logger.error(f"The file path {path} is not writable.")
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_executable(path):
     if not os.access(path, os.X_OK):
-        logger.error('The file path %s is not executable.' % path)
+        logger.error(f"The file path {path} is not executable.")
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_other_user_writable(path):
     st = os.stat(path)
     if st.st_mode & 0o002:
-        logger.error('The file path %s may be insecure because other users have write permissions. ' % path)
+        logger.error(f"The file path {path} may be insecure because other users have write permissions.")
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid() and os.getuid() != 0:
-        logger.error('The file path %s may be insecure because is does not belong to you.' % path)
+        logger.error(f"The file path {path} may be insecure because is does not belong to you.")
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_pattern_valid(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        logger.error('The file path %s contains special characters.' % (path))
+        logger.error(f"The file path {path} contains special characters.")
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
@@ -351,7 +351,7 @@ def check_path_before_create(path):
 
     if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
-                                 'The file path {} contains special characters.'.format(path))
+                                 f"The file path {path} contains special characters.")
 
 
 def check_dirpath_permission(path):
@@ -416,7 +416,7 @@ def change_mode(path, mode):
         os.chmod(path, mode)
     except PermissionError as ex:
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
-                                 'Failed to change {} authority. {}'.format(path, str(ex))) from ex
+                                 f"Failed to change {path} authority. {str(ex)}") from ex
 
 
 @recursion_depth_decorator('components.utils.file_utils.recursive_chmod')
@@ -538,7 +538,7 @@ def save_npy(data, filepath):
 
 def save_npy_to_txt(data, dst_file='', align=0):
     if os.path.exists(dst_file):
-        logger.info("Dst file %s exists, will not save new one." % dst_file)
+        logger.info(f"Dst file {dst_file} exists, will not save new one.")
         return
     shape = data.shape
     data = data.flatten()
@@ -552,7 +552,7 @@ def save_npy_to_txt(data, dst_file='', align=0):
     try:
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
     except Exception as e:
-        logger.error("An unexpected error occurred: %s when savetxt to %s" % (str(e), dst_file))
+        logger.error(f"An unexpected error occurred: {str(e)} when savetxt to{dst_file}")
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
@@ -659,10 +659,10 @@ def remove_path(path):
         else:
             shutil.rmtree(path)
     except PermissionError as err:
-        logger.error("Failed to delete {}. Please check the permission.".format(path))
+        logger.error(f"Failed to delete {path}. Please check the permission.")
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
     except Exception as e:
-        logger.error("Failed to delete {}. Please check.".format(path))
+        logger.error(f"Failed to delete {path}. Please check.")
         raise RuntimeError("Delete file or directory failed.") from e
 
 
