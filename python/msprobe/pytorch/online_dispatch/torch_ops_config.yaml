@@ -1,0 +1,58 @@
+aten_ops_blacklist:
+  - max_pool2d_with_indices
+  - detach
+  - allreduce_
+  - max
+  - npu_rotary_mul
+  - split_with_sizes
+  - npu_dtype_cast  
+  - add_
+  - _cudnn_rnn
+  - _local_scalar_dense
+  - _pin_memory
+  - _to_copy
+  - _unsafe_view
+  - clone
+  - contiguous
+  - copy_
+  - cudnn_batch_norm
+  - cudnn_batch_norm_backward
+  - detach
+  - empty
+  - index_put_
+  - lift_fresh
+  - max_pool2d_with_indices_backward # shape unmatch
+  - native_batch_norm_backward
+  - new_empty
+  - new_empty_strided
+  - new_full
+  - new_ones
+  - new_zeros
+  - ones
+  - ones_like
+  - permute
+  - rand
+  - rand_like
+  - randint
+  - randint_like
+  - randn
+  - randn_like
+  - randperm
+  - scalar_tensor
+  - select
+  - to
+  - transpose
+  - unbind
+  - view
+  - zero
+  - zero_
+  - zeros
+  - zeros_like
+
+npu_adjust_autograd:
+  - adaptive_avg_pool2d
+  - batch_norm
+  - log_softmax
+  - nll_loss
+  - to
+  
