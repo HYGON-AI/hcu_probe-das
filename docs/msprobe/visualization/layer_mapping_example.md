@@ -86,12 +86,9 @@ GPTModel:
 
 执行命令，指定-lm：
 ```
-msprobe -f pytorch graph -i ./compare.json -o ./output -lm ./mapping.yaml
+msprobe graph_visualize -i ./compare.json -o ./output -lm ./mapping.yaml
 ```
-或
-```
-msprobe -f mindspore graph -i ./compare.json -o ./output -lm ./mapping.yaml
-```
+
 可以看到，除了language_model层（NPU多的一层，GPU没有层与其匹配），其余在mapping.yaml文件配置的层均匹配上了。
 
 ![mapping.png](./mapping.png)
