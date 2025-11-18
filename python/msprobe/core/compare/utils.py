@@ -679,8 +679,8 @@ def _compare_parser(parser):
     # rank：ms静态图比对、推理离线模型一键式比对
     parser.add_argument("--rank", dest="rank", type=str, required=False,
                         help="<optional> Ranks to compare when compare kernel of Mindspore for <compare auto>. "
-                             "Ranks to compare for <torchair dumps>."
-                             " Input rank ID [0, 255] for <compare offline_model>.")
+                             "Ranks to compare for <torchair dumps>. "
+                             "Input rank ID [0, 255] for <compare offline_model>.")
     parser.add_argument("--step", dest="step", type=str, required=False,
                         help="<optional> Steps to compare when compare kernel of Mindspore.")
     parser.add_argument('--input_data', dest="input_data", default='',

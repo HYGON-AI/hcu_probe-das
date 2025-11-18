@@ -32,40 +32,25 @@ from msprobe.infer.offline.compare.msquickcmp.dump.args_adapter import DumpArgsA
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
-def check_normal_dump_param(args):
-    if args.opname:
-        raise NotImplementedError("\'--operation-name\' or \'-opname\' only support "
-                                  "MindIE-Torch dump scenario.")
-    if args.exec:
-        raise NotImplementedError("\'--exec\' only support MindIE-Torch dump scenario.")
-
-
 def _offline_dump_parser(parser):
     parser.add_argument(
-        '-m',
-        '--model',
+        '-gp',
+        '--golden_path',
         required=False,
-        dest="model_path",
+        dest="golden_path",
         type=check_model_path_legality,
         help='The original model (.onnx or .pb or saved_model) file path')
     parser.add_argument(
         '--input_data',
         default='',
-        dest="input_data_path",
+        dest="input_data",
         type=check_input_path_legality,
         help='The input data path of the model. Separate multiple inputs with commas(,).'
              ' E.g: input_0.bin,input_1.bin')
     parser.add_argument(
-        '-c',
-        '--cann_path',
-        default=CANN_PATH,
-        dest="cann_path",
-        type=check_cann_path_legality,
-        help='The CANN installation path')
-    parser.add_argument(
         '-o',
-        '--output',
-        dest="out_path",
+        '--output_path',
+        dest="output_path",
         default='',
         type=check_output_path_legality,
         help='The output path')
@@ -83,7 +68,6 @@ def _offline_dump_parser(parser):
         default='0',
         help='Input rank ID [0, 255].')
     parser.add_argument(
-        '-dr',
         '--dym_shape_range',
         type=check_dym_range_string,
         dest="dym_shape_range",
@@ -92,7 +76,6 @@ def _offline_dump_parser(parser):
              "using this means ignore input_shape"
              " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
     parser.add_argument(
-        '-ofs',
         '--onnx_fusion_switch',
         dest="onnx_fusion_switch",
         default=True,
@@ -124,22 +107,6 @@ def _offline_dump_parser(parser):
         type=check_input_json_path,
         help="When dump saved_model, you need provide tf-ops-json file path.")
     parser.add_argument(
-        "--exec",
-        dest="exec",
-        required=False,
-        type=safe_string,
-        help="Exec command to run acltransformer model inference, "
-             "only support MindIE-Torch dump scenario. "
-             "For example: --exec \'bash run.sh patches/models/modeling_xxx.py\' ")
-    parser.add_argument(
-        "-opname",
-        "--operation_name",
-        required=False,
-        dest="opname",
-        type=safe_string,
-        default=None,
-        help="Operation names need to dump, only support MindIE-Torch dump scenario.")
-    parser.add_argument(
         '--fusion_switch_file',
         dest="fusion_switch_file",
         type=check_fusion_cfg_path_legality,
@@ -147,127 +114,22 @@ def _offline_dump_parser(parser):
 
 
 def offline_dump_cli(args):
-    output_path = "./" if args.out_path == '' else args.out_path
+    output_path = "./" if args.output_path == '' else args.output_path
     if not is_enough_disk_space_left(output_path):
         raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
-    if args.exec:
-        from msprobe.infer.offline.compare.msquickcmp.dump.mietorch.dump_config import DumpConfig
-        DumpConfig(dump_path=args.out_path, api_list=args.opname)
-        cmds = args.exec.split()
-        cmds = filter_cmd(cmds)
-        subprocess.run(cmds, shell=False)
-    else:
-        if (not args.model_path) or (not args.device_pattern):
-            raise NotImplementedError("If you do not inference with MindIE-Torch, "
-                                      "must use arguments '-m' and '-dp' to do next.")
-        check_normal_dump_param(args)
-        cmp_args = DumpArgsAdapter(args.model_path,
-                                   input_data_path=args.input_data_path, cann_path=args.cann_path,
-                                   out_path=args.out_path, input_shape=args.input_shape, device=args.device,
-                                   dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch,
-                                   saved_model_signature=args.saved_model_signature,
-                                   saved_model_tag_set=args.saved_model_tag_set, device_pattern=args.device_pattern,
-                                   tf_json_path=args.tf_json_path, fusion_switch_file=args.fusion_switch_file)
-        dump_process(cmp_args, True)
-
-
-def _compare_offline_model_parser(parser):
-    parser.add_argument(
-        '-tp',
-        '--target_path',
-        required=False,
-        dest="target_path",
-        type=check_target_model_path_legality,
-        help='The offline model (.om or saved_model) file path')
-    parser.add_argument(
-        '-gp',
-        '--golden_path',
-        required=False,
-        dest="golden_path",
-        type=check_model_path_legality,
-        help='The original model (.pb or saved_model or .onnx or .om) file path')
-    parser.add_argument(
-        '-o',
-        '--output_path',
-        dest="output_path",
-        default='./',
-        type=check_output_path_legality,
-        help='The output path')
-    parser.add_argument(
-        '--input_data',
-        default='',
-        dest="input_data",
-        type=check_input_data_path,
-        help='The input data path of the model. Separate multiple inputs with commas(,).'
-             ' E.g: input_0.bin,input_1.bin')
-    parser.add_argument(
-        '--input_shape',
-        type=check_dict_kind_string,
-        dest="input_shape",
-        default='',
-        help="Shape of input shape. Separate multiple nodes with semicolons(;)."
-             " E.g: \"input_name1:1,224,224,3;input_name2:3,300\"")
-    parser.add_argument(
-        '--rank',
-        type=check_rank_range_valid,
-        dest="rank",
-        default='0',
-        help='Input device ID [0, 255].')
-    parser.add_argument(
-        '--output_size',
-        type=check_number_list,
-        dest="output_size",
-        default='',
-        help='The size of output. Separate multiple sizes with commas(,). E.g: 10200,34000')
-    parser.add_argument(
-        '--output_nodes',
-        type=check_dict_kind_string,
-        dest="output_nodes",
-        default='',
-        help="Output nodes designated by user. Separate multiple nodes with semicolons(;)."
-             " E.g: \"node_name1:0;node_name2:1;node_name3:0\"")
-    parser.add_argument(
-        '--dym_shape_range',
-        type=check_dym_range_string,
-        dest="dym_shape_range",
-        default='',
-        help="Dynamic shape range using in dynamic model, "
-             "using this means ignore input_shape"
-             " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
-    parser.add_argument(
-        '-ofs',
-        '--onnx_fusion_switch',
-        dest="onnx_fusion_switch",
-        default=True,
-        type=str2bool,
-        help='Onnxruntime fusion switch, set False for dump complete onnx data when '
-             'necessary.Usage: -ofs False')
-    parser.add_argument(
-        '-qfr',
-        '--quant_fusion_rule_file',
-        type=check_quant_json_path_legality,
-        dest="quant_fusion_rule_file",
-        default='',
-        help="the quant fusion rule file path")
-    parser.add_argument(
-        '--saved_model_signature',
-        dest="saved_model_signature",
-        default='serving_default',
-        help="Enter the signature of the model")
-    parser.add_argument(
-        '--saved_model_tag_set',
-        dest="saved_model_tag_set",
-        default='serve',
-        help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
-             "for example, --saved_model_tag_set ['serve', 'general_parser']")
-
-
-offline_model_compare_allowed_keys = {
-    'mode',
-    'target_path', 'golden_path', 'output_path', 'input_data', 'input_shape', 'rank',
-    'output_size', 'output_nodes', 'dym_shape_range', 'onnx_fusion_switch', 'quant_fusion_rule_file',
-    'saved_model_signature', 'saved_model_tag_set'
-}
+    # if (not args.model_path) or (not args.device_pattern):
+    #     raise NotImplementedError("If you do not inference with MindIE-Torch, "
+    #                               "must use arguments '-m' and '-dp' to do next.")
+    if not args.golden_path:
+        raise NotImplementedError("must use arguments '-gp' and '-dp' to do dump, please check arguments.")
+    cmp_args = DumpArgsAdapter(args.golden_path,
+                               input_data=args.input_data, cann_path=CANN_PATH,
+                               output_path=args.output_path, input_shape=args.input_shape, rank=args.rank,
+                               dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch,
+                               saved_model_signature=args.saved_model_signature,
+                               saved_model_tag_set=args.saved_model_tag_set, device_pattern=args.device_pattern,
+                               tf_json_path=args.tf_json_path, fusion_switch_file=args.fusion_switch_file)
+    dump_process(cmp_args, True)
 
 
 def compare_offline_model_mode(args):
