@@ -1,0 +1,4 @@
+aten_ops_blacklist:
+  - rand
+npu_adjust_autograd:
+  - to
