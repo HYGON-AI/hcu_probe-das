@@ -1,11 +1,8 @@
-import os
-import shutil
 import unittest
 from unittest.mock import patch
 
 from msprobe.core.common.const import Const
-from msprobe.pytorch.dump.pt_config import parse_json_config, parse_task_config, \
-    StatisticsConfig, RunUTConfig
+from msprobe.pytorch.dump.pt_config import parse_json_config, StatisticsConfig
 
 
 class TestPtConfig(unittest.TestCase):
@@ -70,7 +67,3 @@ class TestStatisticsConfig(unittest.TestCase):
             self.config._check_summary_mode()
         except Exception as e:
             self.fail(f"Unexpected exception raised: {e}")
-
-
-if __name__ == '__main__':
-    unittest.main()
