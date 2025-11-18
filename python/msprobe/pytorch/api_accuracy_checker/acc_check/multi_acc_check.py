@@ -172,6 +172,11 @@ def run_parallel_ut(config):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
     finally:
+        # 最后再更新一次进度条，避免因缓存写入等原因子进程结束而进度未刷新的问题
+        if wait_for_file_write_complete(config.result_csv_path):
+            result_file = read_csv(config.result_csv_path)
+            completed_items = len(result_file)
+            progress_bar.update(completed_items - progress_bar.n)
         if progress_bar.n < config.total_items:
             logger.warning("The UT task has not been completed. The parameter '-csv_path' along with the path to " \
                            "the result CSV file will be utilized to resume the UT task.")
@@ -184,6 +189,22 @@ def run_parallel_ut(config):
         logger.error(f"Error: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+
+
+def wait_for_file_write_complete(file_path, timeout=3600):
+    last_size = 0
+    start_time = time.time()  # 记录开始时间
+    while True:
+        current_size = os.path.getsize(file_path)
+        # 检查是否文件大小未变化
+        if current_size == last_size:
+            return True  # 文件写入完成，返回 True
+        last_size = current_size
+        # 检查是否超时
+        if time.time() - start_time > timeout:
+            logger.error("write the result csv file timeout.")
+            return False  # 超时，返回 False
+        time.sleep(0.1)  # 适当的延时
 
 
 def prepare_config(args):
