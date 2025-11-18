@@ -30,10 +30,10 @@ from msprobe.infer.offline.compare.msquickcmp.dump.args_adapter import DumpArgsA
 
 
 def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
-    if is_saved_model_valid(args.model_path):
+    if is_saved_model_valid(args.golden_path):
         from msprobe.infer.offline.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-        return TfSaveModelDumpData(args, args.model_path)
-    model_name, extension = utils.get_model_name_and_extension(args.model_path)
+        return TfSaveModelDumpData(args, args.golden_path)
+    model_name, extension = utils.get_model_name_and_extension(args.golden_path)
     if extension == ".pb":
         from msprobe.infer.offline.compare.msquickcmp.tf.tf_dump_data import TfDumpData
         return TfDumpData(args)
@@ -47,9 +47,9 @@ def _generate_golden_data_model(args: DumpArgsAdapter, npu_dump_npy_path):
 
 
 def _generate_model_adapter(args: DumpArgsAdapter):
-    if is_saved_model_valid(args.model_path):
+    if is_saved_model_valid(args.golden_path):
         from msprobe.infer.offline.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
-        return NpuTfAdapterDumpData(args, args.model_path)
+        return NpuTfAdapterDumpData(args, args.golden_path)
     else:
         logger.error("Currently, npu dump supports only saved_model, Please check your model type")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
@@ -62,9 +62,9 @@ def dump_process(args: DumpArgsAdapter, use_cli: bool):
     Exception Description:
         exit the program when an AccuracyCompare Exception  occurs
     """
-    args.model_path = os.path.realpath(args.model_path)
+    args.golden_path = os.path.realpath(args.golden_path)
     args.cann_path = os.path.realpath(args.cann_path)
-    args.input_path = convert_npy_to_bin(args.input_path)
+    args.input_data = convert_npy_to_bin(args.input_data)
     args.fusion_switch_file = os.path.realpath(args.fusion_switch_file) if args.fusion_switch_file else None
     check_and_dump(args, use_cli)
 
@@ -72,7 +72,7 @@ def dump_process(args: DumpArgsAdapter, use_cli: bool):
 def dump_data(args, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
-        args.out_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
+        args.output_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
     if args.device_pattern == "npu":
         """
         npu dump
@@ -97,7 +97,7 @@ def npu_dump_process(args, use_cli):
 
 
 def cpu_dump_process(args):
-    if is_saved_model_valid(args.model_path):
+    if is_saved_model_valid(args.golden_path):
         # 1. get dumper
         golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path="")
         # 2. generate input
@@ -107,21 +107,21 @@ def cpu_dump_process(args):
             raise ValueError("when dump saved_model in cpu, please ensure that --tf-json is provided.")
         golden_dumper.generate_dump_data(args.tf_json_path)
     else:
-        _, extension = utils.get_model_name_and_extension(args.model_path)
+        _, extension = utils.get_model_name_and_extension(args.golden_path)
         golden_dumper = _generate_golden_data_model(args, npu_dump_npy_path=None)
         golden_dumper.generate_inputs_data(npu_dump_data_path=None, use_aipp=False)
         golden_dumper.generate_dump_data()
 
 
 def check_and_dump(args, use_cli: bool):
-    utils.check_file_or_directory_path(args.model_path, is_saved_model_valid(args.model_path))
+    utils.check_file_or_directory_path(args.golden_path, is_saved_model_valid(args.golden_path))
     if args.fusion_switch_file:
         utils.check_file_or_directory_path(args.fusion_switch_file)
-    utils.check_device_param_valid(args.device)
-    utils.check_file_or_directory_path(os.path.realpath(args.out_path), True)
+    utils.check_device_param_valid(args.rank)
+    utils.check_file_or_directory_path(os.path.realpath(args.output_path), True)
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
-    original_out_path = os.path.realpath(os.path.join(args.out_path, time_dir))
-    args.out_path = original_out_path
+    original_out_path = os.path.realpath(os.path.join(args.output_path, time_dir))
+    args.output_path = original_out_path
     # deal with the dymShape_range param if exists
     input_shapes = []
     if args.dym_shape_range:

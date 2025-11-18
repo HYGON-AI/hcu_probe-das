@@ -73,7 +73,6 @@ class OnnxDumpData(DumpData):
         self.dym_shape_range = arguments.dym_shape_range
         self.onnx_fusion_switch = arguments.onnx_fusion_switch
         self.cann_path = arguments.cann_path
-        self.dump = True
 
         self._check_path_exists(self.model_path, extentions="onnx")
 
@@ -108,7 +107,7 @@ class OnnxDumpData(DumpData):
         inputs_tensor_info = self._get_inputs_tensor_info()
         if use_aipp:
             if not npu_dump_data_path:
-                logger.error("find no aipp op in dump data, please check if --dump is True")
+                logger.error("find no aipp op in dump data")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             self._check_path_exists(npu_dump_data_path)
             self.inputs_map = self._get_inputs_data_aipp(self.data_dir, inputs_tensor_info, npu_dump_data_path)
@@ -207,20 +206,18 @@ class OnnxDumpData(DumpData):
             model_relative_name = "../model"
         else:
             model_relative_name = "model"
-            if self.dump:
-                model_dir = os.path.join(self.output_path, model_relative_name)
-                utils.create_directory(model_dir)
+            model_dir = os.path.join(self.output_path, model_relative_name)
+            utils.create_directory(model_dir)
         return data_dir, onnx_dump_data_dir, model_dir
 
     def _modify_model_add_outputs_nodes(self, onnx_model, save_path):
-        if self.dump:
-            del onnx_model.graph.output[:]
-            
-            onnx_model.graph.output.extend(
-                onnx.ValueInfoProto(name=tensor_name) 
-                for node in onnx_model.graph.node 
-                for tensor_name in node.output
-            )
+        del onnx_model.graph.output[:]
+
+        onnx_model.graph.output.extend(
+            onnx.ValueInfoProto(name=tensor_name)
+            for node in onnx_model.graph.node
+            for tensor_name in node.output
+        )
         
         model_size = onnx_model.ByteSize()
         save_external_flag = model_size < 0 or model_size > MAX_PROTOBUF
@@ -340,8 +337,6 @@ class OnnxDumpData(DumpData):
         for node in old_onnx_model.graph.node:
             #存储onnx的输入dump数据
             for i, node_input in enumerate(node.input):
-                if not self.dump:
-                    break
                 file_name = self._generate_dump_data_file_name("input_" + node.name, i)
                 if len(file_name) > MAX_FILE_NAME_LEN:
                     new_file_name = str(round(time.time() * 1e6)) + str(len(file_name_map)) + ".npy"
@@ -351,8 +346,6 @@ class OnnxDumpData(DumpData):
                 if input_map.get(node_input) is not None:
                     np.save(file_path, input_map.get(node_input))
             for j, output in enumerate(node.output):
-                if not self.dump and output not in net_output_node:
-                    continue
                 file_name = self._generate_dump_data_file_name(node.name, j)
                 if len(file_name) > MAX_FILE_NAME_LEN:
                     new_file_name = str(round(time.time() * 1e6)) + str(len(file_name_map)) + ".npy"

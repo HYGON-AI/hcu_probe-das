@@ -16,20 +16,11 @@
 import os
 from msprobe.core.common.file_utils import check_file_type, check_file_or_directory_path
 from msprobe.core.common.const import FileCheckConst, Const
-from msprobe.core.common.utils import CompareException, check_compare_validate_args
+from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import get_paired_dirs
 from msprobe.core.compare.utils import get_compare_framework
 from msprobe.core.compare.utils import compare_distributed_inner
-
-# 定义允许的参数
-auto_compare_allowed_keys = {
-    'mode',
-    'target_path', 'golden_path', 'output_path', 'fuzzy_match', 'highlight',
-    'cell_mapping', 'api_mapping', 'data_mapping', 'layer_mapping',
-    'diff_analyze',
-    'rank', 'step'
-}
 
 
 def compare_auto_mode(args, depth=1):
@@ -37,8 +28,6 @@ def compare_auto_mode(args, depth=1):
     Auto-detect comparison mode based on input paths
     This is the original compare_cli logic
     """
-
-    check_compare_validate_args(args, auto_compare_allowed_keys, 'auto_compare')
 
     if depth > 2:
         logger.error("Recursive compare error, depth exceeds 2.")
