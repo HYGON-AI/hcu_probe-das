@@ -18,11 +18,13 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 from msprobe.core.compare.auto_compare import compare_auto_mode
 from msprobe.core.compare.torchair_acc_cmp import compare_torchair_mode
+from msprobe.infer.offline.compare.msquickcmp.main import compare_offline_model_mode
 
 
 MODE_DISPATCHER = {
     'auto': compare_auto_mode,
     'torchair': compare_torchair_mode,
+    'offline_model': compare_offline_model_mode
 }
 
 

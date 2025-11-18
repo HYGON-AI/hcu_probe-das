@@ -25,14 +25,13 @@ import re
 import shutil
 import subprocess
 import json
-import psutil
 
 import numpy as np
 import pandas as pd
 from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
 from msprobe.infer.utils.security_check import get_valid_write_path, ms_makedirs
-from msprobe.infer.offline.common import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
@@ -123,11 +122,11 @@ def check_exec_cmd(command: str):
 
 def check_exec_script_file(script_path: str):
     if not os.path.exists(script_path):
-        logger.error("File {} is not exist.".format(script_path))
+        logger.error(f"File {script_path} is not exist.")
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
     if not os.access(script_path, os.X_OK):
-        logger.error("Script {} don't has X authority.".format(script_path))
+        logger.error(f"Script {script_path} don't has X authority.")
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_RIGHT_ERROR)
 
 
@@ -144,17 +143,17 @@ def check_file_or_directory_path(path, isdir=False):
 
     if isdir:
         if not os.path.isdir(path):
-            logger.error('The path {} is not a directory.Please check the path'.format(path))
+            logger.error(f"The path {path} is not a directory. Please check the path")
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
         if not os.access(path, os.W_OK):
-            logger.error('The path{} does not have permission to write.Please check the path permission'.format(path))
+            logger.error(f"The path {path} does not have permission to write. Please check the path permission")
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     else:
         if not os.path.isfile(path):
-            logger.error('The path {} is not a file.Please check the path'.format(path))
+            logger.error(f"The path {path} is not a file.Please check the path")
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
         if not os.access(path, os.R_OK):
-            logger.error('The path{} does not have permission to read.Please check the path permission'.format(path))
+            logger.error(f"The path {path} does not have permission to read.Please check the path permission")
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
 
@@ -304,7 +303,7 @@ def get_model_name_and_extension(offline_model_path):
     file_name = os.path.basename(offline_model_path)
     model_name, extension = os.path.splitext(file_name)
     if extension not in MODEL_TYPE:
-        logger.error("Model file {} suffix not valid, supported ones are {}".format(offline_model_path, MODEL_TYPE))
+        logger.error(f"Model file {offline_model_path} suffix not valid, supported ones are {MODEL_TYPE}")
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     return model_name, extension
 
@@ -343,7 +342,7 @@ def get_dump_data_path(dump_dir, is_net_output=False, model_name=None):
             break
 
     if not dump_data_dir:
-        logger.error("The directory \"{}\" does not contain dump data".format(dump_dir))
+        logger.error(f"The directory \"{dump_dir}\" does not contain dump data")
         raise AccuracyCompareException(ACCURACY_COMPARISON_NO_DUMP_FILE_ERROR)
 
     dump_data_path_list = []
@@ -658,9 +657,7 @@ def create_directory(dir_path):
         try:
             ms_makedirs(dir_path, mode=0o700)
         except OSError as ex:
-            logger.error(
-                'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex))
-            )
+            logger.error(f"Failed to create {dir_path}. Please check the path permission or disk space .{str(ex)}")
             raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR) from ex
 
 
@@ -696,7 +693,8 @@ def str2bool(v):
     elif v.lower() in ('no', 'false', 'f', 'n', '0'):
         return False
     else:
-        raise argparse.ArgumentTypeError('Boolean value expected true, 1, false, 0 with case insensitive.')
+        logger.error('Boolean value expected true, 1, false, 0 with case insensitive.')
+        raise argparse.ArgumentTypeError
 
 
 def merge_csv(csv_list, output_dir, output_csv_name):
@@ -719,11 +717,11 @@ def safe_delete_path_if_exists(path, is_log=False):
         path = get_valid_write_path(path, extensions=None, check_user_stat=False, is_dir=is_dir)
         if os.path.isfile(path):
             if is_log:
-                logger.info("File %s exist and will be deleted.", path)
+                logger.info(f"File {path} exist and will be deleted.")
             os.remove(path)
         else:
             if is_log:
-                logger.info("Folder %s exist and will be deleted.", path)
+                logger.info(f"Folder {path} exist and will be deleted.")
             shutil.rmtree(path)
 
 
@@ -733,10 +731,11 @@ def parse_json_file(json_path):
         with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE, encoding='utf-8') as file:
             return json.load(file)
     except FileNotFoundError as e:
-        raise FileNotFoundError(f"File '{json_path}' not found, Please check whether the json file path is "
-                                f"valid. {e}") from e
+        logger.error(f"File '{json_path}' not found, Please check whether the json file path is . {e}")
+        raise FileNotFoundError from e
     except json.JSONDecodeError as e:
-        raise RuntimeError(f"File '{json_path}' is not a valid JSON format. {e}") from e
+        logger.error(f"File '{json_path}' is not a valid JSON format. {e}")
+        raise RuntimeError from e
 
 
 def load_npy_from_buffer(raw_data, dtype, shape):

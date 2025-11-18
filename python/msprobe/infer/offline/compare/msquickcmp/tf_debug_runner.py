@@ -21,7 +21,7 @@ import argparse
 import sys
 import os
 
-
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.utils.util import load_file_to_read_common_check
@@ -70,7 +70,7 @@ class TfDebugRunner(object):
             with tf.io.gfile.GFile(self.args.model_path, "rb") as f:
                 global_graph_def = tf.compat.v1.GraphDef.FromString(f.read())
         except Exception as err:
-            utils.logger.error("Failed to load the model %r. %r" % (self.args.model_path, err))
+            logger.error(f"Failed to load the model {self.args.model_path}. {err}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR) from err
 
         self.global_graph = tf.Graph()
@@ -78,9 +78,9 @@ class TfDebugRunner(object):
             with self.global_graph.as_default():
                 tf.import_graph_def(global_graph_def, name="")
         except Exception as err:
-            utils.logger.error("Failed to load the model %r. %r" % (self.args.model_path, err))
+            logger.error(f"Failed to load the model {self.args.model_path}. {err}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR) from err
-        utils.logger.info("Load the model %s successfully." % self.args.model_path)
+        logger.info(f"Load the model {self.args.model_path} successfully.")
 
     def _get_outputs_tensor(self):
         outputs_tensor = []

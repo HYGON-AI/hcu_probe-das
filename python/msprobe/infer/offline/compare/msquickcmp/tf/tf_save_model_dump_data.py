@@ -23,6 +23,8 @@ import os
 import time
 
 import numpy as np
+
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
 from msprobe.infer.utils.util import load_file_to_read_common_check
@@ -112,7 +114,7 @@ class TfSaveModelDumpData(DumpData):
             input_path = self.input_path.split(",")
             for i, input_file in enumerate(input_path):
                 if not os.path.isfile(input_file):
-                    utils.logger.error("no such file exists: {}".format(input_file))
+                    logger.error(f"no such file exists: {input_file}")
                     raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
                 input_name = self.input_shape_list[i][0]
                 input_shape = self.input_shape_list[i][1]
@@ -139,7 +141,7 @@ class TfSaveModelDumpData(DumpData):
             input_bin_data = [np.fromfile(os.path.join(self.input, input_bin_file), dtype=np.float32)
                               for input_bin_file in input_files]
             if len(input_files) != len(self.input_shape_list):
-                utils.logger.error("numbers of files in input path and input_shape_list unequal, please check.")
+                logger.error("numbers of files in input path and input_shape_list unequal, please check.")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
             for index, bin_data in enumerate(input_bin_data):
                 bin_data = bin_data.reshape(self.input_shape_list[index][1])
@@ -195,7 +197,7 @@ class TfSaveModelDumpData(DumpData):
 
             out = sess.run(output_tensors, feed_dict)
         self._save_dump_data(out, output_tensors)
-        utils.logger.info("Dump tf data success, data saved in: %s", self.dump_data_tf)
+        logger.info(f"Dump tf data success, data saved in: {self.dump_data_tf}")
 
         return self.dump_data_tf
 

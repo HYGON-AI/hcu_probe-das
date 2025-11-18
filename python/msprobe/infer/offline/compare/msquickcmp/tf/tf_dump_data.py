@@ -25,6 +25,7 @@ import time
 import numpy as np
 import pexpect
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
@@ -102,16 +103,16 @@ class TfDumpData(DumpData):
             with tf.io.gfile.GFile(self.args.model_path, 'rb') as f:
                 global_graph_def = tf.compat.v1.GraphDef.FromString(f.read())
         except Exception as err:
-            utils.logger.error("Failed to load the model %s. %s" % (self.args.model_path, err))
+            logger.error(f"Failed to load the model {self.args.model_path}. {err}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR) from err
         self.global_graph = tf.Graph()
         try:
             with self.global_graph.as_default():
                 tf.import_graph_def(global_graph_def, name='')
         except Exception as err:
-            utils.logger.error("Failed to load the model %s. %s" % (self.args.model_path, err))
+            logger.error(f"Failed to load the model {self.args.model_path}. {err}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR) from err
-        utils.logger.info("Load the model %s successfully." % self.args.model_path)
+        logger.info(f"Load the model {self.args.model_path} successfully.")
 
     def _make_inputs_data(self, inputs_tensor):
         if self.args.input_path == "":
@@ -123,8 +124,7 @@ class TfDumpData(DumpData):
             input_path_list = []
             for index, tensor in enumerate(inputs_tensor):
                 if not tensor.shape:
-                    utils.logger.error(
-                        "The shape of %s is unknown. Please usr -i to assign the input path." % tensor.name)
+                    logger.error(f"The shape of {tensor.name} is unknown. Please usr -i to assign the input path.")
                     raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR)
                 input_data = np.random.random(self.tf_common.convert_tensor_shape(tensor.shape)) \
                     .astype(self.tf_common.convert_to_numpy_type(tensor.dtype))
@@ -133,17 +133,15 @@ class TfDumpData(DumpData):
                 try:
                     input_data.tofile(input_path)
                 except Exception as err:
-                    utils.logger.error("Failed to generate data %s. %s" % (input_path, err))
+                    logger.error(f"Failed to generate data {input_path}. {err}")
                     raise AccuracyCompareException(utils.ACCURACY_COMPARISON_BIN_FILE_ERROR) from err
-                utils.logger.info("file name: {}, shape: {}, dtype: {}".format(
-                    input_path, input_data.shape, input_data.dtype))
+                logger.info(f"file name: {input_path}, shape: {input_data.shape}, dtype: {input_data.dtype}")
                 self.input_path = ','.join(input_path_list)
         else:
             input_path = self.args.input_path.split(",")
             if len(inputs_tensor) != len(input_path):
-                utils.logger.error("the number of model inputs tensor is not equal the number of "
-                                      "inputs data, inputs tensor is: {}, inputs data is: {}".format(
-                    len(inputs_tensor), len(input_path)))
+                logger.error(f"the number of model inputs tensor is not equal the number of inputs data, "
+                             f"inputs tensor is: {len(inputs_tensor)}, inputs data is: {len(input_path)}")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
     def _run_model_tf2x(self, outputs_tensor):
@@ -201,28 +199,28 @@ class TfDumpData(DumpData):
         tf_dbg = pexpect.spawn(cmd_line)
         tf_dbg.logfile = sys.stdout.buffer
         tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
-        utils.logger.info("Start to run. Please wait....")
+        logger.info("Start to run. Please wait....")
         tf_dbg.sendline('run')
         index = tf_dbg.expect(['An error occurred during the run', 'tfdbg>'], timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         if index == 0:
             tf_dbg.sendline('exit')
-            utils.logger.error("Failed to run command: %s" % (cmd_line))
+            logger.error(f"Failed to run command: {cmd_line}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PYTHON_COMMAND_ERROR)
         tensor_name_path = os.path.join(self.important_dirs.get("tmp"), 'tf_tensor_names.txt')
         tf_dbg.sendline('lt > %s' % tensor_name_path)
         tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         if not os.path.exists(tensor_name_path):
             tf_dbg.sendline('exit')
-            utils.logger.error("Failed to save tensor name to file.")
+            logger.error("Failed to save tensor name to file.")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PYTHON_COMMAND_ERROR)
-        utils.logger.info("Save tensor name to %s successfully." % tensor_name_path)
+        logger.info(f"Save tensor name to {tensor_name_path} successfully.")
         pt_command_list = self._make_pt_command(tensor_name_path)
-        utils.logger.info("Start to run %d pt commands. Please wait..." % len(pt_command_list))
+        logger.info(f"Start to run {len(pt_command_list)} pt commands. Please wait...")
         for cmd in pt_command_list:
             tf_dbg.sendline(cmd.strip())
             tf_dbg.expect('tfdbg>', timeout=self.tf_common.TF_DEBUG_TIMEOUT)
         tf_dbg.sendline('exit')
-        utils.logger.info('Finish dump tf data.')
+        logger.info('Finish dump tf data.')
 
     def _get_all_node_and_input_node(self):
         input_nodes = []
@@ -246,33 +244,31 @@ class TfDumpData(DumpData):
         for tensor in outputs_tensor:
             tensor_info = tensor.strip().split(':')
             if len(tensor_info) != 2:
-                utils.logger.error(
-                    'Invalid output nodes (%s). Only support "name1:0;name2:1". Please check the output node.' % tensor)
+                logger.error(
+                    f"Invalid output nodes ({tensor}). Only support 'name1:0;name2:1'. Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             node_name = tensor_info[0].strip()  # 0 for node_name
             if not node_name:
-                utils.logger.error(
-                    'Invalid output nodes (%s). Only support "name1:0;name2:1". Please check the output node.' % tensor)
+                logger.error(
+                    f"Invalid output nodes ({tensor}). Only support 'name1:0;name2:1'. Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             if node_name not in node_list:
-                utils.logger.error(
-                    "The output node (%s) is not in the graph. Please check the output node." % node_name)
+                logger.error(f"The output node ({node_name}) is not in the graph. Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             index = tensor_info[1].strip()  # 1 for tensor_index
             if not index:
-                utils.logger.error(
-                    'Invalid output nodes (%s). Only support "name1:0;name2:1". Please check the output node.' % tensor)
+                logger.error(
+                    f"Invalid output nodes ({tensor}). Only support 'name1:0;name2:1'. Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             op = self.global_graph.get_operation_by_name(node_name)
             pattern = re.compile(r'^[0-9]+$')
             match = pattern.match(index)
             if match is None:
-                utils.logger.error("The index (%s) of %s is invalid. Please check the output node."
-                                      % (index, node_name))
+                logger.error(f"The index ({index}) of {node_name} is invalid. Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             if int(index) < 0 or int(index) >= len(op.outputs):
-                utils.logger.error("The index (%s) of %s out of range [0, %d). Please check the output node."
-                                      % (index, node_name, len(op.outputs)))
+                logger.error(f"The index ({index}) of {node_name} out of range [0, {len(op.outputs)}). "
+                             f"Please check the output node.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
 
     def _get_outputs_tensor(self):
@@ -286,5 +282,5 @@ class TfDumpData(DumpData):
             for name in output_nodes:
                 if self._check_node_output(name):
                     outputs_tensor.append(name + ":0")
-        utils.logger.info("The outputs tensor:\n{}\n".format(outputs_tensor))
+        logger.info(f"The outputs tensor:\n{outputs_tensor}\n")
         return outputs_tensor

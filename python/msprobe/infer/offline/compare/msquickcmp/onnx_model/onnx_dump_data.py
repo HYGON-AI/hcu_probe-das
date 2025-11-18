@@ -25,13 +25,13 @@ import onnx
 import onnxruntime
 import numpy as np
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 from msprobe.infer.offline.compare.msquickcmp.common.utils import InputShapeError, load_npy_from_buffer
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.common.convert import convert_bin_file_to_npy
-from msprobe.infer.offline.compare.msquickcmp.onnx_model.custom_op import CustomOp
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.util import load_file_to_read_common_check
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
@@ -66,11 +66,14 @@ class OnnxDumpData(DumpData):
 
     def __init__(self, arguments: CmpArgsAdapter, npu_dump_npy_path=None):
         super().__init__()
-        self.model_path, self.out_path, self.input_path = arguments.model_path, arguments.out_path, arguments.input_path
-        self.input_shape, self.dym_shape_range = arguments.input_shape, arguments.dym_shape_range
-        self.custom_op_type, self.onnx_fusion_switch = arguments.custom_op, arguments.onnx_fusion_switch
-        self.dump, self.cann_path = arguments.dump, arguments.cann_path
-        self.single_op = arguments.single_op
+        self.model_path = arguments.golden_path
+        self.output_path = arguments.output_path
+        self.input_data = arguments.input_data
+        self.input_shape = arguments.input_shape
+        self.dym_shape_range = arguments.dym_shape_range
+        self.onnx_fusion_switch = arguments.onnx_fusion_switch
+        self.cann_path = arguments.cann_path
+        self.dump = True
 
         self._check_path_exists(self.model_path, extentions="onnx")
 
@@ -80,19 +83,9 @@ class OnnxDumpData(DumpData):
         self.net_output, self.inputs_map, self.extend_inputs_map = {}, {}, {}
         self.origin_model, origin_model_contents = self._load_onnx(self.model_path)
 
-        if self.custom_op_type:
-            # remove custom op and add extend inputs map
-            custom_op = CustomOp(self.custom_op_type, self.model_path, npu_dump_npy_path, self.model_dir)
-            modify_model_path, self.extend_inputs_map = custom_op.remove_custom_op_and_add_inputs()
-            modify_model, modify_model_contents = self._load_onnx(modify_model_path)
-
-            self.dump_model_with_inputs_path = self._new_model_save_path(modify_model_path)
-            self.model_with_inputs = modify_model
-            self.model_with_inputs_session = self._load_session(modify_model_path)
-        else:
-            self.dump_model_with_inputs_path = self._new_model_save_path(self.model_path)
-            self.model_with_inputs = self.origin_model
-            self.model_with_inputs_session = self._load_session(self.model_path)
+        self.dump_model_with_inputs_path = self._new_model_save_path(self.model_path)
+        self.model_with_inputs = self.origin_model
+        self.model_with_inputs_session = self._load_session(self.model_path)
 
     @staticmethod
     def _check_input_shape_fix_value(op_name, model_shape, input_shape):
@@ -102,29 +95,25 @@ class OnnxDumpData(DumpData):
             str(model_shape),
         )
         if len(model_shape) != len(input_shape):
-            utils.logger.error(message)
+            logger.error(message)
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
         for index, value in enumerate(model_shape):
             if value is None or isinstance(value, str):
                 continue
             if input_shape[index] != value:
-                utils.logger.error(message)
+                logger.error(message)
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
     def generate_inputs_data(self, npu_dump_data_path=None, use_aipp=False):
         inputs_tensor_info = self._get_inputs_tensor_info()
         if use_aipp:
             if not npu_dump_data_path:
-                utils.logger.error("find no aipp op in dump data, please check if --dump is True")
+                logger.error("find no aipp op in dump data, please check if --dump is True")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             self._check_path_exists(npu_dump_data_path)
             self.inputs_map = self._get_inputs_data_aipp(self.data_dir, inputs_tensor_info, npu_dump_data_path)
         else:
             self.inputs_map = self._get_inputs_data(inputs_tensor_info)
-
-        # extend inputs add by removed custom op
-        if self.custom_op_type:
-            self.inputs_map.update(self.extend_inputs_map)
 
     def get_output_map(self, output_list):
         output_map, res_idx, output_list_size = {}, 0, len(output_list)
@@ -168,7 +157,7 @@ class OnnxDumpData(DumpData):
             model_path = load_file_to_read_common_check(model_path)
             infersession = onnxruntime.InferenceSession(model_path, options)
         except Exception as e:
-            utils.logger.error(f"Please check onnx model can run in local env. Error: {e}")
+            logger.error(f"Please check onnx model can run in local env. Error: {e}")
             raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
         return infersession
 
@@ -205,11 +194,11 @@ class OnnxDumpData(DumpData):
 
     def _create_dir(self):
         # create input directory
-        data_dir = os.path.join(self.out_path, "input")
+        data_dir = os.path.join(self.output_path, "input")
         utils.create_directory(data_dir)
 
         # create dump_data/onnx directory
-        onnx_dump_data_dir = os.path.join(self.out_path, "dump_data/onnx")
+        onnx_dump_data_dir = os.path.join(self.output_path, "dump_data/onnx")
         utils.create_directory(onnx_dump_data_dir)
 
         # create model directory
@@ -219,7 +208,7 @@ class OnnxDumpData(DumpData):
         else:
             model_relative_name = "model"
             if self.dump:
-                model_dir = os.path.join(self.out_path, model_relative_name)
+                model_dir = os.path.join(self.output_path, model_relative_name)
                 utils.create_directory(model_dir)
         return data_dir, onnx_dump_data_dir, model_dir
 
@@ -236,7 +225,7 @@ class OnnxDumpData(DumpData):
         model_size = onnx_model.ByteSize()
         save_external_flag = model_size < 0 or model_size > MAX_PROTOBUF
         
-        utils.logger.debug("Modfied model has size over 2G: %s", save_external_flag)
+        logger.debug(f"Modified model has size over 2G: {save_external_flag}")
         
         onnx.save_model(
             onnx_model, 
@@ -244,7 +233,7 @@ class OnnxDumpData(DumpData):
             save_as_external_data=save_external_flag
         )
         
-        utils.logger.info("Modified model has being saved successfully at: %s", os.path.abspath(save_path))
+        logger.info(f"Modified model has being saved successfully at: {os.path.abspath(save_path)}")
         
     def _get_inputs_tensor_info(self):
         inputs_tensor_info = []
@@ -261,27 +250,24 @@ class OnnxDumpData(DumpData):
 
             if utils.check_dynamic_shape(tensor_shape):
                 if not self.input_shapes:
-                    utils.logger.error(
-                        "The dynamic shape {} are not supported. Please "
-                        "set '-is' or '--input-shape' to fix the dynamic shape.".format(tensor_shape)
-                    )
+                    logger.error(
+                        f"The dynamic shape {tensor_shape} are not supported. "
+                        f"Please set '-is' or '--input-shape' to fix the dynamic shape.")
                     raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
             if self.input_shapes and tensor_name in self.input_shapes:
                 input_shape = self.input_shapes.get(tensor_name)
                 try:
                     number_shape = [int(dim) for dim in input_shape]
                 except (ValueError, TypeError) as error:
-                    utils.logger.error(
-                        utils.get_shape_not_match_message(InputShapeError.FORMAT_NOT_MATCH, self.input_shape)
-                    )
+                    logger.error(utils.get_shape_not_match_message(InputShapeError.FORMAT_NOT_MATCH, self.input_shape))
                     raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR) from error
                 self._check_input_shape_fix_value(tensor_name, tensor_shape, number_shape)
                 tensor_info = {"name": tensor_name, "shape": tuple(number_shape), "type": tensor_type}
-                utils.logger.info("Fix dynamic input shape of %s to %s" % (tensor_name, number_shape))
+                logger.info(f"Fix dynamic input shape of {tensor_name} to {number_shape}")
             else:
                 tensor_info = {"name": tensor_name, "shape": tensor_shape, "type": tensor_type}
             inputs_tensor_info.append(tensor_info)
-        utils.logger.info("model inputs tensor info:\n{}\n".format(inputs_tensor_info))
+        logger.info(f"model inputs tensor info:\n{inputs_tensor_info}\n")
         return inputs_tensor_info
 
     def _get_inputs_data(self, inputs_tensor_info):
@@ -290,7 +276,7 @@ class OnnxDumpData(DumpData):
         dtypes = [self._convert_to_numpy_type(ii["type"]) for ii in inputs_tensor_info]
 
         bin_file_path_array = []
-        if "" == self.input_path:
+        if "" == self.input_data:
             utils.check_file_or_directory_path(os.path.realpath(self.data_dir), True)
             input_bin_files = os.listdir(self.data_dir)
             if len(input_bin_files) == 0:
@@ -299,7 +285,7 @@ class OnnxDumpData(DumpData):
             bin_file_path_array = [os.path.join(self.data_dir, item) for item in input_bin_files]
 
         else:
-            input_initial_path = self.input_path.split(",")
+            input_initial_path = self.input_data.split(",")
             for input_item in input_initial_path:
                 input_item_path = os.path.realpath(input_item)
                 if input_item_path.endswith('.bin'):
@@ -317,11 +303,12 @@ class OnnxDumpData(DumpData):
             if bin_file.startswith("Aipp"):
                 aipp_input.append(os.path.join(npu_dump_data_path, bin_file))
         if len(aipp_input) != len(inputs_tensor_info):
-            utils.logger.error("lengths of aipp_input and input_tensor_info unequal, please check.")
+            logger.error("lengths of aipp_input and input_tensor_info unequal, please check.")
             raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INDEX_OUT_OF_BOUNDS_ERROR)
         for i, tensor_info in enumerate(inputs_tensor_info):
-            convert_bin_file_to_npy(aipp_input[i], os.path.join(self.out_path, "input"), self.cann_path)
-            aipp_output_path = os.path.join(self.out_path, "input", aipp_input[i].rsplit("/", 1)[1]) + ".output.0.npy"
+            convert_bin_file_to_npy(aipp_input[i], os.path.join(self.output_path, "input"), self.cann_path)
+            aipp_output_path = (os.path.join(self.output_path, "input", aipp_input[i].rsplit("/", 1)[1]) +
+                                ".output.0.npy")
             aipp_output_path = load_file_to_read_common_check(aipp_output_path)
             aipp_output = np.load(aipp_output_path)
             nchw_prod = np.prod(tensor_info["shape"])
@@ -329,7 +316,7 @@ class OnnxDumpData(DumpData):
             try:
                 c0 = int(nchw_prod / nchwc_prod_without_c1)
             except ZeroDivisionError as e:
-                utils.logger.error("Aipp output has wrong shape, file path: {}".format(aipp_output_path))
+                logger.error(f"Aipp output has wrong shape, file path: {aipp_output_path}")
                 raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR) from e
             onnx_input = aipp_output[..., :c0].transpose((0, 4, 2, 3, 1)).squeeze(-1).astype(np.float32)
             inputs_map[tensor_info["name"]] = onnx_input
@@ -340,7 +327,7 @@ class OnnxDumpData(DumpData):
         if numpy_data_type:
             return numpy_data_type
         else:
-            utils.logger.error("unsupported tensor type: {}".format(tensor_type))
+            logger.error(f"unsupported tensor type: {tensor_type}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_TENSOR_TYPE_ERROR)
 
     def _run_model(self, session, inputs_map):
@@ -378,7 +365,7 @@ class OnnxDumpData(DumpData):
                 if res_idx <= len(dump_bins) - 1:
                     np.save(file_path, dump_bins[res_idx])
                 else:
-                    utils.logger.error("res_idx out of bounds of dump_bins and can not save, please check.")
+                    logger.error("res_idx out of bounds of dump_bins and can not save, please check.")
                 res_idx += 1
 
         if len(file_name_map) > 0:
@@ -386,7 +373,6 @@ class OnnxDumpData(DumpData):
             with ms_open(mapping_file_path, mode="w") as map_file:
                 map_file.writelines(file_name_map)
 
-        if not self.single_op:
-            for key, value in self.net_output.items():
-                utils.logger.info("net_output node is:{}, file path is {}".format(key, value))
-        utils.logger.info("dump data success")
+        for key, value in self.net_output.items():
+            logger.info(f"net_output node is:{key}, file path is {value}")
+        logger.info("dump data success")

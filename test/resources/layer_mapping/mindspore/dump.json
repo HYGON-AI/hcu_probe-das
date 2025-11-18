@@ -1,0 +1,40 @@
+{
+  "task": "statistics",
+  "level": "mix",
+  "framework": "mindspore",
+  "dump_data_dir": null,
+  "data": {
+    "Cell.network_with_loss.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int32",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": 165558.0,
+                    "Min": 0.0,
+                    "Mean": 16050.638671875,
+                    "Norm": 2257767.75
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0
+                }
+            ]
+        }
+  }
+}

@@ -17,7 +17,7 @@ import sys
 import subprocess
 from typing import Union
 
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 
 
 def get_entry_points(entry_points_name):
@@ -205,7 +205,7 @@ def check_tools(names):
 
 
 def check_tool(pkg_name):
-    logger.debug("checking %s", pkg_name)
+    logger.debug(f"checking {pkg_name}")
     pkg_installer = get_installer(pkg_name)
 
     if not pkg_installer:

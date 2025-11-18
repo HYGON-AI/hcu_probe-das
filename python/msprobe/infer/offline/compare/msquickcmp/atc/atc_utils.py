@@ -20,6 +20,7 @@ This class mainly involves convert model to json function.
 import os
 import stat
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 
@@ -38,23 +39,23 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
     """
     model_name, extension = utils.get_model_name_and_extension(offline_model_path)
     if extension not in [".om", ".txt"]:
-        utils.logger.error(
-            'The offline model file not ends with .om or .txt, Please check {}.'.format(offline_model_path))
+        logger.error(
+            f"The offline model file not ends with .om or .txt, Please check {offline_model_path}.")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
     
     cann_path = os.path.realpath(cann_path)
     if not os.path.isdir(cann_path):
-        utils.logger.error(f'The cann path {cann_path} is not a directory.Please check.')
+        logger.error(f'The cann path {cann_path} is not a directory.Please check.')
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     
     atc_command_file_path = get_atc_path(cann_path)
     utils.check_file_or_directory_path(atc_command_file_path)
     output_json_path = os.path.join(out_path, "model", model_name + ".json")
     if os.path.exists(output_json_path):
-        utils.logger.info("The {} file is exists.".format(output_json_path))
+        logger.info(f"The {output_json_path} file is exists.")
     else:
         # do the atc command to convert om to json
-        utils.logger.info('Start to converting the model to json')
+        logger.info('Start to converting the model to json')
         if extension == ".om":
             mode_type = "1"
         else:
@@ -63,9 +64,9 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
             atc_command_file_path, "--mode=" + mode_type, "--om=" + offline_model_path,
             "--json=" + output_json_path
         ]
-        utils.logger.info("ATC command line %s" % " ".join(atc_cmd))
+        logger.info(f"ATC command line {' '.join(atc_cmd)}")
         utils.execute_command(atc_cmd)
-        utils.logger.info("Complete model conversion to json %s." % output_json_path)
+        logger.info(f"Complete model conversion to json {output_json_path}.")
 
     utils.check_file_size_valid(output_json_path, utils.MAX_READ_FILE_SIZE_4G)
     return output_json_path
@@ -80,9 +81,9 @@ def get_atc_path(cann_path):
 
     atc_command_file_path = os.path.realpath(atc_command_file_path)
     if not os.access(atc_command_file_path, os.X_OK):
-        utils.logger.error('ATC path is not permitted for executing.')
+        logger.error('ATC path is not permitted for executing.')
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     if os.stat(atc_command_file_path).st_mode & (stat.S_IWGRP | stat.S_IWOTH) > 0:
-        utils.logger.error('ATC path is writable by others or group, not permitted.')
+        logger.error('ATC path is writable by others or group, not permitted.')
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     return atc_command_file_path

@@ -14,7 +14,7 @@
 import torch
 import numpy as np
 from torch.nn import functional as F
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 
 FLOAT_EPSILON = torch.finfo(torch.float).eps
 NP_FLOAT_EPSILON = np.finfo(np.float32).eps

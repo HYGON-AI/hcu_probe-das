@@ -21,54 +21,32 @@ CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-tool
 
 class CmpArgsAdapter:
     def __init__(self,
-                 gold_model,
-                 om_model,
-                 input_data_path="",
+                 golden_path,
+                 target_path,
+                 input_data="",
                  cann_path=CANN_PATH,
-                 out_path="./",
+                 output_path="./",
                  input_shape="",
-                 device="0",
+                 rank="0",
                  output_size="",
                  output_nodes="",
-                 advisor=False,
                  dym_shape_range="",
-                 dump=True,
-                 bin2npy=False,
-                 custom_op="",
-                 locat=False,
                  onnx_fusion_switch=True,
-                 single_op=False,
-                 fusion_switch_file="",
-                 max_cmp_size=0,
                  quant_fusion_rule_file="",
                  saved_model_signature="",
-                 saved_model_tag_set="",
-                 my_path="",
-                 golden_path="",
-                 ops_json=""
+                 saved_model_tag_set=""
                  ):
-        self.model_path = gold_model
-        self.offline_model_path = om_model
-        self.input_path = input_data_path
+        self.golden_path = golden_path
+        self.target_path = target_path
+        self.input_data = input_data
         self.cann_path = cann_path
-        self.out_path = out_path
+        self.output_path = output_path
         self.input_shape = input_shape
-        self.device = device
+        self.rank = rank
         self.output_size = output_size
         self.output_nodes = output_nodes
-        self.advisor = advisor
         self.dym_shape_range = dym_shape_range
-        self.dump = dump
-        self.bin2npy = bin2npy
-        self.custom_op = custom_op
-        self.locat = locat
         self.onnx_fusion_switch = onnx_fusion_switch
-        self.fusion_switch_file = fusion_switch_file
-        self.single_op = single_op
-        self.max_cmp_size = max_cmp_size
         self.quant_fusion_rule_file = quant_fusion_rule_file
         self.saved_model_signature = saved_model_signature
         self.saved_model_tag_set = saved_model_tag_set
-        self.my_path = my_path
-        self.golden_path = golden_path
-        self.ops_json = ops_json

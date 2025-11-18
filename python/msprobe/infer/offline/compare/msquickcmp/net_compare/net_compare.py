@@ -28,12 +28,12 @@ from collections import namedtuple
 
 import numpy as np
 
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
-from msprobe.infer.utils.file_open_check import sanitize_csv_value, MAX_SIZE_LIMITE_NORMAL_FILE
+from msprobe.infer.utils.file_open_check import sanitize_csv_value
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.check.rule import Rule
-
 from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
 
@@ -48,8 +48,6 @@ READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT | os.O_TRUNC
 NPU_DUMP_TAG = "NPUDump"
 GROUND_TRUTH_TAG = "GroundTruth"
 MIN_ELEMENT_NUM = 3
-ADVISOR_ARGS = "-advisor"
-MAX_CMP_SIZE_ARGS = "--max_cmp_size"
 
 
 class NetCompare(object):
@@ -76,7 +74,7 @@ class NetCompare(object):
     @staticmethod
     def execute_command_line(cmd):
         cmd = filter_cmd(cmd)
-        utils.logger.info('Execute command:%s' % " ".join(cmd))
+        logger.info(f"Execute command:{' '.join(cmd)}")
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return process
 
@@ -87,18 +85,15 @@ class NetCompare(object):
             if os.path.exists(msaccucmp_command_file_path):
                 return msaccucmp_command_file_path
             else:
-                utils.logger.warning(
-                    'The path {} is not exist.Please check the file'.format(msaccucmp_command_file_path))
-        utils.logger.error(
-            'Does not exist in {} directory msaccucmp.py and msaccucmp.pyc file'.format(msaccucmp_command_dir_path))
+                logger.warning(f"The path {msaccucmp_command_file_path} is not exist.Please check the file")
+        logger.error(f"Does not exist in {msaccucmp_command_dir_path} directory msaccucmp.py and msaccucmp.pyc file")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
     @staticmethod
     def _check_pyc_to_python_version(msaccucmp_command_file_path, python_version):
         if msaccucmp_command_file_path.endswith(".pyc"):
             if python_version != PYC_FILE_TO_PYTHON_VERSION:
-                utils.logger.error(
-                    "The python version for executing {} must be 3.7.5".format(msaccucmp_command_file_path))
+                logger.error(f"The python version for executing {msaccucmp_command_file_path} must be 3.7.5")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PYTHON_VERSION_ERROR)
 
     @staticmethod
@@ -124,15 +119,66 @@ class NetCompare(object):
                         header = info_content
             return result, header
         except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
-            utils.logger.error('Failed to parse the alg compare result!')
+            logger.error('Failed to parse the alg compare result!')
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
         finally:
             pass
 
+    @staticmethod
+    def _process_result_one_line(fp_write, fp_read, npu_file_name, golden_file_name, result):
+        writer = csv.writer(fp_write)
+        # write header to file
+        table_header_info = next(fp_read)
+        header_list = table_header_info.strip().split(',')
+        writer.writerow(header_list)
+        npu_dump_index = header_list.index(NPU_DUMP_TAG)
+        ground_truth_index = header_list.index(GROUND_TRUTH_TAG)
+
+        result_reader = csv.reader(fp_read)
+        # update result data
+        new_content = []
+        for line in result_reader:
+            if len(line) < MIN_ELEMENT_NUM:
+                logger.warning(f"The content of line is {line}")
+                continue
+            if line[npu_dump_index] != "Node_Output":
+                for ele in line:
+                    sanitize_csv_value(ele)
+                writer.writerow(line)
+            else:
+                new_content = [
+                    line[0], "NaN", "Node_Output", "NaN", "NaN",
+                    npu_file_name, "NaN", golden_file_name, "[]"
+                ]
+                new_content.extend(result)
+                new_content.extend([""])
+                if line[ground_truth_index] != "*":
+                    writer.writerow(line)
+        writer.writerow(new_content)
+
+    @staticmethod
+    def _process_result_to_csv(fp_write, csv_info):
+        writer = csv.writer(fp_write)
+        if csv_info.header:
+            header_base_info = [
+                'Index', 'OpType', 'NPUDump', 'DataType', 'Address',
+                'GroundTruth', 'DataType', 'TensorIndex', 'Shape'
+            ]
+            header_base_info.extend(csv_info.header)
+            writer.writerow(header_base_info)
+        fp_write.seek(0, 0)
+        index = len(fp_write.readlines()) - 1
+        new_content = [
+            str(index), "NaN", "Node_Output", "NaN", "NaN",
+            csv_info.npu_file_name, "NaN", csv_info.golden_file_name, "[]"
+        ]
+        new_content.extend(csv_info.result)
+        writer.writerow(new_content)
+
     def accuracy_network_compare(self):
         """
         Function Description:
-            invoke the interface for network-wide comparsion
+            invoke the interface for network-wide comparison
         Exception Description:
             when invalid  msaccucmp command throw exception
         """
@@ -140,12 +186,8 @@ class NetCompare(object):
         msaccucmp_cmd = [
             self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
             self.npu_dump_data_path, "-g",
-            self.cpu_dump_data_path, "-f", self.output_json_path, "-out", self.arguments.out_path
+            self.cpu_dump_data_path, "-f", self.output_json_path, "-out", self.arguments.output_path
         ]
-        if self._check_msaccucmp_compare_support_advisor():
-            msaccucmp_cmd.append(ADVISOR_ARGS)
-        if self._check_msaccucmp_compare_support_max_cmp_size():
-            msaccucmp_cmd.extend([MAX_CMP_SIZE_ARGS, str(self.arguments.max_cmp_size)])
 
         if self.golden_json_path is not None:
             msaccucmp_cmd.extend(["-cf", self.golden_json_path])
@@ -155,10 +197,10 @@ class NetCompare(object):
         
         status_code, _, _ = self.execute_msaccucmp_command(msaccucmp_cmd)
         if status_code == 2 or status_code == 0:
-            utils.logger.info("Finish compare the files in directory %s with those in directory %s." % (
-                self.npu_dump_data_path, self.cpu_dump_data_path))
+            logger.info(f"Finish compare the files in directory {self.npu_dump_data_path} "
+                        f"with those in directory {self.cpu_dump_data_path}.")
         else:
-            utils.logger.error("Failed to execute command: %s" % " ".join(msaccucmp_cmd))
+            logger.error(f"Failed to execute command: {' '.join(msaccucmp_cmd)}")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
     def net_output_compare(self, npu_net_output_data_path, golden_net_output_info):
@@ -169,11 +211,11 @@ class NetCompare(object):
             return
         npu_dump_file = {}
         file_index = 0
-        utils.logger.info("=================================compare Node_output=================================")
-        utils.logger.info("start to compare the Node_output at now, compare result is:")
-        utils.logger.warning("The comparison of Node_output may be incorrect in certain scenarios. If the precision"
-                             " is abnormal, please check whether the mapping between the comparison"
-                             " data is correct.")
+        logger.info("=================================compare Node_output=================================")
+        logger.info("start to compare the Node_output at now, compare result is:")
+        logger.warning("The comparison of Node_output may be incorrect in certain scenarios. "
+                       "If the precision is abnormal, "
+                       "please check whether the mapping between the comparison data is correct.")
         for dir_path, _, files in os.walk(npu_net_output_data_path):
             for each_file in sorted(files):
                 if each_file.endswith(".npy"):
@@ -193,9 +235,9 @@ class NetCompare(object):
                         self.save_net_output_result_to_csv(npu_dump_file.get(file_index),
                                                            golden_net_output_info.get(file_index),
                                                            compare_result, header)
-                        utils.logger.info("Compare Node_output:{} completely.".format(file_index))
+                        logger.info(f"Compare Node_output:{file_index} completely.")
                     else:
-                        utils.logger.error("Failed to execute command: %s" % " ".join(msaccucmp_cmd))
+                        logger.error(f"Failed to execute command: {' '.join(msaccucmp_cmd)}")
                         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
                     file_index += 1
         return
@@ -208,7 +250,7 @@ class NetCompare(object):
         result_file_backup_path = None
         npu_file_name = os.path.basename(npu_file)
         golden_file_name = os.path.basename(golden_file)
-        for dir_path, _, files in os.walk(self.arguments.out_path):
+        for dir_path, _, files in os.walk(self.arguments.output_path):
             files = [file for file in files if file.endswith("csv")]
             if files:
                 result_file_path = os.path.join(dir_path, files[0])
@@ -216,32 +258,15 @@ class NetCompare(object):
                 result_file_backup_path = os.path.join(dir_path, result_file_backup)
                 break
         try:
-            if not self.arguments.dump:
-                result_file_path = ""
-                for f in os.listdir(self.arguments.out_path):
-                    if f.endswith(".csv"):
-                        result_file_path = os.path.join(self.arguments.out_path, f)
-                        break
-                if not result_file_path:
-                    time_suffix = time.strftime("%Y%m%d%H%M%S", time.localtime())
-                    file_name = "result_" + time_suffix + ".csv"
-                    result_file_path = os.path.join(self.arguments.out_path, file_name)
-                else:
-                    header = []
-                CsvInfo = namedtuple('CsvInfo', 'npu_file_name, golden_file_name, result, header')
-                csv_info = CsvInfo(npu_file_name, golden_file_name, result, header)
-                with ms_open(result_file_path, "a+") as fp_writer:
-                    self._process_result_to_csv(fp_writer, csv_info)
-            else:
-                # read result file and write it to backup file,update the result of compare Node_output
-                Rule.input_file().check(result_file_path, will_raise=True)
-                with ms_open(result_file_path, "r", max_size=TENSOR_MAX_SIZE) as fp_read:
-                    with ms_open(result_file_backup_path, 'w', newline="") as fp_write:
-                        self._process_result_one_line(fp_write, fp_read, npu_file_name, golden_file_name, result)
-                os.remove(result_file_path)
-                os.rename(result_file_backup_path, result_file_path)
+            # read result file and write it to backup file,update the result of compare Node_output
+            Rule.input_file().check(result_file_path, will_raise=True)
+            with ms_open(result_file_path, "r", max_size=TENSOR_MAX_SIZE) as fp_read:
+                with ms_open(result_file_backup_path, 'w', newline="") as fp_write:
+                    self._process_result_one_line(fp_write, fp_read, npu_file_name, golden_file_name, result)
+            os.remove(result_file_path)
+            os.rename(result_file_backup_path, result_file_path)
         except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
-            utils.logger.error('Failed to write Net_output compare result')
+            logger.error("Failed to write Net_output compare result")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
         finally:
             pass
@@ -266,39 +291,6 @@ class NetCompare(object):
                 header = header_result if header_result else header
         return process.returncode, result, header
 
-    def _process_result_one_line(self, fp_write, fp_read, npu_file_name, golden_file_name, result):
-        writer = csv.writer(fp_write)
-        # write header to file
-        table_header_info = next(fp_read)
-        header_list = table_header_info.strip().split(',')
-        writer.writerow(header_list)
-        npu_dump_index = header_list.index(NPU_DUMP_TAG)
-        ground_truth_index = header_list.index(GROUND_TRUTH_TAG)
-
-        result_reader = csv.reader(fp_read)
-        # update result data
-        new_content = []
-        for line in result_reader:
-            if len(line) < MIN_ELEMENT_NUM:
-                utils.logger.warning('The content of line is {}'.format(line))
-                continue
-            if line[npu_dump_index] != "Node_Output":
-                for ele in line:
-                    sanitize_csv_value(ele)
-                writer.writerow(line)
-            else:
-                new_content = [
-                    line[0], "NaN", "Node_Output", "NaN", "NaN",
-                    npu_file_name, "NaN", golden_file_name, "[]"
-                ]
-                if self._check_msaccucmp_compare_support_advisor():
-                    new_content.append("NaN")
-                new_content.extend(result)
-                new_content.extend([""])
-                if line[ground_truth_index] != "*":
-                    writer.writerow(line)
-        writer.writerow(new_content)
-
     def _check_msaccucmp_compare_support_args(self, compare_args):
         check_cmd = [self.python_version, self.msaccucmp_command_file_path, "compare", "-h"]
         process = self.execute_command_line(check_cmd)
@@ -309,32 +301,5 @@ class NetCompare(object):
                 if compare_args in line_decode:
                     return True
         else:
-            utils.logger.warning(f'Current version does not support {compare_args} function')
+            logger.warning(f'Current version does not support {compare_args} function')
             return False
-
-    def _check_msaccucmp_compare_support_advisor(self):
-        return self.arguments.advisor and \
-               self._check_msaccucmp_compare_support_args(ADVISOR_ARGS)
-    
-    def _check_msaccucmp_compare_support_max_cmp_size(self):
-        return self.arguments.max_cmp_size and \
-               self._check_msaccucmp_compare_support_args(MAX_CMP_SIZE_ARGS)
-
-
-    def _process_result_to_csv(self, fp_write, csv_info):
-        writer = csv.writer(fp_write)
-        if csv_info.header:
-            header_base_info = [
-                'Index', 'OpType', 'NPUDump', 'DataType', 'Address',
-                'GroundTruth', 'DataType', 'TensorIndex', 'Shape'
-                ]
-            header_base_info.extend(csv_info.header)
-            writer.writerow(header_base_info)
-        fp_write.seek(0, 0)
-        index = len(fp_write.readlines()) - 1
-        new_content = [
-            str(index), "NaN", "Node_Output", "NaN", "NaN",
-            csv_info.npu_file_name, "NaN", csv_info.golden_file_name, "[]"
-        ]
-        new_content.extend(csv_info.result)
-        writer.writerow(new_content)

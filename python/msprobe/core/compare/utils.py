@@ -676,13 +676,37 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
-    parser.add_argument(
-        "--rank", dest="rank", type=str,
-        help="<optional> Ranks to compare when compare kernel of Mindspore or torchair dumps.",
-        required=False
-    )
-    parser.add_argument("--step", dest="step", type=str,
-                        help="<optional> Steps to compare when compare kernel of Mindspore.", required=False)
+    # rank：ms静态图比对、推理离线模型一键式比对
+    parser.add_argument("--rank", dest="rank", type=str, required=False,
+                        help="<optional> Ranks to compare when compare kernel of Mindspore for <compare auto>. "
+                             "Ranks to compare for <torchair dumps>."
+                             " Input rank ID [0, 255] for <compare offline_model>.")
+    parser.add_argument("--step", dest="step", type=str, required=False,
+                        help="<optional> Steps to compare when compare kernel of Mindspore.")
+    parser.add_argument('--input_data', dest="input_data", default='',
+                        help='The input data path of the model. Separate multiple inputs with commas(,).'
+                             ' E.g: input_0.bin,input_1.bin')
+    parser.add_argument('--input_shape', dest="input_shape", default='',
+                        help="Shape of input shape. Separate multiple nodes with semicolons(;)."
+                             " E.g: \"input_name1:1,224,224,3;input_name2:3,300\"")
+    parser.add_argument('--output_size', dest="output_size", default='',
+                        help='The size of output. Separate multiple sizes with commas(,). E.g: 10200,34000')
+    parser.add_argument('--output_nodes', dest="output_nodes", default='',
+                        help="Output nodes designated by user. Separate multiple nodes with semicolons(;)."
+                             " E.g: \"node_name1:0;node_name2:1;node_name3:0\"")
+    parser.add_argument('--dym_shape_range', dest="dym_shape_range", default='',
+                        help="Dynamic shape range using in dynamic model, using this means ignore input_shape."
+                             " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
+    parser.add_argument('-ofs', '--onnx_fusion_switch', dest="onnx_fusion_switch", default=True,
+                        help='Onnxruntime fusion switch, set False for dump complete onnx data when necessary. '
+                             'Usage: -ofs False')
+    parser.add_argument('-qfr', '--quant_fusion_rule_file', dest="quant_fusion_rule_file", default='',
+                        help="the quant fusion rule file path")
+    parser.add_argument('--saved_model_signature', dest="saved_model_signature", default='serving_default',
+                        help="Enter the signature of the model")
+    parser.add_argument('--saved_model_tag_set', dest="saved_model_tag_set", default='serve',
+                        help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
+                             "for example, --saved_model_tag_set ['serve', 'general_parser']")
 
 
 def get_sorted_ranks(npu_dump_dir, bench_dump_dir):

@@ -20,7 +20,7 @@ import pickle
 import re
 
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE, EXT_SIZE_MAPPING, PATH_WHITE_LIST_REGEX, MAX_RECUR_DEPTH
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.utils.file_open_check import is_legal_path_length
 
 # 记录工具函数递归的深度
@@ -40,10 +40,10 @@ def confirmation_interaction(prompt):
 
 def check_file_ext(path, ext: str):
     if not isinstance(path, str):
-        raise TypeError("Expected first positional argument type 'str', got %r instead" % type(path))
+        raise TypeError(f"Expected first positional argument type 'str', got {type(path)} instead")
 
     if not isinstance(ext, str):
-        raise TypeError("Expected second positional argument type 'str', got %r instead" % type(ext))
+        raise TypeError(f"Expected second positional argument type 'str', got {type(ext)} instead")
 
     path_ext = os.path.splitext(path)[1]
 
@@ -57,7 +57,7 @@ def check_file_size_based_on_ext(path, ext=None):
     """Check the file size based on extension. This function uses `os.stat` to get file size may lead to OSError"""
 
     if not isinstance(path, str):
-        raise TypeError("Expected path to be 'str', got %r instead" % type(path))
+        raise TypeError(f"Expected path to be 'str', got {type(path)} instead")
 
     ext = ext or os.path.splitext(path)[1]
     size = os.path.getsize(path)  # may lead to errors
@@ -103,15 +103,15 @@ def load_file_to_read_common_check(path: str, exts=None):
 
     if isinstance(exts, (tuple, list)):
         if not any(check_file_ext(path, ext) for ext in exts):
-            logger.error("Expected extenstion to be one of %r", exts)
+            logger.error(f"Expected extension to be one of {exts}")
             raise ValueError
 
     elif exts is not None:
-        logger.error("Expected 'exts' to be 'List[str]', got %r instead", type(exts))
+        logger.error(f"Expected 'exts' to be 'List[str]', got {type(exts)} instead")
         raise TypeError
 
     if re.search(PATH_WHITE_LIST_REGEX, path):
-        logger.error("Invalid character: %r", path)
+        logger.error(f"Invalid character: {path}")
         raise ValueError
 
     if not is_legal_path_length(path):
@@ -123,26 +123,26 @@ def load_file_to_read_common_check(path: str, exts=None):
     try:
         file_status = os.stat(path)
     except OSError as e:
-        logger.error("%s: %r", e.strerror, path)
+        logger.error(f"{e.strerror}: {path}")
         raise
 
     if not os.st.S_ISREG(file_status.st_mode):
-        logger.error("Not a regular file: %r", path)
+        logger.error(f"Not a regular file: {path}")
         raise ValueError
 
     if not check_file_size_based_on_ext(path):
-        logger.error("File too large: %r", path)
+        logger.error(f"File too large: {path}")
         raise ValueError
 
     if (os.st.S_IWOTH & file_status.st_mode) == os.st.S_IWOTH:
-        logger.error("Vulnerable path: %r should not be other writeable", path)
+        logger.error(f"Vulnerable path: {path} should not be other writeable")
         raise PermissionError
 
     cur_euid = os.geteuid()
     if file_status.st_uid != cur_euid:
         # not root
         if cur_euid != 0:
-            logger.error("File owner and current user are inconsistent: %r", path)
+            logger.error(f"File owner and current user are inconsistent: {path}")
             raise PermissionError
 
         # root but reading a other writeable file
@@ -178,14 +178,6 @@ def check_str_for_cmd(strings, var_name):
         )
 
 
-def load_file_to_read_common_check_for_cli(value, exts=None):
-    try:
-        value = load_file_to_read_common_check(value, exts)
-    except Exception as e:
-        raise argparse.ArgumentTypeError("%r" % value) from e
-    return value
-
-
 def safe_int(str_value, log_print_variable_name=None):
     try:
         int_value = int(str_value)
@@ -196,63 +188,3 @@ def safe_int(str_value, log_print_variable_name=None):
         raise ValueError(f"The value {str_value} is not valid, "
                          "what we need is a value that can be convert to int.") from e
     return int_value
-
-
-def safe_get(container, key):
-    """
-    Safely get an item from a list or dict.
-    For lists, checks index bounds.
-    For dicts, checks key existence.
-    Raises IndexError or KeyError if not found.
-    """
-    if isinstance(container, list):
-        if isinstance(key, int) and 0 <= key < len(container):
-            return container[key]
-        raise IndexError("list index out of range")
-    elif isinstance(container, dict):
-        if key in container:
-            return container[key]
-        raise KeyError(f"key '{key}' not found in dict")
-    else:
-        raise TypeError("container must be a list or dict")
-
-
-def safe_del(container, key):
-    """
-    Safely delete an item from a list or dict.
-    For lists, checks index bounds.
-    For dicts, checks key existence.
-    Raises IndexError or KeyError if not found.
-    """
-    if isinstance(container, list):
-        if isinstance(key, int) and 0 <= key < len(container):
-            del container[key]
-        raise IndexError("list index out of range")
-    elif isinstance(container, dict):
-        if key in container:
-            del container[key]
-        raise KeyError(f"key '{key}' not found in dict")
-    else:
-        raise TypeError("container must be a list or dict")
-
-
-def recursion_depth_decorator(func_info, max_depth=MAX_RECUR_DEPTH):
-    """装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            func_id = id(func)
-            recursion_depth[func_id] += 1
-            if recursion_depth[func_id] > max_depth:
-                raise RecursionError(
-                    f"call {func_info} exceeds the recursion limit."
-                )
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                recursion_depth[func_id] -= 1
-            return result
-
-        return wrapper
-
-    return decorator

@@ -22,8 +22,9 @@ import time
 
 import numpy as np
 
+from msprobe.core.common.file_utils import save_numpy_to_bin
 from msprobe.infer.offline.compare.msquickcmp.common import utils
-from msprobe.infer.offline.compare.msquickcmp.common.utils import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 from msprobe.infer.utils.check.rule import Rule
 
@@ -56,6 +57,33 @@ class DumpData(object):
             logger.error(f"user doesn't have read permission to the file {input_path}.")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
+    @staticmethod
+    def _check_input_data_path(input_path, inputs_tensor_info):
+        if len(inputs_tensor_info) != len(input_path):
+            logger.error(
+                f"the number of model inputs tensor_info is not equal the number of inputs data, "
+                f"inputs tensor_info is: {len(inputs_tensor_info)}, "
+                f"inputs data is: {len(input_path)}"
+            )
+            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
+
+        for cur_path in input_path:
+            if not os.path.exists(cur_path):
+                logger.error(f"input data path '{cur_path}' not exists")
+                raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+
+    @staticmethod
+    def _generate_random_input_data(save_dir, names, shapes, dtypes):
+        inputs_map = {}
+        for index, (tensor_name, tensor_shape, tensor_dtype) in enumerate(zip(names, shapes, dtypes)):
+            input_data = np.random.random(tensor_shape).astype(tensor_dtype)
+            inputs_map[tensor_name] = input_data
+            file_name = "input_" + str(index) + ".bin"
+            input_data_path = os.path.join(save_dir, file_name)
+            save_numpy_to_bin(input_data, input_data_path)
+            logger.info(f"save input file name: {file_name}, shape: {input_data.shape}, dtype: {input_data.dtype}")
+        return inputs_map
+
     def generate_dump_data(self):
         pass
 
@@ -67,33 +95,6 @@ class DumpData(object):
 
     def _generate_dump_data_file_name(self, name_str, node_id):
         return ".".join([self._to_valid_name(name_str), str(node_id), str(round(time.time() * 1e6)), "npy"])
-
-    def _check_input_data_path(self, input_path, inputs_tensor_info):
-        if len(inputs_tensor_info) != len(input_path):
-            logger.error(
-                "the number of model inputs tensor_info is not equal the number of "
-                "inputs data, inputs tensor_info is: {}, inputs data is: {}".format(
-                    len(inputs_tensor_info), len(input_path)
-                )
-            )
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
-
-        for cur_path in input_path:
-            if not os.path.exists(cur_path):
-                logger.error(f"input data path '{cur_path}' not exists")
-                raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
-
-    def _generate_random_input_data(self, save_dir, names, shapes, dtypes):
-        inputs_map = {}
-        for index, (tensor_name, tensor_shape, tensor_dtype) in enumerate(zip(names, shapes, dtypes)):
-            input_data = np.random.random(tensor_shape).astype(tensor_dtype)
-            inputs_map[tensor_name] = input_data
-            file_name = "input_" + str(index) + ".bin"
-            input_data.tofile(os.path.join(save_dir, file_name))
-            logger.info(
-                "save input file name: {}, shape: {}, dtype: {}".format(file_name, input_data.shape, input_data.dtype)
-            )
-        return inputs_map
 
     def _read_input_data(self, input_pathes, names, shapes, dtypes):
         inputs_map = {}
@@ -111,8 +112,8 @@ class DumpData(object):
             input_data = input_data.reshape(shape)
             inputs_map[name] = input_data
             logger.info(
-                "load input file name: {}, shape: {}, dtype: {}".format(
-                    os.path.basename(input_path), input_data.shape, input_data.dtype
-                )
+                f"load input file name: {os.path.basename(input_path)}, "
+                f"shape: {input_data.shape}, "
+                f"dtype: {input_data.dtype}"
             )
         return inputs_map

@@ -18,7 +18,7 @@ import sys
 import numpy as np
 import torch
 
-from msprobe.infer.utils.log import logger
+from msprobe.core.common.log import logger
 from msprobe.infer.utils.check.string_checker import StringChecker
 from msprobe.infer.utils.file_open_check import ms_open, MAX_SIZE_LIMITE_NORMAL_FILE
 
