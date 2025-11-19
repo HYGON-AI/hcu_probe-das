@@ -1,0 +1,203 @@
+# config.json配置示例
+
+以下示例包含当前支持的所有场景可配置的完整参数。
+
+## 1 PyTorch 场景
+
+### 1.1 task 配置为 statistics
+
+```json
+{
+    "task": "statistics",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "async_dump": false,
+
+    "statistics": {
+        "scope": [], 
+        "list": [],
+        "tensor_list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}
+```
+
+### 1.2 task 配置为 tensor
+
+```json
+{
+    "task": "tensor",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "async_dump": false,
+
+    "tensor": {
+        "scope": [],
+        "list":[],
+        "data_mode": ["all"]
+    }
+}
+```
+
+### 1.3 task 配置为 acc_check
+
+```json
+{
+    "task": "acc_check",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+
+    "acc_check": {
+        "white_list": [],
+        "black_list": [],
+        "error_data_path": "./"
+    }
+}
+```
+
+### 1.4 task 配置为 structure
+
+```json
+{
+    "task": "structure",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "mix"
+}
+```
+
+## 2 MindSpore 静态图场景
+
+### 2.1 task 配置为 statistics
+
+```json
+{
+    "task": "statistics",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L2",
+
+    "statistics": {
+        "list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}
+```
+
+### 2.2 task 配置为 tensor
+
+```json
+{
+    "task": "tensor",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L2",
+
+    "tensor": {
+        "list":[],
+        "data_mode": ["all"]
+    }
+}
+```
+
+### 2.3 task 配置为 overflow_check
+
+```json
+{
+    "task": "overflow_check",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L2",
+
+    "overflow_check": {
+        "check_mode": "all"
+    }
+}
+```
+
+### 2.4 task 配置为 exception_dump
+
+```json
+{
+    "task": "exception_dump",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L2"
+}
+```
+
+## 3 MindSpore 动态图场景
+
+### 3.1 task 配置为 statistics
+
+```json
+{
+    "task": "statistics",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+
+    "statistics": {
+        "scope": [], 
+        "list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}
+```
+
+### 3.2 task 配置为 tensor
+
+```json
+{
+    "task": "tensor",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+
+    "tensor": {
+        "scope": [],
+        "list":[],
+        "data_mode": ["all"]
+    }
+}
+```
+
+### 3.3 task 配置为 structure
+
+```json
+{
+    "task": "structure",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "mix"
+}
+```
+
+### 3.4 task 配置为 exception_dump
+
+```json
+{
+    "task": "exception_dump",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L2"
+}
+```

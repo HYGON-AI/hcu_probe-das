@@ -1,0 +1,72 @@
+# PyTorch 场景的 kernel dump 说明
+
+当使用 msprobe 数据采集功能时，level 配置为 "L2" 表示采集 kernel 层级的算子数据，仅支持昇腾 NPU 平台。 
+
+本文主要介绍 kernel dump 的配置示例和采集结果介绍， msprobe 数据采集功能的详细使用参考《[PyTorch场景精度数据采集](./pytorch_data_dump_instruct.md)》。
+
+## 1 kernel dump 配置示例
+
+使用 kernel dump 时，task 需要配置为 tensor , list 必须要填一个 API 名称，kernel dump 目前每个 step 只支持采集一个 API 的数据。
+API 名称填写参考 L1 dump 结果文件 dump.json 中的API名称，命名格式为：`{api_type}.{api_name}.{API调用次数}.{forward/backward}`。
+
+```json
+{
+    "task": "tensor",
+    "dump_path": "/home/data_dump",
+    "level": "L2",
+    "rank": [],
+    "step": [],
+    "tensor": {
+        "scope": [],
+        "list": ["Functional.linear.0.backward"]
+    }
+}
+```
+
+## 2 结果文件介绍
+
+### 2.1 采集结果说明
+
+如果 API kernel 级数据采集成功，会打印以下信息：
+
+```bash
+The kernel data of {api_name} is dumped successfully.
+```
+
+注意：如果打印该信息后，没有数据生成，参考**常见问题3.1**进行排查。
+
+如果 kernel dump 遇到不支持的 API， 会打印以下信息：
+
+```bash
+The kernel dump does not support the {api_name} API.
+```
+
+其中 {api_name} 是对应溢出的 API 名称。
+
+### 2.2 输出文件说明
+kernel dump 采集成功后，会在指定的 dump_path 目录下生成如下文件：
+
+```
+├── /home/data_dump/
+│   ├── step0
+│   │   ├── 20241201103000    # 日期时间格式，表示2024-12-01 10:30:00
+│   │   │   ├── 0             # 表示 device id
+│   │   │   │   ├──{op_type}.{op_name}.{task_id}.{stream_id}.{timestamp}    # kernel 层算子数据
+│   │   │  ...
+│   │   ├── kernel_config_{device_id}.json    # kernel dump 在接口调用过程中生成的中间文件，一般情况下无需关注
+│   │  ...     
+│   ├── step1
+│  ...
+```
+
+## 3 常见问题
+
+#### 3.1 采集结果文件为空，有可能是什么原因？
+
+1. 首先需要确认工具使用方式、配置文件内容、list 填写的 API 名称格式是否都正确无误。
+
+2. 其次需要确认 API 是否运行在昇腾 NPU 上，如果是运行在其他设备上则不会存在 kernel 级数据。
+
+3. 如果排除上述两点仍然没有数据，您可以使用《[Ascend Extension for PyTorch 插件](https://gitcode.com/Ascend/pytorch)》提供的
+torch_npu.npu 接口进行 kernel 层数据采集，工具的 kernel dump 也是基于其中的init_dump、set_dump和finalize_dump三个子接口实现的。
+torch_npu.npu 接口详细描述见《[torch_npu.npu API 概述](https://www.hiascend.com/document/detail/zh/Pytorch/60RC3/apiref/apilist/ptaoplist_000192.html)》。
