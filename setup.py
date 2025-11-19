@@ -34,10 +34,7 @@ INSTALL_REQUIRED = [
     "matplotlib",
     "tensorboard",
     "protobuf <= 3.20.3",
-    "rich",
-    "onnx >= 1.14.0",
-    "onnxruntime >= 1.14.1,< 1.16.0",
-    "skl2onnx >= 1.14.1",
+    "rich"
 ]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:

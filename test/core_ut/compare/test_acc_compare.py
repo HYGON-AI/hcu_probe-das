@@ -206,8 +206,6 @@ aten_result = [
      ' ', ' ', ' ', ' ', ' ', ' ', 61.7945556640625, 42.59713363647461, 52.03831481933594, 'Nan', 'Nan', 'Nan',
      'Yes', '', 'None']]
 
-highlight_dict = {'red_rows': [], 'yellow_rows': []}
-
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
                     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,

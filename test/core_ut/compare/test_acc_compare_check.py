@@ -133,7 +133,6 @@ class TestUtilsMethods(unittest.TestCase):
             dump_mode='',
             stack_mode=False,
             fuzzy_match=False,
-            highlight=False,
             data_mapping={},
             suffix='',
             cell_mapping={},

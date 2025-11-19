@@ -33,7 +33,6 @@ from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str
 from msprobe.core.compare.utils import print_compare_ends_info, read_op, set_stack_json_path, reorder_index
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
-from msprobe.core.compare.highlight import HighLight
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 
 
@@ -42,7 +41,6 @@ class ComparisonConfig:
     dump_mode: str
     stack_mode: bool
     fuzzy_match: bool
-    highlight: bool
     data_mapping: dict
     suffix: str
     cell_mapping: dict
@@ -134,18 +132,8 @@ class Comparator:
 
         # save result excel file
         logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
-        if self.mode_config.highlight and len(result_df) <= CompareConst.MAX_EXCEL_LENGTH:
-            # highlight if not too long
-            highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-            highlight = HighLight(self.mode_config, rank)
-            if self.mode_config.compared_file_type == Const.DUMP_JSON_FILE:
-                highlight.find_compare_result_error_rows(result_df, highlight_dict)
-            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
-            highlight.highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        else:
-            # fallback to simple save without highlight
-            result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
-            save_excel(file_path, result_df)
+        result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
+        save_excel(file_path, result_df)
 
         print_compare_ends_info()
 
@@ -754,7 +742,6 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             dump_mode='',
             stack_mode=False,
             fuzzy_match=kwargs.get('fuzzy_match', False),
-            highlight=kwargs.get('highlight', False),
             data_mapping=kwargs.get('data_mapping', {}),
             suffix=kwargs.get('suffix', ''),
             cell_mapping=kwargs.get('cell_mapping', {}),
