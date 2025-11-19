@@ -6,7 +6,7 @@ from msprobe.core.compare.auto_compare import mix_compare
 
 class TestMixCompare(unittest.TestCase):
     @patch('msprobe.core.compare.auto_compare.get_paired_dirs')
-    @patch('msprobe.core.compare.auto_compare.auto_compare.compare_auto_mode')
+    @patch('msprobe.core.compare.auto_compare.compare_auto_mode')
     def test_mix_compare_with_matching_dirs(self, mock_compare_cli, mock_get_paired_dirs):
         mock_args = MagicMock()
         mock_args.output_path = "/output"
@@ -23,7 +23,7 @@ class TestMixCompare(unittest.TestCase):
         self.assertTrue(result)
 
     @patch('msprobe.core.compare.auto_compare.get_paired_dirs')
-    @patch('msprobe.core.compare.auto_compare.auto_compare.compare_auto_mode')
+    @patch('msprobe.core.compare.auto_compare.compare_auto_mode')
     def test_mix_compare_no_matching_dirs(self, mock_compare_cli, mock_get_paired_dirs):
         mock_args = MagicMock()
         mock_args.output_path = "/output"
