@@ -27,8 +27,7 @@ class TestMsConfig(unittest.TestCase):
         mock_json_config = {
             "tensor": None,
             "statistics": None,
-            "overflow_check": None,
-            "free_benchmark": None
+            "overflow_check": None
         }
 
         task_config = parse_task_config("tensor", mock_json_config)
@@ -40,7 +39,6 @@ class TestMsConfig(unittest.TestCase):
         task_config = parse_task_config("overflow_check", mock_json_config)
         self.assertTrue(isinstance(task_config, OverflowCheckConfig))
 
-        mock_json_config.update({"overflow_check": {"overflow_nums": 1}})
         mock_json_config.update({"overflow_check": {"check_mode": "core"}})
         with self.assertRaises(Exception) as context:
             task_config = parse_task_config("overflow_check", mock_json_config)
