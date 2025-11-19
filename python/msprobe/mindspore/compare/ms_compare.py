@@ -39,7 +39,6 @@ def ms_compare(input_param, output_path, **kwargs):
     config_dict = {
         'stack_mode': config.stack_mode,
         'fuzzy_match': config.fuzzy_match,
-        'highlight': config.highlight,
         'dump_mode': config.dump_mode,
         'compared_file_type': config.compared_file_type
     }

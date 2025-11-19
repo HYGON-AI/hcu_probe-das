@@ -664,8 +664,6 @@ def _compare_parser(parser):
                         required=False, default="./output", nargs="?", const="./output")
     parser.add_argument("-fm", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
-    parser.add_argument("-hl", "--highlight", dest="highlight", action="store_true",
-                        help="<optional> Whether to set result highlighting.", required=False)
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,

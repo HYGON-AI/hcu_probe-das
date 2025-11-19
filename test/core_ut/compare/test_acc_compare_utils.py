@@ -150,7 +150,7 @@ bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.con
                           [1.0, 1.0, 1.0, 1.0]],
               'stack_info': [],
               'requires_grad': [True, False, True, True, True, True, True, True]}
-highlight_dict = {'red_rows': [], 'yellow_rows': []}
+
 o_result = [
     ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.float32', 'torch.float32',
      [1, 1, 28, 28], [1, 1, 28, 28], True, True, 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',

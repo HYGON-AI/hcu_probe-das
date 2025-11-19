@@ -109,10 +109,8 @@ def check_stack_json_str(stack_info, op_name):
 
 
 def check_configuration_param(config):
-    arg_list = [config.stack_mode, config.fuzzy_match,
-                config.highlight, config.first_diff_analyze, config.is_print_compare_log]
-    arg_names = ['stack_mode', 'fuzzy_match',
-                 'highlight', 'first_diff_analyze', 'is_print_compare_log']
+    arg_list = [config.stack_mode, config.fuzzy_match, config.first_diff_analyze, config.is_print_compare_log]
+    arg_names = ['stack_mode', 'fuzzy_match', 'first_diff_analyze', 'is_print_compare_log']
     for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):
             logger.error(f"Invalid input parameter, {name} which should be only bool type.")

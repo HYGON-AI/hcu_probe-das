@@ -35,7 +35,6 @@ def compare_auto_mode(args, depth=1):
 
     common_kwargs = {
         "fuzzy_match": args.fuzzy_match,
-        "highlight": args.highlight,
         "data_mapping": args.data_mapping,
         "diff_analyze": args.diff_analyze
     }

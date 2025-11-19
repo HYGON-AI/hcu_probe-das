@@ -622,26 +622,12 @@ class CompareConst:
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
 
-    # highlight xlsx color const
-    RED = "FFFF0000"
-    YELLOW = "FFFF00"
-    BLUE = "0000FF"
-
     # acc_check const
     MAX_TOKENS = 65536
     SPECIAL_SPARSE_MOED = 4
 
-    # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
-    MAX_DIFF_RED = 1e+10
-    ORDER_MAGNITUDE_DIFF_YELLOW = 1
-    ONE_THOUSAND_ERROR_IN_RED = 0.9
-    ONE_THOUSAND_ERROR_OUT_RED = 0.6
-    ONE_THOUSAND_ERROR_DIFF_YELLOW = 0.1
-    COSINE_DIFF_YELLOW = 0.1
-    MAX_RELATIVE_OUT_RED = 0.5
-    MAX_RELATIVE_OUT_YELLOW = 0.1
-    MAX_RELATIVE_IN_YELLOW = 0.01
+
     MS_GRAPH_BASE = {
         NPU_NAME: None, BENCH_NAME: None, NPU_DTYPE: None, BENCH_DTYPE: None, NPU_SHAPE: None, BENCH_SHAPE: None,
         NPU_MAX: None, NPU_MIN: None, NPU_MEAN: None, NPU_NORM: None, BENCH_MAX: None, BENCH_MIN: None,
