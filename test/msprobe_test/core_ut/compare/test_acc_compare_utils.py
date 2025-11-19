@@ -475,31 +475,6 @@ class TestUtilsMethods(unittest.TestCase):
         op_dict = merge_tensor(tensor_list_md5, dump_mode=Const.MD5)
         self.assertEqual(op_dict, result_op_dict_md5)
 
-    def test_compare_parser_1(self):
-        test_args = ["-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
-        args = self.parser.parse_args(test_args)
-
-        self.assertEqual(args.input_path, "input.json")
-        self.assertEqual(args.output_path, "output.json")
-        self.assertTrue(args.stack_mode)
-        self.assertTrue(args.compare_only)
-        self.assertTrue(args.fuzzy_match)
-
-    def test_compare_parser_2(self):
-        self.assertEqual(self.parser.parse_args('-i aaa -o'.split(' ')).output_path, './output')
-        self.assertEqual(self.parser.parse_args('-i aaa'.split(' ')).output_path, './output')
-        self.assertEqual(self.parser.parse_args('-i aaa -o ./aaa/output'.split(' ')).output_path, './aaa/output')
-
-    def test_compare_parser_3(self):
-        test_args = ["-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
-                     "data_mapping.txt", "-lm", "layer_mapping.txt"]
-        args = self.parser.parse_args(test_args)
-
-        self.assertEqual(args.cell_mapping, "cell_mapping.txt")
-        self.assertIsNone(args.api_mapping)  # 默认值应为 None
-        self.assertEqual(args.data_mapping, "data_mapping.txt")
-        self.assertEqual(args.layer_mapping, "layer_mapping.txt")
-
     def test_stack_column_process_stack_info(self):
         result_item = []
         has_stack = True

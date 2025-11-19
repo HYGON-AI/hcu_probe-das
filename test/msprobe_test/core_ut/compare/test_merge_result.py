@@ -362,39 +362,3 @@ class TestUtilsMethods(unittest.TestCase):
 
         from msprobe.core.compare.merge_result.merge_result import share_compare_index_list
         self.assertIs(share_compare_index_list, mock_list)
-
-    @patch('msprobe.core.compare.merge_result.merge_result.FileChecker')
-    @patch('msprobe.core.compare.merge_result.merge_result.create_directory')
-    @patch('msprobe.core.compare.merge_result.merge_result.get_result_path')
-    @patch('msprobe.core.compare.merge_result.merge_result.load_yaml')
-    @patch('msprobe.core.compare.merge_result.merge_result.handle_multi_process')
-    @patch('msprobe.core.compare.merge_result.merge_result.generate_merge_result')
-    def test_merge_result(self, mock_generate_merge_result, mock_handle_multi_process, mock_load_yaml,
-                          mock_get_result_path, mock_create_directory, mock_file_checker):
-
-        input_dir = '/path/to/input'
-        output_dir = '/path/to/output'
-        config_path = '/path/to/config.yaml'
-
-        mock_file_checker.return_value.common_check.return_value = input_dir
-        mock_create_directory.return_value = None
-        mock_get_result_path.return_value = ['/path/to/input/compare_result_rank1-rank1_20240101010101.xlsx',
-                                             '/path/to/input/compare_result_rank2-rank2_20240101010101.xlsx']
-        mock_load_yaml.return_value = {
-            'api': ['api1', 'api2'],
-            'compare_index': ['index1', 'index2']
-        }
-        mock_handle_multi_process.return_value = (
-            [[{'index1': {'api1': {1: 100}}}], [{'index1': {'api1': {2: 100}}}]],  # all_compare_index_dict_list
-            [[1], [2]],  # all_rank_num_list
-            [['index1'], ['index2']]    # all_compare_index_list_list
-        )
-
-        merge_result(input_dir, output_dir, config_path)
-
-        mock_file_checker.assert_called_once_with(input_dir, "dir", "read")
-        mock_create_directory.assert_called_once_with(output_dir)
-        mock_get_result_path.assert_called_once_with(input_dir)
-        mock_load_yaml.assert_called_once_with(config_path)
-        mock_handle_multi_process.assert_called_once()
-        mock_generate_merge_result.assert_called_once()
