@@ -674,6 +674,12 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
+    parser.add_argument("-fr", "--fusion_rule_file", dest="fusion_rule_file", type=str, default="",
+                        help="<Optional> The fusion rule file path.", required=False)
+    parser.add_argument("-qfr", "--quant_fusion_rule_file", dest="quant_fusion_rule_file", type=str, default="",
+                        help="<Optional> The quant fusion rule file path.", required=False)
+    parser.add_argument("-cfr", "--close_fusion_rule_file", dest="close_fusion_rule_file", type=str, default="",
+                        help="<Optional> The close fusion rule file path.", required=False)
     # rank：ms静态图比对、推理离线模型一键式比对
     parser.add_argument("--rank", dest="rank", type=str, required=False,
                         help="<optional> Ranks to compare when compare kernel of Mindspore for <compare auto>. "
@@ -698,8 +704,6 @@ def _compare_parser(parser):
     parser.add_argument('-ofs', '--onnx_fusion_switch', dest="onnx_fusion_switch", default=True,
                         help='Onnxruntime fusion switch, set False for dump complete onnx data when necessary. '
                              'Usage: -ofs False')
-    parser.add_argument('-qfr', '--quant_fusion_rule_file', dest="quant_fusion_rule_file", default='',
-                        help="the quant fusion rule file path")
     parser.add_argument('--saved_model_signature', dest="saved_model_signature", default='serving_default',
                         help="Enter the signature of the model")
     parser.add_argument('--saved_model_tag_set', dest="saved_model_tag_set", default='serve',
@@ -710,7 +714,7 @@ def _compare_parser(parser):
 def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
     """
     get the ranks and match by order
-    """
+    """ 
     unsorted_npu_ranks = check_and_return_dir_contents(npu_dump_dir, 'rank')
     unsorted_bench_ranks = check_and_return_dir_contents(bench_dump_dir, 'rank')
     # 正则匹配已经校验rank后面必是数字，或者无数字的rank
