@@ -67,7 +67,7 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[1] == "compare":
-        compare_cli(args)
+        compare_cli(args, sys.argv[1:])
     elif sys.argv[1] == "merge_result":
         merge_result_cli(args)
     elif sys.argv[1] == "overflow_check":
