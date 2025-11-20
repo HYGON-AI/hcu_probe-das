@@ -31,6 +31,7 @@ from msprobe.core.common.megatron_utils import MegatronStepInfo
 
 class BaseService(ABC):
     def __init__(self, config):
+        self.bench_dump_iter_dir = None
         self.config = copy.deepcopy(config)
         self.config.level = getattr(config, 'level_ori', config.level)  # 兼容MindSpore配置
         self.model = None
@@ -232,6 +233,11 @@ class BaseService(ABC):
         else:
             self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
 
+        if getattr(self.config, "bench_path", None):
+            self.bench_dump_iter_dir = os.path.join(self.config.bench_path, f"step{self.current_iter}")
+        else:
+            self.bench_dump_iter_dir = None
+
         cur_rank = self.current_rank if self.current_rank is not None else ''
         if self._is_l2_level:
             self._create_l2_dirs(cur_rank)
@@ -305,21 +311,27 @@ class BaseService(ABC):
 
     def _create_l2_dirs(self, cur_rank):
         create_directory(self.dump_iter_dir)
+        create_directory(self.bench_dump_iter_dir)
         kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
         self.config.kernel_config_path = kernel_config_path
 
     def _create_default_dirs(self, cur_rank):
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
+        bench_dump_dir = None
+        if self.bench_dump_iter_dir:
+            bench_dump_dir = os.path.join(self.bench_dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
-
+        if bench_dump_dir:
+            create_directory(bench_dump_dir)
         dump_data_dir = None
         if self._need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
 
-        self._configure_dump_paths(dump_dir, dump_data_dir)
+        self._configure_dump_paths(dump_dir, dump_data_dir, bench_dump_dir)
 
-    def _configure_dump_paths(self, dump_dir, dump_data_dir):
+
+    def _configure_dump_paths(self, dump_dir, dump_data_dir, bench_dump_dir):
         dump_path_aggregation = DumpPathAggregation()
         dump_path_aggregation.dump_file_path = os.path.join(dump_dir, "dump.json")
         dump_path_aggregation.stack_file_path = os.path.join(dump_dir, "stack.json")
@@ -327,6 +339,8 @@ class BaseService(ABC):
         dump_path_aggregation.dump_error_info_path = os.path.join(dump_dir, "dump_error_info.log")
         dump_path_aggregation.dump_tensor_data_dir = dump_data_dir
         dump_path_aggregation.debug_file_path = os.path.join(dump_dir, "debug.json")
+        if bench_dump_dir:
+            dump_path_aggregation.bench_dump_file_path = os.path.join(bench_dump_dir, "dump.json")
         self.data_collector.update_dump_paths(dump_path_aggregation)
         self.data_collector.initialize_json_file(self._get_framework_type)
 

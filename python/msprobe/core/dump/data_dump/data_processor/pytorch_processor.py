@@ -17,6 +17,8 @@ import ctypes
 import inspect
 import os
 import zlib
+import json
+import re
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 
@@ -25,6 +27,7 @@ import torch
 from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
+from msprobe.core.common.file_utils import FileOpen, load_json
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
@@ -32,6 +35,8 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, is_int
 from msprobe.core.dump.data_dump.data_processor.base import (
     BaseDataProcessor,
+    ModuleBackwardInputsOutputs,
+    ModuleForwardInputsOutputs,
     TensorStatInfo
 )
 from msprobe.pytorch.common.utils import (
@@ -41,6 +46,7 @@ from msprobe.pytorch.common.utils import (
     is_hifloat8_tensor,
     is_float8_tensor
 )
+
 
 is_gpu = False
 try:
@@ -439,18 +445,22 @@ class PytorchDataProcessor(BaseDataProcessor):
                 elif t_cpu.device.type == "npu":
                     t_cpu = t_cpu.to("cpu", non_blocking=True)
                     torch.npu.synchronize()
-
                 t_cpu = t_cpu.detach()
-                if not t_cpu.is_contiguous():
-                    t_cpu = t_cpu.contiguous()
 
-                future = self._crc_executor.submit(
-                    PytorchDataProcessor.compute_crc32_from_tensor,
-                    t_cpu
-                )
+                if self.config.task == Const.TENSOR and self.data_writer.bench_dump_file_path is not None:
+                    tensor_md5 = PytorchDataProcessor.compute_crc32_from_tensor(t_cpu)
+                    tensor_json.update({Const.MD5: tensor_md5})
+                else:
+                    if not t_cpu.is_contiguous():
+                        t_cpu = t_cpu.contiguous()
 
-                crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
-                tensor_json[Const.MD5_INDEX] = crc_placeholder
+                    future = self._crc_executor.submit(
+                        PytorchDataProcessor.compute_crc32_from_tensor,
+                        t_cpu
+                    )
+
+                    crc_placeholder = self.data_writer.append_crc32_to_buffer(future)
+                    tensor_json[Const.MD5_INDEX] = crc_placeholder
             else:
                 logger.debug(
                     "Calculating the md5 value of fake tensor or meta tensor is not supported, "
@@ -505,6 +515,318 @@ class TensorDataProcessor(PytorchDataProcessor):
 
     def _analyze_ndarray(self, ndarray, suffix):
         return self._analyze_and_save_ndarray(ndarray, suffix)
+
+
+class DiffCheckDataProcessor(PytorchDataProcessor):
+    __slots__ = [
+        "cached_tensors_and_file_paths",
+        "_bench_ref_path",
+        "_bench_ref_mtime",
+        "_bench_map",
+        "_bench_state",  # 新增：按 API 的对比状态
+    ]
+
+    def __init__(self, config, data_writer):
+        super().__init__(config, data_writer)
+        self.has_diff = False
+
+        self.cached_api_info = {}
+        self.cached_tensors_and_file_paths = {}
+        self.bits_for_diff = 8
+        self.real_diff_nums = 0
+        self.diff_nums = config.diff_nums
+
+        # 新增：bench 基准缓存初始化
+        self._bench_ref_path = None
+        self._bench_ref_mtime = None
+        self._bench_map = {}
+        self._bench_state = {}  # key: api_name -> 状态字典
+
+    @property
+    def is_terminated(self):
+        if self.diff_nums == -1:
+            return False
+        if self.real_diff_nums >= self.diff_nums:
+            return True
+        return False
+
+    @staticmethod
+    def _parse_data_name(data_name: str):
+        """
+        解析 data_name，例如：
+        - "Functional.relu.2.forward.input.0.pt"
+        - 兼容可选前缀 "name:" -> "name:Functional.relu.2.forward.input.0.pt"
+        返回 (api, io, idx) 或 None
+        """
+        if not data_name:
+            return None
+        if data_name.startswith("name:"):
+            data_name = data_name.split(":", 1)[1]
+
+        # api 名本身可能包含若干个 '.'，所以用正则从右侧提取 io/idx/扩展名
+        m = re.match(
+            r"^(?=.{1,1024}$)(?P<api>.+)\.(?P<io>input|output)\.(?P<idx>\d+)\.\w+$",
+            data_name
+        )
+        if not m:
+            return None
+        api = m.group("api")
+        io = m.group("io")
+        idx = int(m.group("idx"))
+        return api, io, idx
+
+    def analyze_forward_input(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        self.has_diff = False
+
+        self.cached_api_info = super().analyze_forward_input(name, module, module_input_output)
+        return None
+
+    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+
+        api_info_struct = super().analyze_forward_output(name, module, module_input_output)
+        if name in self.cached_api_info and name in api_info_struct:
+            self.cached_api_info[name].update(api_info_struct[name])
+        elif name in api_info_struct:
+            self.cached_api_info = api_info_struct
+        self.handle_diff()
+        return self.cached_api_info
+
+    def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        self.has_diff = False
+
+        api_info_struct = super().analyze_forward(name, module, module_input_output)
+        self.handle_diff()
+        return api_info_struct
+
+    def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
+        self.has_diff = False
+
+        api_info_struct = super().analyze_backward(name, module, module_input_output)
+        self.handle_diff()
+        return api_info_struct
+
+    def analyze_params(self, name, param_name, grad):
+        self.has_diff = False
+
+        api_info_struct = super().analyze_params(name, param_name, grad)
+        self.handle_diff()
+        return api_info_struct
+
+    def handle_diff(self):
+        if self.has_diff:
+            for file_path, tensor in self.cached_tensors_and_file_paths.items():
+                self.tensor_handler.save_tensor(tensor, file_path)
+            self.real_diff_nums += 1
+            if self.diff_nums != -1 and self.real_diff_nums >= self.diff_nums:
+                logger.info(f"[{Const.TOOL_NAME}] Reached the preset diff times, "
+                            f"current diff times: {self.real_diff_nums}.")
+        api = getattr(self, "current_api_or_module_name", None)
+        if api and api in self._bench_state:
+            self._bench_state.pop(api, None)
+
+        self.cached_tensors_and_file_paths = {}
+
+
+    def _analyze_maybe_diff_flag(self):
+        try:
+            self.has_diff = torch_npu.npu.utils.get_npu_diff_flag()
+            if self.has_diff:
+                torch_npu.npu.utils.clear_npu_diff_flag()
+        except Exception as e:
+            logger.error(f"Diff check failed, the current environment may be abnormal.")
+            raise RuntimeError(f"diff check failed") from e
+
+    def _bench_expected_counts_for_api(self, api: str):
+        """统计某 API 在 bench_map 里有多少个 Tensor 输入/输出"""
+        n_in = n_out = 0
+        for (a, io, _) in self._bench_map.keys():
+            if a == api:
+                if io == "input":
+                    n_in += 1
+                elif io == "output":
+                    n_out += 1
+        return n_in, n_out
+
+    def _resolve_bench_json_path(self) -> str:
+        p = getattr(self.data_writer, "bench_dump_file_path", None)
+        if not p:
+            return None
+        p = os.path.join(p, "dump.json") if os.path.isdir(p) else p
+        return p if os.path.isfile(p) else None
+
+    def _ensure_bench_map_loaded(self) -> bool:
+        """
+        当路径变化或文件 mtime 变化时重载 dump.json，并构建 (api, 'input'/'output', idx) -> {md5, shape} 的索引。
+        """
+        path = self._resolve_bench_json_path()
+        if not path:
+            return False
+        try:
+            mtime = os.path.getmtime(path)
+        except Exception as e:
+            return False
+
+        need_reload = (path != self._bench_ref_path) or (mtime != self._bench_ref_mtime)
+
+        if need_reload:
+            try:
+                obj = load_json(path)
+            except Exception as e:
+                logger.warning(f"Failed to load bench dump.json: {e}")
+                return False
+
+            data = obj.get("data", {})
+            self._bench_map = self._build_bench_map_from_json(data)
+            self._bench_ref_path = path
+            self._bench_ref_mtime = mtime
+
+        return True
+
+    def _build_bench_map_from_json(self, data: dict) -> dict:
+        """
+        data 结构：{ api_name: {input_args: [...], output: [...] } }
+        只收集 Tensor 项：(api, io, idx) -> {"md5": str, "shape": list}
+        """
+        mp = {}
+        total_inputs = 0
+        total_outputs = 0
+        for api_name, rec in data.items():
+            ia = rec.get("input_args", [])
+            oa = rec.get("output", [])
+            # input_args
+            input_count_this_api = 0
+            for i, arg in enumerate(ia):
+                if isinstance(arg, dict) and arg.get("type") == "torch.Tensor":
+                    mp[(api_name, "input", i)] = {
+                        "md5": arg.get("md5"),
+                        "shape": arg.get("shape"),
+                    }
+                    input_count_this_api += 1
+            total_inputs += input_count_this_api
+
+            # output
+            output_count_this_api = 0
+            for i, out in enumerate(oa):
+                if isinstance(out, dict) and out.get("type") == "torch.Tensor":
+                    mp[(api_name, "output", i)] = {
+                        "md5": out.get("md5"),
+                        "shape": out.get("shape"),
+                    }
+                    output_count_this_api += 1
+            total_outputs += output_count_this_api
+
+        return mp
+
+    def _analyze_maybe_diff_tensor(self, tensor_json):
+        # 1) bench map 准备
+        if not self._ensure_bench_map_loaded():
+            return
+
+        # 2) 解析 data_name -> (api, io, idx)
+        data_name = tensor_json.get("data_name")
+        parsed = self._parse_data_name(data_name)
+        if not parsed:
+            logger.debug(f"data_name parse failed: {data_name}")
+            return
+        api, io, idx = parsed
+
+        # 3) 取/建 本 API 的状态
+        st = self._bench_state.get(api)
+        if st is None:
+            n_in, _ = self._bench_expected_counts_for_api(api)
+            st = {
+                "expected_in": n_in,  # 标杆中该 API 期望的 Tensor 输入数
+                "checked_in": 0,  # 已经校验过的“在标杆中存在的输入”个数
+                "inputs_equal": True,  # 到目前为止，输入是否全部一致
+                "seen_input_not_in_ref": False,  # 遇到“运行时存在但标杆里没有”的输入
+                "any_output_neq": False,  # 是否发现过任一输出不一致（shape 同且 md5 不同）
+            }
+            self._bench_state[api] = st
+
+        # 4) 找到标杆项
+        ref = self._bench_map.get((api, io, idx))
+
+        # 5) 当前 shape
+        cur_shape = tensor_json.get("shape")
+        if cur_shape is None:
+            return
+        try:
+            cur_shape = list(cur_shape)
+        except Exception as e:
+            logger.warning("[BENCH]", "shape to list failed:", repr(e), "-> skip")
+            return
+
+        # 6) 输入与输出分别处理
+        if io == "input":
+            # —— 输入阶段：只维护“输入是否一致”的状态 —— #
+            if ref is None:
+                # 运行时有输入，但标杆里没有对应条目 => 不能断言“输入一致”
+                st["inputs_equal"] = False
+                st["seen_input_not_in_ref"] = True
+
+                return
+
+            ref_shape = ref.get("shape")
+            ref_md5 = ref.get("md5")
+
+            # 标杆有该输入，计入已校验
+            st["checked_in"] += 1
+
+            # shape 必须一致
+            if list(ref_shape) != list(cur_shape):
+                st["inputs_equal"] = False
+
+                return
+
+            # 取当前 md5
+            cur_md5 = tensor_json.get(Const.MD5) if Const.MD5 in tensor_json else tensor_json.get("md5")
+
+            if cur_md5 is None or ref_md5 is None:
+                # 缺少 md5 信息，无法断言一致
+                st["inputs_equal"] = False
+                return
+
+            # md5 必须一致
+            if str(cur_md5) != str(ref_md5):
+                st["inputs_equal"] = False
+            return  # 输入阶段不触发 has_diff
+
+        else:  # io == "output"
+            # —— 输出阶段：仅当“所有输入一致且已校验完所有输入”时，才检查输出不一致以置位 —— #
+            # 若标杆无此输出，按照你的规则：不能断言输出不一致，直接跳过
+            if ref is None:
+                return
+
+            ref_shape = ref.get("shape")
+            ref_md5 = ref.get("md5")
+
+            # shape 必须一致才比较 md5
+            if list(ref_shape) != list(cur_shape):
+                return
+
+            cur_md5 = tensor_json.get(Const.MD5) if Const.MD5 in tensor_json else tensor_json.get("md5")
+            if cur_md5 is None or ref_md5 is None:
+                return
+
+            # 只有当“输入全部一致且已校验完所有输入”时，才允许判定输出不一致
+            inputs_ok = (
+                    st["inputs_equal"]
+                    and (st["checked_in"] == st["expected_in"])
+                    and (not st["seen_input_not_in_ref"])
+            )
+
+            if inputs_ok and (str(cur_md5) != str(ref_md5)):
+                st["any_output_neq"] = True
+                self.has_diff = True
+
+    def _analyze_tensor(self, tensor, suffix):
+        dump_data_name, file_path = self.get_save_file_path(suffix)
+        self.cached_tensors_and_file_paths.update({file_path: tensor})
+        single_arg = super()._analyze_tensor(tensor, suffix)
+        single_arg.update({"data_name": dump_data_name})
+        if not self.has_diff:
+            self._analyze_maybe_diff_tensor(single_arg)
+        return single_arg
 
 
 class KernelDumpDataProcessor(PytorchDataProcessor):

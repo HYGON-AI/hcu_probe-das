@@ -60,6 +60,7 @@ class BaseConfig:
         self.data_mode = json_config.get('data_mode')
         self.file_format = json_config.get("file_format")
         self.summary_mode = json_config.get("summary_mode")
+        self.diff_nums = json_config.get("diff_nums")
         self.check_mode = json_config.get("check_mode")
         self.is_regex_valid = True
 

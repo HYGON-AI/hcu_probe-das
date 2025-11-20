@@ -33,7 +33,8 @@ class DebuggerConfig:
         self.framework = Const.PT_FRAMEWORK
         self.async_dump = common_config.async_dump if common_config.async_dump else False
         self.precision = common_config.precision if common_config.precision else Const.DUMP_PRECISION_LOW
-
+        self.diff_nums = task_config.diff_nums if task_config.diff_nums else 1
+        self.bench_path = getattr(task_config, "bench_path", None)
         self.check()
         self._check_statistics_config(task_config)
 

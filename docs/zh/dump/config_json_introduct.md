@@ -42,7 +42,7 @@
     <tr><td>PyTorch、MSAdapter 以及 MindSpore 动态图场景配置具体的 API 全称，dump 该 API 数据。在 PyTorch 场景，如果 level 配置成 L2，该配置为必填项。<br/><b>配置示例</b>："list": ["Tensor.permute.1.forward", "Tensor.transpose.2.forward", "Torch.relu.3.backward"]。<br/> PyTorch 和 MindSpore 动态图场景在level为 mix 级别时可以配置模块名称，dump该模块展开数据 （dump该模块从执行开始到执行结束期间的所有数据）。
     <br/><b>配置示例</b>："list": ["Module.module.language_model.encoder.layers.0.mlp.ParallelMlp.forward.0"], 或 "list": ["Cell.network_with_loss.language_model.encoder.layers.0.mlp.ParallelMlp.forward.0"]</td></tr>
     <tr><td>PyTorch、MSAdapter 以及 MindSpore 动态图场景指定某一类 API，dump 某一类的 API 级别输入输出数据。<br/><b>配置示例</b>："list": ["relu"]。 <br/>    PyTorch、MSAdapter 以及 MindSpore 动态图场景在level为 mix 级别时, 会dump名称中包含list中配置的字符串的API数据，还会将名称中包含list中配置的字符串的模块进行展开dump （dump该模块从执行开始到执行结束期间的所有数据）。</td></tr>
-    <tr><td>MindSpore 静态图场景配置 kernel_name，可以是算子的名称列表，也可以指定算子类型（jit_level=O2 时不支持），还可以配置算子名称的正则表达式（当字符串符合“name-regex(xxx)”格式时，后台则会将其作为正则表达式。<br/><b>配置示例</b>：list: ["name-regex(Default/.+)"]<br/>可匹配算子名称以“Default/”开头的所有算子。</td></tr>
+    <tr><td>MindSpore 静态图场景配置 kernel_name，可以是算子的名称列表，也可以指定算子类型（jit_level=O2 时不支持），还可以配置算子名称的正则表达式（当字符串符合“name-regex(xxx)”格式时），后台则会将其作为正则表达式。<br/><b>配置示例</b>：list: ["name-regex(Default/.+)"]<br/>可匹配算子名称以“Default/”开头的所有算子。</td></tr>
     <tr><td rowspan="2">tensor_list</td><td>自定义采集真实数据的算子列表，list[str] 类型，默认未配置。包含以下配置方法：</td><td rowspan="2">否</td></tr>
     <tr><td>PyTorch、MSAdapter 以及 MindSpore 动态图场景指定某一类 API 或模块，即会 dump 这一类 API 或模块输入输出的统计量信息和完整的 tensor 数据。<br/><b>配置示例</b>："tensor_list": ["relu"]。 <br/>    PyTorch、MSAdapter 以及 MindSpore 动态图场景目前只支持level配置为 L0, L1 和 mix 级别。 <br/>  MindSpore 静态图场景不支持。</td></tr>
     <tr><td>device</td><td>控制统计值计算所用的设备，可选值["device", "host"]，默认"host"。使用device计算会比host有性能加速，只支持min/max/avg/l2norm统计量。支持 MindSpore静态图 O0/O1 场景。</td><td>否</td></tr>
@@ -66,13 +66,17 @@ PyTorch、MSAdapter 以及 MindSpore 动态图场景，"summary_mode" 配置为 
 
 ### 1.3 task 配置为 tensor
 
-| 参数         | 解释         | 是否必选 |
-| -------------- | ---------------------- | -------- |
-| scope          | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。 | 否       |
-| list           | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。 | 否       |
-| data_mode      | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同 | 否       |
-| file_format    | tensor 数据的保存格式，str 类型，仅支持 MindSpore 静态图场景的 L2 级别配置该字段，其他场景不生效。可选参数：<br/> "bin"：dump 的 tensor 文件为二进制格式；<br/>"npy"：dump 的 tensor 文件后缀为 .npy，默认值。 | 否       |
-| summary_mode  | 控制 dump 文件输出的模式，str 类型，支持 PyTorch、MSAdapter、MindSpore 动态图。可选参数：<br/> md5：dump 输出包含 CRC-32 值以及 API 统计信息的 dump.json 文件，用于验证数据的完整性；<br/> statistics：dump 仅输出包含 API 统计信息的 dump.json 文件，默认值。| 否 |
+| 参数         | 解释                                                                                                                                                                                   | 是否必选 |
+| -------------- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+| scope          | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                         | 否       |
+| list           | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                         | 否       |
+| data_mode      | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同                                                                                                                          | 否       |
+| file_format    | tensor 数据的保存格式，str 类型，仅支持 MindSpore 静态图场景的 L2 级别配置该字段，其他场景不生效。可选参数：<br/> "bin"：dump 的 tensor 文件为二进制格式；<br/>"npy"：dump 的 tensor 文件后缀为 .npy，默认值。                                       | 否       |
+| summary_mode  | 控制 dump 文件输出的模式，str 类型，支持 PyTorch、MSAdapter、MindSpore 动态图。可选参数：<br/> md5：dump 输出包含 CRC-32 值以及 API 统计信息的 dump.json 文件，用于验证数据的完整性；<br/> statistics：dump 仅输出包含 API 统计信息的 dump.json 文件，默认值。 | 否 |
+| bench_path      | 自动控制在PyTorch确定性问题定位时进行md5实时差异分析，即dump存在差异的md5数据，str 类型，默认未配置本参数。 需要在bench_path参数传入提前预置的md5数据路径（即在上一次dump操作时，summary_mode参数配置为md5），并且本次dump时同样配置summary_mode为md5。配置本参数后，dump会判断本次任务中每个tensor与预置的md5数据的差异，识别到差异节点后，进行真实数据dump。**配置示例**："bench_path": "./bench_dump_path"。 | 否       |
+| diff_nums      | 最大差异次数，int 类型，默认为 1，仅PyTorch md5实时差异分析场景支持（即配置bench_path）。 表示第N次差异出现后，不再进行溢出检测。过程中检测到差异API对应的输入输出数据均dump。 **配置示例**："diff_nums": 3。配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
+
+
 
 **示例**：
 

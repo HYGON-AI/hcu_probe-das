@@ -19,6 +19,7 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json
 from msprobe.core.dump.common_config import BaseConfig, CommonConfig
 from msprobe.pytorch.dump.api_dump.utils import get_ops
+from msprobe.core.common.utils import is_int
 
 
 class TensorConfig(BaseConfig):
@@ -27,6 +28,7 @@ class TensorConfig(BaseConfig):
         self.check_config()
         self._check_summary_mode()
         self._check_file_format()
+        self.bench_path = json_config.get("bench_path")
 
     def _check_file_format(self):
         if self.file_format is not None and self.file_format not in ["npy", "bin"]:
@@ -43,6 +45,22 @@ class StatisticsConfig(BaseConfig):
         self._check_str_list_config(self.tensor_list, "tensor_list")
 
 
+class DiffCheckConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.diff_nums = json_config.get("diff_nums")
+        self.check_mode = json_config.get("check_mode")
+        self.check_diff_config()
+
+    def check_diff_config(self):
+        if self.diff_nums is not None and not is_int(self.diff_nums):
+            raise Exception("diff_num is invalid")
+        if self.diff_nums is not None and self.diff_nums != -1 and self.diff_nums <= 0:
+            raise Exception("diff_nums should be -1 or positive integer")
+        if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
+            raise Exception("check_mode is invalid")
+
+
 class StructureConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
@@ -51,6 +69,7 @@ class StructureConfig(BaseConfig):
 TaskDict = {
     Const.TENSOR: TensorConfig,
     Const.STATISTICS: StatisticsConfig,
+    Const.DIFF_CHECK: DiffCheckConfig,
     Const.STRUCTURE: StructureConfig
 }
 

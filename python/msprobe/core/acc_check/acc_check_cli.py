@@ -18,10 +18,12 @@ import sys
 import json
 import os
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
 def _detect_framework_from_api_info(api_info_path: str) -> str:
     """从 -api_info 指定的 dump.json 中读取 framework 字段."""
+    check_file_or_directory_path(api_info_path, False)
     if not api_info_path:
         raise ValueError("Argument -api_info is required to detect framework.")
 

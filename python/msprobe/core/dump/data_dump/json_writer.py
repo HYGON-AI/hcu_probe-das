@@ -31,6 +31,7 @@ lock = threading.Lock()
 class DataWriter:
 
     def __init__(self) -> None:
+        self.bench_dump_file_path = None
         self.dump_file_path = None
         self.stack_file_path = None
         self.construct_file_path = None
@@ -165,7 +166,9 @@ class DataWriter:
         self.construct_file_path = dump_path_aggregation.construct_file_path
         self.dump_tensor_data_dir = dump_path_aggregation.dump_tensor_data_dir
         self.debug_file_path = dump_path_aggregation.debug_file_path
+        self.bench_dump_file_path = getattr(dump_path_aggregation, "bench_dump_file_path", None)
         self.dump_error_info_path = dump_path_aggregation.dump_error_info_path
+
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
