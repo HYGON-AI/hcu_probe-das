@@ -45,7 +45,7 @@ msprobe compare -i ./compare.json -o ./output -s
 | --rank              | 配置比对的Rank ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Rank的数据。默认为空，表示比对所有Rank。可配置一个或多个Rank，多个Rank ID用逗号隔开，例如：1,2,3                                                                                                                     | 否    |
 | --step              | 配置比对的Step ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Step的数据。默认为空，表示比对所有Step。可配置一个或多个Step，多个Step ID用逗号隔开，例如：1,2,3                                                                                                                                | 否    |
 
-动态图模式没有填写任何mapping时，按照同框架比对的方式进行比对，比对数据和标杆数据的Cell或Api名称需要完全相同才能匹配得上。
+动态图模式没有填写任何mapping时，按照同框架比对的方式进行比对，比对数据和标杆数据的Cell或API名称需要完全相同才能匹配得上。
 
 ### 2.2 不同版本下的全量API比对
 
@@ -57,7 +57,7 @@ msprobe compare -i ./compare.json -o ./output -s
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output
    ```
-   多卡场景(-tp和-gp需填写到step层级，即rank的上一层及)：
+   多卡场景(-tp和-gp需填写到step层级，即rank的上一层)：
    ```shell
    msprobe compare -tp /target_dump/step0 -gp /golden_dump/step0 -o ./output
    ```
