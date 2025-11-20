@@ -79,10 +79,6 @@ MindStudio Probe（简称msProbe）是精度调试工具包。主要包括精度
 
 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
 
-#### [在线精度比对](../../docs/zh/accuracy_compare/online_dispatch_instruct.md)
-
-实现在训练过程中直接完成精度比对并输出比对结果的功能，是NPU与CPU之间的精度数据比对。
-
 #### [训练状态监控](../../docs/zh/monitor_instruct.md)
 
 收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
