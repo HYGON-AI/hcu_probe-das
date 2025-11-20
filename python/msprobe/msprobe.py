@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="msprobe(mindstudio probe), [Powered by MindStudio].\n"
-                    "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
+                    "A full-process, all-scenario precision tool base on Ascend products.\n"
                     f"For any issue, refer README.md first",
     )
 
