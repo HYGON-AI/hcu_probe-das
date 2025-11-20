@@ -15,7 +15,7 @@
         "scope": [], 
         "list":[], 
         "data_mode": ["all"],
-        "file_format": "npy" 
+        "file_format": "npy"
     },
     "acc_check": {
         "white_list": [],

@@ -31,7 +31,7 @@ def build_data_collector(config):
 
 
 class DataCollector:
-    tasks_need_tensor_data = [Const.TENSOR]
+    tasks_need_tensor_data = [Const.DIFF_CHECK, Const.TENSOR]
     level_without_construct = [Const.LEVEL_L1, Const.LEVEL_L2]
 
     def __init__(self, config):
@@ -54,6 +54,10 @@ class DataCollector:
     @property
     def dump_file_path(self):
         return self.data_writer.dump_file_path
+
+    @property
+    def bench_dump_file_path(self):
+        return self.data_writer.bench_dump_file_path
 
     @staticmethod
     def check_scope_and_pid(scope, name, pid):

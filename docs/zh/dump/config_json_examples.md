@@ -39,7 +39,10 @@
     "tensor": {
         "scope": [],
         "list":[],
-        "data_mode": ["all"]
+        "data_mode": ["all"],
+        "bench_path": "/home/bench_data_dump",
+        "summary_mode": "md5",
+        "diff_nums": 5        
     }
 }
 ```
