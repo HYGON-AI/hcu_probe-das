@@ -601,6 +601,9 @@ def is_download_finished(directory, save_flag):
 def process_step(dump_path, flag_path, step, step_list):
     if step_list and step not in step_list:
         return
+    
+    global dump_task
+    dump_task = CoreConst.TENSOR
 
     if not os.path.exists(dump_path):
         logger.warning('No grap cell data is dumped.')

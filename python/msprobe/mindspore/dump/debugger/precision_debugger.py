@@ -125,6 +125,18 @@ class PrecisionDebugger(BasePrecisionDebugger):
         return is_graph
 
     @classmethod
+    def handle_graph_cell_dump(cls, instance):
+        """处理graph cell dump相关逻辑"""
+        is_graph_mode = instance.config.execution_mode in [MsConst.GRAPH_GE_MODE, MsConst.GRAPH_KBYK_MODE]
+
+        if is_graph_mode:
+            GraphModeCellDump.step(instance.config.dump_path, instance.config.step, instance.config.task)
+
+        if Runtime.run_mode == MsConst.PYNATIVE_GRAPH_MODE:
+            dump_path = os.path.join(instance.config.dump_path, MsConst.GRAPH_MODE)
+            GraphModeCellDump.step(dump_path, instance.config.step, instance.config.task)
+
+    @classmethod
     def start(cls, model=None, token_range=None):
         instance = cls._get_instance()
         if instance is None:
@@ -174,8 +186,10 @@ class PrecisionDebugger(BasePrecisionDebugger):
         if instance.service:
             with ThreadSafe():
                 instance.service.step()
-        if is_graph_mode_cell_dump_allowed(instance.config):
-            GraphModeCellDump.step(instance.config.dump_path, instance.config.step, instance.config.task)
+
+        if instance.config.level in [MsConst.CELL, MsConst.CELL_AND_API]:
+            cls.handle_graph_cell_dump(instance)
+
         if enable_dynamic_kbyk_dump and instance.config.level_ori == Const.LEVEL_L2:
             _dump_step(1)
         if cls._is_kernel_dump() and _msprobe_c:
