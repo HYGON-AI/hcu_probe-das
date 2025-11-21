@@ -298,8 +298,8 @@ class GraphBuilder:
         no_recompute_map = GraphBuilder._get_no_recompute_map(graph, id_prefixes)
         if not no_recompute_map:
             return
-        # 深拷贝非重计算节点字典用于反向模式
-        no_recompute_ids_b = copy.deepcopy(no_recompute_map)
+        # 拷贝非重计算节点字典用于反向模式
+        no_recompute_ids_b = {node_id: list(node_list) for node_id, node_list in no_recompute_map.items()}
 
         del_indexes = []
         for node_id, id_prefix in recompute_map.items():
