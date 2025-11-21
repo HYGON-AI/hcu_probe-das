@@ -21,7 +21,102 @@ import subprocess
 import platform
 import sys
 import setuptools
+from wheel.bdist_wheel import bdist_wheel
 
+# 检查操作系统，如果不是Linux则报错
+if platform.system() != "Linux":
+    raise SystemError("This package only supports Linux platform. {}".format(platform.system()))
+
+
+def build_frontend():
+    """构建前端资源"""
+    fe_path = os.path.join("plugins", "tb_graph_ascend", "fe")
+    
+    if not os.path.exists(fe_path):
+        return False
+
+    original_cwd = os.getcwd()
+    
+    try:
+        # 切换到fe目录
+        os.chdir(fe_path)
+        
+        # 检查package.json是否存在
+        if not os.path.exists("package.json"):
+            return True
+        
+        # 安装依赖
+        install_result = subprocess.run(
+            ["npm", "install", "--force"],
+            capture_output=True,
+            text=True
+        )
+        if install_result.returncode != 0:
+            return False
+        
+        # 执行构建
+        build_result = subprocess.run(
+            ["npm", "run", "buildLinux"],
+            capture_output=True,
+            text=True
+        )
+        if build_result.returncode != 0:
+            return False
+        else:
+            return True
+            
+    except Exception as e:
+        return False
+    finally:
+        # 切换回原始目录
+        os.chdir(original_cwd)
+
+
+def is_frontend_built():
+    """检查前端是否已经构建完成"""
+    fe_dist_path = os.path.join("plugins", "tb_graph_ascend", "fe", "dist")
+    fe_build_path = os.path.join("plugins", "tb_graph_ascend", "fe", "build")
+    
+    # 检查是否存在构建产物
+    index_html_exists = (
+        os.path.exists(os.path.join(fe_dist_path, "index.html")) or
+        os.path.exists(os.path.join(fe_build_path, "index.html"))
+    )
+    
+    return index_html_exists
+
+
+class BuildTbGraphAscendCommand(setuptools.Command):
+    """自定义命令：只构建 tb_graph_ascend 前端部分"""
+    
+    description = "Build tb_graph_ascend frontend"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        success = build_frontend()
+        if not success:
+            raise Exception("tb_graph_ascend 前端构建失败")
+
+
+class CustomBdistWheelCommand(bdist_wheel):
+    """自定义wheel构建命令"""
+    
+    def run(self):
+        # 检查前端是否已构建
+        if is_frontend_built():
+            # 包含所有包
+            self.distribution.packages = packages
+        else:
+            # 只包含 msprobe 相关的包，排除 tb_graph_ascend
+            self.distribution.packages = [pkg for pkg in packages if not pkg.startswith('tb_graph_ascend')]
+            
+        super().run()
 
 INSTALL_REQUIRED = [
     "wheel",
@@ -32,8 +127,8 @@ INSTALL_REQUIRED = [
     "tqdm",
     "openpyxl >= 3.0.6",
     "matplotlib",
-    "tensorboard",
-    "protobuf <= 3.20.3",
+    "tensorboard >= 2.11.2",
+    "protobuf <= 3.20.2",
     "rich"
 ]
 
@@ -72,6 +167,18 @@ if mod_list:
     if p.returncode != 0:
         raise RuntimeError(f"Failed to build source({p.returncode})")
 
+# 只查找python目录下的包（msprobe相关）
+packages = setuptools.find_packages(where="python")
+
+# 手动添加tb_graph_ascend相关的包
+tb_packages = [
+    "tb_graph_ascend",
+    "tb_graph_ascend.server", 
+    "tb_graph_ascend.fe",
+]
+
+packages.extend(tb_packages)
+
 setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
@@ -80,8 +187,26 @@ setuptools.setup(
     url="https://gitcode.com/Ascend/MindStudio-Probe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
-    packages=setuptools.find_packages(where="python"),  # 在python目录下查找包
-    package_dir={"": "python"},
+    packages=packages,
+    package_dir={
+        "": "python",
+        "tb_graph_ascend": "plugins/tb_graph_ascend",
+        "tb_graph_ascend.server": "plugins/tb_graph_ascend/server",
+        "tb_graph_ascend.fe": "plugins/tb_graph_ascend/fe", 
+    },
+    package_data={
+        "tb_graph_ascend.server": [
+            "static/**", 
+            "static/**/*",
+            "app/**",
+            "app/**/*",
+            "*.py",
+            "**/*.py",
+            "**/*.js",
+            "**/*.css",
+            "**/*.html"
+        ],
+    },
     platforms=["Linux"],
     include_package_data=True,
     python_requires=">=3.7",
@@ -103,6 +228,14 @@ setuptools.setup(
     keywords='pytorch msprobe ascend',
     ext_modules=[],
     zip_safe=False,
+    cmdclass={
+        'bdist_wheel': CustomBdistWheelCommand,
+        'build_tb_graph_ascend': BuildTbGraphAscendCommand,  # 新增自定义命令
+    },
     entry_points={
         'console_scripts': ['msprobe=msprobe.msprobe:main'],
-    }, )
+        'tensorboard_plugins': [
+            'graph_ascend = tb_graph_ascend.server.plugin:GraphsPlugin',
+        ],
+    },
+)

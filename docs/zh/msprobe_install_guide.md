@@ -37,10 +37,19 @@ cd MindStudio-Probe
 
 pip install setuptools wheel
 
+python setup.py build_tb_graph_ascend #可选项 模型分级可视化功能
 python setup.py bdist_wheel [--include-mod=[adump]] [--no-check]
 cd ./dist
 pip install ./mindstudio_probe*.whl
 ```
+
+通过执行 build_tb_graph_ascend 构建指令来安装模型分级可视化功能
+如执行此命令，则会安装模型分级可视化插件
+如不执行，则按正常流程安装msprobe功能
+
+详细文档：
+关于模型分级可视化插件的详细功能及使用说明，请查阅：[模型分级可视化文档](./accuracy_compare/tb_graph_ascend.md)
+
 
 |参数|说明|是否必选|
 |--|--|:--:|
