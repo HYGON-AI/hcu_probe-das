@@ -146,6 +146,7 @@ class BaseGraphMerger:
                                                                           GraphConst.APIS_BETWEEN_MODULES_ALL_RANKS,
                                                                           id_accumulation=True)
                 all_collection_node = main_graph_result.graph.get_node(all_collection_node_id)
+                all_collection_node.upnode = main_graph_result.graph.root
                 new_main_root_sub_nodes.append(all_collection_node)
                 # Apis_Between_Modules.0 --> Apis_Between_Modules_Rank0.0
                 origin_main_node_id = main_node.id
@@ -376,6 +377,12 @@ class PPMerger(BaseGraphMerger):
         if not pp_groups:
             logger.info('Unable to get pp groups based on Distributed Api (batch_isend_irecv, send, or isend), '
                         'generate pp groups using parallel param "rank_size", "tp" and "pp".')
+            _, pp_groups = self.get_default_groups()
+        elif len(pp_groups[0]) != self.parallel_param.pp:
+            logger.warning(f'Based on Distributed Api (atch_isend_irecv, send, or isend), '
+                           f'the resulting pp groups={pp_groups}, '
+                           f'its length is not equal to the parallel param "pp"({self.parallel_param.pp}) you defined, '
+                           f'generate pp groups using parallel param "rank_size", "tp" and "pp".')
             _, pp_groups = self.get_default_groups()
         logger.info(f'{self.log_prefix} All pp groups is {pp_groups}.')
         return pp_groups
@@ -656,6 +663,12 @@ class TPMerger(BaseGraphMerger):
         if not tp_groups:
             logger.info('Unable to get tp groups based on Distributed Api (reduce_scatter or all_reduce), '
                         'generate tp groups using parallel param "rank_size", "tp" and "pp".')
+            tp_groups, _ = self.get_default_groups()
+        elif len(tp_groups[0]) != self.parallel_param.tp:
+            logger.warning(f'Based on Distributed Api (reduce_scatter or all_reduce), '
+                           f'the resulting tp groups={tp_groups}, '
+                           f'its length is not equal to the parallel param "tp"({self.parallel_param.tp}) you defined, '
+                           f'generate tp groups using parallel param "rank_size", "tp" and "pp".')
             tp_groups, _ = self.get_default_groups()
         logger.info(f'{self.log_prefix} All tp groups is {tp_groups}.')
         return tp_groups

@@ -126,21 +126,25 @@ class Graph:
 
     def get_sorted_nodes(self):
         """
-        通过深度优先遍历graph，获得排过序的node列表
+        通过深度优先遍历graph，获得排过序的node列表，使用栈实现避免超出递归深度问题
         """
         visited = set()
         order = []
+        stack = [(self.root, False)]
 
-        @recursion_depth_decorator('msprobe.visualization.graph.graph.Graph.get_nodes_order.visit', max_depth=500)
-        def visit(node):
+        while stack:
+            node, processed = stack.pop()
             if node.id in visited:
-                return
-            visited.add(node.id)
-            for sub_node in node.subnodes:
-                visit(sub_node)
-            order.append(node)
+                continue
+            if processed:
+                visited.add(node.id)
+                order.append(node)
+            else:
+                stack.append((node, True))
+                for sub_node in reversed(node.subnodes):
+                    if sub_node.id not in visited:
+                        stack.append((sub_node, False))
 
-        visit(self.root)
         return order
 
     def add_node(self, node_op, node_id, up_node=None, id_accumulation=False):
