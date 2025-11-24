@@ -25,16 +25,13 @@ class CmpArgsAdapter:
                  target_path,
                  input_data="",
                  cann_path=CANN_PATH,
-                 output_path="./",
+                 output_path="./output",
                  input_shape="",
                  rank="0",
                  output_size="",
-                 output_nodes="",
                  dym_shape_range="",
                  onnx_fusion_switch=True,
-                 quant_fusion_rule_file="",
-                 saved_model_signature="",
-                 saved_model_tag_set=""
+                 quant_fusion_rule_file=""
                  ):
         self.golden_path = golden_path
         self.target_path = target_path
@@ -44,9 +41,6 @@ class CmpArgsAdapter:
         self.input_shape = input_shape
         self.rank = rank
         self.output_size = output_size
-        self.output_nodes = output_nodes
         self.dym_shape_range = dym_shape_range
         self.onnx_fusion_switch = onnx_fusion_switch
         self.quant_fusion_rule_file = quant_fusion_rule_file
-        self.saved_model_signature = saved_model_signature
-        self.saved_model_tag_set = saved_model_tag_set

@@ -155,7 +155,7 @@ def load_file_to_read_common_check(path: str, exts=None):
 
 
 def filter_cmd(paras):
-    whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ]+$")
+    whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ;/]+$")
     filtered = []
     for arg in paras:
         arg_str = str(arg)

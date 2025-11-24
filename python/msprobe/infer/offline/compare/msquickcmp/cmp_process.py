@@ -27,10 +27,10 @@ import onnxruntime
 import pandas as pd
 
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.atc import atc_utils
 from msprobe.infer.offline.compare.msquickcmp.common import utils
-from msprobe.infer.offline.compare.msquickcmp.common.args_check import is_saved_model_valid
 from msprobe.infer.offline.compare.msquickcmp.common.convert import convert_npy_to_bin
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException, \
     get_shape_to_directory_name, OPTYPE_WHITWLIST
@@ -61,24 +61,14 @@ NO = "NO"
 
 
 def _generate_golden_data_model(args, npu_dump_npy_path):
-    if is_saved_model_valid(args.golden_path):
-        from msprobe.infer.offline.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-
-        return TfSaveModelDumpData(args, args.golden_path), None
     model_name, extension = utils.get_model_name_and_extension(args.golden_path)
-    if ".pb" == extension:
-        from msprobe.infer.offline.compare.msquickcmp.tf.tf_dump_data import TfDumpData
-
-        return TfDumpData(args), extension
-    elif ".onnx" == extension:
+    if ".onnx" == extension:
         from msprobe.infer.offline.compare.msquickcmp.onnx_model.onnx_dump_data import OnnxDumpData
-
         return OnnxDumpData(args, npu_dump_npy_path), extension
     elif ".om" == extension:
         return NpuDumpData(arguments=args, is_golden=True), extension
-
     else:
-        logger.error("Only model files whose names end with .pb or .onnx are supported")
+        logger.error("Only model files whose names end with .om or .onnx are supported")
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
 
 
@@ -219,25 +209,7 @@ def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
     if input_shape:
         args.input_shape = input_shape
         args.output_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
-
-    if is_saved_model_valid(args.target_path):
-        # npu dump
-        from msprobe.infer.offline.compare.msquickcmp.npu.npu_tf_adapter_dump_data import NpuTfAdapterDumpData
-        npu_dump = NpuTfAdapterDumpData(args, args.target_path)
-        npu_dump.generate_inputs_data()
-        npu_dump_data_path, output_json_path = npu_dump.generate_dump_data()
-        # gpu dump
-        from msprobe.infer.offline.compare.msquickcmp.tf.tf_save_model_dump_data import TfSaveModelDumpData
-        golden_dump = TfSaveModelDumpData(args, args.golden_path)
-        golden_dump.generate_inputs_data(False)
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
-        # compare the entire network
-        net_compare = NetCompare(npu_dump_data_path, golden_dump_data_path,
-                                 output_json_path, args, golden_json_path=None)
-        net_compare.accuracy_network_compare()
-        _append_column_to_csv(args.output_path)
-    else:
-        run_om_model_compare(args, use_cli)
+    run_om_model_compare(args, use_cli)
 
 
 def run_om_model_compare(args, use_cli):
@@ -261,15 +233,11 @@ def run_om_model_compare(args, use_cli):
     golden_dump, model_extension = _generate_golden_data_model(args, npu_dump_npy_path)
     expect_net_output_node = npu_dump.get_expect_output_name()
     # generate dump data by golden model
-    if is_saved_model_valid(args.golden_path):
-        golden_dump.generate_inputs_data(True)
-        golden_dump_data_path = golden_dump.generate_dump_data(output_json_path)
+    golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
+    if isinstance(golden_dump, NpuDumpData):
+        golden_dump_data_path, _ = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
     else:
-        golden_dump.generate_inputs_data(npu_dump_data_path, use_aipp)
-        if isinstance(golden_dump, NpuDumpData):
-            golden_dump_data_path, _ = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
-        else:
-            golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
+        golden_dump_data_path = golden_dump.generate_dump_data(npu_dump_npy_path, npu_dump.om_parser)
     golden_net_output_info = golden_dump.get_net_output_info()
 
     # if it's dynamic batch scenario, golden data files should be renamed
@@ -311,14 +279,14 @@ def _find_previous_node(graph, output_name):
 
 
 def check_and_run(args: CmpArgsAdapter, use_cli: bool):
-    utils.check_file_or_directory_path(args.golden_path, is_saved_model_valid(args.golden_path))
-    utils.check_file_or_directory_path(args.target_path, is_saved_model_valid(args.target_path))
+    check_file_or_directory_path(args.golden_path, False)
+    check_file_or_directory_path(args.target_path, False)
     utils.check_device_param_valid(args.rank)
-    utils.check_file_or_directory_path(os.path.realpath(args.output_path), True)
 
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.output_path, time_dir))
     args.output_path = original_out_path
+    create_directory(args.output_path)
 
     # deal with the dymShape_range param if exists
     input_shapes = []

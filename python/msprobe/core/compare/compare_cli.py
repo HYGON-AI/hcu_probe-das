@@ -19,12 +19,14 @@ from msprobe.core.common.log import logger
 from msprobe.core.compare.auto_compare import compare_auto_mode
 from msprobe.core.compare.offline_data_compare import compare_offline_data_mode
 from msprobe.core.compare.torchair_acc_cmp import compare_torchair_mode
+from msprobe.infer.offline.compare.msquickcmp.main import compare_offline_model_mode
 
 
 MODE_DISPATCHER = {
     'auto': compare_auto_mode,
     'offline_data': compare_offline_data_mode,
-    'torchair': compare_torchair_mode
+    'torchair': compare_torchair_mode,
+    'offline_model': compare_offline_model_mode
 }
 
 VALID_ARGS_MAP = {
@@ -40,7 +42,11 @@ VALID_ARGS_MAP = {
     'torchair': [
         '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o'
     ],
-    'offline_model': [],
+    'offline_model': [
+        '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o',
+        '--rank', '--input_data', '--input_shape', '--output_size', '--dym_shape_range',
+        '-ofs', '--onnx_fusion_switch', '-qfr', '--quant_fusion_rule_file'
+    ]
 }
 
 

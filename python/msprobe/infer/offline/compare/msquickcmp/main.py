@@ -21,11 +21,9 @@ from msprobe.infer.utils.security_check import is_enough_disk_space_left
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.cmp_process import cmp_process
 from msprobe.infer.offline.compare.msquickcmp.common.args_check import check_model_path_legality, \
-    check_target_model_path_legality, check_input_path_legality, check_cann_path_legality, check_output_path_legality, \
-    check_dict_kind_string, check_rank_range_valid, check_number_list, check_dym_range_string, \
-    check_fusion_cfg_path_legality, check_quant_json_path_legality, safe_string, str2bool, \
-    check_input_json_path, check_input_data_path
-from msprobe.infer.utils.util import filter_cmd
+    check_target_model_path_legality, check_input_path_legality, check_output_path_legality, check_dict_kind_string, \
+    check_rank_range_valid, check_number_list, check_dym_range_string, check_quant_json_path_legality, str2bool, \
+    check_input_data_path
 from msprobe.infer.offline.compare.msquickcmp.dump.dump_process import dump_process
 from msprobe.infer.offline.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
 
@@ -34,12 +32,12 @@ CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-tool
 
 def _offline_dump_parser(parser):
     parser.add_argument(
-        '-gp',
-        '--golden_path',
+        '-mp',
+        '--model_path',
         required=False,
-        dest="golden_path",
+        dest="model_path",
         type=check_model_path_legality,
-        help='The original model (.onnx or .pb or saved_model) file path')
+        help='The original model .onnx file path')
     parser.add_argument(
         '--input_data',
         default='',
@@ -51,7 +49,7 @@ def _offline_dump_parser(parser):
         '-o',
         '--output_path',
         dest="output_path",
-        default='',
+        default='./output',
         type=check_output_path_legality,
         help='The output path')
     parser.add_argument(
@@ -81,55 +79,20 @@ def _offline_dump_parser(parser):
         default=True,
         type=str2bool,
         help='Onnxruntime fusion switch, set False for dump complete onnx data when '
-             'necessary.Usage: -ofs False')
-    parser.add_argument(
-        '--saved_model_signature',
-        dest="saved_model_signature",
-        default='serving_default',
-        help="Enter the signature of the model")
-    parser.add_argument(
-        '--saved_model_tag_set',
-        dest="saved_model_tag_set",
-        default='serve',
-        help="Enter the tagSet of the model.Currently, multiple tagSets can be transferred, "
-             "for example, --saved_model_tag_set ['serve', 'general_parser']")
-    parser.add_argument(
-        '-dp',
-        '--device_pattern',
-        required=False,
-        dest="device_pattern",
-        choices=["cpu", "npu"],
-        help="Enter inference in npu or cpu device. For example: -dp cpu")
-    parser.add_argument(
-        '--tf_json',
-        required=False,
-        dest="tf_json_path",
-        type=check_input_json_path,
-        help="When dump saved_model, you need provide tf-ops-json file path.")
-    parser.add_argument(
-        '--fusion_switch_file',
-        dest="fusion_switch_file",
-        type=check_fusion_cfg_path_legality,
-        help='You can disable selected fusion patterns in the configuration file in TF2.x')
+             'necessary.Usage: --onnx_fusion_switch False')
 
 
 def offline_dump_cli(args):
-    output_path = "./" if args.output_path == '' else args.output_path
-    if not is_enough_disk_space_left(output_path):
+    if not is_enough_disk_space_left(args.output_path):
         raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
-    # if (not args.model_path) or (not args.device_pattern):
-    #     raise NotImplementedError("If you do not inference with MindIE-Torch, "
-    #                               "must use arguments '-m' and '-dp' to do next.")
-    if not args.golden_path:
-        raise NotImplementedError("must use arguments '-gp' and '-dp' to do dump, please check arguments.")
-    cmp_args = DumpArgsAdapter(args.golden_path,
+    if not args.model_path:
+        raise NotImplementedError("must use arguments '-mp' to do dump, please check arguments.")
+    cmp_args = DumpArgsAdapter(args.model_path,
                                input_data=args.input_data, cann_path=CANN_PATH,
                                output_path=args.output_path, input_shape=args.input_shape, rank=args.rank,
-                               dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch,
-                               saved_model_signature=args.saved_model_signature,
-                               saved_model_tag_set=args.saved_model_tag_set, device_pattern=args.device_pattern,
-                               tf_json_path=args.tf_json_path, fusion_switch_file=args.fusion_switch_file)
-    dump_process(cmp_args, True)
+                               dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch
+                               )
+    dump_process(cmp_args)
 
 
 def compare_offline_model_mode(args):
@@ -140,9 +103,8 @@ def compare_offline_model_mode(args):
         logger.error("The following args are required: -gp/--golden_path")
         return
     cmp_args = CmpArgsAdapter(args.golden_path, args.target_path, args.input_data, CANN_PATH, args.output_path,
-                              args.input_shape, args.rank, args.output_size, args.output_nodes, args.dym_shape_range,
-                              args.onnx_fusion_switch, args.quant_fusion_rule_file, args.saved_model_signature,
-                              args.saved_model_tag_set)
+                              args.input_shape, args.rank, args.output_size, args.dym_shape_range,
+                              args.onnx_fusion_switch, args.quant_fusion_rule_file)
     cmp_process(cmp_args, True)
 
 
@@ -155,18 +117,12 @@ def set_args_default(args):
         args.input_shape = ''
     if not hasattr(args, 'output_size'):
         args.output_size = ''
-    if not hasattr(args, 'output_nodes'):
-        args.output_nodes = ''
     if not hasattr(args, 'dym_shape_range'):
         args.dym_shape_range = ''
     if not hasattr(args, 'onnx_fusion_switch'):
         args.onnx_fusion_switch = True
     if not hasattr(args, 'quant_fusion_rule_file'):
         args.quant_fusion_rule_file = ''
-    if not hasattr(args, 'saved_model_signature'):
-        args.saved_model_signature = 'serving_default'
-    if not hasattr(args, 'saved_model_tag_set'):
-        args.saved_model_tag_set = 'serve'
     return args
 
 
@@ -185,8 +141,6 @@ def check_compare_args(args):
         args.rank = check_rank_range_valid(args.rank)
     if args.output_size:
         args.output_size = check_number_list(args.output_size)
-    if args.output_nodes:
-        args.output_nodes = check_dict_kind_string(args.output_nodes)
     if args.dym_shape_range:
         args.dym_shape_range = check_dym_range_string(args.dym_shape_range)
     if args.onnx_fusion_switch:

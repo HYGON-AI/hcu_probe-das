@@ -23,8 +23,6 @@ import stat
 import re
 import sys
 import subprocess
-import time
-from collections import namedtuple
 
 import numpy as np
 

@@ -34,9 +34,6 @@ def check_target_model_path_legality(path):
         raise argparse.ArgumentTypeError
     if os.path.isdir(path):
         check_input_dir_path(path)
-        if not is_saved_model_valid(path):
-            logger.error(f"target model path:{path} is not qualified saved_model file. Please check.")
-            raise argparse.ArgumentTypeError
         check_path_no_group_others_write(path)
         return path
     else:
@@ -54,45 +51,15 @@ def check_model_path_legality(path):
         raise argparse.ArgumentTypeError
     if os.path.isdir(path):
         check_input_dir_path(path)
-        if not is_saved_model_valid(path):
-            logger.error(f"model path:{path} is not qualified saved_model file. Please check.")
-            raise argparse.ArgumentTypeError
         check_path_no_group_others_write(path)
         return path
     else:
         check_input_file_path(path, file_max_size=MAX_SIZE_LIMITE_NORMAL_MODEL)
-        if not is_endswith_extensions(path, ["onnx", "om", "pb"]):
+        if not is_endswith_extensions(path, ["onnx", "om"]):
             logger.error(f"model path:{path} is illegal. Please check.")
             raise argparse.ArgumentTypeError
         check_path_no_group_others_write(path)
         return path
-
-
-def check_tf_pb_path_legality(value):
-    path_value = value
-    check_input_file_path(path_value, file_max_size=MAX_SIZE_LIMITE_NORMAL_MODEL)
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        logger.error(f"model path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError from err
-    if not file_stat.is_legal_file_type(["pb"]):
-        logger.error(f"model path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    check_path_no_group_others_write(path_value)
-    return path_value
-
-
-def is_saved_model_valid(directory):
-    if not os.path.isdir(directory):
-        return False
-
-    saved_model_pb = os.path.join(directory, "saved_model.pb")
-    if not os.path.isfile(saved_model_pb):
-        return False
-
-    variables_dir = os.path.join(directory, "variables")
-    return os.path.isdir(variables_dir)
 
 
 def check_input_path_legality(value):
@@ -144,16 +111,6 @@ def check_input_data_path(path):
             raise argparse.ArgumentTypeError
         check_path_no_group_others_write(input_item_path)
     return path
-
-
-def check_cann_path_legality(value):
-    path_value = value
-    check_input_dir_path(path_value)
-    if not is_legal_args_path_string(path_value):
-        logger.error(f"cann path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    check_path_no_group_others_write(path_value)
-    return path_value
 
 
 def check_output_path_legality(path):
@@ -220,95 +177,6 @@ def check_quant_json_path_legality(path):
         logger.error(f"quant fusion rule file path:{path} is illegal. Please check.")
         raise argparse.ArgumentTypeError
     return path
-
-
-def check_path_exit(value):
-    if not os.path.exists(value):
-        raise ValueError
-    return value
-
-
-def check_input_json_path(path):
-    if not isinstance(path, str):
-        logger.error(f"ops json path:{path} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    check_input_file_path(path)
-    if not is_endswith_extensions(path, ".json"):
-        logger.error(f"ops json path:{path} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    check_path_no_group_others_write(path)
-    return path
-
-
-def check_alone_compare_dir_path(path):
-    check_input_dir_path(path)
-    check_path_no_group_others_write(path)
-    return path
-
-
-def check_ops_json_path(path):
-    if os.path.isdir(path):
-        path = check_alone_compare_dir_path(path)
-    else:
-        path = check_input_json_path(path)
-    return path
-
-
-def valid_json_file_or_dir(value):
-    if not value:
-        return value
-    path_value = value
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        logger.error(f"input path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError from err
-    if not file_stat.is_basically_legal('read', strict_permission=False):
-        logger.error(f"input path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-
-    # input type: dir or json
-    # input type -> json need additional check
-    if not file_stat.is_dir:
-        if not file_stat.is_legal_file_type(["json"]):
-            logger.error(f"input path:{path_value} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
-            logger.error(f"input path:{path_value} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-    return path_value
-
-
-def check_fusion_cfg_path_legality(value):
-    if not value:
-        return value
-    path_value = value
-    check_input_file_path(path_value)
-    try:
-        file_stat = FileStat(path_value)
-    except Exception as err:
-        logger.error(f"fusion switch file path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError from err
-    if not file_stat.is_basically_legal('read'):
-        logger.error(f"fusion switch file path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    if not file_stat.is_legal_file_type(["cfg"]):
-        logger.error(f"fusion switch file path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    if not file_stat.is_legal_file_size(MAX_SIZE_LIMITE_NORMAL_MODEL):
-        logger.error(f"fusion switch file path:{path_value} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    check_path_no_group_others_write(path_value)
-    return path_value
-
-
-def safe_string(value):
-    if not value:
-        return value
-    if re.search(STR_WHITE_LIST_REGEX, value):
-        logger.error("String parameter contains invalid characters.")
-        raise ValueError
-    return value
 
 
 def str2bool(v):

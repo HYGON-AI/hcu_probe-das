@@ -31,20 +31,20 @@ if platform.system() != "Linux":
 def build_frontend():
     """构建前端资源"""
     fe_path = os.path.join("plugins", "tb_graph_ascend", "fe")
-    
+
     if not os.path.exists(fe_path):
         return False
 
     original_cwd = os.getcwd()
-    
+
     try:
         # 切换到fe目录
         os.chdir(fe_path)
-        
+
         # 检查package.json是否存在
         if not os.path.exists("package.json"):
             return True
-        
+
         # 安装依赖
         install_result = subprocess.run(
             ["npm", "install", "--force"],
@@ -53,7 +53,7 @@ def build_frontend():
         )
         if install_result.returncode != 0:
             return False
-        
+
         # 执行构建
         build_result = subprocess.run(
             ["npm", "run", "buildLinux"],
@@ -64,7 +64,7 @@ def build_frontend():
             return False
         else:
             return True
-            
+
     except Exception as e:
         return False
     finally:
@@ -76,19 +76,19 @@ def is_frontend_built():
     """检查前端是否已经构建完成"""
     fe_dist_path = os.path.join("plugins", "tb_graph_ascend", "fe", "dist")
     fe_build_path = os.path.join("plugins", "tb_graph_ascend", "fe", "build")
-    
+
     # 检查是否存在构建产物
     index_html_exists = (
         os.path.exists(os.path.join(fe_dist_path, "index.html")) or
         os.path.exists(os.path.join(fe_build_path, "index.html"))
     )
-    
+
     return index_html_exists
 
 
 class BuildTbGraphAscendCommand(setuptools.Command):
     """自定义命令：只构建 tb_graph_ascend 前端部分"""
-    
+
     description = "Build tb_graph_ascend frontend"
     user_options = []
 
@@ -106,7 +106,7 @@ class BuildTbGraphAscendCommand(setuptools.Command):
 
 class CustomBdistWheelCommand(bdist_wheel):
     """自定义wheel构建命令"""
-    
+
     def run(self):
         # 检查前端是否已构建
         if is_frontend_built():
@@ -115,7 +115,7 @@ class CustomBdistWheelCommand(bdist_wheel):
         else:
             # 只包含 msprobe 相关的包，排除 tb_graph_ascend
             self.distribution.packages = [pkg for pkg in packages if not pkg.startswith('tb_graph_ascend')]
-            
+
         super().run()
 
 INSTALL_REQUIRED = [
@@ -129,7 +129,10 @@ INSTALL_REQUIRED = [
     "matplotlib",
     "tensorboard >= 2.11.2",
     "protobuf <= 3.20.2",
-    "rich"
+    "rich",
+    "onnx >= 1.14.0",
+    "onnxruntime >= 1.14.1,< 1.16.0",
+    "skl2onnx >= 1.14.1"
 ]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
@@ -173,7 +176,7 @@ packages = setuptools.find_packages(where="python")
 # 手动添加tb_graph_ascend相关的包
 tb_packages = [
     "tb_graph_ascend",
-    "tb_graph_ascend.server", 
+    "tb_graph_ascend.server",
     "tb_graph_ascend.fe",
 ]
 
@@ -192,11 +195,11 @@ setuptools.setup(
         "": "python",
         "tb_graph_ascend": "plugins/tb_graph_ascend",
         "tb_graph_ascend.server": "plugins/tb_graph_ascend/server",
-        "tb_graph_ascend.fe": "plugins/tb_graph_ascend/fe", 
+        "tb_graph_ascend.fe": "plugins/tb_graph_ascend/fe",
     },
     package_data={
         "tb_graph_ascend.server": [
-            "static/**", 
+            "static/**",
             "static/**/*",
             "app/**",
             "app/**/*",

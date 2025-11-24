@@ -252,7 +252,7 @@ def check_common_file_size(file_path):
             if file_path.endswith(suffix):
                 check_file_size(file_path, max_size)
                 return
-        check_file_size(file_path, FileCheckConst.COMMOM_FILE_SIZE)
+        check_file_size(file_path, FileCheckConst.COMMON_FILE_SIZE)
 
 
 def check_file_suffix(file_path, file_suffix):

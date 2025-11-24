@@ -160,7 +160,7 @@ class TestFileOperations:
             check_common_file_size(str(self.test_file.with_suffix('.csv')))
 
         with patch('os.path.isfile', return_value=True), \
-                patch('os.path.getsize', return_value=FileCheckConst.COMMOM_FILE_SIZE + 1), \
+                patch('os.path.getsize', return_value=FileCheckConst.COMMON_FILE_SIZE + 1), \
                 pytest.raises(FileCheckException) as exc_info:
             check_common_file_size(str(self.test_file))
         assert exc_info.value.code == FileCheckException.FILE_TOO_LARGE_ERROR
