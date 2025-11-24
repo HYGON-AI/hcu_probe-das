@@ -89,7 +89,7 @@ def is_bool_output(x):
 
 
 def run_overflow_check(forward_file):
-    logger.info("start UT test")
+    logger.info("start acc_check test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     if real_data_path:
         dump_path = os.path.dirname(forward_file)
@@ -112,7 +112,7 @@ def run_overflow_check(forward_file):
                 logger.warning(f"API {api_name} not support matmul primitive in CPU due to pytorch bug, "
                                "so it will be skipped.")
             else:
-                logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
+                logger.error(f"Run {api_full_name} acc_check Error: %s" % str(err))
 
 
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
@@ -166,7 +166,7 @@ def _run_overflow_check(parser=None):
     _run_overflow_check_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     _run_overflow_check_command(args)
-    logger.info("UT task completed.")
+    logger.info("acc_check task completed.")
 
 
 def _run_overflow_check_command(args):

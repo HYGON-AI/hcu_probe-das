@@ -59,8 +59,10 @@ def main():
 
     if len(sys.argv) >= 2 and sys.argv[1] == "acc_check":
         acc_check_cli(sys.argv[2:])
+        return
     elif len(sys.argv) >= 2 and sys.argv[1] == "multi_acc_check":
         multi_acc_check_cli(sys.argv[2:])
+        return
     elif len(sys.argv) < 2:
         parser.print_help()
         sys.exit(0)

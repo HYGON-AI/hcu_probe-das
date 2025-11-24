@@ -70,7 +70,7 @@ def acc_check_cli(argv):
         pt_parser = argparse.ArgumentParser(
             prog="msprobe acc_check",
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description="Run PyTorch UT with msprobe."
+            description="Run PyTorch acc_check with msprobe."
         )
         _acc_check_parser(pt_parser)  # 这里会给 parser 加上原来的所有 PT acc_check 参数（包括 -api_info）
 
@@ -85,7 +85,7 @@ def acc_check_cli(argv):
         ms_parser = argparse.ArgumentParser(
             prog="msprobe acc_check",
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description="Run MindSpore UT with msprobe."
+            description="Run MindSpore Check  with msprobe."
         )
         add_api_accuracy_checker_argument(ms_parser)  # 给 acc_check 的 parser 加上原来 MS 的所有参数
 
@@ -112,7 +112,7 @@ def multi_acc_check_cli(argv):
         pt_parser = argparse.ArgumentParser(
             prog="msprobe multi_acc_check",
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description="Run PyTorch UT in parallel with msprobe."
+            description="Run PyTorch acc_check in parallel with msprobe."
         )
         _acc_check_parser(pt_parser)
         pt_parser.add_argument(
@@ -135,7 +135,7 @@ def multi_acc_check_cli(argv):
         ms_parser = argparse.ArgumentParser(
             prog="msprobe multi_acc_check",
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description="Run MindSpore UT in parallel with msprobe."
+            description="Run MindSpore Check in parallel with msprobe."
         )
         multi_add_api_accuracy_checker_argument(ms_parser)
 

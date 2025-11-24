@@ -88,13 +88,13 @@ seed_all()
 
 
 def acc_check(config):
-    logger.info("start UT test")
+    logger.info("start acc_check test")
 
-    logger.info(f"UT task result will be saved in {config.result_csv_path}")
-    logger.info(f"UT task details will be saved in {config.details_csv_path}")
+    logger.info(f"acc_check task result will be saved in {config.result_csv_path}")
+    logger.info(f"acc_check task details will be saved in {config.details_csv_path}")
 
     if config.save_error_data:
-        logger.info(f"UT task error_data will be saved in {config.error_data_path}")
+        logger.info(f"acc_check task error_data will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_acc_check, config=config)
 
 
@@ -108,8 +108,8 @@ def acc_check(config):
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
         change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        logger.info(f"UT task result csv is saved in {result_csv_path}")
-        logger.info(f"UT task details csv is saved in {details_csv_path}")
+        logger.info(f"acc_check task result csv is saved in {result_csv_path}")
+        logger.info(f"acc_check task details csv is saved in {details_csv_path}")
     compare.print_pretest_result()
 
 
@@ -147,7 +147,7 @@ def run_api_offline(config, compare, api_name_set):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
             else:
-                logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
+                logger.error(f"Run {api_full_name} acc_check Error: %s" % str(err))
             compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
             record_skip_info(api_full_name, compare, compare_alg_results)
         finally:
@@ -323,7 +323,7 @@ def _acc_check_parser(parser):
                              "a json file.",
                         required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
-                        help="<optional> The ut task result out path.",
+                        help="<optional> The acc_check task result out path.",
                         required=False)
     parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
                         help="<optional> Save compare failed api output.", required=False)
@@ -345,7 +345,7 @@ def _acc_check_parser(parser):
                         default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
-                             "when run ut is interrupted, enter the file path to continue run ut.",
+                             "when acc_check is interrupted, enter the file path to continue run ut.",
                         required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
                         help="<optional> Whether to filter the api in the api_info_file.", required=False)
@@ -486,7 +486,7 @@ def acc_check_command(args):
     }
     acc_check_config = checker_config.get_acc_check_config(**config_params)
     acc_check(acc_check_config)
-    logger.info("UT task completed.")
+    logger.info("acc_check task completed.")
 
 
 if __name__ == '__main__':
