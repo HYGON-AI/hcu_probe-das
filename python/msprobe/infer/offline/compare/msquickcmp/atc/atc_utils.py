@@ -21,6 +21,7 @@ import os
 import stat
 
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 
@@ -49,7 +50,7 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
         raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     
     atc_command_file_path = get_atc_path(cann_path)
-    utils.check_file_or_directory_path(atc_command_file_path)
+    check_file_or_directory_path(atc_command_file_path)
     output_json_path = os.path.join(out_path, "model", model_name + ".json")
     if os.path.exists(output_json_path):
         logger.info(f"The {output_json_path} file is exists.")

@@ -20,25 +20,19 @@ CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-tool
 
 class DumpArgsAdapter:
     def __init__(self,
-                 golden_path,
+                 model_path,
                  input_data="",
                  cann_path=CANN_PATH,
-                 output_path="./",
+                 output_path="./output",
                  input_shape="",
                  rank="0",
                  dym_shape_range="",
                  onnx_fusion_switch=True,
-                 saved_model_signature="",
-                 saved_model_tag_set="",
-                 device_pattern="",
-                 tf_json_path="",
-                 fusion_switch_file="",
                  custom_op="",
                  dump=True,
-                 single_op="",
-                 output_nodes=""
+                 single_op=""
                  ):
-        self.golden_path = golden_path
+        self.golden_path = model_path
         self.input_data = input_data
         self.cann_path = cann_path
         self.output_path = output_path
@@ -46,12 +40,6 @@ class DumpArgsAdapter:
         self.rank = rank
         self.dym_shape_range = dym_shape_range
         self.onnx_fusion_switch = onnx_fusion_switch
-        self.saved_model_signature = saved_model_signature
-        self.saved_model_tag_set = saved_model_tag_set
-        self.device_pattern = device_pattern
-        self.tf_json_path = tf_json_path
-        self.fusion_switch_file = fusion_switch_file
         self.custom_op = custom_op
         self.dump = dump
         self.single_op = single_op
-        self.output_nodes = output_nodes

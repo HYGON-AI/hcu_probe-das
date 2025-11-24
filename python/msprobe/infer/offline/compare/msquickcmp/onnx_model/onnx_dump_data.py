@@ -26,6 +26,7 @@ import onnxruntime
 import numpy as np
 
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
@@ -274,7 +275,7 @@ class OnnxDumpData(DumpData):
 
         bin_file_path_array = []
         if "" == self.input_data:
-            utils.check_file_or_directory_path(os.path.realpath(self.data_dir), True)
+            check_file_or_directory_path(os.path.realpath(self.data_dir), True)
             input_bin_files = os.listdir(self.data_dir)
             if len(input_bin_files) == 0:
                 return self._generate_random_input_data(self.data_dir, names, shapes, dtypes)

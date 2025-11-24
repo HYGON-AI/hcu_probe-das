@@ -27,6 +27,7 @@ import shutil
 import numpy as np
 
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.infer.offline.compare.msquickcmp.atc import atc_utils
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
@@ -325,7 +326,7 @@ class NpuDumpData(DumpData):
             self.output_path, NPU_DUMP_DATA_GOLDEN_PATH if self.is_golden else NPU_DUMP_DATA_BASE_PATH
         )
         utils.create_directory(npu_data_output_dir)
-        model_name, extension = utils.get_model_name_and_extension(self.offline_model_path)
+        model_name, extension = utils.get_model_name_and_extension(self.target_path)
         acl_json_path = os.path.join(npu_data_output_dir, ACL_JSON_PATH)
         if not os.path.exists(acl_json_path):
             os.mknod(acl_json_path, mode=0o600)
@@ -334,7 +335,7 @@ class NpuDumpData(DumpData):
             "-m",
             "ais_bench",
             "--model",
-            self.offline_model_path,
+            self.target_path,
             "--input",
             self.benchmark_input_path,
             "--device",
@@ -386,8 +387,8 @@ class NpuDumpData(DumpData):
 
         options = aclruntime.session_options()
         Rule.input_file().check(self.target_path, will_raise=True)
-        self.offline_model_path = load_file_to_read_common_check(self.target_path)
-        aa = aclruntime.InferenceSession(self.offline_model_path, int(self.device), options)
+        self.target_path = load_file_to_read_common_check(self.target_path)
+        aa = aclruntime.InferenceSession(self.target_path, int(self.device), options)
         shape_list = [ii.shape for ii in aa.get_inputs()]
         dtype_list = [ii.datatype.name for ii in aa.get_inputs()]
 
@@ -515,7 +516,7 @@ class NpuDumpData(DumpData):
     def _check_input_path_param(self):
         if self.input_data == "":
             input_path = os.path.join(self.output_path, INPUT)
-            utils.check_file_or_directory_path(os.path.realpath(input_path), True)
+            check_file_or_directory_path(os.path.realpath(input_path), True)
             input_bin_files = os.listdir(input_path)
             input_bin_files.sort(key=lambda file: int((re.findall("\\d+", file))[0]))
             bin_file_path_array = []
