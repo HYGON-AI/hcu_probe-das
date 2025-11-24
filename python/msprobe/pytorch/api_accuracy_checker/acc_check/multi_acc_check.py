@@ -96,8 +96,8 @@ def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
     if config.save_error_data_flag:
-        logger.info("UT task error data will be saved")
-    logger.info(f"Starting parallel UT with {config.num_splits} processes")
+        logger.info("acc_check task error data will be saved")
+    logger.info(f"Starting parallel acc_check with {config.num_splits} processes")
     progress_bar = tqdm(total=config.total_items, desc="Total items", unit="items")
 
     def create_cmd(api_info, dev_id):
@@ -178,8 +178,9 @@ def run_parallel_ut(config):
             completed_items = len(result_file)
             progress_bar.update(completed_items - progress_bar.n)
         if progress_bar.n < config.total_items:
-            logger.warning("The UT task has not been completed. The parameter '-csv_path' along with the path to " \
-                           "the result CSV file will be utilized to resume the UT task.")
+            logger.warning("The acc_check task has not been completed. The parameter '-csv_path' along with the "
+                           "path to " 
+                           "the result CSV file will be utilized to resume the acc_check task.")
         clean_up()
         progress_bar_thread.join()
     try:
@@ -229,8 +230,8 @@ def prepare_config(args):
     else:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-    logger.info(f"UT task result will be saved in {result_csv_path}")
-    logger.info(f"UT task details will be saved in {details_csv_path}")
+    logger.info(f"acc_check task result will be saved in {result_csv_path}")
+    logger.info(f"acc_check task details will be saved in {details_csv_path}")
     return ParallelUTConfig(split_files, out_path, args.num_splits, args.save_error_data,
                             args.jit_compile, args.device_id, result_csv_path,
                             total_items, config_path)
@@ -239,7 +240,7 @@ def prepare_config(args):
 def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    parser = argparse.ArgumentParser(description='Run UT in parallel')
+    parser = argparse.ArgumentParser(description='Run acc_check in parallel')
     _acc_check_parser(parser)
     parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
                         help='Number of splits for parallel processing. Range: 1-64')

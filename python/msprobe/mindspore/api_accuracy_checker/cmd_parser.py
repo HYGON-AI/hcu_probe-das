@@ -36,7 +36,7 @@ def add_api_accuracy_checker_argument(parser):
                         help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.")
     parser.add_argument("-o", "--out_path", dest="out_path", default="./", type=str, required=False,
-                        help="<optional> The ut task result out path.")
+                        help="<optional> The acc_check task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
     parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
@@ -48,7 +48,7 @@ def multi_add_api_accuracy_checker_argument(parser):
                         help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.")
     parser.add_argument("-o", "--out_path", dest="out_path", default="./", type=str, required=False,
-                        help="<optional> The ut task result out path.")
+                        help="<optional> The acc_check task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
     parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",

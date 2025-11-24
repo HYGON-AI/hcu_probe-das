@@ -16,6 +16,8 @@
 from msprobe.core.common.const import Const
 from msprobe.core.dump.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class DataProcessorFactory:
@@ -44,7 +46,10 @@ class DataProcessorFactory:
         task = Const.KERNEL_DUMP if config.level == "L2" else config.task
         key = (config.framework, task)
         bench_path = getattr(config, "bench_path", None)
-        if config.task == Const.TENSOR and bench_path is not None:
+        if config.task == Const.TENSOR and bench_path is not None and not isinstance(bench_path, str):
+            logger.error_log_with_exp("bench_path is invalid, it should be a string",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        elif config.task == Const.TENSOR and bench_path is not None and isinstance(bench_path, str):
             check_file_or_directory_path(bench_path, True)
             processor_class = cls._data_processor.get(("pytorch", Const.DIFF_CHECK))
         else:
