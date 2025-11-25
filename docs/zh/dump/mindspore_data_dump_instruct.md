@@ -1,8 +1,19 @@
 
 # MindSpore场景精度数据采集
 
+## 简介
 
-## 专业名词解释
+msProbe工具通过在训练脚本中添加 `PrecisionDebugger` 接口并启动训练的方式，采集模型在运行过程中的精度数据。该工具支持对MindSpore的静态图和动态图场景进行不同Level等级的精度数据采集。
+
+dump "statistics"模式的性能膨胀大小"与"tensor"模式采集的数据量大小，可以参考[dump基线](../baseline/mindspore_data_dump_perf_baseline.md)。
+
+**注意**：
+
+* 因MindSpore框架自动微分机制的限制，dump数据中可能会缺少原地操作模块/API及其上一个模块/API的反向数据。
+
+* 使用msprobe工具后loss/gnorm发生变化：可能是工具中的item操作引入同步，pt/ms框架的hook机制等原因导致的，详见《[模型计算结果改变原因分析](../faq.md#模型计算结果改变原因分析)》。
+
+**基本概念**
 
 * **静态图**：在编译时就确定网络结构，静态图模式拥有较高的训练性能，但难以调试。
 * **动态图**：运行时动态构建网络，相较于静态图模式虽然易于调试，但难以高效执行。
@@ -10,29 +21,22 @@
 * **JIT（Just-In-Time 编译）**：MindSpore提供JIT（just-in-time）技术进一步进行性能优化。JIT模式会通过AST树解析的方式或者Python字节码解析的方式，将代码解析为一张中间表示图（IR，intermediate representation）。IR图作为该代码的唯一表示，编译器通过对该IR图的优化，来达到对代码的优化，提高运行性能。与动态图模式相对应，这种JIT的编译模式被称为静态图模式。
 * **Primitive op**：MindSpore 中的基本算子，通常由 `mindspore.ops.Primitive` 定义，提供底层的算子操作接口。
 
+## 使用前准备
 
-## 工具安装
+**环境准备**
 
-请参见《[msprobe 工具安装指南](../msprobe_install_guide.md)》。
+安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
+
+**约束**
+
+支持PyTorch和MindSpore框架。
 
 
 ## 快速入门
 
 以下通过一个简单的示例，展示如何在 MindSpore 中使用 msprobe 工具进行精度数据采集。
 
-您可以参考 [动态图快速入门示例](mindspore_dump_quick_start.md)  了解详细步骤。
-
-## 概述
-
-msprobe 工具通过在训练脚本中添加 `PrecisionDebugger` 接口并启动训练的方式，采集模型在运行过程中的精度数据。该工具支持对MindSpore的静态图和动态图场景进行不同Level等级的精度数据采集。
-
-dump "statistics"模式的性能膨胀大小"与"tensor"模式采集的数据量大小，可以参考[dump基线](../baseline/mindspore_data_dump_perf_baseline.md)。
-
-**注意**：
-
-* 因 MindSpore 框架自动微分机制的限制，dump 数据中可能会缺少原地操作模块/API 及其上一个模块/API 的反向数据。
-
-* 使用msprobe工具后loss/gnorm发生变化：可能是工具中的item操作引入同步，pt/ms框架的hook机制等原因导致的，详见《工具导致计算结果变化》。
+您可以参考《[动态图快速入门示例](mindspore_dump_quick_start.md) 》了解详细步骤。
 
 ## 场景介绍
 

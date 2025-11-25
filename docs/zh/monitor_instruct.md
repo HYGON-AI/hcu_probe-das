@@ -1,16 +1,18 @@
-# Monitor 训练状态轻量化监控工具
+# Monitor训练状态轻量化监控工具
 
 ## 简介
 
-训练状态轻量化监控工具，能够在较低性能损耗下收集和记录模型训练过程中的激活值、权重梯度、优化器状态和通信算子的中间值，实时呈现训练状态。
+Monitor训练状态轻量化监控工具，能够在较低性能损耗下收集和记录模型训练过程中的激活值、权重梯度、优化器状态和通信算子的中间值，实时呈现训练状态。
 
-## 安装
-参见[msprobe安装](./msprobe_install_guide.md)。
+## 使用前准备
+**环境准备**
 
-要求：
+安装msProbe工具，详情请参见《[msProbe安装指南](./msprobe_install_guide.md)》。
 
-- PyTorch场景：torch不低于**2.0**
-- MindSpore场景：mindspore不低于**2.4.10**，仅支持**MindSpore动态图**，已支持**msadapter**套件
+**约束**
+
+- PyTorch场景：torch不低于**2.1**
+- MindSpore场景：mindspore不低于**2.4.10**，仅支持MindSpore动态图，已支持msadapter套件
 
 ## 功能介绍
 下表中字段为训练状态轻量化监控工具的完整功能点：
@@ -111,7 +113,7 @@ monitor.set_monitor(
 ```
 
 请注意以下两点：
-- Mindspore功能在1.2.2版本后支持, <1.2.2版本不支持
+- MindSpore功能在1.2.2版本后支持, <1.2.2版本不支持
 - 上述接口使用方式为1.2.2后更新的最新接口使用方式, <1.2.2版本的Pytorch旧接口使用方式为：
 ```Python
 from msprobe.pytorch import TrainerMon

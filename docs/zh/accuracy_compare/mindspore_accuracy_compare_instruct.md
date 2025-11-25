@@ -1,6 +1,6 @@
-# MindSpore 场景的精度比对
+# MindSpore场景精度比对
 
-## 1 简介
+## 简介
 
 msprobe精度比对工具主要用于如下场景：
 
@@ -14,13 +14,21 @@ msprobe精度比对工具主要用于如下场景：
   - 通过对同一个网络模型，在整网环境下分别在MindSpore动态图和PyTorch环境下获得API或模块dump数据，由用户指定可以比对的API或模块，以PyTorch数据作为标杆，进行自动比对，从而实现跨框架的精度对比。
   - 通过对同一个网络模型，在整网环境下分别在MindSpore动态图和PyTorch环境下获得API或模块dump数据，由用户指定可以比对的模型代码中的Layer层，以PyTorch数据作为标杆，进行自动比对，从而实现跨框架的精度对比。
 
-执行精度比对操作需要安装msprobe工具。详见《[msprobe工具安装指南](../msprobe_install_guide.md)》。
+## 使用前准备
 
-## 2 命令行比对
+**环境准备**
+
+安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
+
+**约束**
+
+仅支持MindSpore场景。
+
+## 命令行比对
 
 精度比对工具目前使用方式为命令行形式。
 
-### 2.1 比对命令说明
+### 比对命令说明
 
 命令示例如下：
 
@@ -30,24 +38,24 @@ msprobe compare -i ./compare.json -o ./output -s
 
 **完整参数说明**
 
-| 参数名                 | 说明                                                                                                                                                                                                                                               | 是否必选 |
-|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
-| -tp 或 --target_path | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。                                                                                                                                                                                                    | 是    |
-| -gp 或 --golden_path | CPU、GPU或NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。                                                                                                                                                                                            | 是    |
-| -o或--output_path    | 配置比对结果文件存盘目录，默认会在当前目录创建output目录。文件名称基于时间戳自动生成，格式为：<br>        `compare_result_{timestamp}.xlsx`<br/>        `compare_result_{rank_id}_{step_id}_{timestamp}.xlsx`（仅[不同版本下的全量kernel比对](#23-不同版本下的全量kernel比对)场景支持）。<br>提示：output目录下与结果件同名文件将被删除覆盖。 | 否    |
-| -fm或--fuzzy_match   | 模糊匹配。开启后，对于网络中同一层级且命名相同仅调用次数不同的API，可匹配并进行比对。通过直接配置该参数开启，默认未配置，表示关闭。                                                                                                                                                                              | 否    |
-| -hl或--highlight     | 高亮颜色标记。开启后，比对结果件中通过红色或黄色标记精度可疑API或模块。通过直接配置该参数开启，默认未配置，表示关闭。 开启高亮颜色标记后，比对性能降低，如果比对结果行数超出excel单页限制，程序强制关闭高亮颜色标记。                                                                                                                                  | 否    |
-| -am或--api_mapping   | 跨框架比对。配置该参数时表示开启跨框架API比对功能，可以指定自定义映射文件*.yaml，不指定映射文件时按照msprobe定义的默认映射关系进行比对。自定义映射文件的格式请参见[自定义映射文件（api_mapping）](#43-自定义映射文件api_mapping)。仅[跨框架的API比对](#25-跨框架的api比对)场景需要配置。                                                                       | 否    |
-| -cm或--cell_mapping  | 跨框架比对。配置该参数时表示开启跨框架cell模块比对功能，可以指定自定义映射文件*.yaml，不指定映射文件时按照msprobe定义的默认映射关系进行比对。自定义映射文件的格式请参见[自定义映射文件（cell_mapping）](#44-自定义映射文件cell_mapping)。仅[跨框架的cell模块比对](#26-跨框架的cell模块比对)场景需要配置。                                                            | 否    |
-| -dm或--data_mapping  | 同框架或跨框架比对。通过映射文件指定两个具体参数的对应关系，可以在L0、L1或mix采集场景下使用。配置该参数的同时需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（data_mapping）](#45-自定义映射文件data_mapping)。                                                                                                       | 否    |
-| -lm或--layer_mapping | 跨框架比对。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer_mapping）](#46-自定义映射文件layer_mapping)。仅[跨框架的Layer层比对](#27-跨框架的layer层比对)场景需要配置。                                                   | 否    |
-| -da或--diff_analyze  | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。                                                                                                                                                                                                         | 否    |
-| --rank              | 配置比对的Rank ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Rank的数据。默认为空，表示比对所有Rank。可配置一个或多个Rank，多个Rank ID用逗号隔开，例如：1,2,3                                                                                                                     | 否    |
-| --step              | 配置比对的Step ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Step的数据。默认为空，表示比对所有Step。可配置一个或多个Step，多个Step ID用逗号隔开，例如：1,2,3                                                                                                                     | 否    |
+| 参数名               | 说明                                                         | 是否必选 |
+| -------------------- | ------------------------------------------------------------ | -------- |
+| -tp 或 --target_path | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。 | 是       |
+| -gp 或 --golden_path | CPU、GPU或NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。 | 是       |
+| -o或--output_path    | 配置比对结果文件存盘目录，默认会在当前目录创建output目录。文件名称基于时间戳自动生成，格式为：<br>        `compare_result_{timestamp}.xlsx`<br/>        `compare_result_{rank_id}_{step_id}_{timestamp}.xlsx`（仅[不同版本下的全量kernel比对](#不同版本下的全量kernel比对)场景支持）。<br>提示：output目录下与结果件同名文件将被删除覆盖。 | 否       |
+| -fm或--fuzzy_match   | 模糊匹配。开启后，对于网络中同一层级且命名相同仅调用次数不同的API，可匹配并进行比对。通过直接配置该参数开启，默认未配置，表示关闭。 | 否       |
+| -hl或--highlight     | 高亮颜色标记。开启后，比对结果件中通过红色或黄色标记精度可疑API或模块。通过直接配置该参数开启，默认未配置，表示关闭。 开启高亮颜色标记后，比对性能降低，如果比对结果行数超出excel单页限制，程序强制关闭高亮颜色标记。 | 否       |
+| -am或--api_mapping   | 跨框架比对。配置该参数时表示开启跨框架API比对功能，可以指定自定义映射文件*.yaml，不指定映射文件时按照msprobe定义的默认映射关系进行比对。自定义映射文件的格式请参见[自定义映射文件（api_mapping）](#自定义映射文件api_mapping)。仅[跨框架的API比对](#跨框架的api比对)场景需要配置。 | 否       |
+| -cm或--cell_mapping  | 跨框架比对。配置该参数时表示开启跨框架cell模块比对功能，可以指定自定义映射文件*.yaml，不指定映射文件时按照msprobe定义的默认映射关系进行比对。自定义映射文件的格式请参见[自定义映射文件（cell_mapping）](#自定义映射文件cell_mapping)。仅[跨框架的cell模块比对](#跨框架的cell模块比对)场景需要配置。 | 否       |
+| -dm或--data_mapping  | 同框架或跨框架比对。通过映射文件指定两个具体参数的对应关系，可以在L0、L1或mix采集场景下使用。配置该参数的同时需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。 | 否       |
+| -lm或--layer_mapping | 跨框架比对。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer_mapping）](#自定义映射文件layer_mapping)。仅[跨框架的Layer层比对](#跨框架的layer层比对)场景需要配置。 | 否       |
+| -da或--diff_analyze  | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。 | 否       |
+| --rank               | 配置比对的Rank ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Rank的数据。默认为空，表示比对所有Rank。可配置一个或多个Rank，多个Rank ID用逗号隔开，例如：1,2,3 | 否       |
+| --step               | 配置比对的Step ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Step的数据。默认为空，表示比对所有Step。可配置一个或多个Step，多个Step ID用逗号隔开，例如：1,2,3 | 否       |
 
 动态图模式没有填写任何mapping时，按照同框架比对的方式进行比对，比对数据和标杆数据的Cell或API名称需要完全相同才能匹配得上。
 
-### 2.2 不同版本下的全量API比对
+### 不同版本下的全量API比对
 
 1. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》完成不同环境下MindSpore静态图精度数据的采集，得到不同框架版本的API dump数据。
 
@@ -62,9 +70,9 @@ msprobe compare -i ./compare.json -o ./output -s
    msprobe compare -tp /target_dump/step0 -gp /golden_dump/step0 -o ./output
    ```
 
-3. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+3. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.3 不同版本下的全量kernel比对
+### 不同版本下的全量kernel比对
 
 1. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》完成不同环境下MindSpore静态图精度数据的采集，得到不同框架版本的kernel dump数据。
 
@@ -76,25 +84,23 @@ msprobe compare -i ./compare.json -o ./output -s
 
    该场景仅支持compare的-tp、-gp、-o、--rank、--step参数。
 
-3. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+3. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.4 不同版本下的cell模块比对
+### 不同版本下的cell模块比对
 
 1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L0、task配置为tensor或statistics并指定需要dump的cell模块名。
 
 2. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》完成不同环境下MindSpore动态图精度数据的采集，得到不同框架版本的cell模块dump数据。
 
-3. 创建比对文件，文件内容及示例请参见[比对文件](#41-比对文件)。
-
-4. 执行如下示例命令进行比对：
+3. 执行如下示例命令进行比对：
 
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output
    ```
 
-5. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+5. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.5 跨框架的API比对
+### 跨框架的API比对
 
 1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L1、task配置为tensor或statistics。
 
@@ -112,18 +118,18 @@ msprobe compare -i ./compare.json -o ./output -s
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -am api_mapping.yaml
    ```
 
-   api_mapping.yaml文件配置请参见[自定义映射文件（api_mapping）](#43-自定义映射文件api_mapping)。
+   api_mapping.yaml文件配置请参见[自定义映射文件（api_mapping）](#自定义映射文件api_mapping)。
    不传入api_mapping.yaml的情况下将按照内置的api映射进行匹配；传入api_mapping.yaml的情况下优先按照api_mapping.yaml的内容进行匹配，api_mapping.yaml中没有涉及的按照内置的api映射进行匹配。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#45-自定义映射文件data_mapping)。
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
 4. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
 
-### 2.6 跨框架的cell模块比对
+### 跨框架的cell模块比对
 
 1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L0、task配置为tensor或statistics并指定需要dump的cell模块名。
 
@@ -141,18 +147,18 @@ msprobe compare -i ./compare.json -o ./output -s
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -cm cell_mapping.yaml
    ```
 
-   cell_mapping.yaml文件配置请参见[自定义映射文件（cell_mapping）](#44-自定义映射文件cell_mapping)。
+   cell_mapping.yaml文件配置请参见[自定义映射文件（cell_mapping）](#自定义映射文件cell_mapping)。
    不传入cell_mapping.yaml的情况下仅将Cell改成Module后进行匹配；传入cell_mapping.yaml的情况下将按照cell_mapping.yaml的内容进行匹配。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#45-自定义映射文件data_mapping)。
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
-4. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+4. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.7 跨框架的Layer层比对
+### 跨框架的Layer层比对
 
 layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
 
@@ -166,17 +172,17 @@ layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -lm layer_mapping.yaml
    ```
 
-   layer_mapping.yaml文件配置请参见[自定义映射文件（layer_mapping）](#46-自定义映射文件layer_mapping)。
+   layer_mapping.yaml文件配置请参见[自定义映射文件（layer_mapping）](#自定义映射文件layer_mapping)。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#45-自定义映射文件data_mapping)。
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
-4. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+4. 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.8 动静态图场景L0混合dump数据比对
+### 动静态图场景L0混合dump数据比对
 
 1. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》，执行dump操作。<br>动态图场景下使用 `mindspore.jit` 装饰特定 Cell 或 function 时，被装饰的部分会被编译成静态图执行。采集的数据文件目录结构示例如下：
     ```lua
@@ -226,12 +232,12 @@ layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
 
 output目录下生成两个graph和pynative两个文件夹，每个文件夹下生成对应step的比对结果。
 
-4. 查看比对结果，请详见PyTorch目录下的《[PyTorch 场景的精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#3-精度比对结果分析)》章节。
+4. 查看比对结果，请详见PyTorch目录下的《[PyTorch 场景的精度比对-精度比对结果分析](./pytorch_accuracy_compare_instruct.md#精度比对结果分析)》章节。
 
-### 2.9 首差异算子节点识别
-参见《[PyTorch 场景的精度比对-首差异算子节点识别](./pytorch_accuracy_compare_instruct.md#24-首差异算子节点识别场景)》章节。
+### 首差异算子节点识别
+参见《[PyTorch 场景的精度比对-首差异算子节点识别](./pytorch_accuracy_compare_instruct.md#首差异算子节点识别场景)》章节。
 
-## 3 多卡比对结果提取汇总通信算子数据
+## 多卡比对结果提取汇总通信算子数据
 
 本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。
 
@@ -308,9 +314,9 @@ compare_index:
 8. Distributed.irecv：点对点通信，输入为原数据，输出为接收的新数据。
 9. Distributed.all_to_all_single：输出数据为所有卡上的数据切分后合并的结果。
 
-## 4 附录
+## 附录
 
-### 4.1 自定义映射文件（api_mapping）
+### 自定义映射文件（api_mapping）
 
 文件名格式：\*.yaml，*为文件名，可自定义。
 
@@ -381,7 +387,7 @@ pt_outputs:
 # ms_args/pt_args和ms_outputs/pt_outputs参数的配置需要根据ms_api/pt_api的API入参和输出的顺序，例如Functional.abs API的入参为（a b c），那对应的ms_args为0 1 2，可根据实际需要选择，而Torch.abs的入参如果是（a b c），那么ms_args和pt_args配置一致即可，但如果Torch.abs的入参如果是（a c）或其他与Functional.abs不完全映射的值，那么ms_args和pt_args配置的序号需要与入参对应，Torch.abs（a c）的序号为0 1，Functional.abs（a b c）为0 1 2，只有a和c参数可以映射，那么ms_args配置为0 2，pt_args配置为0 1。ms_outputs/pt_outputs同理。
 ```
 
-### 4.2 自定义映射文件（cell_mapping）
+### 自定义映射文件（cell_mapping）
 
 文件名格式：\*.yaml，*为文件名，可自定义。
 
@@ -412,7 +418,7 @@ conv1.Conv2d: conv3.Conv2d
 {Module}.{module_name}.{class_name}.parameters_grad.{parameter_name}
 ```
 
-### 4.3 自定义映射文件（data_mapping）
+### 自定义映射文件（data_mapping）
 
 文件名格式：\*.yaml，*为文件名，可自定义。
 
@@ -590,7 +596,7 @@ Cell.network.module.NetworkWithLoss.forward.0.input.1.data_info.img_hw
 Cell.network.module.NetworkWithLoss.forward.0.output.0
 ```
 
-### 4.4 自定义映射文件（Layer_mapping）
+### 自定义映射文件（Layer_mapping）
 
 文件名格式：\*.yaml，*为文件名，可自定义。
 

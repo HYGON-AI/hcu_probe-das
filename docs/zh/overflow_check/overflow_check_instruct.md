@@ -1,21 +1,25 @@
 # 整网首个溢出节点分析
 
-## 介绍
+## 简介
 在分析inf、nan的场景下，会采集多个rank下的多个step的dump数据，前面出现的异常会传播到同rank后续的节点，并通过通信算子传播到其他rank的后续节点中，因此如何分析首个nan出现的节点位置尤为重要。
 
-通过overflow_check工具可以对pytorch的dump数据进行分析。在多卡场景下，检测到每张卡中产生inf/nan的节点。若是经过通信导致的inf/nan，可以分析并找出首个产生inf/nan的rank和节点。
+整网首个溢出节点分析（overflow_check）可以对PyTorch的dump数据进行分析，在多卡场景下，检测到每张卡中产生inf/nan的节点。若是经过通信导致的inf/nan，可以分析并找出首个产生inf/nan的rank和节点。
 
-## 安装教程
+## 使用前准备
 
-参见 msprobe [安装教程](../msprobe_install_guide.md)
+**环境准备**
+
+安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
+
+**数据准备**
+
+采集精度数据，详情请参见[PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)。
+
+**约束**
+
+当前仅支持分析PyTorch场景的dump数据。
 
 ## 使用说明
-
-当前仅支持分析pytorch的dump数据。
-
-### 采集数据
-
-参见 [PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)。
 
 ### 执行命令
 

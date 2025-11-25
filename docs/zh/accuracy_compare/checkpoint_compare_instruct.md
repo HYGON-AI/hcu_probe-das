@@ -1,14 +1,13 @@
 # Checkpoint Compare
 
-## 介绍
+## 简介
 在模型训练过程中或结束后，可能保存一些检查点文件(checkpoint，简称ckpt)记录当前模型、优化器等训练状态, 工具支持比较两个不同的ckpt，评估模型相似度。
 
 当前支持Megatron-LM、MindSpeed(PyTorch/MindTorch)的ckpt比较。支持TP、PP、EP、VPP模型并行；支持megatron.core、megatron.legacy、TransformerEngine的模型实现。
 
+## 使用前准备
 
-## 安装教程
-
-参见 [msprobe安装](../msprobe_install_guide.md)。
+安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
 
 ## 使用说明
 Megatron、MindSpeed的ckpt加载依赖megatron，请确保megatron在python环境中或megatron在当前路径下。

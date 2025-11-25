@@ -1,4 +1,6 @@
-# MindSpore 场景的溢出检测
+# MindSpore场景溢出检测
+
+## 简介
 
 msprobe 工具提供静态图O2编译等级下的溢出检测功能。其中检测对象为 **kernel** 级别，对应 config.json 配置中的 **"L2"** level。
 
@@ -15,17 +17,26 @@ export MS_ASCEND_CHECK_OVERFLOW_MODE="INFNAN_MODE"
 
 溢出检测任务的配置示例见[MindSpore 静态图场景下 task 配置为 overflow_check](../dump/config_json_examples.md#23-task-配置为-overflow_check)。
 
+## 使用前准备
 
-## 1 接口介绍
+**环境准备**
 
-溢出检测功能提供的接口与数据采集任务一致，详见MindSpore场景精度数据采集中的"[接口介绍](../dump/mindspore_data_dump_instruct.md#接口介绍)"章节。
+安装msProbe工具，详情请参见《[msProbe安装指南](./msprobe_install_guide.md)》。
+
+**数据准备**
+
+采集精度数据，详情请参见MindSpore场景精度数据采集中的"[接口介绍](../dump/mindspore_data_dump_instruct.md#接口介绍)"章节。
+
+**约束**
+
+仅支持PMindSpore框架。
 
 
-## 2 示例代码
+## 示例代码
 
 溢出检测功能使用方式与数据采集任务一致，详见MindSpore场景精度数据采集中的“[示例代码](../dump/mindspore_data_dump_instruct.md#示例代码)”章节。
 
-## 3 溢出检测结果文件介绍
+## 溢出检测结果文件介绍
 
 溢出检测结果文件目录结构与含义与数据采集任务一致，但仅保存溢出 API 或 kernel 的真实数据或统计信息。详见MindSpore场景精度数据采集中的[dump结果文件介绍](../dump/mindspore_data_dump_instruct.md#dump结果文件介绍)章节。
 
