@@ -1,0 +1,10 @@
+{
+    "task": "tensor",
+    "dump_enable": false,
+    "exec_range": "all",
+    "ids": "",
+    "op_name": "",
+    "save_child": false,
+    "device": "",
+    "filter_level": 1
+}
