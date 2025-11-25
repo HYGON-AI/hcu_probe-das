@@ -1,18 +1,32 @@
-# 基于 torch 图模式（torchair）推理场景
+# 基于torch图模式（torchair）推理场景
 
-- 在跑推理之前需要确认 torchvision 版本与 torch 版本是否匹配。torch 版本与 torchvision 版本的匹配关系如下：
-  | torch 版本 | torchvision 版本 |
-  | ---------- | ---------------- |
-  | 2.3.0      | 0.18.0           |
-  | 2.2.0      | 0.17.0           |
-  | 2.1.0      | 0.16.0           |
-  | 2.0.0      | 0.15.1           |
+## 简介
 
-### 1.1 GE 融合模式 dump 数据
+本文主要介绍基于torch图模式（torchair）推理场景的精度数据采集。
+
+## 使用前准备
+
+**环境准备**
+
+安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
+
+**约束**
+
+- 仅支持torch图模式（torchair）推理场景。
+
+- 在执行推理任务前需要确认torchvision版本与torch版本是否匹配。torch版本与torchvision版本的匹配关系如下：
+  | torch版本 | torchvision版本 |
+  | --------- | --------------- |
+  | 2.3.0     | 0.18.0          |
+  | 2.2.0     | 0.17.0          |
+  | 2.1.0     | 0.16.0          |
+  | 2.0.0     | 0.15.0          |
+
+### GE融合模式dump数据
 
 调用 `set_ge_dump_config` 接口，获取配置后的 `config` 实例，或在已有 `config` 实例上增加 dump 配置，配置模型 compile，并执行推理。
 
-#### 1.1.1 接口介绍
+#### 接口介绍
 
 **接口原型**：
 
@@ -38,7 +52,7 @@ set_ge_dump_config(
 | dump_layer         | 指定layer进行dump。格式：["Add", "Conv_1"] 代表dump Add和Conv_1两层数据           | 否(默认为None，dump全量数据)           |
 | compiler_config    | 图编译配置（CompilerConfig对象）                                                  | 否(默认为None，返回新创建的图编译配置) |
 
-#### 1.1.2 工具使用
+#### 工具使用
 
 ```py
   # 若用户已创建 CompilerConfig 对象
@@ -72,7 +86,7 @@ set_ge_dump_config(
 ```
 
 
-#### 1.1.3 dump 结果文件介绍
+#### dump结果文件介绍
 
 dump 数据保存路径为 `{dump_path}/msit_ge_dump`。其中 `{dump_path}` 为用户通过 `set_ge_dump_config` 接口的'dump_path' 参数传入的路径，`msit_ge_dump`为msProbe工具自动创建的目录。
 
@@ -108,11 +122,11 @@ dump 数据保存路径为 `{dump_path}/msit_ge_dump`。其中 `{dump_path}` 为
 ```
 
 
-### 1.2 FX 模式 dump 数据
+### FX模式dump数据
 
 调用 `set_fx_dump_config` 接口，获取配置后的 `config` 实例，或在已有 `config` 实例上增加 dump 配置，配置模型 compile，并执行推理。
 
-#### 1.2.1 接口介绍
+####  接口介绍
 
 **接口原型**：
 
@@ -127,7 +141,7 @@ set_fx_dump_config(dump_path='', compiler_config=None)
 | dump_path       | dump数据的存放路径。仅在使用7.0.0以上版本的PTA时生效 | 否(默认为"./")                         |
 | compiler_config | 图编译配置（CompilerConfig对象）                     | 否(默认为None，返回新创建的图编译配置) |
 
-#### 1.2.2 工具使用
+#### 工具使用
 
 ```py
   # 若用户已创建 CompilerConfig 对象
@@ -161,7 +175,7 @@ set_fx_dump_config(dump_path='', compiler_config=None)
 ```
 
 
-#### 1.2.3 dump 结果文件介绍
+#### dump结果文件介绍
 
 dump 数据保存路径为 `{dump_path}/msit_fx_dump`。其中 `{dump_path}` 为用户通过 `set_fx_dump_config` 接口的'dump_path' 参数传入的路径，`msit_fx_dump`为msProbe工具自动创建的目录。
 
@@ -197,7 +211,7 @@ dump 数据保存路径为 `{dump_path}/msit_fx_dump`。其中 `{dump_path}` 为
 └── └── └── └── └── # npy 格式数据
 ```
 
-### 2. GE 模式关闭融合 dump 数据
+### GE模式关闭融合dump数据
 
 在[**GE 融合模式 dump 数据**](#11-ge-融合模式-dump-数据)的基础上，通过 `set_ge_dump_config` 接口的 `fusion_switch_file` 参数传入设置关闭算子融合的配置文件。工具使用示例如下：
 
@@ -250,5 +264,5 @@ dump 数据保存路径为 `{dump_path}/msit_fx_dump`。其中 `{dump_path}` 为
   ```
 - dump 结果文件的目录结构与含义可见“[1.1.3 dump 结果文件介绍](#113-dump-结果文件介绍)”小节。
 
-完整精度比对案例和使用方法请参考《[基于 torch 图模式（torchair）整网算子精度比对](torchair_compare.md)》。
+完整精度比对案例和使用方法请参考《[基于 torch 图模式（torchair）整网算子精度比对](../accuracy_compare/torchair_compare_instruct.md)》。
 
