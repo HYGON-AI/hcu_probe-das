@@ -154,28 +154,25 @@ def load_file_to_read_common_check(path: str, exts=None):
     return path
 
 
-def filter_cmd(paras):
-    whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ;/]+$")
-    filtered = []
-    for arg in paras:
-        arg_str = str(arg)
-        if whitelist_pattern.fullmatch(arg_str):
-            filtered.append(arg_str)
-        else:
-            raise ValueError(
-                f'The command contains invalid characters. Only the "{whitelist_pattern}" pattern is allowed.'
-            )
-    return filtered
+def is_valid_command(arg_str, index):
+    first_whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ]+$")
+    whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ;]+$")
 
-
-def check_str_for_cmd(strings, var_name):
-    whitelist_pattern = re.compile(r"^[a-zA-Z0-9_\-./=:,\[\] ]+$")
-    if whitelist_pattern.fullmatch(strings):
-        pass
+    if index == 0:
+        return re.fullmatch(first_whitelist_pattern, arg_str), first_whitelist_pattern
     else:
-        raise ValueError(
-            f'{var_name} contains invalid characters. Only the "{whitelist_pattern}" pattern is allowed.'
-        )
+        return re.fullmatch(whitelist_pattern, arg_str), whitelist_pattern
+
+
+def filter_cmd(paras):
+    filtered = []
+    for index, arg in enumerate(paras):
+        arg_str = str(arg)
+        valid, pattern = is_valid_command(arg_str, index)
+        if not valid:
+            raise ValueError(f"The command contains invalid characters. Only the '{pattern}' pattern is allowed.")
+        filtered.append(arg_str)
+    return filtered
 
 
 def safe_int(str_value, log_print_variable_name=None):

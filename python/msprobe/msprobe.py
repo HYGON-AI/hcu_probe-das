@@ -26,8 +26,8 @@ from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
     _api_precision_compare_command
-from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli, \
-    _install_offline_deps_parser, install_offline_deps_cli
+from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
+from msprobe.core.install_deps.install_deps import _install_deps_parser, install_deps_cli
 
 
 def main():
@@ -60,8 +60,9 @@ def main():
 
     offline_dump_parser = subparsers.add_parser('offline_dump')
     _offline_dump_parser(offline_dump_parser)
-    install_offline_deps_cmd_parser = subparsers.add_parser('install_offline_deps')
-    _install_offline_deps_parser(install_offline_deps_cmd_parser)
+
+    install_deps_cmd_parser = subparsers.add_parser('install_deps')
+    _install_deps_parser(install_deps_cmd_parser)
 
     if len(sys.argv) >= 2 and sys.argv[1] == "acc_check":
         acc_check_cli(sys.argv[2:])
@@ -93,8 +94,8 @@ def main():
 
     elif sys.argv[1] == "offline_dump":
         offline_dump_cli(args)
-    elif sys.argv[1] == "install_offline_deps":
-        install_offline_deps_cli(args)
+    elif sys.argv[1] == "install_deps":
+        install_deps_cli(args)
 
 
 if __name__ == "__main__":

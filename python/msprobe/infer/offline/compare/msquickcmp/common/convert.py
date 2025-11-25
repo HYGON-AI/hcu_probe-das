@@ -18,8 +18,8 @@ import sys
 import numpy as np
 
 from msprobe.core.common.log import logger
-from msprobe.infer.offline.compare.msquickcmp.common import utils
-from msprobe.infer.utils.util import load_file_to_read_common_check
+from msprobe.infer.offline.compare.msquickcmp.common.utils import execute_command
+from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 
 
 MSACCUCMP_FILE_PATH = "toolkit/tools/operator_cmp/compare/msaccucmp.py"
@@ -36,9 +36,10 @@ def convert_bin_file_to_npy(bin_file_path, npy_dir_path, cann_path):
     """
     python_version = sys.executable.split('/')[-1]
     msaccucmp_command_file_path = os.path.join(cann_path, MSACCUCMP_FILE_PATH)
-    bin2npy_cmd = [python_version, msaccucmp_command_file_path, "convert", "-d", bin_file_path, "-out", npy_dir_path]
     logger.info(f"convert dump data: {bin_file_path} to npy file")
-    utils.execute_command(bin2npy_cmd)
+    bin2npy_cmd = [python_version, msaccucmp_command_file_path, "convert", "-d", bin_file_path, "-out", npy_dir_path]
+    bin2npy_cmd = filter_cmd(bin2npy_cmd)
+    execute_command(bin2npy_cmd)
 
 
 def convert_npy_to_bin(npy_input_path):
