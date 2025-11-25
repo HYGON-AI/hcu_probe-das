@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -17,9 +17,11 @@
 __version__ = '8.3.1'
 
 import os
-import subprocess
 import platform
+import shutil
+import subprocess
 import sys
+
 import setuptools
 from wheel.bdist_wheel import bdist_wheel
 
@@ -64,8 +66,7 @@ def build_frontend():
             return False
         else:
             return True
-
-    except Exception as e:
+    except Exception:
         return False
     finally:
         # 切换回原始目录
@@ -118,6 +119,7 @@ class CustomBdistWheelCommand(bdist_wheel):
 
         super().run()
 
+
 INSTALL_REQUIRED = [
     "wheel",
     "einops",
@@ -169,6 +171,20 @@ if mod_list:
     p = subprocess.run(build_cmd.split(), shell=False)
     if p.returncode != 0:
         raise RuntimeError(f"Failed to build source({p.returncode})")
+
+# 添加scripts脚本
+current_dir = os.path.dirname(os.path.realpath(__file__))
+src_path = os.path.join(current_dir, 'scripts')
+dst_path = os.path.join(current_dir, 'python', 'msprobe', 'scripts')
+if not os.path.isdir(dst_path):
+    shutil.copytree(src_path, dst_path)
+else:
+    for root, dirs, files in os.walk(src_path):
+        target_root = os.path.join(dst_path, root[len(src_path) + 1:])
+        for dir_name in dirs:
+            os.makedirs(os.path.join(target_root, dir_name), mode=0o750, exist_ok=True)
+        for file in files:
+            shutil.copy(os.path.join(root, file), os.path.join(target_root, file))
 
 # 只查找python目录下的包（msprobe相关）
 packages = setuptools.find_packages(where="python")
