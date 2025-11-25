@@ -27,8 +27,9 @@ import subprocess
 import numpy as np
 
 from msprobe.core.common.log import logger
-from msprobe.infer.offline.compare.msquickcmp.common import utils
-from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
+from msprobe.infer.offline.compare.msquickcmp.common.utils import check_file_size_valid, AccuracyCompareException, \
+    ACCURACY_COMPARISON_INVALID_PATH_ERROR, ACCURACY_COMPARISON_PYTHON_VERSION_ERROR, \
+    ACCURACY_COMPARISON_NET_OUTPUT_ERROR, ACCURACY_COMPARISON_INVALID_DATA_ERROR, MAX_READ_FILE_SIZE_4G
 from msprobe.infer.utils.file_open_check import sanitize_csv_value
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.check.rule import Rule
@@ -58,20 +59,16 @@ class NetCompare(object):
         self.cpu_dump_data_path = cpu_dump_data_path
         self.output_json_path = output_json_path
         self.golden_json_path = golden_json_path
-        self.quant_fusion_rule_file = arguments.quant_fusion_rule_file
         self.arguments = arguments
         self.msaccucmp_command_dir_path = os.path.join(self.arguments.cann_path, MSACCUCMP_DIR_PATH)
         self.msaccucmp_command_file_path = self._check_msaccucmp_file(self.msaccucmp_command_dir_path)
         self.python_version = sys.executable.split('/')[-1]
 
         if self.golden_json_path:
-            utils.check_file_size_valid(self.golden_json_path, utils.MAX_READ_FILE_SIZE_4G)
-        if self.quant_fusion_rule_file:
-            utils.check_file_size_valid(self.quant_fusion_rule_file, utils.MAX_READ_FILE_SIZE_4G)
+            check_file_size_valid(self.golden_json_path, MAX_READ_FILE_SIZE_4G)
 
     @staticmethod
     def execute_command_line(cmd):
-        cmd = filter_cmd(cmd)
         logger.info(f"Execute command:{' '.join(cmd)}")
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return process
@@ -85,14 +82,14 @@ class NetCompare(object):
             else:
                 logger.warning(f"The path {msaccucmp_command_file_path} is not exist.Please check the file")
         logger.error(f"Does not exist in {msaccucmp_command_dir_path} directory msaccucmp.py and msaccucmp.pyc file")
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
     @staticmethod
     def _check_pyc_to_python_version(msaccucmp_command_file_path, python_version):
         if msaccucmp_command_file_path.endswith(".pyc"):
             if python_version != PYC_FILE_TO_PYTHON_VERSION:
                 logger.error(f"The python version for executing {msaccucmp_command_file_path} must be 3.7.5")
-                raise AccuracyCompareException(utils.ACCURACY_COMPARISON_PYTHON_VERSION_ERROR)
+                raise AccuracyCompareException(ACCURACY_COMPARISON_PYTHON_VERSION_ERROR)
 
     @staticmethod
     def _catch_compare_result(log_line, catch):
@@ -118,7 +115,7 @@ class NetCompare(object):
             return result, header
         except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
             logger.error('Failed to parse the alg compare result!')
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
+            raise AccuracyCompareException(ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
         finally:
             pass
 
@@ -190,16 +187,14 @@ class NetCompare(object):
         if self.golden_json_path is not None:
             msaccucmp_cmd.extend(["-cf", self.golden_json_path])
 
-        if self.quant_fusion_rule_file:
-            msaccucmp_cmd.extend(["-q", self.quant_fusion_rule_file])
-        
+        msaccucmp_cmd = filter_cmd(msaccucmp_cmd)
         status_code, _, _ = self.execute_msaccucmp_command(msaccucmp_cmd)
         if status_code == 2 or status_code == 0:
             logger.info(f"Finish compare the files in directory {self.npu_dump_data_path} "
                         f"with those in directory {self.cpu_dump_data_path}.")
         else:
             logger.error(f"Failed to execute command: {' '.join(msaccucmp_cmd)}")
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
+            raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
     def net_output_compare(self, npu_net_output_data_path, golden_net_output_info):
         """
@@ -236,7 +231,7 @@ class NetCompare(object):
                         logger.info(f"Compare Node_output:{file_index} completely.")
                     else:
                         logger.error(f"Failed to execute command: {' '.join(msaccucmp_cmd)}")
-                        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_DATA_ERROR)
+                        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_DATA_ERROR)
                     file_index += 1
         return
 
@@ -265,7 +260,7 @@ class NetCompare(object):
             os.rename(result_file_backup_path, result_file_path)
         except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
             logger.error("Failed to write Net_output compare result")
-            raise AccuracyCompareException(utils.ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
+            raise AccuracyCompareException(ACCURACY_COMPARISON_NET_OUTPUT_ERROR) from error
         finally:
             pass
 
@@ -291,6 +286,7 @@ class NetCompare(object):
 
     def _check_msaccucmp_compare_support_args(self, compare_args):
         check_cmd = [self.python_version, self.msaccucmp_command_file_path, "compare", "-h"]
+        check_cmd = filter_cmd(check_cmd)
         process = self.execute_command_line(check_cmd)
         while process.poll() is None:
             line = process.stdout.readline().strip()

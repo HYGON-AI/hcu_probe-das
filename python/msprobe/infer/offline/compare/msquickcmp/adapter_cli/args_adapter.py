@@ -30,8 +30,7 @@ class CmpArgsAdapter:
                  rank="0",
                  output_size="",
                  dym_shape_range="",
-                 onnx_fusion_switch=True,
-                 quant_fusion_rule_file=""
+                 onnx_fusion_switch=True
                  ):
         self.golden_path = golden_path
         self.target_path = target_path
@@ -43,4 +42,3 @@ class CmpArgsAdapter:
         self.output_size = output_size
         self.dym_shape_range = dym_shape_range
         self.onnx_fusion_switch = onnx_fusion_switch
-        self.quant_fusion_rule_file = quant_fusion_rule_file

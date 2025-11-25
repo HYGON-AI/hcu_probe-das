@@ -104,8 +104,8 @@ def compare_offline_model_mode(args):
         return
     cmp_args = CmpArgsAdapter(args.golden_path, args.target_path, args.input_data, CANN_PATH, args.output_path,
                               args.input_shape, args.rank, args.output_size, args.dym_shape_range,
-                              args.onnx_fusion_switch, args.quant_fusion_rule_file)
-    cmp_process(cmp_args, True)
+                              args.onnx_fusion_switch)
+    cmp_process(cmp_args)
 
 
 def set_args_default(args):
@@ -121,8 +121,6 @@ def set_args_default(args):
         args.dym_shape_range = ''
     if not hasattr(args, 'onnx_fusion_switch'):
         args.onnx_fusion_switch = True
-    if not hasattr(args, 'quant_fusion_rule_file'):
-        args.quant_fusion_rule_file = ''
     return args
 
 
@@ -145,8 +143,6 @@ def check_compare_args(args):
         args.dym_shape_range = check_dym_range_string(args.dym_shape_range)
     if args.onnx_fusion_switch:
         args.onnx_fusion_switch = str2bool(args.onnx_fusion_switch)
-    if args.quant_fusion_rule_file:
-        args.quant_fusion_rule_file = check_quant_json_path_legality(args.quant_fusion_rule_file)
 
 
 def _install_offline_deps_parser(parser):

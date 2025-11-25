@@ -22,8 +22,10 @@ import stat
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
-from msprobe.infer.offline.compare.msquickcmp.common import utils
-from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
+from msprobe.infer.utils.util import filter_cmd
+from msprobe.infer.offline.compare.msquickcmp.common.utils import execute_command, get_model_name_and_extension, \
+    check_file_size_valid, ACCURACY_COMPARISON_MODEL_TYPE_ERROR, ACCURACY_COMPARISON_INVALID_PATH_ERROR, \
+    MAX_READ_FILE_SIZE_4G, AccuracyCompareException
 
 ATC_FILE_PATH = "compiler/bin/atc"
 OLD_ATC_FILE_PATH = "atc/bin/atc"
@@ -38,16 +40,16 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
     Exception Description:
         when the model type is wrong throw exception
     """
-    model_name, extension = utils.get_model_name_and_extension(offline_model_path)
+    model_name, extension = get_model_name_and_extension(offline_model_path)
     if extension not in [".om", ".txt"]:
         logger.error(
             f"The offline model file not ends with .om or .txt, Please check {offline_model_path}.")
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_MODEL_TYPE_ERROR)
     
     cann_path = os.path.realpath(cann_path)
     if not os.path.isdir(cann_path):
         logger.error(f'The cann path {cann_path} is not a directory.Please check.')
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     
     atc_command_file_path = get_atc_path(cann_path)
     check_file_or_directory_path(atc_command_file_path)
@@ -66,10 +68,11 @@ def convert_model_to_json(cann_path, offline_model_path, out_path):
             "--json=" + output_json_path
         ]
         logger.info(f"ATC command line {' '.join(atc_cmd)}")
-        utils.execute_command(atc_cmd)
+        atc_cmd = filter_cmd(atc_cmd)
+        execute_command(atc_cmd)
         logger.info(f"Complete model conversion to json {output_json_path}.")
 
-    utils.check_file_size_valid(output_json_path, utils.MAX_READ_FILE_SIZE_4G)
+    check_file_size_valid(output_json_path, MAX_READ_FILE_SIZE_4G)
     return output_json_path
 
 
@@ -78,13 +81,13 @@ def get_atc_path(cann_path):
     if not os.path.exists(atc_command_file_path):
         atc_command_file_path = os.path.join(cann_path, OLD_ATC_FILE_PATH)
     if not os.path.exists(atc_command_file_path):
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
 
     atc_command_file_path = os.path.realpath(atc_command_file_path)
     if not os.access(atc_command_file_path, os.X_OK):
         logger.error('ATC path is not permitted for executing.')
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     if os.stat(atc_command_file_path).st_mode & (stat.S_IWGRP | stat.S_IWOTH) > 0:
         logger.error('ATC path is writable by others or group, not permitted.')
-        raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
     return atc_command_file_path

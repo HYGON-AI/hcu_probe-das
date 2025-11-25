@@ -194,25 +194,25 @@ def _append_column_to_csv(csv_path, node_output_show_list=None):
     _write_csv(csv_path, rows)
 
 
-def cmp_process(args: CmpArgsAdapter, use_cli: bool):
+def cmp_process(args: CmpArgsAdapter):
     args.golden_path = os.path.realpath(args.golden_path)
     args.target_path = os.path.realpath(args.target_path)
     args.cann_path = os.path.realpath(args.cann_path)
     args.input_data = convert_npy_to_bin(args.input_data)
     try:
-        check_and_run(args, use_cli)
+        check_and_run(args)
     except utils.AccuracyCompareException as error:
         raise error
 
 
-def run(args: CmpArgsAdapter, input_shape, original_out_path, use_cli: bool):
+def run(args: CmpArgsAdapter, input_shape, original_out_path):
     if input_shape:
         args.input_shape = input_shape
         args.output_path = os.path.join(original_out_path, get_shape_to_directory_name(args.input_shape))
-    run_om_model_compare(args, use_cli)
+    run_om_model_compare(args)
 
 
-def run_om_model_compare(args, use_cli):
+def run_om_model_compare(args):
     # whether use aipp
     output_json_path = atc_utils.convert_model_to_json(args.cann_path, args.target_path, args.output_path)
     golden_json_path = None
@@ -226,7 +226,7 @@ def run_om_model_compare(args, use_cli):
     # generate npu inputs data
     npu_dump.generate_inputs_data(use_aipp=use_aipp)
     # generate npu dump data
-    npu_dump_data_path, npu_net_output_data_path = npu_dump.generate_dump_data(use_cli=use_cli)
+    npu_dump_data_path, npu_net_output_data_path = npu_dump.generate_dump_data()
     npu_dump_npy_path = ""
 
     # generate onnx inputs data
@@ -278,7 +278,7 @@ def _find_previous_node(graph, output_name):
     return None
 
 
-def check_and_run(args: CmpArgsAdapter, use_cli: bool):
+def check_and_run(args: CmpArgsAdapter):
     check_file_or_directory_path(args.golden_path, False)
     check_file_or_directory_path(args.target_path, False)
     utils.check_device_param_valid(args.rank)
@@ -295,7 +295,7 @@ def check_and_run(args: CmpArgsAdapter, use_cli: bool):
     if not input_shapes:
         input_shapes.append("")
     for input_shape in input_shapes:
-        run(args, input_shape, original_out_path, use_cli)
+        run(args, input_shape, original_out_path)
     if args.dym_shape_range:
         csv_sum(original_out_path)
 

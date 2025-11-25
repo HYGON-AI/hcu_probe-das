@@ -32,7 +32,7 @@ from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean impor
 
 from msprobe.infer.utils.security_check import get_valid_write_path, ms_makedirs
 from msprobe.core.common.log import logger
-from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
+from msprobe.infer.utils.util import load_file_to_read_common_check
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
 
@@ -626,7 +626,6 @@ def execute_command(cmd, info_need=True):
     Exception Description:
         when invalid command throw exception
     """
-    cmd = filter_cmd(cmd)
     if info_need:
         logger.info('Execute command:%s' % " ".join(cmd))
     process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

@@ -35,7 +35,7 @@ from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompar
 from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from msprobe.infer.offline.compare.msquickcmp.npu.om_parser import OmParser
 from msprobe.infer.utils.check.rule import Rule
-from msprobe.infer.utils.util import load_file_to_read_common_check
+from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 from msprobe.infer.utils.file_open_check import ms_open
 
 
@@ -264,7 +264,7 @@ class NpuDumpData(DumpData):
         else:
             self._generate_inputs_data_without_aipp(self.data_dir)
 
-    def generate_dump_data(self, npu_dump_path=None, om_parser=None, use_cli=True):
+    def generate_dump_data(self, npu_dump_path=None, om_parser=None):
         """
         Function Description:
             compile and rum benchmark project
@@ -272,9 +272,6 @@ class NpuDumpData(DumpData):
             npu dump data path
         """
         self._check_input_path_param()
-        if not use_cli:
-            benchmark_dir = os.path.join(os.path.realpath("../../"), BENCHMARK_DIR)
-            self.benchmark_install_sh(benchmark_dir)
         return self.benchmark_run()
 
     def get_expect_output_name(self):
@@ -285,27 +282,6 @@ class NpuDumpData(DumpData):
             output node name in golden net
         """
         return self.om_parser.get_expect_net_output_name()
-
-    def benchmark_install_sh(self, benchmark_dir):
-        """
-        Function Description:
-            compile benchmark backend project
-        Parameter:
-            benchmark_dir: benchmark project directory
-        """
-        execute_path = benchmark_dir
-        logger.info(f"Start to install benchmark backend execute_path: {execute_path}")
-        install_sh_cmd = ["sh", "install1.sh", "-p", self.python_version]
-
-        retval = os.getcwd()
-        os.chdir(execute_path)
-
-        # do install.1sh command
-        logger.info(f"Run command line: cd {execute_path} && {' '.join(install_sh_cmd)}")
-        utils.execute_command(install_sh_cmd)
-        logger.info(f"Finish to install benchmark backend execute_path: {benchmark_dir}.")
-        os.chdir(retval)
-        logger.info(f"Run command line: cd {retval} (back to the working directory)")
 
     def benchmark_run(self):
         """
@@ -357,6 +333,7 @@ class NpuDumpData(DumpData):
             self._make_benchmark_cmd_for_shape_range(benchmark_cmd)
 
         # do benchmark command
+        benchmark_cmd = filter_cmd(benchmark_cmd)
         utils.execute_command(benchmark_cmd, False)
 
         npu_dump_data_path = ""

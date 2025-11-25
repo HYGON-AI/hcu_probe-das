@@ -45,7 +45,7 @@ VALID_ARGS_MAP = {
     'offline_model': [
         '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o',
         '--rank', '--input_data', '--input_shape', '--output_size', '--dym_shape_range',
-        '-ofs', '--onnx_fusion_switch', '-qfr', '--quant_fusion_rule_file'
+        '-ofs', '--onnx_fusion_switch'
     ]
 }
 
