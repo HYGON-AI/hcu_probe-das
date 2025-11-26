@@ -2,7 +2,19 @@
 
 ## 简介
 
-分级可视化工具将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
+MindSpore场景分级可视化构图比对：将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
+
+**基本概念**
+
+- msProbe：全称MindStudio Probe，是精度调试工具包，可以定位模型训练或推理中的精度问题。
+- dump：精度数据采集。
+
+**使用流程**
+
+1. 进行工具安装以及数据的采集，详见[使用前准备](#使用前准备)
+2. 使用命令行工具生成图结构文件，详见[分级可视化操作指导](#分级可视化操作指导)
+3. 启动tensorboard服务，详见[启动tensorboard](#启动tensorboard)
+4. 使用浏览器查看图结构，分析模型结构和精度数据，详见[浏览器查看](#浏览器查看)
 
 **工具特性**
 
@@ -26,10 +38,10 @@
 
 **版本配套关系**
 
-| msprobe版本 | tb_graph_ascend版本 | 说明       | 
-|-----------|-------------------|----------| 
-| 大于等于8.2.1     | 大于等于8.2.0             | msprobe工具的分级可视化构图比对功能自8.2.1版本起，输出件切换为db格式，需要对应版本的tb_graph_ascend进行解析 | 
-| 小于8.2.1     | 小于8.2.0            |    无      | 
+| msProbe版本 | tb_graph_ascend版本 | 说明                                                                   | 
+|-----------|-------------------|----------------------------------------------------------------------| 
+| 大于等于8.2.1 | 大于等于8.2.0             | msProbe工具的分级可视化构图比对功能自8.2.1版本起，输出件切换为db格式，需要对应版本的tb_graph_ascend进行解析 | 
+| 小于8.2.1   | 小于8.2.0            | 无                                                                    | 
 
 **数据准备**
 
@@ -39,289 +51,266 @@
 
 仅支持MindSpore框架，且mindspore>=2.4.0。
 
-## 生成图结构文件
+## 分级可视化操作指导
+### 单图构建
+**功能说明**
 
-### 构图命令行说明
+展示模型结构、精度数据、堆栈信息，并且包含了溢出检测功能。适用于分析模型结构和分析数据溢出的场景。
 
-**命令示例如下**：
+**注意事项**
+
+依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息+和API信息），采集结果件construct.json内容不为空。
+
+**命令格式**
 ```
-msprobe graph_visualize -i ./compare.json -o ./output
+msprobe graph_visualize -i <build_json_path> -o <output_path> [-oc]
 ```
-**命令行参数说明**：
+可选字段使用[]表示，变量使用<>表示。
 
-| 参数名               | 说明                                                                                                                                                                                                                                                                                                                                                                    | 是否必选 |
-|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
-| -i 或 --input_path   | 指定比对文件，参考[比对文件说明](#比对文件说明)。                                                                                                                                                                                                                                                                                                                                       | 是       |
-| -o 或 --output_path  | 配置比对结果文件存盘目录，str 类型。文件名称基于时间戳自动生成，格式为：`compare_{timestamp}.vis.db或build_{timestamp}.vis.db`。                                                                                                                                                                                                                                                                          | 是       |
+**参数说明**
+
+| 参数名                  | 说明                                                                                            | 是否必选 |
+| ----------------------- |-----------------------------------------------------------------------------------------------| -------- |
+| -i 或 --input_path      | 指定构图配置文件路径。                                                                                   | 是       |
+| -o 或 --output_path     | 配置构图结果文件存盘目录，str 类型。文件名称基于时间戳自动生成，格式为：`build_{timestamp}.vis.db`。                             | 是       |
+| -oc 或 --overflow_check | 是否开启溢出检测模式，开启后会在输出db文件中（`build_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。 | 否       |
+
+**构图配置文件说明**
+
+以在当前目录创建 ./build.json 为例。
+```
+{
+  "npu_path": "./npu_dump",
+  "is_print_compare_log": true
+}
+```
+**比对文件参数说明**：
+
+| 参数名               | 说明                                                                                                             | 是否必选 |
+|-------------------|----------------------------------------------------------------------------------------------------------------|------|
+| npu_path   | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank构建、多rank批量构建或多step批量比构建。                                                     | 是    |
+| is_print_compare_log  | 配置是否开启单个算子的日志打屏。可取值 true 或 false，默认为 true。关闭后则只输出常规日志，bool 类型。                                                 | 否    |
+
+
+**使用示例**
+
+**示例1：执行单rank图构建**
+
+```
+msprobe graph_visualize -i ./build.json -o ./output_path
+```
+
+build.json中npu_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 单rank格式。
+
+**示例2：执行多rank批量图构建**
+
+```
+msprobe graph_visualize -i ./build.json -o ./output_path
+```
+
+build.json中npu_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 多rank格式。
+
+**示例3：执行多step批量图构建**
+
+```
+msprobe graph_visualize -i ./build.json -o ./output_path
+```
+
+build.json中npu_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 多step格式。
+
+**示例4：执行单图的溢出检测**
+
+```
+msprobe graph_visualize -i ./build.json -o ./output_path -oc
+```
+
+在输出结果中会对每个图节点进行溢出检测指标的标记，溢出检测指标如下：
+
+- medium：输入异常，输出正常场景；
+- high：输入异常，输出异常；输出norm值相较于输入存在异常增大情况；
+- critical：输入正常，输出异常场景。
+
+**输出说明**
+
+在配置的输出路径中，生成一个`.vis.db`后缀的文件，文件名称基于时间戳自动生成，格式为：`build_{timestamp}.vis.db`。
+
+### 双图比对
+**功能说明**
+
+展示模型结构、结构差异、精度数据和精度比对指标、精度是否疑似有问题（精度比对指标差异越大颜色越深），且支持跨套件比对、溢出检测和模糊匹配功能。
+
+当前比对支持三种类型的dump数据，分级可视化工具比对时会自动判断：
+
+1. 统计信息：仅dump了API和Module的输入输出数据统计信息，占用磁盘空间小；
+2. 真实数据：不仅dump了API和Module的输入输出数据统计信息，还将tensor进行存盘，占用磁盘空间大，但比对更加准确；
+3. md5：dump了API和Module的输入输出数据统计信息和CRC-32信息。
+
+dump类型如何配置见[数据采集配置文件介绍](../dump/config_json_introduct.md)。
+
+**注意事项**
+
+依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息+和API信息），采集结果件construct.json内容不为空。
+
+**命令格式**
+```
+msprobe graph_visualize -i <compare_json_path> -o <output_path> [-lm] [-oc] [-f]
+```
+可选字段使用[]表示，变量使用<>表示。
+
+**参数说明**
+
+| 参数名                  | 说明                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 是否必选 |
+| ----------------------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+| -i 或 --input_path      | 指定构图配置文件路径。                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 是       |
+| -o 或 --output_path     | 配置构图结果文件存盘目录，str 类型。文件名称基于时间戳自动生成，格式为：`compare_{timestamp}.vis.db`。                                                                                                                                                                                                                                                                                                                                                                                                                     | 是       |
 | -lm 或 --layer_mapping| 跨框架比对，MindSpore和PyTorch的比对场景。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer）](#自定义映射文件layer), 如何配置自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。配置该参数后，将仅按节点名称进行比对，忽略节点的 type 和 shape。如果调试侧和标杆侧有名称不同的节点，则需要配置自定义映射文件，-lm参数传入自定义映射文件路径；如果调试侧和标杆侧节点名称相同，则仅指定-lm即可。 | 否    |
-| -oc 或 --overflow_check | 是否开启溢出检测模式，开启后会在输出db文件中（`compare_{timestamp}.vis.db或build_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级，溢出等级说明参考[溢出等级说明](#溢出等级说明)。                                                                                                                                                                                                                                          | 否    |
-| -f 或 --fuzzy_match     | 是否开启模糊匹配，bool类型。模糊匹配说明参考[匹配说明](#匹配说明)。                                                                                                                                                                                                                                                                                                                            | 否    |
+| -oc 或 --overflow_check | 是否开启溢出检测模式，开启后会在输出db文件中（`compare_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。                                                                                                                                                                                                                                                                                                                                                                                         | 否       |
+| -f 或 --fuzzy_match     | 是否开启模糊匹配，bool类型。                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 否       |
 
-#### 匹配说明
-
-**注：dump名称 = 名称 + 调用次数**，例如Functional.matmul.2.forward，matmul是名称，2是调用次数
-
-1.默认匹配
-
-- 所有节点dump名称一致
-- 节点输入输出参数数量一致，参数type、shape一致
-- 节点的层级一致（父节点们一致）
-
-2.模糊匹配
-- Cell节点dump名称一致，两个匹配上的Cell节点，忽略各自节点下所有api的dump调用次数，按照名称一致+Cell节点内的调用顺序进行匹配
-- ![fuzzy_match_ms.png](../figures/visualization/fuzzy_match_ms.png)
-- 参数shape一致
-
-#### 溢出等级说明
-- medium：输入异常，输出正常场景
-- high：输入异常，输出异常；输出norm值相较于输入存在异常增大情况
-- critical：输入正常，输出异常场景
-
-#### 比对文件说明
+**构图配置文件说明**
 
 以在当前目录创建 ./compare.json 为例。
 ```
 {
-"npu_path": "./npu_dump",
-"bench_path": "./bench_dump",
-"is_print_compare_log": true
+  "npu_path": "./npu_dump",
+  "bench_path": "./bench_dump",
+  "is_print_compare_log": true
 }
 ```
 **比对文件参数说明**：
 
 | 参数名               | 说明                                                                         | 是否必选 |
 |-------------------|----------------------------------------------------------------------------|------|
-| npu_path   | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank比对、多rank批量比对或多step批量比对，具体格式参考[图构建和比对](#图构建和比对)。 | 是    |
+| npu_path   | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank比对、多rank批量比对或多step批量比对，具体格式参考3.2 图构建和比对。 | 是    |
 | bench_path  | 指定标杆侧比对路径，str类型。单图构建场景可以不配置。                                               | 否    |
 | is_print_compare_log  | 配置是否开启单个算子的日志打屏。可取值 true 或 false，默认为 true。关闭后则只输出常规日志，bool 类型。             | 否    |
-| parallel_merge  | 配置是否开启不同切分策略下的图合并，dict类型。rank_size、tp、pp参数按实际情况进行配置。比对时配置npu、bench，只构图配置npu。 配置示例见[不同切分策略下的图合并](#不同切分策略下的图合并)。 | 否    |
 
-### 图构建和比对
 
-**如果只是想查看一个模型的结构，请选择单图构建**；
-**如果想比较两个模型的结构差异和精度数据差异，请选择双图比对**。
+**使用示例**
 
-#### 单图构建
+**示例1：执行单rank图比对**
 
-展示模型结构、精度数据、堆栈信息。
-
-**1. 准备比对文件**：
-
-以在当前目录创建 ./compare.json 为例。
 ```
-{
-"npu_path": "./npu_dump",
-"is_print_compare_log": true
-}
-```
-npu_path格式：必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
-```
-├── npu_path
-│   ├── dump_tensor_data（配置dump的task参数选择tensor时存在）
-|   |    ├── MintFunctional.relu.0.backward.input.0.npy
-|   |    ├── Mint.abs.0.forward.input.0.npy
-|   |    ...
-|   |    └── Cell.relu.ReLU.forward.0.input.0.npy
-|   ├── dump.json         # 数据信息
-|   ├── stack.json        # 调用栈信息
-|   └── construct.json    # 分层分级结构，level为L1时，construct.json内容为空
-```
-**2. 执行命令**：
-```
-msprobe graph_visualize -i ./compare.json -o ./output
-```
-#### 双图比对
-
-展示模型结构、结构差异、精度数据和精度比对指标、精度是否疑似有问题（精度比对指标差异越大颜色越深）。
-
-当前比对支持三种类型的dump数据，分级可视化工具比对时会自动判断：
-
-1.统计信息：仅dump了API和Module的输入输出数据统计信息，占用磁盘空间小；
-
-2.真实数据：不仅dump了API和Module的输入输出数据统计信息，还将tensor进行存盘，占用磁盘空间大，但比对更加准确；
-
-3.md5：dump了API和Module的输入输出数据统计信息和md5信息。
-
-dump类型如何配置见[数据采集配置文件介绍](../dump/config_json_introduct.md)。
-
-**1. 准备比对文件**：
-
-以在当前目录创建 ./compare.json 为例。
-```
-{
-"npu_path": "./npu_dump",
-"bench_path": "./bench_dump",
-"is_print_compare_log": true
-}
-```
-npu_path或bench_path格式：必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
-```
-├── npu_path或bench_path
-│   ├── dump_tensor_data（配置dump的task参数选择tensor时存在）
-|   |    ├── MintFunctional.relu.0.backward.input.0.npy
-|   |    ├── Mint.abs.0.forward.input.0.npy
-|   |    ...
-|   |    └── Cell.relu.ReLU.forward.0.input.0.npy
-|   ├── dump.json         # 数据信息
-|   ├── stack.json        # 调用栈信息
-|   └── construct.json    # 分层分级结构，level为L1时，construct.json内容为空
-```
-**2. 执行命令**：
-```
-msprobe graph_visualize -i ./compare.json -o ./output
+msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-比对完成后将在**output**下生成一个**vis后缀文件**。
+compare.json中npu_path和bench_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 单rank格式。
 
-#### 批量构建或比对
-##### 多rank批量构建或比对
-批量构建或比对一个step下的所有rank的数据
+**示例2：执行多rank批量图比对**
 
-**1. 准备比对文件**：
-
-以在当前目录创建 ./compare.json 为例。
 ```
-{
-"npu_path": "./npu_dump",
-"bench_path": "./bench_dump", # 只进行图构建可不配置
-"is_print_compare_log": true
-}
-```
-npu_path或bench_path格式：必须只包含rank+数字格式的文件夹，且每个rank文件夹中必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
-
-进行批量图比对时，npu_path和bench_path中包含的rank+数字格式的文件夹必须数量一致且能够一一对应。
-```
-├── npu_path或bench_path
-|   ├── rank0
-|   │   ├── dump_tensor_data（仅配置dump的task参数选择tensor时存在）
-|   |   |    ├── MintFunctional.relu.0.backward.input.0.npy
-|   |   |    ├── Mint.abs.0.forward.input.0.npy
-|   |   |    ...
-|   |   |    └── Cell.relu.ReLU.forward.0.input.0.npy
-|   |   ├── dump.json         # 数据信息
-|   |   ├── stack.json        # 算子调用栈信息
-|   |   └── construct.json    # 分层分级结构，level为L1时，construct.json内容为空
-|   ├── rank1
-|   |   ├── dump_tensor_data
-|   |   |   └── ...
-|   |   ├── dump.json
-|   |   ├── stack.json
-|   |   └── construct.json
-|   ├── ...
-|   |
-|   └── rankn
-```
-**2. 执行命令**：
-```
-msprobe graph_visualize -i ./compare.json -o ./output
-```
-比对完成后将在**output**下生成1个**vis.db后缀文件**。
-
-图构建：
-```
-├── build_{timestamp}.vis.db
-```
-图比对：
-```
-├── compare_{timestamp}.vis.db
-```
-##### 多step批量构建或比对
-批量构建或比对多个step下的所有rank的数据
-
-**1. 准备比对文件**：
-
-以在当前目录创建 ./compare.json 为例。
-```
-{
-"npu_path": "./npu_dump",
-"bench_path": "./bench_dump", # 只进行图构建可不配置
-"is_print_compare_log": true
-}
-```
-npu_path或bench_path格式：必须只包含step+数字格式的文件夹，且每个step文件夹中必须只包含rank+数字格式的文件夹，每个rank文件夹中必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
-
-进行批量图比对时，npu_path和bench_path中包含的step+数字格式的文件夹必须数量一致且能够一一对应，每个step文件夹中包含的rank+数字格式的文件夹必须数量一致且能够一一对应。
-```
-├── npu_path或bench_path
-│   ├── step0
-│   |   ├── rank0
-│   |   │   ├── dump_tensor_data（仅配置dump的task参数选择tensor时存在）
-|   |   |   |    ├── MintFunctional.relu.0.backward.input.0.npy
-|   |   |   |    ├── Mint.abs.0.forward.input.0.npy  
-|   |   |   |    ...
-|   |   |   |    └── Cell.relu.ReLU.forward.0.input.0.npy
-│   |   |   ├── dump.json             # 数据信息
-│   |   |   ├── stack.json            # 调用栈信息
-│   |   |   └── construct.json        # 分层分级结构，level为L1时，construct.json内容为空
-│   |   ├── rank1
-|   |   |   ├── dump_tensor_data
-|   |   |   |   └── ...
-│   |   |   ├── dump.json
-│   |   |   ├── stack.json
-|   |   |   └── construct.json
-│   |   ├── ...
-│   |   |
-|   |   └── rankn
-│   ├── step1
-│   |   ├── ...
-│   ├── step2
-```
-**2. 执行命令**：
-```
-msprobe graph_visualize -i ./compare.json -o ./output
-```
-比对完成后将在**output**下生成1个**vis.db后缀文件**。
-
-图构建：
-```
-├── build_{timestamp}.vis.db
-```
-图比对：
-```
-├── compare_{timestamp}.vis.db
+msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-#### 仅模型结构比对
+compare.json中npu_path和bench_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 多rank格式。
 
-适用场景：**主要关注模型结构而非训练过程数据**。例如，在模型迁移过程中，确保迁移前后模型结构的一致性，或在排查精度差异时，判断是否由模型结构差异所引起。
+**示例3：执行多step批量图比对**
 
-使用msprobe工具对模型数据进行采集时，**可选择仅采集模型结构（task配置为structure）**，此配置将避免采集模型训练过程的数据，从而显著减少采集所需的时间。
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path
+```
 
-dump配置请参考[dump配置示例](../dump/config_json_examples.md#35-task-配置为-structure)。
+compare.json中npu_path和bench_path格式需要满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 多step格式。
 
-得到dump数据后，若需比较特定两个rank之间的数据，请参考[双图比对](#双图比对)；若需进行多个rank或多个step的数据批量比对，请参考[批量构建或比对](#批量构建或比对)。
+**示例4：执行跨框架比对**
 
-#### 不同切分策略下的图合并
+调试侧和标杆侧节点名称相同，则仅指定-lm即可。
 
-适用场景：不同模型并行切分策略下，两个模型产生了精度差异，需要进行整网数据比对，但被切分的数据或模型结构分布于多rank中无法进行比对，需要将分布在各个rank的数据或模型结构合并后再进行比对。
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path -lm
+```
 
-使用限制：
+调试侧和标杆侧有节点名称不相同，则需要配置自定义映射文件，-lm参数传入自定义映射文件路径，映射文件如何配置详见参数说明。
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path -lm ./mapping.yaml
+```
+
+**示例5：执行溢出检测**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path -oc
+```
+
+在输出结果中会对每个图节点进行溢出检测指标的标记，溢出检测指标如下：
+
+- medium：输入异常，输出正常场景；
+- high：输入异常，输出异常；输出norm值相较于输入存在异常增大情况；
+- critical：输入正常，输出异常场景。
+
+**示例6：执行模糊匹配**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path -f
+```
+
+模糊匹配与默认匹配的区别详见[匹配说明](#匹配说明)
+
+**输出说明**
+
+在配置的输出路径中，生成一个`.vis.db`后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_{timestamp}.vis.db`。
+
+
+### 仅模型结构比对
+
+**功能说明**
+
+主要关注模型结构而非训练过程数据。例如，在模型迁移过程中，确保迁移前后模型结构的一致性，或在排查精度差异时，判断是否由模型结构差异所引起。
+
+**注意事项**
+
+使用msProbe工具对模型数据进行采集时，**选择仅采集模型结构（task配置为structure）**，此配置将避免采集模型训练过程的数据，从而显著减少采集所需的时间。
+
+dump配置请参考[dump配置示例](../dump/config_json_examples.md#33-task-配置为-structure)。
+
+**命令格式**
+
+请参考[双图比对](#双图比对)的命令格式
+
+**参数说明**
+
+请参考[双图比对](#双图比对)的参数说明
+
+**使用示例**
+
+请参考[双图比对](#双图比对)使用示例中的示例1、示例2和示例3
+
+**输出说明**
+
+在配置的输出路径中，生成一个`.vis.db`后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_{timestamp}.vis.db`。
+
+### 不同切分策略下的图合并
+
+**功能说明**
+
+不同模型并行切分策略下，两个模型产生了精度差异，需要进行整网数据比对，但被切分的数据或模型结构分布于多rank中无法进行比对，需要将分布在各个rank的数据或模型结构合并后再进行比对。
+
+**注意事项**
 
 - 当前支持的模型并行切分策略：Tensor Parallelism（TP）、Pipeline Parallelism（PP）、Virtual Pipeline Parallelism（VPP），暂不支持Context Parallelism（CP）和Expert Parallelism（EP）。
 - 当前支持基于Megatron、MindSpeed-LLM套件的模型进行图合并，其他套件的模型图合并效果有待验证；
-- 当前仅支持msprobe工具dump的statistics数据, level需指定L0或者mix；
+- 当前仅支持msProbe工具dump的statistics数据, level需指定L0或者mix；
 - 图合并比对时要确保Data Parallelism（DP）切分一致，例如rank=8 tp=1 pp=8的配置，dp=1，图合并将得到一张图，rank=8 tp=1 pp=4的配置，dp=2，图合并将得到两张图，暂不支持数量不一致的图进行比对。
 
-使能方式：
+**命令格式**
+```
+msprobe graph_visualize -i <compare_json_path> -o <output_path> [-lm] [-oc] [-f]
+```
+可选字段使用[]表示，变量使用<>表示
 
-在compare.json里增加parallel_merge配置项， rank_size、tp、pp和vpp参数按实际情况进行配置。
+**参数说明**
 
-参数说明：
+| 参数名                  | 说明                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | 是否必选 |
+| ----------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+| -i 或 --input_path      | 指定构图配置文件路径。                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | 是       |
+| -o 或 --output_path     | 配置构图结果文件存盘目录，str 类型。文件名称基于时间戳自动生成，格式为：`compare_{timestamp}.vis.db`。                                                                                                                                                                                                                                                                                                                                                                                                                      | 是       |
+| -lm 或 --layer_mapping| 跨框架比对，MindSpore和PyTorch的比对场景。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer）](#自定义映射文件layer), 如何配置自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。配置该参数后，将仅按节点名称进行比对，忽略节点的 type 和 shape。如果调试侧和标杆侧有名称不同的节点，则需要配置自定义映射文件，-lm参数传入自定义映射文件路径；如果调试侧和标杆侧节点名称相同，则仅指定-lm即可。 | 否    |
+| -oc 或 --overflow_check | 是否开启溢出检测模式，开启后会在输出db文件中（`compare_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。                                                                                                                                                                                                                                                                                                                                                                                          | 否       |
+| -f 或 --fuzzy_match     | 是否开启模糊匹配，bool类型。                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 否       |
 
-所需tp、pp和vpp参数来自于Megatron、MindSpeed-LLM套件中的训练脚本实际配置。
+**构图配置文件说明**
 
-| 参数名       | 说明                                                                                                                       | 是否必填 |
-|-----------|--------------------------------------------------------------------------------------------------------------------------|------|
-| rank_size | 模型实际训练所用加速卡的数量，int类型。`rank_size=tp*pp*cp*dp`，由于暂不支持CP合并，图合并功能中默认cp=1。                                                    | 是    |
-| tp        | 张量并行大小，int类型。实际训练脚本中需指定`--tensor-model-parallel-size T`，其中`T`表示张量模型并行大小，即**图合并所需的参数tp**, `tp=T`。                           | 是    |
-| pp        | 流水线并行的阶段数，int类型。实际训练脚本中需指定`--pipeline-model-parallel-size P`，其中`P`表示流水线并行的阶段数，即**图合并所需的参数pp**, `pp=P`。                     | 是    |
-| vpp       | 虚拟流水线并行阶段数，int类型。虚拟流水线并行依赖流水线并行，实际训练脚本中需指定`--num-layers-per-virtual-pipeline-stage V`，其中`V`表示每个虚拟流水线阶段的层数；指定`--num-layers L`，其中`L`表示模型总层数，**图合并所需的参数vpp**=`L/V/P`。vpp参数可以不配置，默认vpp=1代表未开启虚拟流水线并行。 | 否    |
-| order     | 模型并行维度的排序顺序，str类型。Megatron默认为`tp-cp-ep-dp-pp`。 如果使用msprobe工具dump数据指定level为L0并且实际训练脚本中的order非默认值（例如实际训练脚本中指定`--use-tp-pp-dp-mapping`），请传入修改后的order。dump数据指定level为mix则无需修改。                         | 否    |
-
-npu_path、bench_path的配置以及执行命令请参考[批量构建或比对](#批量构建或比对)
-
-如果只进行图构建，"bench_path"和"parallel_merge"中的"bench"参数可不配置。
-
+以在当前目录创建 ./compare.json 为例。
 ```
 {
   "npu_path": "./npu_dump",
@@ -333,6 +322,107 @@ npu_path、bench_path的配置以及执行命令请参考[批量构建或比对]
   }
 }
 ```
+**比对文件参数说明**：
+
+| 参数名               | 说明                                                                         | 是否必选 |
+|-------------------|----------------------------------------------------------------------------|------|
+| npu_path   | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank比对、多rank批量比对或多step批量比对，具体格式参考3.2 图构建和比对。 | 是    |
+| bench_path  | 指定标杆侧比对路径，str类型。单图构建场景可以不配置。                                               | 否    |
+| is_print_compare_log  | 配置是否开启单个算子的日志打屏。可取值 true 或 false，默认为 true。关闭后则只输出常规日志，bool 类型。             | 否    |
+| parallel_merge  | 配置是否开启不同切分策略下的图合并，dict类型。rank_size、tp、pp参数按实际情况进行配置。 | 否    |
+
+**parallel_merge参数说明**
+
+所需tp、pp和vpp参数来自于Megatron、MindSpeed-LLM套件中的训练脚本实际配置。
+
+| 参数名       | 说明                                                                                                                                                                                                | 是否必填 |
+|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|
+| rank_size | 模型实际训练所用加速卡的数量，int类型。`rank_size=tp*pp*cp*dp`，由于暂不支持CP合并，图合并功能中默认cp=1。                                                                                                                             | 是    |
+| tp        | 张量并行大小，int类型。实际训练脚本中需指定`--tensor-model-parallel-size T`，其中`T`表示张量模型并行大小，即**图合并所需的参数tp**, `tp=T`。                                                                                                  | 是    |
+| pp        | 流水线并行的阶段数，int类型。实际训练脚本中需指定`--pipeline-model-parallel-size P`，其中`P`表示流水线并行的阶段数，即**图合并所需的参数pp**, `pp=P`。                                                                                            | 是    |
+| vpp       | 虚拟流水线并行阶段数，int类型。虚拟流水线并行依赖流水线并行，实际训练脚本中需指定`--num-layers-per-virtual-pipeline-stage V`，其中`V`表示每个虚拟流水线阶段的层数；指定`--num-layers L`，其中`L`表示模型总层数，**图合并所需的参数vpp**=`L/V/P`。vpp参数可以不配置，默认vpp=1代表未开启虚拟流水线并行。 | 否    |
+| order     | 模型并行维度的排序顺序，str类型。Megatron默认为`tp-cp-ep-dp-pp`。 如果使用msProbe工具dump数据指定level为L0并且实际训练脚本中的order非默认值（例如实际训练脚本中指定`--use-tp-pp-dp-mapping`），请传入修改后的order。dump数据指定level为mix则无需修改。                         | 否    |
+
+
+**使用示例**
+
+**示例1：不同tp切分下的图合并比对**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path
+```
+
+以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，tp=8，bench侧4卡，tp=4
+```
+{
+  "npu_path": "./npu_dump",
+  "bench_path": "./bench_dump",
+  "is_print_compare_log": true,
+  "parallel_merge": {
+    "npu": {"rank_size": 8, "tp": 8, "pp": 1},
+    "bench": {"rank_size": 4, "tp": 4, "pp": 1}
+  }
+}
+```
+
+**示例2：不同pp切分下的图合并比对**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path
+```
+
+以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧1卡，pp=1
+```
+{
+  "npu_path": "./npu_dump",
+  "bench_path": "./bench_dump",
+  "is_print_compare_log": true,
+  "parallel_merge": {
+    "npu": {"rank_size": 8, "tp": 1, "pp": 8},
+    "bench": {"rank_size": 1, "tp": 1, "pp": 1}
+  }
+}
+```
+
+**示例3：不同tp和pp切分下的图合并比对**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path
+```
+
+以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧8卡，pp=8, vpp=2
+```
+{
+  "npu_path": "./npu_dump",
+  "bench_path": "./bench_dump",
+  "is_print_compare_log": true,
+  "parallel_merge": {
+    "npu": {"rank_size": 8, "tp": 1, "pp": 8},
+    "bench": {"rank_size": 8, "tp": 1, "pp": 8, "vpp": 2}
+  }
+}
+```
+
+**示例4：不同vpp切分下的图合并比对**
+
+```
+msprobe graph_visualize -i ./compare.json -o ./output_path
+```
+
+以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧8卡，tp=8
+```
+{
+  "npu_path": "./npu_dump",
+  "bench_path": "./bench_dump",
+  "is_print_compare_log": true,
+  "parallel_merge": {
+    "npu": {"rank_size": 8, "tp": 1, "pp": 8},
+    "bench": {"rank_size": 8, "tp": 8, "pp": 1}
+  }
+}
+```
+
+以上所有示例中，npu_path和bench_path格式必须满足[分级可视化构图所需dump文件落盘格式](#分级可视化构图所需dump文件落盘格式) - 多rank格式
 
 ## 启动TensorBoard
 
@@ -395,50 +485,14 @@ tensorboard --logdir out_path
 ![vis_browser_2](../figures/visualization/vis_browser_2.png)
 
 ### 查看图
-![vis_show_info.png](../figures/visualization/vis_show_info.png)
 
-MicroStep是指在一次完整的权重更新前执行的多次前向和反向传播过程，一次完整的训练迭代（step）可以进一步细分为多个更小的步骤（micro step）。其中分级可视化工具通过识别模型首层结构中一次完整的前反向作为一次micro step。
-
-### 名称搜索
-![vis_search_info.png](../figures/visualization/vis_search_info.png)
-
-### 精度筛选
-![vis_precision_info.png](../figures/visualization/vis_precision_info.png)
-
-### 未匹配节点筛选
-
-参考[匹配说明](#匹配说明) ，不符合匹配规则的节点为无匹配节点，颜色标灰。适用于排查两个模型结构差异的场景。
-
-![vis_unmatch_info.png](../figures/visualization/vis_unmatch_info.png)
-
-### 手动选择节点匹配
-
-可通过浏览器界面，通过鼠标选择两个待匹配的灰色节点进行匹配。当前暂不支持真实数据模式。
-
-![vis_match_info.png](../figures/visualization/vis_match_info.png)
+详见[PyTorch场景的分级可视化构图比对-查看图](./pytorch_visualization_instruct.md#查看图)
 
 ## 图比对说明
 
 ### 颜色
 
-颜色越深，精度比对差异越大，越可疑，具体信息可见浏览器页面左下角颜色图例。
-
-#### 真实数据模式
-节点中所有输入的最小双千指标和所有输出的最小双千分之一指标的差值，反映了双千指标的下降情况，**该数值越大，表明两组模型的精度差异越大，在图中标注的对应颜色会更深**。
-
-``One Thousandth Err Ratio（双千分之一）精度指标：Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好``
-
-如果调试侧（NPU）节点的output指标中的最大值（MAX）或最小值（MIN）中存在 nan/inf/-inf，直接标记为最深颜色。
-
-#### 统计信息模式
-节点中输出的统计量相对误差，**该数值越大，表明两组模型的精度差异越大，在图中标注的对应颜色会更深**。
-
-``相对误差：abs((npu统计值 - bench统计值) / bench统计值)``
-
-如果调试侧（NPU）节点的output指标中的最大值（MAX）或最小值（MIN）中存在 nan/inf/-inf，直接标记为最深颜色。
-
-#### md5模式
-节点中任意输入输出的md5值不同。
+详见[PyTorch场景的分级可视化构图比对-颜色说明](./pytorch_visualization_instruct.md#颜色说明)
 
 ### 指标说明
 
@@ -506,6 +560,95 @@ yaml文件中只需配置MindSpore与PyTorch模型代码中功能一致但名称
 
 ![ms_dump](../figures/ms_layer.png)
 
+### 分级可视化构图所需dump文件落盘格式
+
+**单rank格式**
+
+dump_path格式：必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
+```
+├── dump_path
+│   ├── dump_tensor_data（配置dump的task参数选择tensor时存在）
+|   |    ├── MintFunctional.relu.0.backward.input.0.npy
+|   |    ├── Mint.abs.0.forward.input.0.npy
+|   |    ...
+|   |    └── Cell.relu.ReLU.forward.0.input.0.npy
+|   ├── dump.json         # 数据信息
+|   ├── stack.json        # 调用栈信息
+|   └── construct.json    # 分层分级结构，level为L1时，construct.json内容为空
+```
+
+**多rank格式**
+
+dump_path格式：必须只包含rank+数字格式的文件夹，且每个rank文件夹中必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
+
+```
+├── dump_path
+|   ├── rank0
+|   │   ├── dump_tensor_data（仅配置dump的task参数选择tensor时存在）
+|   |   |    ├── MintFunctional.relu.0.backward.input.0.npy
+|   |   |    ├── Mint.abs.0.forward.input.0.npy
+|   |   |    ...
+|   |   |    └── Cell.relu.ReLU.forward.0.input.0.npy
+|   |   ├── dump.json         # 数据信息
+|   |   ├── stack.json        # 算子调用栈信息
+|   |   └── construct.json    # 分层分级结构，level为L1时，construct.json内容为空
+|   ├── rank1
+|   |   ├── dump_tensor_data
+|   |   |   └── ...
+|   |   ├── dump.json
+|   |   ├── stack.json
+|   |   └── construct.json
+|   ├── ...
+|   |
+|   └── rankn
+```
+
+**多step格式**
+
+dump_path格式：必须只包含step{数字}格式的文件夹，且每个step文件夹中必须只包含rank{数字}格式的文件夹，每个rank文件夹中必须包含dump.json、stack.json和construct.json，且construct.json不能为空。如果construct.json为空，请检查dump的level参数是否没有选择L0或者mix。
+
+```
+├── dump_path
+│   ├── step0
+│   |   ├── rank0
+│   |   │   ├── dump_tensor_data（仅配置dump的task参数选择tensor时存在）
+|   |   |   |    ├── MintFunctional.relu.0.backward.input.0.npy
+|   |   |   |    ├── Mint.abs.0.forward.input.0.npy  
+|   |   |   |    ...
+|   |   |   |    └── Cell.relu.ReLU.forward.0.input.0.npy
+│   |   |   ├── dump.json             # 数据信息
+│   |   |   ├── stack.json            # 调用栈信息
+│   |   |   └── construct.json        # 分层分级结构，level为L1时，construct.json内容为空
+│   |   ├── rank1
+|   |   |   ├── dump_tensor_data
+|   |   |   |   └── ...
+│   |   |   ├── dump.json
+│   |   |   ├── stack.json
+|   |   |   └── construct.json
+│   |   ├── ...
+│   |   |
+|   |   └── rankn
+│   ├── step1
+│   |   ├── ...
+│   ├── step2
+```
+
+### 匹配说明
+
+1.默认匹配
+- 所有节点dump名称一致
+- 节点输入输出参数数量一致，参数type、shape一致
+- 节点的层级一致（父节点们一致）
+
+2.模糊匹配
+- Module节点dump名称一致，两个匹配上的Module节点, 忽略各自节点下所有api的dump调用次数，按照名称一致+Module节点内的调用顺序进行匹配
+
+  ![fuzzy_match_pt.png](../figures/visualization/fuzzy_match_pt.png)
+
+- 参数shape一致
+
+**注：dump名称 = 名称 + 调用次数**，例如Torch.matmul.2.forward，matmul是名称，2是调用次数
+
 # FAQ
 1. 图比对场景，节点呈现灰色，且没有精度比对数据，怎么处理？
 
@@ -513,8 +656,8 @@ yaml文件中只需配置MindSpore与PyTorch模型代码中功能一致但名称
 
 - **标杆侧确实没有能与待调试侧匹配上的节点**，属于代码实现上的差异，请确认此差异是否正常，是否会影响到整网精度。
 - **节点名称一致，但节点的输入或输出type、shape不一致，参数个数不一致，节点所在层级的父层级不一致，导致节点无法匹配**
-  - 具体匹配规则见[匹配说明](#匹配说明)，可尝试使用模糊匹配功能，如何使用此功能请参考[构图命令行说明](#构图命令行说明)。
+  - 具体匹配规则见[匹配说明](#匹配说明)，可尝试使用模糊匹配功能，如何使用此功能请参考[双图比对-参数说明](#双图比对)。
   - 如果是参数shape不一致，即使是模糊匹配功能也无法让节点匹配上，请检查参数shape不一致是否合理。
 - **节点名称不一致**，导致节点无法匹配，目前提供两种方法，选其一即可
-  - 可使用layer mapping功能，如何使用此功能请参考[构图命令行说明](#构图命令行说明)，如何自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。
+  - 可使用layer mapping功能，如何使用此功能请参考[双图比对-参数说明](#双图比对)，如何自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。
   - 可通过浏览器页面手动选择未匹配节点进行匹配，请参考[手动选择节点匹配](#手动选择节点匹配)。
