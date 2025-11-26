@@ -19,10 +19,11 @@ import os
 from collections import namedtuple
 from msprobe.core.common.file_utils import load_yaml, check_file_or_directory_path
 from msprobe.core.common.utils import is_int
-from msprobe.pytorch.dump.pt_config import RunUTConfig
+from msprobe.pytorch.dump.pt_config import ACCCheckConfig
 
 
-RunUtConfig = namedtuple('RunUtConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
+AccCheckConfig = namedtuple('AccCheckConfig', ['forward_content', 'backward_content',
+                                               'result_csv_path', 'details_csv_path',
                                          'save_error_data', 'is_continue_acc_check', 'real_data_path', 'white_list',
                                          'black_list', 'error_data_path'])
 
@@ -56,11 +57,11 @@ class Config:
         if key == 'precision' and (value < 0 or value > 20):
             raise ValueError("precision must be greater than or equal to 0 and less than 21")
         if key == 'white_list':
-            RunUTConfig.check_filter_list_config(key, value)
+            ACCCheckConfig.check_filter_list_config(key, value)
         if key == 'black_list':
-            RunUTConfig.check_filter_list_config(key, value)
+            ACCCheckConfig.check_filter_list_config(key, value)
         if key == 'error_data_path':
-            RunUTConfig.check_error_data_path_config(value)
+            ACCCheckConfig.check_error_data_path_config(value)
         return value
 
 
@@ -85,7 +86,7 @@ class CheckerConfig:
     
 
     def get_acc_check_config(self, **config_params):
-        return RunUtConfig(
+        return AccCheckConfig(
             forward_content=config_params.get('forward_content'),
             backward_content=config_params.get('backward_content'),
             result_csv_path=config_params.get('result_csv_path'),
