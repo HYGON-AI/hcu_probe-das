@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2024-2024 Huawei Technologies Co., Ltd.
+# Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,54 +17,66 @@ import os
 import subprocess
 
 from msprobe.core.common.log import logger
-from msprobe.infer.utils.security_check import is_enough_disk_space_left
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.cmp_process import cmp_process
-from msprobe.infer.offline.compare.msquickcmp.common.args_check import check_model_path_legality, \
-    check_target_model_path_legality, check_input_path_legality, check_output_path_legality, check_dict_kind_string, \
-    check_rank_range_valid, check_number_list, check_dym_range_string, check_quant_json_path_legality, str2bool, \
+from msprobe.infer.offline.compare.msquickcmp.common.args_check import (
+    check_model_path_legality,
+    check_target_model_path_legality,
+    check_input_path_legality,
+    check_output_path_legality,
+    check_dict_kind_string,
+    check_rank_range_valid,
+    check_number_list,
+    check_dym_range_string,
+    str2bool,
     check_input_data_path
-from msprobe.infer.offline.compare.msquickcmp.dump.dump_process import dump_process
+)
 from msprobe.infer.offline.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
+from msprobe.infer.offline.compare.msquickcmp.dump.dump_process import dump_process
+from msprobe.infer.utils.security_check import is_enough_disk_space_left
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
 
 def _offline_dump_parser(parser):
     parser.add_argument(
-        '-mp',
         '--model_path',
-        required=False,
+        required=True,
         dest="model_path",
         type=check_model_path_legality,
-        help='The original model .onnx file path')
+        help='The original model .onnx or .om file path'
+    )
     parser.add_argument(
         '--input_data',
         default='',
         dest="input_data",
         type=check_input_path_legality,
         help='The input data path of the model. Separate multiple inputs with commas(,).'
-             ' E.g: input_0.bin,input_1.bin')
+             ' E.g: input_0.bin,input_1.bin'
+    )
     parser.add_argument(
         '-o',
         '--output_path',
         dest="output_path",
         default='./output',
         type=check_output_path_legality,
-        help='The output path')
+        help='The output path'
+    )
     parser.add_argument(
         '--input_shape',
         type=check_dict_kind_string,
         dest="input_shape",
         default='',
         help="Shape of input shape. Separate multiple nodes with semicolons(;)."
-             " E.g: \"input_name1:1,224,224,3;input_name2:3,300\"")
+             " E.g: \"input_name1:1,224,224,3;input_name2:3,300\""
+    )
     parser.add_argument(
         '--rank',
         type=check_rank_range_valid,
         dest="rank",
         default='0',
-        help='Input rank ID [0, 255].')
+        help='Input rank ID [0, 255].'
+    )
     parser.add_argument(
         '--dym_shape_range',
         type=check_dym_range_string,
@@ -72,27 +84,38 @@ def _offline_dump_parser(parser):
         default='',
         help="Dynamic shape range using in dynamic model, "
              "using this means ignore input_shape"
-             " E.g: \"input_name1:1,3,200\~224,224-230;input_name2:1,300\"")
+             " E.g: \"input_name1:1,3,200~224,224-230;input_name2:1,300\""
+    )
+    parser.add_argument(
+        '--output_size',
+        dest="output_size",
+        default='',
+        help='The size of output. Separate multiple sizes with commas(,). E.g: 10200,34000'
+    )
     parser.add_argument(
         '--onnx_fusion_switch',
         dest="onnx_fusion_switch",
         default=True,
         type=str2bool,
         help='Onnxruntime fusion switch, set False for dump complete onnx data when '
-             'necessary.Usage: --onnx_fusion_switch False')
+             'necessary.Usage: --onnx_fusion_switch False'
+    )
 
 
 def offline_dump_cli(args):
     if not is_enough_disk_space_left(args.output_path):
         raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
-    if not args.model_path:
-        raise NotImplementedError("must use arguments '-mp' to do dump, please check arguments.")
-    cmp_args = DumpArgsAdapter(args.model_path,
-                               input_data=args.input_data, cann_path=CANN_PATH,
-                               output_path=args.output_path, input_shape=args.input_shape, rank=args.rank,
-                               dym_shape_range=args.dym_shape_range, onnx_fusion_switch=args.onnx_fusion_switch
-                               )
-    dump_process(cmp_args)
+    dump_args = DumpArgsAdapter(
+        args.model_path,
+        input_data=args.input_data,
+        cann_path=CANN_PATH,
+        output_path=args.output_path,
+        input_shape=args.input_shape, rank=args.rank,
+        dym_shape_range=args.dym_shape_range,
+        onnx_fusion_switch=args.onnx_fusion_switch,
+        output_size=args.output_size
+    )
+    dump_process(dump_args)
 
 
 def compare_offline_model_mode(args):
@@ -102,9 +125,18 @@ def compare_offline_model_mode(args):
     if not args.golden_path:
         logger.error("The following args are required: -gp/--golden_path")
         return
-    cmp_args = CmpArgsAdapter(args.golden_path, args.target_path, args.input_data, CANN_PATH, args.output_path,
-                              args.input_shape, args.rank, args.output_size, args.dym_shape_range,
-                              args.onnx_fusion_switch)
+    cmp_args = CmpArgsAdapter(
+        args.golden_path,
+        args.target_path,
+        args.input_data,
+        CANN_PATH,
+        args.output_path,
+        args.input_shape,
+        args.rank,
+        args.output_size,
+        args.dym_shape_range,
+        args.onnx_fusion_switch
+    )
     cmp_process(cmp_args)
 
 
@@ -146,12 +178,16 @@ def check_compare_args(args):
 
 
 def _install_offline_deps_parser(parser):
-    parser.add_argument("--no_check", dest="no_check", action="store_true",
-                        help="<optional> Whether to skip checking the target website's certificate information "
-                             "when installing aclruntime and ais_bench poses a certain security risk. "
-                             "This poses a certain security risk, "
-                             "and users should use it with caution and bear the consequences themselves.",
-                        required=False)
+    parser.add_argument(
+        "--no_check",
+        dest="no_check",
+        action="store_true",
+        help="<optional> Whether to skip checking the target website's certificate information "
+             "when installing aclruntime and ais_bench poses a certain security risk. "
+             "This poses a certain security risk, "
+             "and users should use it with caution and bear the consequences themselves.",
+        required=False
+    )
 
 
 def install_offline_deps_cli(args):

@@ -299,7 +299,8 @@ class NpuDumpData(DumpData):
 
         self._compare_shape_vs_file()
         npu_data_output_dir = os.path.join(
-            self.output_path, NPU_DUMP_DATA_GOLDEN_PATH if self.is_golden else NPU_DUMP_DATA_BASE_PATH
+            self.output_path,
+            NPU_DUMP_DATA_GOLDEN_PATH if self.is_golden else NPU_DUMP_DATA_BASE_PATH
         )
         utils.create_directory(npu_data_output_dir)
         model_name, extension = utils.get_model_name_and_extension(self.target_path)
@@ -342,12 +343,13 @@ class NpuDumpData(DumpData):
             if not file_is_exist:
                 logger.error(f"The path {npu_dump_data_path} dump data is not exist.")
                 raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+
         # net output data path
         npu_net_output_data_path, file_is_exist = utils.get_dump_data_path(npu_data_output_dir, True, model_name)
         if not file_is_exist:
-
             logger.error(f"The path {npu_net_output_data_path} net output data is not exist.")
             raise AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR)
+
         self._convert_net_output_to_numpy(npu_net_output_data_path, npu_dump_data_path)
         if self.is_golden:
             return npu_dump_data_path, ""
@@ -378,7 +380,7 @@ class NpuDumpData(DumpData):
 
         inputs_list, data_type_list = self._get_inputs_info_from_aclruntime()
         if self.dynamic_input.is_dynamic_shape_scenario() and not self.input_shape:
-            logger.error("Please set '-is' or '--input-shape' to fix the dynamic shape.")
+            logger.error("Please set '--input_shape' to fix the dynamic shape.")
             raise utils.AccuracyCompareException(utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR)
 
         if self.input_shape:

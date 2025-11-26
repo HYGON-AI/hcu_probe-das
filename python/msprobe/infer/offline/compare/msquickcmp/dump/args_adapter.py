@@ -19,19 +19,21 @@ CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-tool
 
 
 class DumpArgsAdapter:
-    def __init__(self,
-                 model_path,
-                 input_data="",
-                 cann_path=CANN_PATH,
-                 output_path="./output",
-                 input_shape="",
-                 rank="0",
-                 dym_shape_range="",
-                 onnx_fusion_switch=True,
-                 custom_op="",
-                 dump=True,
-                 single_op=""
-                 ):
+    def __init__(
+            self,
+            model_path,
+            input_data="",
+            cann_path=CANN_PATH,
+            output_path="./output",
+            input_shape="",
+            rank="0",
+            dym_shape_range="",
+            onnx_fusion_switch=True,
+            custom_op="",
+            dump=True,
+            single_op="",
+            output_size=""
+    ):
         self.golden_path = model_path
         self.input_data = input_data
         self.cann_path = cann_path
@@ -43,3 +45,4 @@ class DumpArgsAdapter:
         self.custom_op = custom_op
         self.dump = dump
         self.single_op = single_op
+        self.output_size = output_size
