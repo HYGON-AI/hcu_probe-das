@@ -353,7 +353,7 @@ msprobe graph_visualize -i <compare_json_path> -o <output_path> [-lm] [-oc] [-f]
 msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，tp=8，bench侧4卡，tp=4
+以在当前目录创建 ./compare.json 为例，当前示例比对场景为：npu侧8卡，tp=8，bench侧4卡，tp=4。
 ```
 {
   "npu_path": "./npu_dump",
@@ -372,7 +372,7 @@ msprobe graph_visualize -i ./compare.json -o ./output_path
 msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧1卡，pp=1
+以在当前目录创建 ./compare.json 为例，当前示例比对场景为：npu侧8卡，pp=8，bench侧1卡，pp=1。
 ```
 {
   "npu_path": "./npu_dump",
@@ -385,13 +385,13 @@ msprobe graph_visualize -i ./compare.json -o ./output_path
 }
 ```
 
-**示例3：不同tp和pp切分下的图合并比对**
+**示例3：不同vpp切分下的图合并比对**
 
 ```
 msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧8卡，pp=8, vpp=2
+以在当前目录创建 ./compare.json 为例，当前示例比对场景为：npu侧8卡，pp=8，bench侧8卡，pp=8, vpp=2。
 ```
 {
   "npu_path": "./npu_dump",
@@ -404,13 +404,13 @@ msprobe graph_visualize -i ./compare.json -o ./output_path
 }
 ```
 
-**示例4：不同vpp切分下的图合并比对**
+**示例4：不同pp和tp切分下的图合并比对**
 
 ```
 msprobe graph_visualize -i ./compare.json -o ./output_path
 ```
 
-以在当前目录创建 ./compare.json 为例，当前比对场景为：npu侧8卡，pp=8，bench侧8卡，tp=8
+以在当前目录创建 ./compare.json 为例，当前示例比对场景为：npu侧8卡，pp=8，bench侧8卡，tp=8。
 ```
 {
   "npu_path": "./npu_dump",
