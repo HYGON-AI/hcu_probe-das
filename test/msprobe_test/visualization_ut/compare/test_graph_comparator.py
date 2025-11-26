@@ -124,23 +124,14 @@ class TestGraphComparator(unittest.TestCase):
 
     def test_add_compare_result_node(self):
         compare_result_list = [
-            ['Module.module.Float16Module.forward.0.input.0', 'Module.module.Float16Module.forward.0.input.0',
-             'torch.int64', 'torch.int64', [4, 4096], [4, 4096], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-             30119.0, 1.0, 8466.25, 1786889.625, 30119.0, 1.0, 8466.25, 1786889.625, '', '', ],
-            ['Module.module.Float16Module.forward.0.input.1', 'Module.module.Float16Module.forward.0.input.1',
-             'torch.int64', 'torch.int64', [4, 4096], [4, 4096], 0.0, 0.0, 0.0, 0.0, '0.0%', 'N/A', '0.0%', '0.0%',
-             4095.0, 0.0, 2047.5, 302642.375, 4095.0, 0.0, 2047.5, 302642.375, '', '', 'None'],
-            ['Module.module.Float16Module.forward.0.input.2', 'Module.module.Float16Module.forward.0.input.2',
-             'torch.bool', 'torch.bool', [1, 1, 4096, 4096], [1, 1, 4096, 4096], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A',
-             'N/A', 'N/A', 'N/A', True, False, None, None, True, False, None, None, '', '', 'None'],
-            ['Module.module.Float16Module.forward.0.input.labels', 'Module.module.Float16Module.forward.0.input.labels',
-             'torch.int64', 'torch.int64', [4, 4096], [4, 4096], 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
-             30119.0, 1.0, 8460.7685546875, 1786117.625, 30119.0, 1.0, 8460.7685546875, 1786117.625, '', '', 'None'],
-            ['Module.module.Float16Module.forward.0.output.0', 'Module.module.Float16Module.forward.0.output.0',
-             'torch.float32', 'torch.float32', [4, 4096], [4, 4096], 7.7903289794921875, -4.33783483505249,
-             1.8622245788574219, 256.28173828125, '73.29288957533336%', '42.86585137147556%', '17.943317141609008%',
-             '19.29155502636134%', 18.41936683654785, 5.781723499298096, 12.240598678588867, 1584.7476806640625,
-             10.629037857055664, 10.119558334350586, 10.378374099731445, 1328.4659423828125, '', '', 'None']]
+            ['Tensor.__truediv__.139.backward.input.0', 'Tensor.__truediv__.139.backward.input.0', 'torch.float32',
+             'torch.float32', [], [], 'False', 'False', 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+             0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, True, '', '', 'None'],
+            ['Tensor.__truediv__.139.backward.output.0', 'Tensor.__truediv__.139.backward.output.0', 'torch.float32',
+             'torch.float32', [], [], 'False', 'False', 0.0, 0.0, 0.0, 0.0, '0.0%', '0.0%', '0.0%', '0.0%',
+             0.25, 0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625,
+             0.000244140625, 0.000244140625, True, '', '', 'None']
+        ]
         node = BaseNode(NodeOp.module, 'Module.module.Float16Module.forward.0')
         comparator = GraphComparator(self.graphs, self.dump_path_param, Args(output_path=self.output_path), False)
         comparator.add_compare_result_to_node(node, compare_result_list)

@@ -34,6 +34,7 @@ from msprobe.core.compare.utils import print_compare_ends_info, read_op, set_sta
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
+from msprobe.core.compare.indicator_analysis.calculator import calculate_excel_result_df
 
 
 @dataclass
@@ -132,6 +133,7 @@ class Comparator:
 
         # save result excel file
         logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
+        calculate_excel_result_df(result_df, self.mode_config.dump_mode)
         result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
         save_excel(file_path, result_df)
 

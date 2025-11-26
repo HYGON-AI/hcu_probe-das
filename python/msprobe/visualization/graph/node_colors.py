@@ -15,10 +15,10 @@
 
 from enum import Enum
 from msprobe.visualization.utils import GraphConst, ToolTip
+from msprobe.core.common.const import CompareConst
 
-SUMMARY_DESCRIPTION = "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
-REAL_DATA_DESCRIPTION = (f"此节点所有输入的最小双千分之一和所有输出的最小双千分之一的差值的绝对值, 代表双千指标的变化情况, "
-                         f"值越大代表测量值与标杆值的偏差越大, 双千分之一指标计算方式：{ToolTip.ONE_THOUSANDTH_ERR_RATIO}")
+SUMMARY_DESCRIPTION = "此节点所有输入输出的统计量误差, 颜色越深代表调试侧与标杆侧的偏差越大"
+REAL_DATA_DESCRIPTION = "此节点所有输入输出的 tensor 误差, 颜色越深代表调试侧与标杆侧的偏差越大"
 MD5_DESCRIPTION_N = "与标杆相比, 此节点任意输入输出的md5值不同"
 MD5_DESCRIPTION_Y = "与标杆相比, 此节点所有输入输出的md5值相同"
 NOT_MATCHED = "比对过程中节点未匹配上"
@@ -28,29 +28,31 @@ class NodeColors(Enum):
     # 枚举值后缀数字越小, 颜色越浅
     # value值左闭右开, 两个值相同代表固定值
     YELLOW_1 = ("#FFFCF3", {
-        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0, 0.2], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION},
-        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0, 0.05], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION},
-        GraphConst.MD5_COMPARE: {GraphConst.VALUE: [1, 1], GraphConst.DESCRIPTION: MD5_DESCRIPTION_Y},
-    })
-    YELLOW_2 = ("#FFEDBE", {
-        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.2, 0.4], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION},
-        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.05, 0.1], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION}
+        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0, 0.3], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION,
+                                     GraphConst.ACCURACY_LEVEL: CompareConst.PASS},
+        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0, 0.3], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION,
+                                       GraphConst.ACCURACY_LEVEL: CompareConst.PASS},
+        GraphConst.MD5_COMPARE: {GraphConst.VALUE: [0, 0.3], GraphConst.DESCRIPTION: MD5_DESCRIPTION_Y,
+                                 GraphConst.ACCURACY_LEVEL: CompareConst.PASS},
     })
     ORANGE_1 = ("#FFDC7F", {
-        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.4, 0.6], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION},
-        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.1, 0.15], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION}
-    })
-    ORANGE_2 = ("#FFC62E", {
-        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.6, 0.8], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION},
-        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.15, 0.2], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION}
+        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.3, 0.6], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION,
+                                     GraphConst.ACCURACY_LEVEL: CompareConst.WARNING},
+        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.3, 0.6], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION,
+                                       GraphConst.ACCURACY_LEVEL: CompareConst.WARNING},
+        GraphConst.MD5_COMPARE: {GraphConst.VALUE: [0.3, 0.6], GraphConst.DESCRIPTION: MD5_DESCRIPTION_N,
+                                 GraphConst.ACCURACY_LEVEL: CompareConst.WARNING},
     })
     RED = ("#FF704D", {
-        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.8, 1], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION},
-        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.2, 1], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION},
-        GraphConst.MD5_COMPARE: {GraphConst.VALUE: [0, 0], GraphConst.DESCRIPTION: MD5_DESCRIPTION_N},
+        GraphConst.SUMMARY_COMPARE: {GraphConst.VALUE: [0.6, 1], GraphConst.DESCRIPTION: SUMMARY_DESCRIPTION,
+                                     GraphConst.ACCURACY_LEVEL: CompareConst.ERROR},
+        GraphConst.REAL_DATA_COMPARE: {GraphConst.VALUE: [0.6, 1], GraphConst.DESCRIPTION: REAL_DATA_DESCRIPTION,
+                                       GraphConst.ACCURACY_LEVEL: CompareConst.ERROR},
+        GraphConst.MD5_COMPARE: {GraphConst.VALUE: [0.6, 1], GraphConst.DESCRIPTION: MD5_DESCRIPTION_N,
+                                 GraphConst.ACCURACY_LEVEL: CompareConst.ERROR},
     })
     GREY = ("#C7C7C7", {
-        GraphConst.VALUE: [], GraphConst.DESCRIPTION: NOT_MATCHED
+        GraphConst.VALUE: [], GraphConst.DESCRIPTION: NOT_MATCHED, GraphConst.ACCURACY_LEVEL: GraphConst.UNMATCHED
     })
 
     def __init__(self, hex_value, mode_info):

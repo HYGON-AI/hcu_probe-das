@@ -14,7 +14,8 @@
 # limitations under the License.
 
 import re
-from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data, get_csv_df
+from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data, get_csv_df, \
+    get_api_indicator_info, get_real_api_data_list
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
@@ -60,20 +61,15 @@ class GraphComparator:
         # 真实数据比对，先暂存节点，在多进程对比得到精度指标后，再将指标添加到节点中
         if self.ma.prepare_real_data(node):
             return
-        compare_in_dict = {}
-        compare_out_dict = {}
+        api_indicator = get_api_indicator_info(self.ma.compare_mode, compare_result_list)
+        compare_result_dict = {}
         # input和output对比数据分开
         for item in compare_result_list:
             if not isinstance(item, (list, tuple)) or not item:
                 continue
-            if '.output.' in item[0]:
-                compare_out_dict[item[0]] = item
-            else:
-                compare_in_dict[item[0]] = item
-        precision_index, other_dict = (
-            self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
+            compare_result_dict[item[0]] = item
+        precision_index = self.ma.parse_result(node, compare_result_dict, api_indicator)
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
-        node.data.update(other_dict)
 
     def _compare_nodes(self, node_root):
         """
@@ -136,23 +132,22 @@ class GraphComparator:
         df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_framework)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
-            precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
+            compare_result_list = get_real_api_data_list(node, compare_data_dict)
+            api_indicator = get_api_indicator_info(self.ma.compare_mode, compare_result_list)
+            precision_index = self.ma.parse_result(node, compare_data_dict, api_indicator)
             node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
     def _handle_api_collection_index(self):
         """
-        api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
-        md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
+        api集合的指标, 使用集合中所有api最差的指标
+        指标为1代表最差
         """
 
         def handle_api_collection_index(api_collection_node):
-            precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                else GraphConst.MIN_INDEX_KEY
+            precision_index = GraphConst.MIN_INDEX_KEY
             for api in api_collection_node.subnodes:
-                precision_index = min(precision_index,
-                                      api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
-                    if self.ma.compare_mode == GraphConst.MD5_COMPARE \
-                    else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
+                precision_index = max(precision_index,
+                                      api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
             api_collection_node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
         for node in self.graph_n.root.subnodes:
