@@ -251,18 +251,23 @@ class GraphConst:
     INPUT = '.input.'
     OUTPUT = '.output.'
     STR_MAX_LEN = 50
-    MD5_INDEX_LIST = CompareConst.MD5_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
-    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
-    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST]
+    MD5_INDEX_LIST = CompareConst.MD5_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST, CompareConst.RESULT,
+                                                       CompareConst.ERROR_MESSAGE]
+    REAL_DATA_INDEX_LIST = CompareConst.ALL_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST, CompareConst.RESULT,
+                                                             CompareConst.ERROR_MESSAGE]
+    SUMMARY_INDEX_LIST = CompareConst.SUMMARY_COMPARE_INDEX + [CompareConst.REQ_GRAD_CONSIST, CompareConst.RESULT,
+                                                               CompareConst.ERROR_MESSAGE]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     APIS_BETWEEN_MODULES_ALL_RANKS = 'Apis_Between_Modules_All_Ranks'
     NULL = 'null'
     NONE = 'None'
     VALUE = 'value'
     DESCRIPTION = 'description'
+    ACCURACY_LEVEL = 'accuracy_level'
     COLORS = 'Colors'
     MICRO_STEPS = 'MicroSteps'
     OVERFLOW_CHECK = 'OverflowCheck'
+    UNMATCHED = 'unmatched node'
 
     DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING = {
         Const.ALL: REAL_DATA_COMPARE,
@@ -276,6 +281,12 @@ class GraphConst:
         SUMMARY_COMPARE: Const.SUMMARY,
         MD5_COMPARE: Const.MD5,
         STRUCTURE_COMPARE: Const.STRUCTURE
+    }
+
+    COMPARE_INDICATOR_TO_PRECISION_INDEX_MAPPING = {
+        CompareConst.PASS: 0,
+        CompareConst.WARNING: 0.5,
+        CompareConst.ERROR: 1
     }
 
     RANKS = 'ranks'

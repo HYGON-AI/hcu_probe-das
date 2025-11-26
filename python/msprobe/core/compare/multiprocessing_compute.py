@@ -138,8 +138,6 @@ class CompareRealData:
                     result.one_thousand_err_ratio_result)[i]
                 result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = (
                     result.five_thousand_err_ratio_result)[i]
-                result_df.loc[process_index, CompareConst.ACCURACY] = (
-                    check_accuracy(result.cos_result[i], result.max_err_result[i]))
                 result_df.loc[process_index, CompareConst.ERROR_MESSAGE] += result.err_msgs[i]
             return result_df
         except ValueError as e:

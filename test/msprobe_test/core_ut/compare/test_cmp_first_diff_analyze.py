@@ -104,7 +104,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
         md5_header = CompareConst.MD5_COMPARE_RESULT_HEADER + [CompareConst.STACK, Const.STATE, Const.API_ORIGIN_NAME]
         result_slice = [
             ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.int32', 'torch.int32',
-             '[]', '[]', 'True', 'True', '2144df1c', '2144df1c', True, 'pass',
+             '[]', '[]', 'True', 'True', '2144df1c', '2144df1c', True, 'pass', '[]',
              '', 'input', 'Functional.conv2d.0.forward']
         ]
         expected_result = {
@@ -113,6 +113,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                 {CompareConst.NPU_NAME: 'Functional.conv2d.0.forward.input.0',
                  CompareConst.BENCH_NAME: 'Functional.conv2d.0.forward.input.0',
                  CompareConst.NPU_DTYPE: 'torch.int32', CompareConst.BENCH_DTYPE: 'torch.int32',
+                 CompareConst.ERROR_MESSAGE: '[]',
                  CompareConst.NPU_SHAPE: '[]', CompareConst.BENCH_SHAPE: '[]',
                  CompareConst.NPU_REQ_GRAD: 'True', CompareConst.BENCH_REQ_GRAD: 'True',
                  CompareConst.NPU_MD5: '2144df1c', CompareConst.BENCH_MD5: '2144df1c',
@@ -131,7 +132,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
         md5_header = CompareConst.MD5_COMPARE_RESULT_HEADER + [CompareConst.STACK, Const.STATE, Const.API_ORIGIN_NAME]
         result_slice = [
             ['Functional.conv2d.0.forward.output.0', 'Functional.conv2d.0.forward.output.0', 'torch.int32', 'torch.int32',
-             '[]', '[]', 'True', 'True', '2144df1c', '2100df1c', True, 'Different',
+             '[]', '[]', 'True', 'True', '2144df1c', '2100df1c', True, 'Different', '[]',
              '', 'output', 'Functional.conv2d.0.forward']
         ]
         expected_result = {
@@ -140,6 +141,7 @@ class TestFirstDiffAnalyze(unittest.TestCase):
                 {CompareConst.NPU_NAME: 'Functional.conv2d.0.forward.output.0',
                  CompareConst.BENCH_NAME: 'Functional.conv2d.0.forward.output.0',
                  CompareConst.NPU_DTYPE: 'torch.int32', CompareConst.BENCH_DTYPE: 'torch.int32',
+                 CompareConst.ERROR_MESSAGE: '[]',
                  CompareConst.NPU_SHAPE: '[]', CompareConst.BENCH_SHAPE: '[]',
                  CompareConst.NPU_REQ_GRAD: 'True', CompareConst.BENCH_REQ_GRAD: 'True',
                  CompareConst.NPU_MD5: '2144df1c', CompareConst.BENCH_MD5: '2100df1c',

@@ -21,7 +21,7 @@ from msprobe.core.compare.utils import read_op, merge_tensor, get_accuracy, make
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.const import Const
-
+from msprobe.core.compare.indicator_analysis.calculator import calculate_result
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
@@ -158,6 +158,26 @@ def compare_node(node_n, node_b, compare_mode):
     result = []
     get_accuracy(result, merge_n, merge_b, dump_mode)
     return result
+
+
+def get_api_indicator_info(compare_mode, result):
+    """
+    得到一个api或模块的指标和异常信息
+    """
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
+    return calculate_result(result, dump_mode)
+
+
+def get_real_api_data_list(node, compare_data_dict: dict):
+    """
+    真实数据模式下，得到的比对结果包含了所有api参数，需要转换为其中某一个api参数列表
+    """
+    api_data_list = []
+    keys = list(node.input_data.keys()) + list(node.output_data.keys())
+    for key in keys:
+        if key in compare_data_dict:
+            api_data_list.append(compare_data_dict.get(key))
+    return api_data_list
 
 
 def _parse_node(node, dump_mode):

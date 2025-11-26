@@ -32,84 +32,15 @@ class ModeAdapter:
         return math.isnan(value) or math.isinf(value)
 
     @staticmethod
-    def _add_md5_compare_data(node_data, compare_data_dict):
-        precision_index = GraphConst.MAX_INDEX_KEY
-        for key, value in node_data.items():
-            if not isinstance(value, dict):
-                continue
-            compare_data = compare_data_dict.get(key)
-            if compare_data:
-                headers = CompareConst.MD5_COMPARE_RESULT_HEADER
-                id_list = [headers.index(x) for x in GraphConst.MD5_INDEX_LIST]
-                ModeAdapter._match_data(value, compare_data, GraphConst.MD5_INDEX_LIST, id_list)
-                # md5比对是否通过
-                if value.get(CompareConst.RESULT) != CompareConst.PASS:
-                    precision_index = GraphConst.MIN_INDEX_KEY
-                node_data[key] = value
-        return precision_index
-
-    @staticmethod
-    def _add_real_compare_data(node_data, compare_data_dict):
-        min_thousandth = float(1)
-        numbers = []
-        for key, value in node_data.items():
-            if not isinstance(value, dict):
-                continue
-            if value.get(Const.MAX) is None:
-                continue
-            compare_data = compare_data_dict.get(key)
-            if compare_data:
-                headers = CompareConst.COMPARE_RESULT_HEADER
-                id_list = [headers.index(x) for x in GraphConst.REAL_DATA_INDEX_LIST]
-                ModeAdapter._match_data(value, compare_data, GraphConst.REAL_DATA_INDEX_LIST, id_list)
-                # 跳过scalar data，因为无法计算双千指标，会得到Nan
-                if not value.get(Const.SHAPE):
-                    continue
-                # 获取一个节点所有的输入或输出最小的双千指标
-                thousandth = value.get(CompareConst.ONE_THOUSANDTH_ERR_RATIO)
-                # 可能是None，可能是非数字内容str
-                try:
-                    thousandth = float(thousandth)
-                except (ValueError, TypeError):
-                    thousandth = None
-                if thousandth is not None:
-                    numbers.append(thousandth)
-                node_data[key] = value
-            if ModeAdapter._is_invalid(value.get(Const.MAX)) or ModeAdapter._is_invalid(value.get(Const.MIN)):
-                numbers.append(CompareConst.N_A)
-        # 双千指标都是None的异常情况
-        if not numbers:
-            min_thousandth = None
-        elif CompareConst.N_A in numbers:
-            min_thousandth = CompareConst.N_A
-        else:
-            min_thousandth = min(numbers + [min_thousandth])
-        return min_thousandth
-
-    @staticmethod
-    def _add_summary_compare_data(node_data, compare_data_dict):
-        max_relative_err = GraphConst.MIN_INDEX_KEY
-        # data_info: {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [2, 536320], 'Max': 9.66036224, ...}
+    def _add_compare_data(node_data, compare_data_dict, key_list, headers):
         for key, data_info in node_data.items():
             if not isinstance(data_info, dict):
-                continue
-            if data_info.get(Const.MAX) is None:
                 continue
             compare_data = compare_data_dict.get(key)
             if compare_data:
                 # 对应比对结果csv的列
-                key_list = GraphConst.SUMMARY_INDEX_LIST
-                headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in key_list]
                 ModeAdapter._match_data(data_info, compare_data, key_list, id_list)
-                for item in key_list[4:]:
-                    relative_err = str2float(data_info.get(item))
-                    max_relative_err = max(max_relative_err, relative_err)
-                node_data[key] = data_info
-            if ModeAdapter._is_invalid(data_info.get(Const.MAX)) or ModeAdapter._is_invalid(data_info.get(Const.MIN)):
-                max_relative_err = GraphConst.MAX_INDEX_KEY
-        max_relative_err = 1 if max_relative_err > 1 else max_relative_err
-        return max_relative_err
 
     @staticmethod
     def _match_data(data_dict, compare_data, key_list, id_list):
@@ -126,43 +57,25 @@ class ModeAdapter:
         if len(data_list) < len_num:
             raise ValueError(f"compare_data_dict_list must contain at least {len_num} items.")
 
-    def parse_result(self, node, compare_data_dict_list):
+    def parse_result(self, node, compare_data_dict, api_indicator):
         """
-        根据结果返回数据，分别是precision_index，和附加数据
+        根据结果返回precision_index
         """
-
-        other_dict = {}
         if self.compare_mode == GraphConst.MD5_COMPARE:
-            ModeAdapter._check_list_len(compare_data_dict_list, 2)
-            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict_list[0])
-            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict_list[1])
-            # 所有输入输出md5对比通过，这个节点才算通过
-            precision_index = min(precision_index_in, precision_index_out)
-            other_result = CompareConst.PASS if precision_index == GraphConst.MAX_INDEX_KEY else CompareConst.DIFF
-            other_dict[CompareConst.RESULT] = other_result
+            key_list = GraphConst.MD5_INDEX_LIST
+            headers = CompareConst.MD5_COMPARE_RESULT_HEADER
         elif self.compare_mode == GraphConst.SUMMARY_COMPARE:
-            ModeAdapter._check_list_len(compare_data_dict_list, 2)
-            ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict_list[0])
-            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict_list[1])
-            precision_index = precision_index_out
+            key_list = GraphConst.SUMMARY_INDEX_LIST
+            headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
         else:
-            ModeAdapter._check_list_len(compare_data_dict_list, 1)
-            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
-            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
-            if CompareConst.N_A == min_thousandth_out:
-                change_percentage = GraphConst.MAX_INDEX_KEY
-            elif CompareConst.N_A == min_thousandth_in:
-                change_percentage = GraphConst.MIN_INDEX_KEY
-            elif min_thousandth_in is not None and min_thousandth_out is not None:
-                change_percentage = min_thousandth_in - min_thousandth_out
-            else:
-                change_percentage = GraphConst.MIN_INDEX_KEY
-            change_percentage = GraphConst.MIN_INDEX_KEY if change_percentage < GraphConst.MIN_INDEX_KEY \
-                else change_percentage
-            precision_index = GraphConst.MAX_INDEX_KEY \
-                if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
+            key_list = GraphConst.REAL_DATA_INDEX_LIST
+            headers = CompareConst.COMPARE_RESULT_HEADER
+        ModeAdapter._add_compare_data(node.input_data, compare_data_dict, key_list, headers)
+        ModeAdapter._add_compare_data(node.output_data, compare_data_dict, key_list, headers)
+        precision_index = GraphConst.COMPARE_INDICATOR_TO_PRECISION_INDEX_MAPPING.get(api_indicator,
+                                                                                      CompareConst.PASS)
         precision_index = self._ignore_precision_index(node.id, precision_index)
-        return precision_index, other_dict
+        return precision_index
 
     def prepare_real_data(self, node):
         """

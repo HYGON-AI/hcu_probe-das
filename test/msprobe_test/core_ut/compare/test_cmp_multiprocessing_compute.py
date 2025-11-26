@@ -18,7 +18,7 @@ data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.inp
          'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
          '', '', '', '', '', '',
          1, 1, 1, 1, 1, 1, 1, 1,
-         True, 'Yes', '', ['-1', '-1']]]
+         True, 'None', '', ['-1', '-1']]]
 o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
            'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
            'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
@@ -218,7 +218,7 @@ class TestCompareRealData(unittest.TestCase):
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
-                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'Yes', '', ['-1', '-1']]]
+                 '', '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, True, 'None', '', ['-1', '-1']]]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                    'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
                    'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',

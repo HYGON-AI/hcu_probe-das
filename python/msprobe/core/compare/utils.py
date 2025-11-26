@@ -28,7 +28,6 @@ from msprobe.core.common.utils import CompareException, check_regex_prefix_forma
     safe_get_value, is_module_available
 from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
 
-
 json_file_mapping = {
     Const.DUMP_JSON_FILE: "dump.json",
     Const.DEBUG_JSON_FILE: "debug.json",
@@ -573,15 +572,23 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                             n_requires_grad, CompareConst.NAN,
                             n_struct[2], CompareConst.NAN,
                             False,
-                            CompareConst.NAN
+                            CompareConst.NAN,
+                            None
                         ]
                         result.append(result_item)
                         continue
-                    result_item = [
-                        n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                        n_requires_grad, CompareConst.NAN,
-                        " ", " ", " ", " ", " ", " "
-                    ]
+                    if dump_mode == Const.TENSOR:
+                        result_item = [
+                            n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                            n_requires_grad, CompareConst.NAN,
+                            " ", " ", " ", " ", " ", " "
+                        ]
+                    else:
+                        result_item = [
+                            n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                            n_requires_grad, CompareConst.NAN,
+                            " ", " ", " ", " ", " ", " ", " ", " "
+                        ]
                     summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                     result_item.extend(summary_data)
                     summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
@@ -594,7 +601,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                     raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
                 err_msg = ""
-                result_item.append(CompareConst.ACCURACY_CHECK_YES)
+                result_item.append(CompareConst.PASS)
                 result_item.append(err_msg)
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
@@ -607,11 +614,12 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
     _, b_num_input, b_num_output, b_num_params, b_num_params_grad = count_struct(b_dict)
 
     get_accuracy_core(0, n_num_input, 0, b_num_input, CompareConst.INPUT_STRUCT)
-    get_accuracy_core(n_num_input + n_num_output, n_num_params, b_num_input + b_num_output, b_num_params,
+    get_accuracy_core(n_num_input, n_num_params, b_num_input, b_num_params,
                       CompareConst.PARAMS_STRUCT)
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, CompareConst.OUTPUT_STRUCT)
-    get_accuracy_core(n_num_input + n_num_output + n_num_params, n_num_params_grad,
-                      b_num_input + b_num_output + b_num_params, b_num_params_grad,
+    get_accuracy_core(n_num_input + n_num_params, n_num_output, b_num_input + b_num_params, b_num_output,
+                      CompareConst.OUTPUT_STRUCT)
+    get_accuracy_core(n_num_input + n_num_params + n_num_output, n_num_params_grad,
+                      b_num_input + b_num_params + b_num_output, b_num_params_grad,
                       CompareConst.PARAMS_GRAD_STRUCT)
 
 
@@ -766,6 +774,7 @@ def mp_logger_init(ranks_str):
     def wrap_logger(fn):
         def inner(msg, *args, **kwargs):
             return fn(ranks_str + msg, *args, **kwargs)
+
         return inner
 
     logger.info = wrap_logger(logger.info)
