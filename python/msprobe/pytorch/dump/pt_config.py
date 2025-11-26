@@ -45,54 +45,7 @@ class StatisticsConfig(BaseConfig):
         self._check_str_list_config(self.tensor_list, "tensor_list")
 
 
-class DiffCheckConfig(BaseConfig):
-    def __init__(self, json_config):
-        super().__init__(json_config)
-        self.diff_nums = json_config.get("diff_nums")
-        self.check_mode = json_config.get("check_mode")
-        self.check_diff_config()
-
-    def check_diff_config(self):
-        if self.diff_nums is not None and not is_int(self.diff_nums):
-            raise Exception("diff_num is invalid")
-        if self.diff_nums is not None and self.diff_nums != -1 and self.diff_nums <= 0:
-            raise Exception("diff_nums should be -1 or positive integer")
-        if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
-            raise Exception("check_mode is invalid")
-
-
-class StructureConfig(BaseConfig):
-    def __init__(self, json_config):
-        super().__init__(json_config)
-
-
-TaskDict = {
-    Const.TENSOR: TensorConfig,
-    Const.STATISTICS: StatisticsConfig,
-    Const.DIFF_CHECK: DiffCheckConfig,
-    Const.STRUCTURE: StructureConfig
-}
-
-
-def parse_task_config(task, json_config):
-    task_map = json_config.get(task, dict())
-    return TaskDict.get(task)(task_map)
-
-
-def parse_json_config(json_file_path, task):
-    if not json_file_path:
-        config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        json_file_path = os.path.join(config_dir, "../../config.json")
-    json_config = load_json(json_file_path)
-    common_config = CommonConfig(json_config)
-    if task:
-        task_config = parse_task_config(task, json_config)
-    else:
-        task_config = parse_task_config(common_config.task, json_config)
-    return common_config, task_config
-
-
-class RunUTConfig(BaseConfig):
+class ACCCheckConfig(BaseConfig):
     WrapApi = get_ops()
 
     def __init__(self, json_config):
@@ -119,7 +72,57 @@ class RunUTConfig(BaseConfig):
             raise Exception("error_data_path: %s does not exist" % error_data_path)
 
     def check_acc_check_config(self):
-        RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
-        RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
-        RunUTConfig.check_error_data_path_config(self.error_data_path)
+        ACCCheckConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
+        ACCCheckConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
+        ACCCheckConfig.check_error_data_path_config(self.error_data_path)
+
+
+class DiffCheckConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.diff_nums = json_config.get("diff_nums")
+        self.check_mode = json_config.get("check_mode")
+        self.check_diff_config()
+
+    def check_diff_config(self):
+        if self.diff_nums is not None and not is_int(self.diff_nums):
+            raise Exception("diff_num is invalid")
+        if self.diff_nums is not None and self.diff_nums != -1 and self.diff_nums <= 0:
+            raise Exception("diff_nums should be -1 or positive integer")
+        if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
+            raise Exception("check_mode is invalid")
+
+
+class StructureConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+
+
+TaskDict = {
+    Const.TENSOR: TensorConfig,
+    Const.STATISTICS: StatisticsConfig,
+    Const.DIFF_CHECK: DiffCheckConfig,
+    Const.STRUCTURE: StructureConfig,
+    Const.ACC_CHECK: ACCCheckConfig
+}
+
+
+def parse_task_config(task, json_config):
+    task_map = json_config.get(task, dict())
+    return TaskDict.get(task)(task_map)
+
+
+def parse_json_config(json_file_path, task):
+    if not json_file_path:
+        config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        json_file_path = os.path.join(config_dir, "../../config.json")
+    json_config = load_json(json_file_path)
+    common_config = CommonConfig(json_config)
+    if task:
+        task_config = parse_task_config(task, json_config)
+    else:
+        task_config = parse_task_config(common_config.task, json_config)
+    return common_config, task_config
+
+
 
