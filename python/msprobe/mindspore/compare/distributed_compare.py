@@ -19,6 +19,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
 from msprobe.core.compare.utils import compare_distributed_inner
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
+from msprobe.core.compare.utils import print_compare_ends_info
 
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
@@ -33,3 +34,4 @@ def ms_graph_compare(args):
         return
     ms_comparator = GraphMSComparator(args)
     ms_comparator.compare_core()
+    print_compare_ends_info()
