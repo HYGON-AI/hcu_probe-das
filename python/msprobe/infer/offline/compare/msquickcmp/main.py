@@ -17,6 +17,7 @@ import os
 import subprocess
 
 from msprobe.core.common.log import logger
+from msprobe.core.compare.utils import print_compare_ends_info
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.cmp_process import cmp_process
 from msprobe.infer.offline.compare.msquickcmp.common.args_check import (
@@ -138,6 +139,7 @@ def compare_offline_model_mode(args):
         args.onnx_fusion_switch
     )
     cmp_process(cmp_args)
+    print_compare_ends_info()
 
 
 def set_args_default(args):
