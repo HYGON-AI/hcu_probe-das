@@ -41,18 +41,21 @@
 
 仅支持PyTorch场景。
 
-## 精度比对操作指导
+## 精度比对功能介绍
 
-### 比对命令说明
+### 功能说明
+使用命令行工具对精度数据进行比对，输出比对结果。
 
-命令示例（单卡场景）：
+### 注意事项
+无
+
+### 命令格式
 
 ```shell
-msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output
+msprobe compare -tp <target_path> -gp <golden_path> [options]
 ```
 
-完整参数说明：
-
+### 参数说明
 | 参数名               | 说明                                                         | 是否必选 |
 | -------------------- | ------------------------------------------------------------ | -------- |
 | -tp 或 --target_path | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。 | 是       |
@@ -62,7 +65,9 @@ msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./outpu
 | -dm或--data_mapping  | 自定义映射关系比对。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件](#自定义映射文件)。仅[API和模块无法自动匹配场景](#API和模块无法自动匹配场景)需要配置。仅支持逐卡比对。 | 否       |
 | -da或--diff_analyze  | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。 | 否       |
 
-### 整网比对场景
+### 使用示例
+
+#### 整网比对场景
 
 整网比对场景是包含：CPU 或 GPU 与 NPU环境的 API 计算数值的整网数据比对；相同模型不同迭代版本的 API 计算数值的整网数据比对。
 
@@ -83,7 +88,7 @@ msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./outpu
    
 3. 查看比对结果，请参见 [精度比对结果分析](#精度比对结果分析)。
 
-### API和模块无法自动匹配场景
+#### API和模块无法自动匹配场景
 
 当存在无法自动匹配的API和模块时，则用户可以通过提供自定义映射关系的配置文件来告知工具可匹配的API或模块，进行比对。
 
@@ -103,7 +108,7 @@ msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./outpu
 
 4. 查看比对结果，请参见 [精度比对结果分析](#精度比对结果分析)。
 
-### 首差异算子节点识别场景
+#### 首差异算子节点识别场景
 
 首差异算子节点识别场景是指：XPU与NPU环境的网络中通过 `msprobe dump`保存数据的数据分析，找到网络精度问题中出现的首个差异算子节点。
 
@@ -135,19 +140,28 @@ msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./outpu
     - `compare_result_rank{rank_id}_{timestamp}.json`：包含该rank比对结果，包括API或模块名、比对状态、比对指标等。
     - `diff_analyze_{timestamp}.json`：包含首差异算子节点识别结果，包括算子节点名、算子类型、算子位置等。
 
-## 精度比对结果分析
+### 输出说明
+比对完成则打屏提示信息msprobe compare ends successfully. <br>
+单卡场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_{timestamp}.xlsx。<br>
+多卡场景：在配置的输出路径中，生成多个.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.xlsx。
+
+首差异算子节点识别场景: <br>
+完成则打屏Saving json file to disk: /output_path/compare_result_rank{rank_id}_{timestamp}.json和The analyze result is saved in: /output_path/diff_analyze_{timestamp}.json<br>
+在配置的输出路径中，生成多个.json后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.json和diff_analyze_{timestamp}.json。
+
+### 输出结果文件说明
+
+#### 精度比对结果分析
 
 PyTorch 精度比对是以 CPU 或 GPU 的计算结果为标杆，通过计算精度评价指标判断 API 在运行时是否存在精度问题。
-
-- `advisor_{timestamp}.txt` 文件中给出了可能存在精度问题的 API 的专家建议。
 
 - `compare_result_{timestamp}.xlsx` 文件列出了所有执行精度比对的 API 详细信息和比对结果，示例如下：
 
   ![compare_result](../figures/compare_result.png)
 
-- **提示**：比对结果通过颜色标记、比对结果（Result）、错误信息提示（Err_Message）定位可疑算子，但鉴于每种指标都有对应的判定标准，还需要结合实际情况进行判断。
+- **提示**：比对结果通过、比对结果（Result）、错误信息提示（Err_Message）定位可疑算子，但鉴于每种指标都有对应的判定标准，还需要结合实际情况进行判断。
 
-### 指标说明
+#### 指标说明
 
 精度比对从三个层面评估 API 的精度，依次是：真实数据模式、统计数据模式和 MD5 模式。比对结果分别有不同的表头。
 
@@ -179,7 +193,7 @@ MD5模式：数据采集时配置config.json中task字段为"statistics"，summa
 
 上表中NPU_Stack_Info字段需要配置-s参数生成。
 
-### 比对指标计算公式
+#### 比对指标计算公式
 
 $N$: NPU侧tensor
 
@@ -219,7 +233,7 @@ MeanRelativeErr: $\vert\frac{mean(N)-mean(B)}{mean(B)}\vert*100\%$
 
 NormRelativeErr: $\vert\frac{l2norm(N)-l2norm(B)}{l2norm(B)}\vert*100\%$
 
-### 比对结果（Result）
+#### 比对结果（Result）
 
 比对结果分为三类：pass、warning和error，优先级error > warning > pass
 
@@ -243,7 +257,7 @@ warning标记情况：
 1. 输入存在占位的API，涉及到使用输入进行计算的指标规则不适用，包括：['_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv']
 2. 冗余API，所有指标不适用，包括：['empty', 'empty_like', 'numpy', 'to', 'setitem', 'empty_with_format', 'new_empty_strided', 'new_empty', 'empty_strided']
 
-### 计算精度评价指标分析
+#### 计算精度评价指标分析
 
 1. Cosine：通过计算两个向量的余弦值来判断其相似度，数值越接近于 1 说明计算出的两个张量越相似，实际可接受阈值为大于 0.99。在计算中可能会存在 nan，主要由于可能会出现其中一个向量为 0。
 
@@ -257,25 +271,24 @@ warning标记情况：
 
 5. One Thousandth Err Ratio（相对误差小于千分之一的元素比例）、Five Thousandths Err Ratio（相对误差小于千分之五的元素比例）精度指标：是指 NPU 的 Tensor 中的元素逐个与对应的标杆数据对比，相对误差小于千分之一、千分之五的比例占总元素个数的比例。该数据仅作为精度下降趋势的参考，并不参与计算精度是否通过的判定。
 
-## 多卡比对结果提取汇总通信算子数据
 
-本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。
+## 多卡数据汇总功能介绍
 
-**使用场景**
-
+### 功能说明
+本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。<br>
+使用场景为：<br>
 已完成精度比对，获得多卡精度比对结果，但是通信算子数据分布在多个结果件中，不利于精度问题的分析。通过此功能，可以汇总多卡通信算子数据，减少问题定位时间。
 
-**约束**
-
+### 注意事项
 不支持MD5比对结果。
 
-**命令示例**
+### 命令格式
 
 ```bash
-msprobe merge_result -i ./input_dir -o ./output_dir -config ./config.yaml
+msprobe merge_result -i <input_dir> -o <output_dir> -config <config-path>
 ```
 
-**完整参数说明**
+### 参数说明
 
 | 参数名                 | 说明                                                                                                                | 是否必选 |
 | --------------------- |-------------------------------------------------------------------------------------------------------------------| -------- |
@@ -302,7 +315,17 @@ compare_index:
 | api           | 表示需要汇总的API或module名称。如果没有配置，工具会提示报错。<br>api名称配置格式为：`{api_type}.{api_name}.{API调用次数}.{前向反向}`<br>须按顺序配置以上四个字段，可按如下组合配置：<br/>        {api_type}<br/>        {api_type}.{api_name}<br/>        {api_type}.{api_name}.{API调用次数}<br/>        {api_type}.{api_name}.{API调用次数}.{前向反向}<br/>这里的api指代API或module。                                              |
 | compare_index | 表示需要汇总的比对指标。compare_index需为dump_mode对应比对指标的子集。如果没有配置，工具将根据比对结果自动提取dump_mode对应的全部比对指标进行汇总。<br>统计数据模式比对指标：Max diff、Min diff、Mean diff、L2norm diff、MaxRelativeErr、MinRelativeErr、MeanRelativeErr、NormRelativeErr、Requires_grad Consistent<br>真实数据模式比对指标：Cosine、EucDist、MaxAbsErr、MaxRelativeErr、One Thousandth Err Ratio、Five Thousandths Err Ratio、Requires_grad Consistent |
 
-**汇总结果件说明**
+### 使用示例
+
+```bash
+msprobe merge_result -i ./input_dir -o ./output_dir -config ./config.yaml
+```
+
+### 输出说明
+
+在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：multi_ranks_compare_merge_{timestamp}.xlsx。
+
+### 输出结果文件说明
 
 多卡数据汇总结果如下所示：
 
