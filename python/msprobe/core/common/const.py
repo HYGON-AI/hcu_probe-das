@@ -410,8 +410,8 @@ class Const:
 
     MEGATRON_MICRO_STEP_NUMBER = 'megatron_micro_step_number'
 
-    TORCHAIR_FX_DATA_DIRECTORY = 'msit_fx_dump'
-    TORCHAIR_GE_DATA_DIRECTORY = 'msit_ge_dump'
+    TORCHAIR_FX_DATA_DIRECTORY = 'msprobe_fx_dump'
+    TORCHAIR_GE_DATA_DIRECTORY = 'msprobe_ge_dump'
 
 
 class CompareConst:
