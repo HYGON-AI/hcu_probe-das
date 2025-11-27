@@ -56,6 +56,11 @@
 | --dym_shape_range    | 动态shape的阈值范围。如果设置该参数，那么将根据参数中所有的shape列表进行依次推理和精度比对。<br/>配置格式为："input_name1:1,3,200\~224,224-230;input_name2:1,300"。<br/>其中，input_name必须是转换前的网络模型中的节点名称；"\~"表示范围，a\~b\~c含义为[a: b :c]；"-"表示某一位的取值。 <br/> | 否    |
 | --onnx_fusion_switch | onnxruntime算子融合开关，默认开启算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx_fusion_switch False。                                                                                                          | 否    |
 
+### 输出说明
+比对完成则打屏提示信息msprobe compare ends successfully.
+在配置的输出路径中，生成dump_data文件夹、 input文件夹、model文件夹和.csv后缀的文件，csv文件名称基于时间戳自动生成，格式为：result_{timestamp}.csv。
+
+
 ## 输出结果文件说明
 
 ```sh
