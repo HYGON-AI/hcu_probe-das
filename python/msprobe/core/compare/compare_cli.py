@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025, Huawei Technologies Co., Ltd.
+# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0  (the "License");
@@ -16,6 +16,7 @@
 
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
+from msprobe.core.compare.atb_data_compare import compare_atb_mode
 from msprobe.core.compare.auto_compare import compare_auto_mode
 from msprobe.core.compare.offline_data_compare import compare_offline_data_mode
 from msprobe.core.compare.torchair_acc_cmp import compare_torchair_mode
@@ -26,14 +27,15 @@ MODE_DISPATCHER = {
     'auto': compare_auto_mode,
     'offline_data': compare_offline_data_mode,
     'torchair': compare_torchair_mode,
-    'offline_model': compare_offline_model_mode
+    'offline_model': compare_offline_model_mode,
+    'atb': compare_atb_mode
 }
 
 VALID_ARGS_MAP = {
     'auto': [
         '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o', 
         '--fuzzy_match', '-fm', '--cell_mapping', '-cm', '--api_mapping', '-am', '--data_mapping',
-         '-dm', '--layer_mapping', '-lm', '--diff_analyze', '-da', '--rank', '--step'
+        '-dm', '--layer_mapping', '-lm', '--diff_analyze', '-da', '--rank', '--step'
     ],
     'offline_data': [
         "-m", "-tp", "-gp", "-fr", "-qfr", "-cfr", "-o", "--mode", "--target_path", "--golden_path", 
@@ -46,7 +48,10 @@ VALID_ARGS_MAP = {
         '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o',
         '--rank', '--input_data', '--input_shape', '--output_size', '--dym_shape_range',
         '-ofs', '--onnx_fusion_switch'
-    ]
+    ],
+    'atb': [
+        '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o'
+    ],
 }
 
 

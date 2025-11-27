@@ -677,6 +677,17 @@ class CompareConst:
     BENCH_DUMP_DATA_DIR = 'bench_dump_data_dir'
     NO_REAL_DATA_FLAG = '-1'
 
+    # ATB data comparison
+    STATS_COMPARISION_MODE = 'stats'
+    TENSOR_COMPARISION_MODE = 'tensor'
+    UNKNOWN_COMPARISION_MODE = "unknown"
+    ATB_DATA_NAME = 'Data Name'
+    DEVICE_AND_PID = 'Device and PID'
+    EXECUTION_COUNT = 'Execution Count'
+    DATA_TYPE = 'Data Type'
+    DATA_SHAPE = 'Data Shape'
+    TENSOR_PATH = "tensor_path"
+
 
 class FileCheckConst:
     """
@@ -717,6 +728,9 @@ class FileCheckConst:
     DB_SUFFIX = '.db'
     ONNX_SUFFIX = '.onnx'
     OM_SUFFIX = '.om'
+    BIN_SUFFIX = '.bin'
+    MAX_BIN_SIZE = 10737418240          # 10G
+    MAX_COMMON_FILE_SIZE = 10737418240  # 10G
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
@@ -750,7 +764,8 @@ class FileCheckConst:
         LOG_SUFFIX: MAX_LOG_SIZE,
         DB_SUFFIX: MAX_DB_SIZE,
         ONNX_SUFFIX: MAX_ONNX_SIZE,
-        OM_SUFFIX: MAX_OM_SIZE
+        OM_SUFFIX: MAX_OM_SIZE,
+        BIN_SUFFIX: MAX_BIN_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 

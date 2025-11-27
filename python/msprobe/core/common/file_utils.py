@@ -85,7 +85,7 @@ class FileChecker:
         """
         check_path_exists(self.file_path)
         check_link(self.file_path)
-        self.file_path = os.path.realpath(self.file_path)
+        self.file_path = os.path.realpath(os.path.expanduser(self.file_path))
         check_path_length(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
@@ -252,7 +252,7 @@ def check_common_file_size(file_path):
             if file_path.endswith(suffix):
                 check_file_size(file_path, max_size)
                 return
-        check_file_size(file_path, FileCheckConst.COMMON_FILE_SIZE)
+        check_file_size(file_path, FileCheckConst.MAX_COMMON_FILE_SIZE)
 
 
 def check_file_suffix(file_path, file_suffix):
@@ -287,17 +287,20 @@ def check_others_writable(file_path):
 
 def make_dir(dir_path):
     check_path_before_create(dir_path)
-    dir_path = os.path.realpath(dir_path)
+    dir_path = os.path.abspath(os.path.expanduser(dir_path))
+    dir_checker = FileChecker(dir_path, FileCheckConst.DIR)
     if os.path.isdir(dir_path):
+        dir_checker.common_check()
         return
     try:
+        parent_dir_checker = FileChecker(os.path.dirname(dir_path), FileCheckConst.DIR)
+        parent_dir_checker.common_check()
         os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  f"Failed to create {dir_path}. "
                                  f"Please check the path permission or disk space. {str(ex)}") from ex
-    file_check = FileChecker(dir_path, FileCheckConst.DIR)
-    file_check.common_check()
+    dir_checker.common_check()
 
 
 @recursion_depth_decorator('msprobe.core.common.file_utils.create_directory', max_depth=16)
@@ -310,21 +313,21 @@ def create_directory(dir_path):
     Exception Description:
         when invalid data throw exception
     """
-    check_link(dir_path)
     check_path_before_create(dir_path)
-    dir_path = os.path.realpath(dir_path)
-    parent_dir = os.path.dirname(dir_path)
+    abs_path = os.path.abspath(os.path.expanduser(dir_path))
+    parent_dir = os.path.dirname(abs_path)
     if not os.path.isdir(parent_dir):
         create_directory(parent_dir)
-    make_dir(dir_path)
+    make_dir(abs_path)
 
 
 def check_path_before_create(path):
     check_link(path)
+    path = os.path.realpath(os.path.expanduser(path))
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
-    if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
+    if not re.match(FileCheckConst.FILE_PATTERN, path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
 
@@ -384,6 +387,49 @@ def check_path_no_group_others_write(file_path):
             FileCheckException.FILE_PERMISSION_ERROR,
             f"The directory/file must not allow write access to group or others. Directory/File path: {file_path}"
         )
+
+
+def check_if_valid_dir_pattern_path(path):
+    if os.path.isfile(path):
+        logger.error(f'The path {path} should be a directory path, but got a file')
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
+
+
+def find_existing_path(path, depth=16):
+    path = os.path.abspath(os.path.expanduser(path))
+    if os.path.exists(path):
+        return path
+    if depth <= 0:
+        raise RecursionError("Output path was not valied")
+    parent_path = os.path.dirname(path)
+    # 递归查找父目录
+    if parent_path and parent_path != path:
+        return find_existing_path(parent_path, depth - 1)
+    else:
+        raise ValueError("Output path was not valied.")
+
+
+def check_and_get_real_path(path, ability, file_type=None, must_exist=True, is_strict=False):
+    ori_path = path
+    if ability == FileCheckConst.READ_ABLE or ability == FileCheckConst.EXECUTE_ABLE:
+        must_exist = True
+    if not must_exist:
+        path = find_existing_path(path)
+    if file_type is not None:
+        path_type = FileCheckConst.FILE
+    else:
+        path_type = FileCheckConst.DIR if os.path.isdir(path) else FileCheckConst.FILE
+
+    file_check = FileChecker(path, path_type, ability=ability, file_type=file_type)
+    file_check.common_check()
+
+    if is_strict and check_group_writable(file_check.file_path):
+        raise FileCheckException(
+            FileCheckException.FILE_PERMISSION_ERROR,
+            f"The directory must not allow write access to group. Directory path: {path}"
+        )
+
+    return os.path.realpath(os.path.expanduser(ori_path))
 
 
 def change_mode(path, mode):
