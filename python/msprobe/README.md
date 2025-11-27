@@ -83,7 +83,7 @@ MindStudio Probe（简称msProbe）是精度调试工具包。主要包括精度
 
 收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
 
-#### [checkpoint比对](../../docs/zh/accuracy_compare/checkpoint_compare_instruct.md)
+#### [checkpoint比对](../../docs/zh/checkpoint_compare_instruct.md)
 
 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 
@@ -126,7 +126,7 @@ MindStudio Probe（简称msProbe）是精度调试工具包。主要包括精度
 
 推荐直接使用[数据采集](#数据采集-1)功能采集统计量信息，检测溢出问题。
 
-#### [checkpoint比对](../../docs/zh/accuracy_compare/checkpoint_compare_instruct.md)
+#### [checkpoint比对](../../docs/zh/checkpoint_compare_instruct.md)
 
 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 
@@ -138,7 +138,7 @@ MindStudio Probe（简称msProbe）是精度调试工具包。主要包括精度
 
 精度数据采集配置需要通过config.json配置文件，详细介绍请参见[介绍](../../docs/zh/dump/config_json_introduct.md)和[示例](../../docs/zh/dump/config_json_examples.md)。
 
-#### [checkpoint比对](../../docs/zh/accuracy_compare/checkpoint_compare_instruct.md)
+#### [checkpoint比对](../../docs/zh/checkpoint_compare_instruct.md)
 
 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 

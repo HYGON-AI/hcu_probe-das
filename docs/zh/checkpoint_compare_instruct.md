@@ -7,22 +7,21 @@
 
 ## 使用前准备
 
-安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
+安装msProbe工具，详情请参见《[msProbe安装指南](msprobe_install_guide.md)》。
 
 ## 使用说明
 Megatron、MindSpeed的ckpt加载依赖megatron，请确保megatron在python环境中或megatron在当前路径下。
 
 
 启动命令如下
-```shell
+```
 msprobe --framework pytorch config_check --compare path1 path2 -o output_path.json
 ```
 
-| 参数名 | 解释                                                                                           | 是否必选 |
-|--------|----------------------------------------------------------------------------------------------|--------|
-| -f 或 --framework | 深度学习框架，str类型。支持参数：pytorch,mindspore，注意：msadaptor场景传入mindspore。                               | 是 |
-| -c 或 --compare | 2个ckpt的路径。在ckpt传给工具加载前，用户需要确保ckpt是安全可信的，若ckpt来源官方有提供SHA256等校验值，用户必须要进行校验，以确保ckpt没有被篡改。 | 是 |
-| -o 或 --output | 比对结果输出路径，默认为 ./ckpt_similarity.json。输出路径存在时将报错终止。                                            | 否 |
+| 参数名 | 可选/必选 | 参数说明 |
+|--------|-------|------|
+| -c 或 --compare | 必选    | 2个ckpt的路径。在ckpt传给工具加载前，用户需要确保ckpt是安全可信的，若ckpt来源官方有提供SHA256等校验值，用户必须要进行校验，以确保ckpt没有被篡改。    |
+| -o 或 --output | 可选    | 比对结果输出路径，默认为 ./ckpt_similarity.json。输出路径存在时将报错终止。    |
 
 Megatron-LM 和 MindSpeed 的 ckpt 目录结构如下：
 
