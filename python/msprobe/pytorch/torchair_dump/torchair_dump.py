@@ -79,7 +79,7 @@ def set_ge_dump_config(
     return config
 
 
-def set_fx_dump_config(dump_path='', compiler_config=None):
+def set_fx_dump_config(dump_path='', op_list=None, compiler_config=None):
     try_import_torchair()
     from torchair.configs.compiler_config import CompilerConfig
 
@@ -93,6 +93,18 @@ def set_fx_dump_config(dump_path='', compiler_config=None):
     if compiler_config is not None and not isinstance(compiler_config, CompilerConfig):
         raise TypeError(f'compiler_config must be a CompilerConfig, but got {type(compiler_config)}')
     config = compiler_config if compiler_config else CompilerConfig()
+    if op_list:
+        if not isinstance(op_list, list) or not all(isinstance(item, str) for item in op_list):
+            raise TypeError("op_list must be a list of strings")
+        from msprobe.infer.utils.util import filter_cmd
+        op_list = filter_cmd(op_list)
+        config.debug.data_dump.filter = (
+            lambda x: x
+            if any(keyword.lower() in x.name.lower() for keyword in op_list)
+            else None
+        )
+        
+
     # Enable FX dump
     config.debug.data_dump.type = "npy"
     if hasattr(config.debug.data_dump, "path"):
