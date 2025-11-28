@@ -175,23 +175,22 @@ MD5模式：数据采集时配置config.json中task字段为"statistics"，summa
 
 **公共表头**：
 
-|dump 数据模式|NPU Name (NPU 的 API 名)| Bench Name (Bench 的 API 名) |NPU Dtype (NPU 数据类型)|Bench Dtype (bench 数据类型)|NPU Tensor Shape (NPU 张量形状)|Bench Tensor Shape (bench 张量形状)| NPU Requires_grad (NPU tensor是否计算梯度) | Bench Requires_grad (Bench tensor是否计算梯度) |
-|:-:|:-:|:--------------------------:|:-:|:-:|:-:|:-:|:------------------------------------:|:----------------------------------------:|
-|真实数据模式|√|             √              |√|√|√|√|                  √                   |                    √                     |
-|统计数据模式|√|             √              |√|√|√|√|                  √                   |                    √                     |
-|MD5 模式|√|             √              |√|√|√|√|                  √                   |                    √                     |
+|dump 数据模式|NPU Name (NPU 的 API 名)| Bench Name (Bench 的 API 名) |NPU Dtype (NPU 数据类型)| Bench Dtype (Bench 数据类型) |NPU Tensor Shape (NPU 张量形状)| Bench Tensor Shape (Bench 张量形状) | NPU Requires_grad (NPU tensor是否计算梯度) | Bench Requires_grad (Bench tensor是否计算梯度) |
+|:-:|:-:|:--------------------------:|:-:|:------------------------:|:-:|:-------------------------------:|:------------------------------------:|:----------------------------------------:|
+|真实数据模式|√|             √              |√|            √             |√|                √                |                  √                   |                    √                     |
+|统计数据模式|√|             √              |√|            √             |√|                √                |                  √                   |                    √                     |
+|MD5 模式|√|             √              |√|            √             |√|                √                |                  √                   |                    √                     |
 
 **个性表头**：
 
 统计量有 4 种：最大值（max）、最小值（min）、平均值（mean）和 L2-范数（L2 norm）。
 
-|dump 数据模式|Cosine (tensor 余弦相似度)|EucDist (tensor 欧式距离)|MaxAbsErr (tensor 最大绝对误差)|MaxRelativeErr (tensor 最大相对误差)|One Thousandth Err Ratio (tensor 相对误差小于千分之一的比例)|Five Thousandth Err Ratio (tensor 相对误差小于千分之五的比例)|NPU 和 bench 的统计量绝对误差 (max, min, mean, L2 norm) diff| NPU 和 bench 的统计量相对误差 (max, min, mean, L2 norm) RelativeErr |NPU 和 bench 的统计量 (max, min, mean, L2 norm)|NPU MD5 (NPU 数据 CRC-32 值)|BENCH MD5 (bench 数据 CRC-32 值)| Requires_grad Consistent (计算梯度是否一致) | Result (比对结果) |Err_message (错误信息提示)|NPU_Stack_Info (堆栈信息)| Data_Name ([NPU真实数据名，Bench真实数据名]) |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:-----------------------------------:|:-------------:|:---:|:---:|:---------------------------------:|
-|真实数据模式|√|√|√|√|√|√|||√|||                  √                  | √ |√|√|                 √                 |
-|统计数据模式|||||||√|√|√|||                  √                  |       √       |√|√|                                   |
-|MD5 模式||||||||||√|√|                  √                  |      √        |√|√|                                   |
+|dump 数据模式|Cosine (tensor 余弦相似度)|EucDist (tensor 欧式距离)|MaxAbsErr (tensor 最大绝对误差)|MaxRelativeErr (tensor 最大相对误差)|One Thousandth Err Ratio (tensor 相对误差小于千分之一的比例)|Five Thousandth Err Ratio (tensor 相对误差小于千分之五的比例)| NPU 和 Bench 的统计量绝对误差 (max, min, mean, L2 norm) diff | NPU 和 Bench 的统计量相对误差 (max, min, mean, L2 norm) RelativeErr | NPU 和 Bench 的统计量 (max, min, mean, L2 norm) |NPU MD5 (NPU 数据 CRC-32 值)|BENCH MD5 (bench 数据 CRC-32 值)| Requires_grad Consistent (计算梯度是否一致) | Result (比对结果) |Err_message (错误信息提示)|NPU_Stack_Info (堆栈信息)| Data_Name ([NPU真实数据名，Bench真实数据名]) |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---------------------------------------------------:|:----------------------------------------------------------:|:------------------------------------------:|:---:|:---:|:-----------------------------------:|:-------------:|:---:|:---:|:---------------------------------:|
+|真实数据模式|√|√|√|√|√|√|                                                     |                                                            |                     √                      |||                  √                  | √ |√|√|                 √                 |
+|统计数据模式|||||||                          √                          |                             √                              |                     √                      |||                  √                  |       √       |√|√|                                   |
+|MD5 模式|||||||                                                     |                                                            |                                            |√|√|                  √                  |      √        |√|√|                                   |
 
-上表中NPU_Stack_Info字段需要配置-s参数生成。
 
 #### 比对指标计算公式
 
