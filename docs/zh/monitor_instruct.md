@@ -5,41 +5,38 @@
 Monitor训练状态轻量化监控工具，能够在较低性能损耗下收集和记录模型训练过程中的激活值、权重梯度、优化器状态和通信算子的中间值，实时呈现训练状态。
 
 ## 使用前准备
-**环境准备**
+**安装**
 
 安装msProbe工具，详情请参见《[msProbe安装指南](./msprobe_install_guide.md)》。
 
 **约束**
 
 - PyTorch场景：torch不低于**2.1**
-- MindSpore场景：mindspore不低于**2.4.10**，仅支持MindSpore动态图，已支持msadapter套件
+- MindSpore场景：mindspore不低于**2.4.10**，仅支持**MindSpore动态图**，支持**msadapter**套件
 
-## 功能介绍
-下表中字段为训练状态轻量化监控工具的完整功能点：
+## 快速入门
 
-| 功能                                                         | 说明                                                         | 支持场景           |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------- |
-| [权重监控](#权重监控)                                        | 开启权重监控                                                 | PyTorch、MindSpore |
-| [权重梯度监控](#权重梯度监控)                                | 开启权重梯度监控                                             | PyTorch、MindSpore |
-| [激活值监控](#激活值监控)                                    | 开启激活值监控                                               | PyTorch、MindSpore |
-| [优化器状态监控](#优化器状态监控)                            | 开启优化器状态监控                                           | PyTorch、MindSpore |
-| [采集module堆栈信息](#采集module堆栈信息)                               | 采集监控的第一个 step 的 module 对应的堆栈信息辅助问题定位                              | PyTorch、MindSpore |
-| [指定监控对象](#指定监控对象)                                | 指定监控的nn.Module(nn.Cell)及对应的输入输出                 | PyTorch、MindSpore |
-| [打印模型结构](#打印模型结构)                                | 打印模型结构                                                 | PyTorch           |
-| [l2可解释特征监控](#l2可解释特征监控)                         | 开启模型状态的高阶监控                                        | PyTorch           |
-| [输出格式和统计量](#输出格式和统计量)                        | format PyTorch支持`csv`、`tensorboard`和`api`，MindSpore仅支持`csv`，`ops`、`ndigits`均支持 | PyTorch、MindSpore |
-| [mbs粒度梯度监控](#mbs粒度梯度监控)                    | 开启梯度监控时，采集聚合前梯度时支持`micro_batch_size`粒度                 | PyTorch、MindSpore |
-| [异常告警](#异常告警)                    | 监控对象指标异常时自动告警，支持异常数据落盘                  | PyTorch、MindSpore |
-| [csv格式数据转tensorboard可视化显示](#csv格式数据转tensorboard可视化显示) | 将csv转为tensorboard文件显示                                 | PyTorch           |
-| [动态启停](#动态启停)                                        | 训练过程中动态修改配置开启监控                               | PyTorch、MindSpore |
-| [功能重载](#功能重载)                                        | 训练中开启激活值监控。待废弃，请使用动态启停功能代替。           | PyTorch           |
-
-## 快速上手
 根据需求监控相应对象。比如在loss上扬，grad norm正常的异常训练过程中，优先考虑监控模型前向过程；在grad norm异常的训练过程中，监控权重和激活值的梯度。
 推荐使用方式：权重梯度的监控性能损耗小（20B dense模型全量权重梯度监控，时间增加<1%，内存增加<1%），可以长期开启。激活值监控性能损耗大，在必要时开启或者仅监控部分。  
 
-### 工具使能
-在实际训练代码中找到模型、优化器定义的位置，使能monitor工具，通过配置文件（json）控制工具行为。如下分别为Pytorch场景和MindSpore场景下的使能方式。
+**配置文件准备**
+
+请在当前目录下创建一个`config.json`文件，此处以权重梯度采集为例：
+
+```json
+{
+    "targets": {},
+    "collect_times": 3,
+    "wg_distribution": true,
+    "format": "csv",
+    "ops": ["min","max", "mean", "norm"],
+    "ndigits": 16
+}
+```
+
+**工具使能**
+
+在实际训练代码中找到模型、优化器定义完成后、训练开始前的位置，加入工具使能代码，不同场景使能方式如下：
 
 - Pytorch使能方式:
 ```python
@@ -64,13 +61,9 @@ monitor.set_monitor(
 ) 
 ```
 
-*注意*：若框架为FSDP1，请先保证model包裹FSDP时设置use_orig_params=True。
-
-*注意*：补充deepspeed下常用框架的使能位置。
-
 deepspeed与accelerate、transformers同时使用时，optimizer传值方式为`optimizer=optimizer.optimizer`，若未使用deepspeed，单独使用accelerate、transformers，optimizer传值方式为`optimizer=optimizer`。
 
-1) 同时使用deepspeed和accelerate时，工具使能位置参考如下：
+同时使用deepspeed和accelerate时，工具使能位置参考如下：
 
 ```python
 model, optimizer, trainloader, evalloader, schedular = accelerator.prepare(...)
@@ -79,7 +72,7 @@ monitor = TrainerMon(...)
 monitor.set_monitor(....optimizer=optimizer.optimizer)
 ```
 
-2. 同时使用deepspeed和transformers时，工具使能位置参考如下：
+同时使用deepspeed和transformers时，工具使能位置参考如下：
 
 ```python
 # src/transformers/trainer.py
@@ -112,9 +105,10 @@ monitor.set_monitor(
 ) 
 ```
 
-请注意以下两点：
+**注意事项**
 - MindSpore功能在1.2.2版本后支持, <1.2.2版本不支持
-- 上述接口使用方式为1.2.2后更新的最新接口使用方式, <1.2.2版本的Pytorch旧接口使用方式为：
+- 若框架为FSDP1，请先保证model包裹FSDP时设置use_orig_params=True
+- 上述接口使用方式为1.2.2后更新的最新接口使用方式（**其中老版接口目前仍能使用，但预计将在2026年废弃，请及时更新到最新版使用方式**）, <1.2.2版本的Pytorch旧接口使用方式为：
 ```Python
 from msprobe.pytorch import TrainerMon
 monitor = TrainerMon(
@@ -134,18 +128,28 @@ monitor.monitor_gnorm_with_ad(
 ) 
 ```
 
-具体接口变更说明如下：
+## 训练状态监控工具功能介绍
+下表中字段为训练状态轻量化监控工具的完整功能点：
 
-| 变更        | 说明                                                                                                        |
-|-----------|-----------------------------------------------------------------------------------------------------------|
-| 初始化接口统一精简 | TrainerMon.__init__(config_file_path, process_group=None, param_have_main_grad=True), 去除了需用户手动传入的opt_ty参数 |
-| 主调接口修改    | 从monitor_gnorm_with_ad(...)改名为set_monitor(...)， 且此时optimizer从可选项改为必传项                                     |
-| 优化器包装接口废除 | set_wrapped_optimizer接口废除， optimizer传入由set_monitor主调完成                                                    |
+| 功能                                                         | 说明                                                         | 支持场景           |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ----------------- |
+| [权重监控](#权重监控)                                        | 开启权重监控                                                 | PyTorch、MindSpore |
+| [权重梯度监控](#权重梯度监控)                                | 开启权重梯度监控                                             | PyTorch、MindSpore |
+| [激活值监控](#激活值监控)                                    | 开启激活值监控                                               | PyTorch、MindSpore |
+| [优化器状态监控](#优化器状态监控)                            | 开启优化器状态监控                                           | PyTorch、MindSpore |
+| [采集module堆栈信息](#采集module堆栈信息)                               | 采集监控的第一个 step 的 module 对应的堆栈信息辅助问题定位                              | PyTorch、MindSpore |
+| [指定监控对象](#指定监控对象)                                | 指定监控的nn.Module(nn.Cell)及对应的输入输出                 | PyTorch、MindSpore |
+| [打印模型结构](#打印模型结构)                                | 打印模型结构                                                 | PyTorch           |
+| [l2可解释特征监控](#l2可解释特征监控)                         | 开启模型状态的高阶监控                                        | PyTorch           |
+| [mbs粒度梯度监控](#mbs粒度梯度监控)                    | 开启梯度监控时，采集聚合前梯度时支持`micro_batch_size`粒度                 | PyTorch、MindSpore |
+| [异常告警](#异常告警)                    | 监控对象指标异常时自动告警，支持异常数据落盘                  | PyTorch、MindSpore |
+| [csv格式数据转tensorboard可视化显示](#csv格式数据转tensorboard可视化显示) | 将csv转为tensorboard文件显示                                 | PyTorch           |
+| [动态启停](#动态启停)                                        | 训练过程中动态修改配置开启监控                               | PyTorch、MindSpore |
+| [功能重载](#功能重载)                                        | 训练中开启激活值监控。待废弃，请使用动态启停功能代替。           | PyTorch           |
 
-**其中老版接口目前仍能使用，但预计将在2026年废弃，请及时更新到最新版使用方式**
 
 ### 权重监控
-- 工具配置示例：
+- 该功能可开启权重监控，工具配置示例：
 ```json
 {  
     "targets": {
@@ -159,7 +163,7 @@ monitor.monitor_gnorm_with_ad(
 设置`param_distribution`为true，表示开启权重监控功能，默认值为false。
 
 ### 权重梯度监控
-- 工具配置示例：
+- 该功能可开启权重梯度监控，监控聚合前后的权重梯度，工具配置示例：
 ```json
 {  
     "targets": {
@@ -174,7 +178,7 @@ monitor.monitor_gnorm_with_ad(
 
 ### 激活值监控
 
-- 工具配置
+- 该功能可开启激活值监控，工具配置示例：
 ```json
 {  
     "targets": {
@@ -195,7 +199,7 @@ monitor.monitor_gnorm_with_ad(
 
 
 ### 优化器状态监控
-- 工具配置示例：
+- 该功能可开启优化器状态监控，工具配置示例：
 ```json
 {  
     "targets": {
@@ -211,7 +215,7 @@ monitor.monitor_gnorm_with_ad(
 本工具针对分布式计算框架megatron和deepspeed框架做了适配，暂不支持其他框架。
 
 ### 采集module堆栈信息
-- 工具配置示例：
+- 该功能可采集module堆栈详细信息，工具配置示例：
 ```json
 {  
     "targets": {
@@ -221,8 +225,6 @@ monitor.monitor_gnorm_with_ad(
 }  
 ```
 开启 `stack_info` 后会采集监控的第一个 step 的所有 module 的堆栈信息，输出格式仅支持 csv 。
-
-## 高阶功能
 
 
 ### 指定监控对象
@@ -308,7 +310,7 @@ param_name可以通过nn.Module的接口`named_parameters()`获取。
 ```
 
 ### l2可解释特征监控
-- 工具配置示例
+- 该功能可开启模型状态的高阶监控，工具配置示例：
 ```json
 {
     "l2_targets": {
@@ -336,58 +338,6 @@ param_name可以通过nn.Module的接口`named_parameters()`获取。
 | **kernel_norm**    | linear_hook       | $\|W\|_F$（Frobenius范数）                                                          | 权重矩阵的缩谱范数，反映输入在矩阵最大奇异向量张成空间的放大系数                                                   |
 
 
-### 输出格式和统计量
-
-工具配置示例：
-```json
-{
-    "format": "csv",
-    "ops": ["norm", "min", "max", "mean", "nans", "zeros"],
-    "ndigits": 12
-}
-```
-
-#### 输出路径 
-通过环境变量`MONITOR_OUTPUT_DIR`设置monitor输出路径，默认为`./monitor_output/`。
-```shell
-export MONITOR_OUTPUT_DIR=/xxx/output_dir
-```
-
-- 输出格式 
-  通过可选配置项`format`指定，当前支持`csv`， `tensorboard`， `api`。其中`csv`为默认缺省值。
-
-    - **tensorboard** 
-      监控结果写入tensorboard的event文件，启动tensorboard查看。  
-      激活值监控任务的tag为{vpp_stage}:{module_name}.{input or output}:{micro_step}/{rank}/{task}\_{ops}
-      其他监控任务的tag为{vpp_stage}:{param_name}/{rank}/{task}\_{ops} 
-    ```shell
-    tensorboard --logdir=$MONITOR_OUTPUT_DIR
-    ```
-    之后，运行以下SSH命令来建立端口转发，可以在本地通过http://localhost:6006访问tensorboard：
-    ```shell
-    ssh -N -L localhost:6006:localhost:6006 your_username@remote_server_address
-    ```
-
-    - **csv**
-      监控结果写入csv文件中，可以通过`ndigits`字段设置小数位数。  
-      表头为 vpp_stage | name | step | micro_step(optional) | *ops |。 
-      仅在激活值监控的输出文件中包含micor_step。
-      激活值监控的name为<module_name>.\<input or output>, 其他任务的name为<param_name>
-
-    - **api** 
-      监控结果不落盘，在训练过程中可以通过`generate_wgrad_metrics`、`generate_xy_metrics`等接口获取，使用方式参考[公开接口](#公开接口) 。
-
-- 统计量 
-通过配置项`ops`指定。当前支持`norm`, `min`, `max`, `mean`, `nans`，`zeros`。其中`nans`监控tensor中`nan`的数量，`zeros`统计tensor中数值小于`eps`的比例。
-
-- csv输出件合并
-
-  提供csv输出件合并功能，在配置json文件中设置`step_count_per_record`，表示每个csv文件存储多个step的监控数据。默认值为1，表示每个csv文件记录一个step的监控数据。
-  
-  如下图所示为梯度监控结果示例，配置`step_count_per_record`为5，连续监控10个step，每个csv文件记录了5个step的梯度数据。其中`grad_reduced_0-4.csv`为step0至step4共计5个step的聚合后梯度数据，`grad_unreduced_0-4.csv`为step0至step4共计5个step的聚合前梯度数据。
-
-  ![step_count_per_record](figures/monitor/step_count_per_record.png)
-
 ### mbs粒度梯度监控
 
 当配置梯度监控任务时，工具默认`global_batch_size`粒度进行梯度监控。当需要监控`micro_batch_size`粒度梯度信息时，在配置文件中配置`monitor_mbs_grad`为`true`，配置示例如下：
@@ -410,7 +360,7 @@ export MONITOR_OUTPUT_DIR=/xxx/output_dir
 工具的异常告警功能旨在自动判断训练过程中的异常现象，用户可通过在配置文件中配置alert字段来指定告警规则，并在训练过程中根据该规则及时打屏对用户发出告警。
 
 
-1. 训练前配置相关参数
+**异常告警规则**
 
 当前支持的异常告警规则如下：
 
@@ -447,14 +397,8 @@ export MONITOR_OUTPUT_DIR=/xxx/output_dir
     },
 ```
 
-2. 实例化工具时传入流水线并行group
-```python
-monitor = TrainerMon(
-    "./monitor_config.json",
-    process_group=mpu.get_pipeline_model_parallel_group(),
-    params_have_main_grad=True  # 权重是否使用main_grad，通常megatron为True，deepspeed为False。默认为True。
-)
-```
+**异常提示说明**
+
 训练过程中，检测到异常后打屏提示，并将异常信息按照rank分组写入json文件，文件路径默认为`monitor_output/anomaly_detected`，异常信息示例如下：
 
 ```json
@@ -476,7 +420,7 @@ monitor = TrainerMon(
 
 其中call_{xxx}中的xxx为API的执行调用顺序，为后续异常事件排序做准备。
 
-3. 异常事件排序
+**异常事件排序**
 
 当模型训练过程中出现较多异常数据，需要对异常事件排序。工具提供topk的异常排序能力，按照api的执行顺序进行排序，便于定界首次异常点。异常分析命令示例：
 
@@ -585,6 +529,46 @@ if {some condition}:
     monitor.reload_xy(xy_distribution=True)
 ```
 
+## 输出结果
+
+### 输出路径 
+通过环境变量`MONITOR_OUTPUT_DIR`设置monitor输出路径，默认为`./monitor_output/`。
+```shell
+export MONITOR_OUTPUT_DIR=/xxx/output_dir
+```
+
+### 输出格式 
+通过可选配置项`format`指定，当前支持`csv`， `tensorboard`， `api`。其中`csv`为默认缺省值。
+
+- **tensorboard** 
+      监控结果写入tensorboard的event文件，启动tensorboard查看。  
+      激活值监控任务的tag为{vpp_stage}:{module_name}.{input or output}:{micro_step}/{rank}/{task}\_{ops}
+      其他监控任务的tag为{vpp_stage}:{param_name}/{rank}/{task}\_{ops} 
+    ```shell
+    tensorboard --logdir=$MONITOR_OUTPUT_DIR
+    ```
+    之后，运行以下SSH命令来建立端口转发，可以在本地通过http://localhost:6006访问tensorboard：
+    ```shell
+    ssh -N -L localhost:6006:localhost:6006 your_username@remote_server_address
+    ```
+
+- **csv**
+  监控结果写入csv文件中，可以通过`ndigits`字段设置小数位数。  
+  表头为 vpp_stage | name | step | micro_step(optional) | *ops |。 
+  仅在激活值监控的输出文件中包含micor_step。
+  激活值监控的name为<module_name>.\<input or output>, 其他任务的name为<param_name>
+
+- **api** 
+  监控结果不落盘，在训练过程中可以通过`generate_wgrad_metrics`、`generate_xy_metrics`等接口获取，使用方式参考[公开接口](#公开接口) 。
+
+### csv输出件合并
+
+  提供csv输出件合并功能，在配置json文件中设置`step_count_per_record`，表示每个csv文件存储多个step的监控数据。默认值为1，表示每个csv文件记录一个step的监控数据。
+  
+  如下图所示为梯度监控结果示例，配置`step_count_per_record`为5，连续监控10个step，每个csv文件记录了5个step的梯度数据。其中`grad_reduced_0-4.csv`为step0至step4共计5个step的聚合后梯度数据，`grad_unreduced_0-4.csv`为step0至step4共计5个step的聚合前梯度数据。
+
+  ![step_count_per_record](figures/monitor/step_count_per_record.png)
+
 ## 公开接口
 - monitor工具初始化
 ```python
@@ -679,6 +663,14 @@ TrainerMon.monitor_gnorm_with_ad(model, grad_acc_steps, optimizer, dp_group, tp_
 | dp_group        | 数据并行的通信组。<br>dp域通信后，且没有使用分布式优化器时，group内所有rank的梯度相同，落盘数据冗余。<br>提供dp_group后，工具仅保留每个dp_group的第一个rank的梯度。 | 否       |
 | tp_group        | 张量并行的通信组。<br/>tp域通信后，group内部分参数所有rank的梯度相同，落盘数据冗余。<br/>提供tp_group后，工具仅保留每个tp_group中冗余参数在第一个rank的梯度。<br/>当前适配Megatron core_r0.6.0, 通过权重属性"tensor_model_parallel"判断是否冗余。 | 否       |
 | start_iteration | 训练的起始iteration，影响工具计数。**仅PyTorch场景支持此参数**。 | 否       |
+
+具体接口变更说明如下：
+
+| 变更        | 说明                                                                                                        |
+|-----------|-----------------------------------------------------------------------------------------------------------|
+| 初始化接口统一精简 | TrainerMon.__init__(config_file_path, process_group=None, param_have_main_grad=True), 去除了需用户手动传入的opt_ty参数 |
+| 主调接口修改    | 从monitor_gnorm_with_ad(...)改名为set_monitor(...)， 且此时optimizer从可选项改为必传项                                     |
+| 优化器包装接口废除 | set_wrapped_optimizer接口废除， optimizer传入由set_monitor主调完成                                                    |
 
 
 ##  详细配置
