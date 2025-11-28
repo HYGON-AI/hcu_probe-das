@@ -1,0 +1,12 @@
+{
+  "start_step": 0,
+  "collect_times": 2,
+  "step_interval": 1,
+  "targets": {"layer1": {}, "layer2": {}},
+  "format": "csv",
+  "ops": ["max", "min", "mean"],
+  "xy_distribution": true,
+  "mv_distribution": true,
+  "wg_distribution": true,
+  "param_distribution": true
+}

@@ -1,0 +1,8 @@
+{
+    "targets": {
+        "": {}
+    },
+    "ur_distribution": true,
+    "format": "tensorboard",
+    "ops": ["norm"]
+}

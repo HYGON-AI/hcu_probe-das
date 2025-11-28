@@ -1,0 +1,12 @@
+{
+    "targets": {
+        "": {}
+    },
+    "cc_distribution": {"enable":true, "cc_codeline":[]},
+    "alert": {
+        "rules": [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}],
+        "dump": true
+    },
+    "format": "csv",
+    "ops": ["norm"]
+}

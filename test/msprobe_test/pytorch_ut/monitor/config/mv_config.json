@@ -1,0 +1,8 @@
+{
+    "targets": {
+        "": {}
+    },
+    "mv_distribution": true,
+    "format": "csv",
+    "ops": ["norm"]
+}
