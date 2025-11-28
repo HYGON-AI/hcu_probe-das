@@ -1,0 +1,13 @@
+{
+    "targets": {
+        "": {}
+    },
+    "param_distribution": true,
+    "xy_distribution": true,
+    "mv_distribution": true,
+    "wg_distribution": true,
+    "all_xy": true,
+    "format": "csv",
+    "ops": ["norm", "nans"],
+    "step_count_per_record": 3
+}

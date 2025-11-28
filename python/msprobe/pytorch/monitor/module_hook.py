@@ -29,7 +29,7 @@ from torch.utils.hooks import BackwardHook
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 
 from msprobe.core.common.const import MonitorConst, Const
-from msprobe.core.common.file_utils import load_json, save_json, make_dir
+from msprobe.core.common.file_utils import load_json, save_json, create_directory
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.monitor.anomaly_processor import AnomalyScanner, AnomalyDataFactory, AnomalyDataWriter
 from msprobe.core.common.file_utils import write_df_to_csv
@@ -932,7 +932,7 @@ class TrainerMon:
 
     def _save_module_struct(self):
         output_dir = os.path.join(get_output_base_dir(), 'module_struct', f'rank{self.rank}')
-        make_dir(output_dir)
+        create_directory(output_dir)
         module_struct_file = os.path.realpath(os.path.join(output_dir, 'module_struct.json'))
         save_json(module_struct_file, self.module_struct, indent=2)
         logger.info(f"> save module struct to {module_struct_file}")
