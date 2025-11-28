@@ -195,9 +195,9 @@ class TestDiffAnalyzer(unittest.TestCase):
             self.analyzer._get_node_by_id("invalid_id")
     
     @patch('msprobe.core.compare.find_first.analyzer.save_json')
-    @patch('msprobe.core.compare.find_first.analyzer.make_dir')
+    @patch('msprobe.core.compare.find_first.analyzer.create_directory')
     @patch('msprobe.core.compare.find_first.analyzer.time')
-    def test_gen_analyze_info(self, mock_time, mock_make_dir, mock_save_json):
+    def test_gen_analyze_info(self, mock_time, mock_create_directory, mock_save_json):
         # 模拟时间戳
         mock_time.time_ns.return_value = 123456789
         
