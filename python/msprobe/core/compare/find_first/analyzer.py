@@ -18,7 +18,7 @@ from collections import defaultdict
 import os
 from itertools import dropwhile, chain
 
-from msprobe.core.common.file_utils import save_json, make_dir
+from msprobe.core.common.file_utils import save_json, create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.compare.utils import compare_distributed_inner
@@ -271,7 +271,7 @@ class DiffAnalyzer:
 
     def _gen_analyze_info(self):
         if not os.path.exists(self._output_path):
-            make_dir(self._output_path)
+            create_directory(self._output_path)
         file_name = f'diff_analyze_{time.time_ns()}.json'
         result_file = os.path.join(self._output_path, file_name)
         result_content = defaultdict(list)
