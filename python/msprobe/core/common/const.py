@@ -414,6 +414,33 @@ class Const:
     TORCHAIR_GE_DATA_DIRECTORY = 'msprobe_ge_dump'
 
 
+class Data2DBConst:
+    BATCH_SIZE = 5000
+    FORWARD = "forward"
+    BACKWARD = "backward"
+    RECOMPUTE = "recompute"
+    PARAMETERS_GRAD = "parameters_grad"
+    METRICS = [FORWARD, BACKWARD, RECOMPUTE, PARAMETERS_GRAD]
+    DEFAULT_TAGS = ["Module", "Cell"]
+    ORDERED_STAT = ["norm", "max", "min", "mean"]
+    TAG_DEFAULT = "default"
+    TAG_INDEX = "index"
+    TAG_LAYER = "layer"
+    TAG_MODULE = "module"
+    TAG_FUNCTION = "function"
+    MAX_PARTITION = 10_000_000
+    MIN_PARTITION = 10
+    MAX_MICRO_STEP = 10000
+    MIN_MICRO_STEP = 1
+    SUPPORT_TYPE = ["torch.Tensor", "mindspore.Tensor", "mindtorch.Tensor"]
+    SUPPORT_DTYPE = [Const.FLOAT16,
+                     Const.FLOAT32,
+                     Const.BFLOAT16,
+                     Const.TORCH_FLOAT16,
+                     Const.TORCH_FLOAT32,
+                     Const.TORCH_BFLOAT16]
+
+
 class CompareConst:
     """
     Class for compare module const
