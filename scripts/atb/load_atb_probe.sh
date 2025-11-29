@@ -44,6 +44,15 @@ function get_output_option()
             output_path="${var#*=}"
         fi
     fi
+    left="${output_path%%/*}"
+    right="${output_path#*/}"
+    if [ -n "$left" ]; then
+        if [ "$left" == "$output_path" ]; then
+            output_path=$(realpath $output_path)
+        else
+            output_path="$(realpath $left)"/${right}
+        fi
+    fi
 }
 
 function get_config_option()
@@ -59,6 +68,15 @@ function get_config_option()
         if [[ "$2" =~ ^--config=.* ]]; then
             var="$2"
             config_path="${var#*=}"
+        fi
+    fi
+    left="${config_path%%/*}"
+    right="${config_path#*/}"
+    if [ -n "$left" ]; then
+        if [ "$left" == "$config_path" ]; then
+            config_path=$(realpath $config_path)
+        else
+            config_path="$(realpath $left)"/${right}
         fi
     fi
 }
