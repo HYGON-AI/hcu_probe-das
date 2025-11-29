@@ -24,7 +24,6 @@ import { NPU_PREFIX, UNMATCHED_COLOR, defaultColorSetting, defaultColorSelects }
 import request from '../../../utils/request';
 import { DarkModeMixin } from '../../../polymer/dark_mode_mixin';
 import { LegacyElementMixin } from '../../../polymer/legacy_element_mixin';
-import '../tf_filter_precision_error/index'
 import i18next from '../../../common/i18n';
 import { t } from 'i18next';
 import { PaperButtonElement } from '@polymer/paper-button';
@@ -209,8 +208,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                   ></vaadin-tooltip>
                   </div>
                   <div style="margin-left: auto; display: flex; gap: 8px;">
-                    <vaadin-icon icon="vaadin:funnel" on-click="_clickFilter"></vaadin-icon>
-                    <vaadin-icon icon="vaadin:cog-o" on-click="_clickSetting"></vaadin-icon>
                     <template is="dom-if" if="[[showSwitchIcon]]">
                       <vaadin-icon icon="vaadin:exchange" on-click="_selectedTabChanged"></vaadin-icon>
                     </template>
@@ -233,7 +230,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                       <div
                         style="width: 12px; height: 12px; background-color: [[item.0]]; margin-right: 8px; border: 1px solid gray;"
                       ></div>
-                      [[item.1.value]]
+                      [[item.1.accuracy_level]]
                     </div>
                   </template>
                 </div>
@@ -275,85 +272,8 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               </template>
             </div>
           </template>
-          <template is="dom-if" if="[[!_colorSetting]]">
-            <div class="toolbar" id="colorSetting-toolbar" style="width: auto; cursor: default;">
-              <span class="toggle-legend-text">
-                [[t('color_setting')]]
-                <div class="legend-clarifier">
-                  <paper-tooltip animation-delay="0" position="right" offset="0">
-                    <div class="custom-tooltip">
-                      <p>精度区间左闭右开</p>
-                      <p>精度区间至多5个档位</p>
-                      <p>区间内输入至多可保留小数点后5位</p>
-                      <p>不符合输入会被清空</p>
-                    </div>
-                  </paper-tooltip>
-                </div>
-              </span>
-              <div style="display: flex; margin-left: auto;">
-              <button on-click="_defaultSetting" style="margin-right: 7px;">
-                  <span>[[t('preset_configuration')]]</span>
-                </button>
-                <button on-click="_confirmAction" style="margin-right: 7px;">
-                  <span>[[t('confirm')]]</span>
-                </button>
-                <button on-click="_cancelAction">
-                  <span>[[t('cancel')]]</span>
-                </button>
-              </div>
-            </div>
-            <iron-collapse opened="[[_colors]]" class="legend-content" id="colorSetting-content" style="height: 150px; padding-top: 10px;">
-              <div style="display: flex; align-items: center">
-                <div>[[t('color_selection')]]</div>
-                <div id="left">[[t('left_interval')]]</div>
-                <div id="right">[[t('right_interval')]]</div>
-                <button id="addButton" on-click="_addOption">[[t('add_range')]]</button>
-              </div>
-              <!-- 动态生成的隐藏选项 -->
-              <template is="dom-repeat" items="[[colorSelects]]" as="item">
-                <div style="display: flex; align-items: center; margin-top: 2px;">
-                  <!-- 自定义颜色选择框 -->
-                  <div class="custom-select">
-                    <div class="select-box" style="background-color: [[item.key]];" on-click="_toggleDropdown">
-                      <span></span>
-                    </div>
-                    <div class="dropdown" hidden>
-                      <template is="dom-repeat" items="[[colorList]]" as="color">
-                        <div class="option" 
-                          style="background-color: [[color]]" 
-                          on-mouseover="_onOptionHover"
-                          on-mouseout="_outOptionHover" 
-                          on-click="_changeColor" 
-                          value="[[color]]">
-                        </div>
-                      </template>
-                    </div>
-                  </div>
-                  <div style="display: flex; margin-right: 10px;">
-                    <!-- 输入框 左 -->
-                    <input
-                      id="input-left"
-                      on-change="_validateInputs"
-                      style="display: inline-block; width: 60px; margin-right: 10px;"
-                      value="[[_formatValue(item.values.0)]]"
-                    />
-                    <!-- 输入框 右 -->
-                    <input
-                      id="input-right"
-                      on-change="_validateInputs"
-                      style="display: inline-block; width: 60px;"
-                      value="[[_formatValue(item.values.1)]]"
-                    />
-                  </div>
-                  <!-- 删除按钮 -->
-                  <button on-click="_removeOption">-</button>
-                </div>
-              </template>
-            </iron-collapse>
-          </template>
         </div>
       </template>
-      <tf-filter-precision-error t="[[t]]" filter-dialog-opened="{{filterDialogOpened}}" update-filter-data="{{updateFilterData}}" selection="[[selection]]"/>
     `;
 
   @property({ type: Object })
@@ -363,13 +283,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   _colorSetting: boolean = true; // 颜色设置按钮
 
   @property({ type: Boolean })
-  filterDialogOpened: boolean = false;
-
-  @property({ type: Boolean })
   isSingleGraph = false;
-
-  @property({ type: Boolean })
-  _overFlowLevel: boolean = true; // 溢出筛选图例
 
   @property({ type: Array })
   selectColor: any = [];
@@ -407,9 +321,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
 
   @property({ type: Array })
   colorSelects = defaultColorSelects;
-
-  @property({ type: Number, notify: true })
-  dropdownIndex;
 
   @property({ type: Object, notify: true })
   colors: any;
@@ -573,293 +484,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         theme: 'error',
       });
     }
-  }
-
-  toggleVisibility(): void {
-    this.set('_colorSetting', !this._colorSetting);
-  }
-
-  _clickFilter(event): void {
-    event.stopPropagation();
-    this.set('filterDialogOpened', true);
-  }
-
-  _clickSetting(event): void {
-    event.stopPropagation();
-    this.set('_colors', true);
-    this.toggleVisibility();
-  }
-
-  _defaultSetting(): void {
-    // 配置预设
-    this.colorSelects = defaultColorSetting;
-    this._confirmAction();
-    // 清空并且还原至临时配置结构
-    this.colorSelects = defaultColorSelects;
-  }
-
-  _cancelAction(): void {
-    this.toggleVisibility();
-  }
-
-  async _confirmAction(): Promise<void> {
-    const newColorsList = {};
-    const len = this.colorSelects.length;
-    if (len === 0) {
-      this.showDynamicDialog(this.t('configuration_items_missing'));
-      return;
-    }
-
-    // 遍历每一项，动态生成 newColorsList 对象
-    for (let i = 0; i < len; i++) {
-      const color = this.colorSelects[i].key;
-      const leftValue = this.colorSelects[i].values[0];
-      const rightValue = this.colorSelects[i].values[1];
-      // 检查每个组中的所有输入框是否都有值
-      if (isNaN(leftValue) || isNaN(rightValue) || color === 'NaN') {
-        this.showDynamicDialog(this.t('unconfigured_items_exist'));
-        return;
-      }
-      // 将每个 color 和其对应的 leftValue 和 rightValue 作为 value 数组，设置到 colors 对象中
-      newColorsList[color] = {
-        value: [leftValue, rightValue],
-        description:
-          '此节点所有输入输出的统计量相对误差，值越大代表测量值与标杆值的偏差越大，相对误差计算方式：|(测量值-标杆值)/标杆值|',
-      };
-    }
-    // 无匹配节点图例一定存在
-    newColorsList[UNMATCHED_COLOR] = {
-      value: this.unMatchedNodeName,
-      description: '对比过程中节点未匹配上',
-    };
-    const params = {
-      colors: JSON.stringify(newColorsList),
-      metaData: this.selection,
-    };
-    const { success, data, error } = await request({ url: 'updateColors', method: "POST", data: params });
-    if (success) {
-      // 更新颜色列表
-
-      this.set('colors', newColorsList);
-      let newColorSetChanged: any[] = [];
-      this.toggleVisibility();
-      Object.entries(newColorsList).forEach(([color, details]) => {
-        let detailsTyped = details as { value: string };
-        const colorset: any[] = [color, detailsTyped];
-        newColorSetChanged.push(colorset);
-      });
-      this.set('colorSetChanged', newColorSetChanged);
-    } else {
-      this.showDynamicDialog(error);
-    }
-  }
-
-  _toggleDropdown(event): void {
-    const selectBox = event.target.closest('.select-box'); // 获取最近的父元素 .select-box
-    const dropdown = selectBox.nextElementSibling; // 获取下一个兄弟元素，即 .dropdown
-    dropdown.hidden = !dropdown.hidden;
-    this.dropdownIndex = event.model.index;
-    function maybeCloseMenu(eventCloseMenu?: any): void {
-      if (eventCloseMenu?.composedPath().includes(selectBox)) {
-        return;
-      }
-      dropdown.hidden = true;
-      document.body.removeEventListener('click', maybeCloseMenu, {
-        capture: true,
-      });
-    }
-    if (!dropdown.hidden) {
-      document.body.addEventListener('click', maybeCloseMenu, {
-        capture: true,
-      });
-    }
-  }
-
-  _onOptionHover(event): void {
-    event.target.style.border = 'solid 1px black';
-  }
-
-  _outOptionHover(event): void {
-    event.target.style.border = '';
-  }
-
-  _changeColor(event): void {
-    const dropdown = event.target.closest('.dropdown');
-    const select = dropdown.previousElementSibling;
-    dropdown.hidden = true;
-    const selectedColor = event.target.value;
-    select.style.backgroundColor = selectedColor;
-    this.set(`colorSelects.${this.dropdownIndex}.key`, selectedColor);
-    this.notifyPath('colorSelects');
-    this._setColorList();
-  }
-
-  // 不显示NaN 而显示空
-  _formatValue(value): string {
-    return isNaN(value) ? '' : value;
-  }
-
-  _validateInputs(event: any): void {
-    const index = event.model.index;
-    const { values } = this.colorSelects[index];
-
-    // 显式定义 leftInputSet 和 rightInputSet 的类型为 number[]
-    const [leftInputSet, rightInputSet] = this.colorSelects.reduce<[number[], number[]]>(
-      (acc, item) => {
-        acc[0].push(item.values[0]);
-        acc[1].push(item.values[1]);
-        return acc;
-      },
-      [[], []], // 初始值为两个空数组
-    );
-
-    let value = parseFloat(event.target.value);
-    // 输入值验证 NaN值防护 限制输入范围
-    if (isNaN(value) || value < 0 || value > 1) {
-      this._clearInput(event, index);
-      return;
-    }
-
-    const valueStr = value.toString();
-
-    // 检查是否存在小数点
-    const parts = valueStr.split('.');
-
-    // 如果存在小数点且小数部分长度超过最大限制
-    if (parts.length > 1 && parts[1].length > 5) {
-      // 使用 toFixed 保留最多5位小数
-      value = parseFloat(value.toFixed(5));
-    }
-
-    const isLeftInput = event.target.id === 'input-left';
-    const otherSide = isLeftInput ? values[1] : values[0];
-    const [left, right] = isLeftInput ? [value, otherSide] : [otherSide, value];
-
-    // 检查输入值是否有效
-    const isLeftInputGreater = isLeftInput && left > right;
-    const isRightInputGreater = !isLeftInput && right < left;
-
-    if (isLeftInputGreater || isRightInputGreater) {
-      this._clearInput(event, index);
-      return;
-    }
-
-    // 检查输入值是否与其他区间冲突
-    const isConflict = this.colorSelects.some((item, i) => {
-      // 排除当前输入框
-      if (i === index) {
-        return false;
-      }
-
-      const [leftInput, rightInput] = item.values;
-      return (
-        (isLeftInput && left !== leftInput && left >= leftInput && left < rightInput) ||
-        (!isLeftInput && right !== rightInput && right > leftInput && right <= rightInput) ||
-        (isLeftInput && leftInputSet.includes(left)) ||
-        (!isLeftInput && rightInputSet.includes(right))
-      );
-    });
-
-    if (isConflict) {
-      this._clearInput(event, index);
-      return;
-    }
-
-    // 0！@#￥ 也可以被float转换为0，阻止这种情况发生
-    event.target.value = value;
-    // 更新值
-    this.set(`colorSelects.${index}.values.${isLeftInput ? 0 : 1}`, value);
-  }
-
-  _clearInput(event: any, index: number): void {
-    event.target.value = ''; // 清空输入框
-    this.set(`colorSelects.${index}.values.${event.target.id === 'input-left' ? 0 : 1}`, NaN); // 更新 colorSelects
-  }
-
-  _addOption(): void {
-    if (this.colorSelects.length < 5) {
-      const obj = {
-        key: 'NaN',
-        values: [NaN, NaN],
-      };
-      this.push('colorSelects', obj);
-    }
-    // 确保它在当前同步操作this.push()之后才执行.
-    this.async(() => {
-      this._setColorList();
-    }, 0);
-  }
-
-  _removeOption(event): void {
-    const index = event.model.index;
-
-    // 删除项
-    this.splice('colorSelects', index, 1);
-
-    // 恢复其他输入框的值
-    this.colorSelects.forEach((item, i) => {
-      if (i >= index) {
-        this.set(`colorSelects.${i}.values`, item.values);
-      }
-    });
-    this._setColorList();
-  }
-
-  _setColorList(): void {
-    let colorSelectElements = this.shadowRoot?.querySelectorAll('[id^="color-select"]');
-    let backgroundColors: string[] = [];
-    this.colorSelects.forEach((item) => {
-      // 获取计算后的背景色
-      const backgroundColor = item.key;
-      backgroundColors.push(backgroundColor);
-    });
-    let newColorList = this.standardColorList.filter((color) => !backgroundColors.includes(color));
-    this.set('colorList', newColorList);
-    // 清除选中，否则再次选中不同列表的同一顺位的值的时候不会触发on-change
-    this.async(() => {
-      colorSelectElements?.forEach((element) => {
-        if (element instanceof HTMLSelectElement) {
-          element.selectedIndex = -1;
-        }
-      });
-    }, 0);
-  }
-
-  _toggleOverflowLevelOpen(): void {
-    this.set('_overFlowLevel', !this._overFlowLevel);
-  }
-
-  showDynamicDialog(message): void {
-    // 检查是否已经有显示的对话框，避免重复添加
-    let existingDialog = this.shadowRoot?.querySelector('#dynamicDialog');
-    if (existingDialog) {
-      existingDialog.remove(); // 删除旧的对话框
-    }
-    // 创建新的对话框
-    const dialog = document.createElement('paper-dialog');
-    dialog.id = 'dynamicDialog';
-    // 添加标题
-    const title = document.createElement('h2');
-    title.textContent = 'Info';
-    this.titleElements.add(title);
-    dialog.appendChild(title);
-    // 添加提示内容
-    const content = document.createElement('div');
-    content.textContent = message;
-    dialog.appendChild(content);
-    // 添加按钮
-    const buttonContainer = document.createElement('div');
-    buttonContainer.classList.add('buttons');
-    const closeButton = document.createElement('paper-button');
-    closeButton.setAttribute('dialog-dismiss', '');
-    closeButton.textContent = 'close';
-    this.closeButtonElements.add(closeButton);
-    buttonContainer.appendChild(closeButton);
-    dialog.appendChild(buttonContainer);
-    // 添加到 shadow DOM
-    this.shadowRoot?.appendChild(dialog);
-    // 打开对话框
-    dialog.open();
   }
 
   async _toggleCheckbox(this, event): Promise<void> {
