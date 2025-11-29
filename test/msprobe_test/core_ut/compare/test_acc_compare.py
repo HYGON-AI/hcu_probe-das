@@ -243,6 +243,7 @@ def generate_dump_json(base_dir):
     data_path = os.path.join(base_dir, 'dump.json')
     data = {
         'task': 'statistics',
+        'framework': 'pytorch',
         'level': 'L1',
         'dump_data_dir': '',
         'data': {

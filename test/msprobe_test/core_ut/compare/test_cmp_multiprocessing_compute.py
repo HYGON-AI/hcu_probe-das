@@ -12,7 +12,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.acc_compare import ModeConfig
 from msprobe.core.compare.multiprocessing_compute import check_accuracy, CompareRealData, ComparisonResult
 from msprobe.pytorch.compare.pt_compare import read_real_data
-from test_acc_compare import generate_dump_json, generate_pt, generate_stack_json
+from .test_acc_compare import generate_dump_json, generate_pt, generate_stack_json
 
 data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
          'torch.float32', 'torch.float32', [2, 2], [2, 2], True, True,
