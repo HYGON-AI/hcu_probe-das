@@ -120,13 +120,13 @@ def run_api_offline(config, compare, api_name_set):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
-            skip_message = f"API {api_full_name} not support for run ut. SKIP."
+            skip_message = f"API {api_full_name} not support for acc_check. SKIP."
             compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
             record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         _, api_name = extract_basic_api_segments(api_full_name)
         if not api_name:
-            err_message = f"API {api_full_name} not support for run ut. SKIP."
+            err_message = f"API {api_full_name} not support for acc_check. SKIP."
             logger.error(err_message)
             compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
             record_skip_info(api_full_name, compare, compare_alg_results)
@@ -341,11 +341,11 @@ def _acc_check_parser(parser):
             setattr(namespace, self.dest, values)
 
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
-                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        help="<optional> set device id to acc_check, must be unique and in range 0-7",
                         default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
-                             "when acc_check is interrupted, enter the file path to continue run ut.",
+                             "when acc_check is interrupted, enter the file path to continue acc_check.",
                         required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
                         help="<optional> Whether to filter the api in the api_info_file.", required=False)
@@ -412,8 +412,8 @@ def acc_check_command(args):
         checker_config = CheckerConfig()
     
     if not args.api_info_file:
-        logger.error("Please provide api_info_file for offline run ut.")
-        raise Exception("Please provide api_info_file for offline run ut.")
+        logger.error("Please provide api_info_file for offline acc_check.")
+        raise Exception("Please provide api_info_file for offline acc_check.")
 
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)

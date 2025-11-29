@@ -55,7 +55,7 @@ def multi_add_api_accuracy_checker_argument(parser):
                         help="<optional> Save compare failed api output.", required=False)
     #以下属于多线程参数
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
-                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        help="<optional> set device id to acc_check, must be unique and in range 0-7",
                         default=[0], required=False, action=UniqueDeviceAction)
 
 

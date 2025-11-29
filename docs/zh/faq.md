@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
    由于这类 API 在 CPU 侧存在精度先提升后下降的操作，因此这类 API 的有效性的参考价值有限。
 
-3. run ut 过程中出现报错：ERROR: Got unsupported ScalarType BFloat16。
+3. acc_check 过程中出现报错：ERROR: Got unsupported ScalarType BFloat16。
 
    答：请使用最新版本的工具。
 
