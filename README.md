@@ -58,6 +58,16 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
 
+### ATB推理场景
+
+#### [数据采集](docs/zh/dump/atb_data_dump_instruct.md)
+
+用于ATB模型运行过程中的精度数据采集，包括模型结构信息、输入输出Tensor的真实数据或统计量数据。并且支持在模型运行过程中修改dump配置文件，实现动态dump。
+
+#### [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)
+
+用于比对采集到的ATB模型精度数据，包括真实数据比对与统计量数据比对，帮助定位精度问题发生点。
+
 ### PyTorch训练场景
 
 #### [训练前配置检查](docs/zh/config_check_instruct.md)
