@@ -85,7 +85,7 @@ def get_validated_result_csv_path(result_csv_path, mode):
         result_csv_name = os.path.basename(validated_result_csv_path)
         pattern = r"^accuracy_checking_result_\d{14}\.csv$"
         if not re.match(pattern, result_csv_name):
-            raise ValueError("When continue run ut, please do not modify the result csv name.")
+            raise ValueError("When continue acc_check, please do not modify the result csv name.")
     return validated_result_csv_path
 
 
@@ -267,7 +267,7 @@ def is_unsupported_api(api_name, is_overflow_check=False):
     unsupport_type_list = [Const.DISTRIBUTED, Const.MINDSPEED_API_TYPE_PREFIX]
     flag = (split_name in unsupport_type_list) or (is_overflow_check and split_name == Const.NPU)
     if flag:
-        logger.info(f"{split_name} api is not supported for run ut. SKIP.")
+        logger.info(f"{split_name} api is not supported for acc_check. SKIP.")
     return flag
 
 

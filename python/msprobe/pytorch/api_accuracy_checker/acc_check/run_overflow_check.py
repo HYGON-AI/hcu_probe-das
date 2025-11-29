@@ -156,7 +156,7 @@ def _run_overflow_check_parser(parser):
                         required=True)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", help="<optional> whether to turn on jit compile",
                         default=False, required=False)
-    parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set NPU device id to run ut",
+    parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set NPU device id to acc_check",
                         default=0, required=False)
 
 
