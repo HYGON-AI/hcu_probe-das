@@ -15,6 +15,7 @@ from msprobe.core.monitor.utils import get_output_base_dir, filter_special_chars
 from msprobe.pytorch.monitor.utils import get_nan_tensor, get_param_struct
 from msprobe.pytorch.common.utils import is_recomputation
 
+
 class TestMonitorUtils(unittest.TestCase):
     def test_get_nan_tensor(self):
         result = get_nan_tensor()
@@ -304,7 +305,7 @@ class TestCoreMonitorUtils(unittest.TestCase):
 
     def test_invalid_orders(self):
         with self.assertRaises(TypeError) as cm:
-            validate_recording_l2_features("xx")
+            validate_sa_order("xx")
             self.assertEqual(str(cm.exception),
                              f'sa_order must be in {MonitorConst.SA_ORDERS}, got xx')
 

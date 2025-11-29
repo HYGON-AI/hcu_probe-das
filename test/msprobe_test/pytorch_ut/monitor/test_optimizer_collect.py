@@ -1,5 +1,5 @@
 import unittest
-from collections import defaultdict
+from types import SimpleNamespace
 from unittest.mock import Mock, patch, MagicMock
 
 import torch
@@ -57,7 +57,99 @@ class TestOptimizerMon(unittest.TestCase):
         self.monitor.update_heatmap_visualizer = {'param1': Mock(), 'param2': Mock()}
         self.monitor.ratio_heatmap_visualizer = {'param1': Mock(), 'param2': Mock()}
 
-    def test_fetch_mv(self):
+    def test_get_single_state(self):
+        optimizer_mon = OptimizerMon(None)
+        torch_opt = Mock()
+        torch_opt.param_to_cpu_states_map = {"a": 1}
+        optimizer_mon._get_single_state(torch_opt)
+        assert optimizer_mon.state == {"a": 1}
+
+        optimizer_mon = OptimizerMon(None)
+        torch_opt = Mock()
+        del torch_opt.param_to_cpu_states_map  # 强制没有上一个属性
+        torch_opt.state = {"b": 2}
+        optimizer_mon._get_single_state(torch_opt)
+        assert optimizer_mon.state == {"b": 2}
+
+        optimizer_mon = OptimizerMon(None)
+        torch_opt = Mock()
+        del torch_opt.param_to_cpu_states_map
+        del torch_opt.state
+        inner_opt = Mock()
+        inner_opt.state = {"c": 3}
+        torch_opt.optimizer = inner_opt
+        optimizer_mon._get_single_state(torch_opt)
+        assert optimizer_mon.state == {"c": 3}
+
+    def test_get_state(self):
+        optimizer_mon = OptimizerMon(None)
+        torch_opt = SimpleNamespace()
+        optimizer_mon.get_state(torch_opt)
+
+        torch_opt = SimpleNamespace()
+        opt1 = SimpleNamespace(state={"a": 1})
+        opt2 = SimpleNamespace(state={"b": 2})
+        torch_opt.chained_optimizers = [opt1, opt2]
+        optimizer_mon.get_state(torch_opt)
+
+    def test_fetch_grad(self):
+        optimizer_mon = OptimizerMon(None)
+        monitor = Mock()
+        params2name = {}
+        result = optimizer_mon.fetch_grad(monitor, params2name)
+        self.assertEqual(result, {})
+
+        def _mock_param(numel, grad_tensor):
+            p = Mock()
+            p.numel.return_value = numel
+            p.grad = grad_tensor
+            p.main_grad = grad_tensor
+            return p
+
+        monitor = Mock()
+        p = _mock_param(3, torch.tensor([1., 2., 3.]))
+        monitor.fp16_to_fp32_param = {p: p}
+        monitor.duplicate_param = {"p": True}
+        params2name = {p: "p"}
+        result = optimizer_mon.fetch_grad(monitor, params2name)
+        self.assertEqual(result, {})
+
+        # param 映射 fp16->fp32
+        monitor = Mock()
+        monitor.duplicate_param = {"p1": False, "p2": False}
+        p1 = _mock_param(4, torch.tensor([10., 20., 30., 40.]))
+        p2 = _mock_param(6, torch.tensor([1., 2., 3., 4., 5., 6.]))
+        optimizer_mon.fp16_to_fp32_param = {
+            p1: p1,  # only p1 in this
+        }
+        params2name = {
+            p1: "p1",
+            p2: "p2"
+        }
+        result = optimizer_mon.fetch_grad(monitor, params2name)
+        self.assertEqual(len(result), 1)
+        value = next(iter(result.values()))
+        self.assertTrue(torch.equal(value, p1.grad))
+
+        p = _mock_param(3, torch.tensor([1., 2., 3.]))
+        optimizer_mon.fp16_to_fp32_param = {p: p}
+        monitor.duplicate_param = {"p": True}
+        params2name = {p: "p"}
+        result = optimizer_mon.fetch_grad(monitor, params2name)
+        self.assertEqual(result, {})
+
+        p = _mock_param(4, None)
+        optimizer_mon.fp16_to_fp32_param = {p: p}
+        params2name = {p: "p1"}
+        result = optimizer_mon.fetch_grad(monitor, params2name)
+        self.assertEqual(result, {})  # None → 跳过
+
+    def test_map_fp16_to_fp32_param(self):
+        optimizer_mon = OptimizerMon(None)
+        torch_opt = Mock()
+        optimizer_mon.map_fp16_to_fp32_param(torch_opt)
+
+    def test_fetch_mv_blank(self):
         optimizer_mon = OptimizerMon(None)
         res = optimizer_mon.fetch_mv(None, {})
         self.assertEqual(res.exp_avg, {})
@@ -75,6 +167,17 @@ class TestOptimizerMon(unittest.TestCase):
         self.optimizer_mon = OptimizerMon(None)
         result = self.optimizer_mon.fetch_mv(self.monitor, self.params2name)
         self.assertIsInstance(result, MVResult)
+
+    def test_patch_grad_sync(self):
+        optimizer_mon = OptimizerMon(None)
+        monitor = Mock()
+        optimizer_mon.patch_grad_sync(monitor)
+
+    def test_restore_grad_sync(self):
+        optimizer_mon = OptimizerMon(None)
+        monitor = Mock()
+        monitor.enable_megatron = False
+        optimizer_mon.patch_grad_sync(monitor)
 
 
 class TestMixPrecisionOptimizerMon(unittest.TestCase):

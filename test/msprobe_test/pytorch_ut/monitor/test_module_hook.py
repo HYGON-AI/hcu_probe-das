@@ -275,6 +275,12 @@ class TestParamIsDataParallelDuplicate(unittest.TestCase):
 
 class TestContext(unittest.TestCase):
 
+    def test_module_hook_context(self):
+        module_ctx = ModuleHookContext("linear")
+        module_ctx.reset()
+        self.assertEqual(module_ctx.actv, {})
+        self.assertEqual(module_ctx.actvgrad, [])
+
     def test_feature_context(self):
         feature_ctx = FeatureHookContext("linear")
         feature_ctx.reset()
