@@ -15,26 +15,9 @@
 
 from collections import defaultdict
 
-from msprobe.core.common.const import Const, Data2DBConst
+from msprobe.core.common.const import Data2DBConst
 from msprobe.core.common.db_manager import DBManager, check_identifier_safety
 from msprobe.core.common.log import logger
-
-
-def parse_tensor_target(metric_type, tensor_type, tensor_idx):
-    """根据tensor类型和索引生成target后缀"""
-    if metric_type in [Data2DBConst.FORWARD, Data2DBConst.RECOMPUTE]:
-        if tensor_type == Const.INPUT_ARGS:
-            return f".input.{tensor_idx}"
-        elif tensor_type == Const.OUTPUT:
-            return f".output.{tensor_idx}"
-        elif tensor_type == Const.PARAMS_GRAD:
-            return f".parameters.{tensor_idx}"
-    elif metric_type == Data2DBConst.BACKWARD:
-        if tensor_type == Const.INPUT:
-            return f".input.{tensor_idx}"
-        elif tensor_type == Const.OUTPUT:
-            return f".output.{tensor_idx}"
-    return ""
 
 
 def parse_full_key(full_key):
