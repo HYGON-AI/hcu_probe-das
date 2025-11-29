@@ -1,0 +1,15 @@
+TopLayer:
+  network_with_loss: module
+
+VocabParallelEmbedding:
+  logical_or: __or__
+  reduce_from_mp_region.all_reduce: all_reduce
+
+ParallelTransformerLayer:
+  attention: self_attention
+
+ParallelAttention:
+  flash_attention_score: core_attention_flash.npu_fusion_attention
+
+FusedRMSNorm:
+  RmsNorm: npu_rms_norm

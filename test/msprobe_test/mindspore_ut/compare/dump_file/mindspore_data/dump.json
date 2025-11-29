@@ -1,0 +1,530 @@
+{
+    "task": "statistics",
+    "level": "mix",
+    "framework": "mindspore",
+    "dump_data_dir": null,
+    "data": {
+        "Tensor.__add__.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int32",
+                    "shape": [
+                        5,
+                        2
+                    ],
+                    "Max": 3430.0,
+                    "Min": 0.0,
+                    "Mean": 926.5,
+                    "Norm": 4977.4384765625
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int64",
+                    "shape": [
+                        2
+                    ],
+                    "Max": 4096.0,
+                    "Min": 1.0,
+                    "Mean": 2048.5,
+                    "Norm": 4096.0
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int64",
+                    "shape": [
+                        5,
+                        2
+                    ],
+                    "Max": 7526.0,
+                    "Min": 1.0,
+                    "Mean": 2974.999755859375,
+                    "Norm": 13585.2802734375
+                }
+            ]
+        },
+        "Tensor.__bool__.1.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Bool",
+                    "shape": [],
+                    "Max": false,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "bool",
+                    "value": false
+                }
+            ]
+        },
+        "Tensor.__add__.1.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int64",
+                    "shape": [],
+                    "Max": 423,
+                    "Min": 423,
+                    "Mean": 423,
+                    "Norm": 423
+                },
+                {
+                    "type": "int",
+                    "value": 1
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int64",
+                    "shape": [],
+                    "Max": 424,
+                    "Min": 424,
+                    "Mean": 424,
+                    "Norm": 424
+                }
+            ]
+        },
+        "Mint.logical_or.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": false,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null
+                }
+            ]
+        },
+        "Distributed.all_reduce.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.0002651214599609375,
+                    "Norm": 2352.0
+                }
+            ],
+            "input_kwargs": {
+                "group": {
+                    "type": "str",
+                    "value": "tp-0-1-2-3"
+                }
+            },
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0
+                },
+                null
+            ]
+        },
+        "Cell.network_with_loss.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Int32",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": 165558.0,
+                    "Min": 0.0,
+                    "Mean": 16050.638671875,
+                    "Norm": 2257767.75
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0
+                }
+            ]
+        },
+        "Primitive.norm.RmsNorm.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 2.5625,
+                    "Min": -2.640625,
+                    "Mean": 0.0002841949462890625,
+                    "Norm": 1256.0
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        6144
+                    ],
+                    "Max": 1.0,
+                    "Min": 1.0,
+                    "Mean": 1.0,
+                    "Norm": 78.5
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 5.125,
+                    "Min": -5.25,
+                    "Mean": 0.0005645751953125,
+                    "Norm": 2512.0
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Float32",
+                    "shape": [
+                        1024,
+                        1,
+                        1
+                    ],
+                    "Max": 2.0491626262664795,
+                    "Min": 1.9447283744812012,
+                    "Mean": 1.9983034133911133,
+                    "Norm": 63.948543548583984
+                }
+            ]
+        },
+        "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0": {
+            "input": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 4.5299530029296875e-05,
+                    "Min": -4.935264587402344e-05,
+                    "Mean": -6.781192496418953e-09,
+                    "Norm": 0.0126953125
+                }
+            ],
+            "output": [
+                null
+            ]
+        },
+        "Cell.network_with_loss.module.language_model.encoder.layers.0.input_norm.FusedRMSNorm.backward.0": {
+            "input": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 1.9311904907226562e-05,
+                    "Min": -1.7881393432617188e-05,
+                    "Mean": -7.741618901491165e-09,
+                    "Norm": 0.00201416015625
+                }
+            ],
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 3.838539123535156e-05,
+                    "Min": -3.552436828613281e-05,
+                    "Mean": -1.548323780298233e-08,
+                    "Norm": 0.0040283203125
+                }
+            ]
+        },
+        "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": {
+            "input_args": [],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 0.421875,
+                    "Min": -0.443359375,
+                    "Mean": -0.0002346038818359375,
+                    "Norm": 50.75
+                },
+                null
+            ]
+        },
+        "Mint.cos.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 4095.0,
+                    "Min": 0.0,
+                    "Mean": 238.66024780273438,
+                    "Norm": 427910.46875
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 1.0000001192092896,
+                    "Min": -1.0000001192092896,
+                    "Mean": 0.13587358593940735,
+                    "Norm": 528.9301147460938
+                }
+            ]
+        },
+        "Functional.flash_attention_score.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.671875,
+                    "Min": -3.765625,
+                    "Mean": -0.00072479248046875,
+                    "Norm": 1744.0
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.484375,
+                    "Min": -3.0625,
+                    "Mean": -0.00115966796875,
+                    "Norm": 1728.0
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.28125,
+                    "Min": -3.234375,
+                    "Mean": -0.001861572265625,
+                    "Norm": 1744.0
+                },
+                {
+                    "type": "int",
+                    "value": 12
+                }
+            ],
+            "input_kwargs": {
+                "attn_mask": {
+                    "type": "mindspore.Tensor",
+                    "dtype": "UInt8",
+                    "shape": [
+                        1,
+                        1,
+                        4096,
+                        4096
+                    ],
+                    "Max": 1.0,
+                    "Min": 0.0,
+                    "Mean": 0.876311182975769,
+                    "Norm": 3834.326904296875
+                },
+                "scalar_value": {
+                    "type": "float",
+                    "value": 0.08838834764831843
+                },
+                "pre_tokens": {
+                    "type": "int",
+                    "value": 65536
+                },
+                "next_tokens": {
+                    "type": "int",
+                    "value": 0
+                },
+                "input_layout": {
+                    "type": "str",
+                    "value": "SBH"
+                }
+            },
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 2.734375,
+                    "Min": -2.578125,
+                    "Mean": -0.001373291015625,
+                    "Norm": 266.0
+                }
+            ]
+        },
+        "Functional.flash_attention_score.0.backward": {
+            "input": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 1.5139579772949219e-05,
+                    "Min": -1.5854835510253906e-05,
+                    "Mean": -9.313225746154785e-09,
+                    "Norm": 0.0064697265625
+                }
+            ],
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 1.3634562492370605e-06,
+                    "Min": -1.3485550880432129e-06,
+                    "Mean": -3.765308065339923e-10,
+                    "Norm": 0.000286102294921875
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.11434268951416e-06,
+                    "Min": -2.8312206268310547e-06,
+                    "Mean": 6.661338147750939e-14,
+                    "Norm": 0.000244140625
+                },
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "BFloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 2.181529998779297e-05,
+                    "Min": -2.205371856689453e-05,
+                    "Mean": -9.313225746154785e-09,
+                    "Norm": 0.001922607421875
+                },
+                null
+            ]
+        }
+    }
+}

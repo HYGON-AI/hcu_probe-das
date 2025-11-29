@@ -1,0 +1,701 @@
+{
+    "task": "statistics",
+    "level": "mix",
+    "framework": "pytorch",
+    "dump_data_dir": null,
+    "data": {
+        "Tensor.__add__.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [],
+                    "Max": 423,
+                    "Min": 423,
+                    "Mean": 423,
+                    "Norm": 423,
+                    "requires_grad": false
+                },
+                {
+                    "type": "int",
+                    "value": 1
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [],
+                    "Max": 424,
+                    "Min": 424,
+                    "Mean": 424,
+                    "Norm": 424,
+                    "requires_grad": false
+                }
+            ]
+        },
+        "Tensor.__add__.1.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [],
+                    "Max": 423,
+                    "Min": 423,
+                    "Mean": 423,
+                    "Norm": 423,
+                    "requires_grad": false
+                },
+                {
+                    "type": "int",
+                    "value": 1
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [],
+                    "Max": 424,
+                    "Min": 424,
+                    "Mean": 424,
+                    "Norm": 424,
+                    "requires_grad": false
+                }
+            ]
+        },
+        "Tensor.__or__.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": false,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                }
+            ]
+        },
+        "Distributed.all_reduce.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.0002651214599609375,
+                    "Norm": 2352.0,
+                    "requires_grad": true
+                }
+            ],
+            "input_kwargs": {
+                "group": null
+            },
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                },
+                null
+            ]
+        },
+        "Module.module.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.int64",
+                    "shape": [
+                        1,
+                        4096
+                    ],
+                    "Max": 165558.0,
+                    "Min": 0.0,
+                    "Mean": 16050.638671875,
+                    "Norm": 2257767.75,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1,
+                        4096,
+                        6144
+                    ],
+                    "Max": 2.6875,
+                    "Min": -2.640625,
+                    "Mean": 0.000316619873046875,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                }
+            ]
+        },
+        "NPU.npu_rms_norm.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 2.5625,
+                    "Min": -2.640625,
+                    "Mean": 0.0002841949462890625,
+                    "Norm": 1256.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        6144
+                    ],
+                    "Max": 1.0,
+                    "Min": 1.0,
+                    "Mean": 1.0,
+                    "Norm": 78.5,
+                    "requires_grad": true
+                }
+            ],
+            "input_kwargs": {
+                "epsilon": {
+                    "type": "float",
+                    "value": 1e-05
+                }
+            },
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 5.125,
+                    "Min": -5.25,
+                    "Mean": 0.0005645751953125,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        1024,
+                        1,
+                        1
+                    ],
+                    "Max": 2.0491626262664795,
+                    "Min": 1.9447283744812012,
+                    "Mean": 1.9983034133911133,
+                    "Norm": 63.948543548583984,
+                    "requires_grad": false
+                }
+            ]
+        },
+        "Module.module.module.language_model.encoder.layers.0.input_norm.RMSNorm.forward.0": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 2.5625,
+                    "Min": -2.640625,
+                    "Mean": 0.0002841949462890625,
+                    "Norm": 1256.0,
+                    "requires_grad": true
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 5.125,
+                    "Min": -5.25,
+                    "Mean": 0.0005645751953125,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                }
+            ]
+        },
+        "Module.module.module.language_model.encoder.layers.0.self_attention.ParallelAttention.forward.0": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 5.125,
+                    "Min": -5.25,
+                    "Mean": 0.0005645751953125,
+                    "Norm": 2512.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        1,
+                        4096,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {
+                "inference_params": null,
+                "rotary_pos_emb": {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 4095.0,
+                    "Min": 0.0,
+                    "Mean": 238.66024780273438,
+                    "Norm": 427910.46875,
+                    "requires_grad": false
+                }
+            },
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 0.421875,
+                    "Min": -0.443359375,
+                    "Mean": -0.0002346038818359375,
+                    "Norm": 50.75,
+                    "requires_grad": true
+                },
+                null
+            ]
+        },
+        "Module.module.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 2.5625,
+                    "Min": -2.640625,
+                    "Mean": 0.0002841949462890625,
+                    "Norm": 1256.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        1,
+                        4096,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {
+                "encoder_output": null,
+                "enc_dec_attn_mask": null,
+                "inference_params": null,
+                "rotary_pos_emb": {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 4095.0,
+                    "Min": 0.0,
+                    "Mean": 238.66024780273438,
+                    "Norm": 427910.46875,
+                    "requires_grad": false
+                },
+                "retriever_input": null,
+                "retriever_output": null,
+                "retriever_attn_mask": null
+            },
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        1024,
+                        1,
+                        6144
+                    ],
+                    "Max": 2.46875,
+                    "Min": -2.6875,
+                    "Mean": -0.000438690185546875,
+                    "Norm": 1280.0,
+                    "requires_grad": true
+                }
+            ]
+        },
+        "Torch.cos.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 4095.0,
+                    "Min": 0.0,
+                    "Mean": 238.66024780273438,
+                    "Norm": 427910.46875,
+                    "requires_grad": false
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        4096,
+                        1,
+                        1,
+                        128
+                    ],
+                    "Max": 1.0000001192092896,
+                    "Min": -1.0000001192092896,
+                    "Mean": 0.13587358593940735,
+                    "Norm": 528.9301147460938,
+                    "requires_grad": false
+                }
+            ]
+        },
+        "NPU.npu_fusion_attention.0.forward": {
+            "input_args": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.671875,
+                    "Min": -3.765625,
+                    "Mean": -0.00072479248046875,
+                    "Norm": 1744.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.484375,
+                    "Min": -3.0625,
+                    "Mean": -0.00115966796875,
+                    "Norm": 1728.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.28125,
+                    "Min": -3.234375,
+                    "Mean": -0.001861572265625,
+                    "Norm": 1744.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "int",
+                    "value": 12
+                },
+                {
+                    "type": "str",
+                    "value": "SBH"
+                }
+            ],
+            "input_kwargs": {
+                "pse": null,
+                "padding_mask": null,
+                "atten_mask": {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bool",
+                    "shape": [
+                        1,
+                        1,
+                        4096,
+                        4096
+                    ],
+                    "Max": true,
+                    "Min": false,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": false
+                },
+                "scale": {
+                    "type": "float",
+                    "value": 0.08838834764831843
+                },
+                "pre_tockens": {
+                    "type": "int",
+                    "value": 65536
+                },
+                "next_tockens": {
+                    "type": "int",
+                    "value": 0
+                },
+                "keep_prob": {
+                    "type": "float",
+                    "value": 1.0
+                },
+                "inner_precise": {
+                    "type": "int",
+                    "value": 0
+                },
+                "actual_seq_qlen": null,
+                "actual_seq_kvlen": null,
+                "sparse_mode": {
+                    "type": "int",
+                    "value": 0
+                }
+            },
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 2.734375,
+                    "Min": -2.578125,
+                    "Mean": -0.001373291015625,
+                    "Norm": 266.0,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        1,
+                        12,
+                        4096,
+                        8
+                    ],
+                    "Max": 2.60323166847229,
+                    "Min": -0.8802953958511353,
+                    "Mean": 1.3589274883270264,
+                    "Norm": 870.7459716796875,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.float32",
+                    "shape": [
+                        1,
+                        12,
+                        4096,
+                        8
+                    ],
+                    "Max": 546.2620849609375,
+                    "Min": 1.0,
+                    "Mean": 132.59361267089844,
+                    "Norm": 102677.125,
+                    "requires_grad": true
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        0
+                    ],
+                    "Max": null,
+                    "Min": null,
+                    "Mean": null,
+                    "Norm": null,
+                    "requires_grad": true
+                },
+                {
+                    "type": "int",
+                    "value": 187651464146080
+                },
+                {
+                    "type": "int",
+                    "value": 281472727719936
+                },
+                {
+                    "type": "int",
+                    "value": 201326592
+                }
+            ]
+        },
+        "NPU.npu_fusion_attention.0.backward": {
+            "input": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 1.5139579772949219e-05,
+                    "Min": -1.5854835510253906e-05,
+                    "Mean": -9.313225746154785e-09,
+                    "Norm": 0.0064697265625,
+                    "requires_grad": false
+                },
+                null,
+                null,
+                null
+            ],
+            "output": [
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 1.3634562492370605e-06,
+                    "Min": -1.3485550880432129e-06,
+                    "Mean": -3.765308065339923e-10,
+                    "Norm": 0.000286102294921875,
+                    "requires_grad": false
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 3.11434268951416e-06,
+                    "Min": -2.8312206268310547e-06,
+                    "Mean": 6.661338147750939e-14,
+                    "Norm": 0.000244140625,
+                    "requires_grad": false
+                },
+                {
+                    "type": "torch.Tensor",
+                    "dtype": "torch.bfloat16",
+                    "shape": [
+                        4096,
+                        1,
+                        1536
+                    ],
+                    "Max": 2.181529998779297e-05,
+                    "Min": -2.205371856689453e-05,
+                    "Mean": -9.313225746154785e-09,
+                    "Norm": 0.001922607421875,
+                    "requires_grad": false
+                },
+                null
+            ]
+        }
+    }
+}
