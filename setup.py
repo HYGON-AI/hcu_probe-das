@@ -113,10 +113,14 @@ class CustomBdistWheelCommand(bdist_wheel):
         if is_frontend_built():
             # 包含所有包
             self.distribution.packages = packages
+            # 设置包含tb_graph_ascend的标志
+            self.distribution.with_tb_graph_ascend = True
         else:
             # 只包含 msprobe 相关的包，排除 tb_graph_ascend
             self.distribution.packages = [pkg for pkg in packages if not pkg.startswith('tb_graph_ascend')]
-
+            # 设置不包含tb_graph_ascend的标志
+            self.distribution.with_tb_graph_ascend = False
+            
         super().run()
 
 
@@ -198,6 +202,17 @@ tb_packages = [
 
 packages.extend(tb_packages)
 
+# 检查前端是否已构建，决定entry_points内容
+entry_points_dict = {
+    'console_scripts': ['msprobe=msprobe.msprobe:main'],
+}
+
+# 只有在tb_graph_ascend前端已构建时才注册tensorboard插件
+if is_frontend_built():
+    entry_points_dict['tensorboard_plugins'] = [
+        'graph_ascend = tb_graph_ascend.server.plugin:GraphsPlugin',
+    ]
+
 setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
@@ -251,10 +266,5 @@ setuptools.setup(
         'bdist_wheel': CustomBdistWheelCommand,
         'build_tb_graph_ascend': BuildTbGraphAscendCommand,  # 新增自定义命令
     },
-    entry_points={
-        'console_scripts': ['msprobe=msprobe.msprobe:main'],
-        'tensorboard_plugins': [
-            'graph_ascend = tb_graph_ascend.server.plugin:GraphsPlugin',
-        ],
-    },
+    entry_points=entry_points_dict,
 )
