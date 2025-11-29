@@ -17,6 +17,7 @@ import os
 import shutil
 import random
 import unittest
+from unittest.mock import MagicMock, patch
 import torch
 import numpy as np
 import torch.nn as nn
@@ -24,7 +25,8 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 
 from msprobe.pytorch import TrainerMon
 from msprobe.core.common.const import MonitorConst
-from msprobe.pytorch.monitor.csv2tb import parse_step_fn, csv2tensorboard_by_step
+from msprobe.pytorch.monitor.csv2tb import parse_step_fn, csv2tensorboard_by_step, write_step, update_dict, \
+    csv2tb_by_step_work, check_data_type_list, all_data_type_list
 from msprobe.pytorch.dump.api_dump.api_register import get_api_register
 
 get_api_register().restore_all_api()
@@ -43,6 +45,135 @@ def seed_all(seed=1234, mode=False):
 
 
 seed_all()
+
+
+class TestCSV2Tensorboard(unittest.TestCase):
+
+    @patch("msprobe.pytorch.monitor.csv2tb.os.path.exists")
+    @patch("msprobe.pytorch.monitor.csv2tb.remove_path")
+    @patch("msprobe.pytorch.monitor.csv2tb.SummaryWriter")
+    def test_write_step(self, mock_writer_cls, mock_remove_path, mock_path_exists):
+        # 模拟路径已存在
+        mock_path_exists.return_value = True
+
+        mock_writer = MagicMock()
+        mock_writer_cls.return_value = mock_writer
+
+        output_dirpath = "/tmp/output"
+        rank = 0
+        data_type = "test_data"
+        parse_step_result = {
+            "vpp1": {
+                2: {"op1": 20, "op2": 200},
+                1: {"op1": 10, "op2": 100},  # steps 打乱顺序，测试 sort
+            },
+            "vpp2": {
+                1: {"op3": 300}
+            }
+        }
+
+        write_step(output_dirpath, parse_step_result, rank, data_type)
+
+        # 检查 remove_path 被调用
+        mock_remove_path.assert_called_once()
+
+        # 检查 SummaryWriter 被创建
+        tb_path = f"/tmp/output/rank{rank}/{data_type}"
+        mock_writer_cls.assert_called_once_with(tb_path)
+
+        # 检查 add_scalar 调用顺序
+        expected_calls = [
+            # vpp1 step 1
+            ("vpp1/op1", 10, 1),
+            ("vpp1/op2", 100, 1),
+            # vpp1 step 2
+            ("vpp1/op1", 20, 2),
+            ("vpp1/op2", 200, 2),
+            # vpp2 step 1
+            ("vpp2/op3", 300, 1)
+        ]
+        actual_calls = [call.args for call in mock_writer.add_scalar.call_args_list]
+        self.assertEqual(actual_calls, expected_calls)
+
+        # 检查 close 被调用
+        mock_writer.close.assert_called_once()
+
+    def test_update_dict(self):
+        d1 = {"a": 1}
+        d2 = {"b": 2}
+        result = update_dict(d1, d2)
+        self.assertEqual(result, {"a": 1, "b": 2})
+        # d1 本身也被更新
+        self.assertEqual(d1, {"a": 1, "b": 2})
+
+        d1 = {"a": 1}
+        d2 = {"a": 2}  # 重复 key
+        with self.assertRaises(Exception) as ctx:
+            update_dict(d1, d2)
+        self.assertIn("duplicate key: a", str(ctx.exception))
+
+        d1 = {"a": {"x": 1}}
+        d2 = {"a": {"y": 2}}
+        result = update_dict(d1, d2)
+        self.assertEqual(result, {"a": {"x": 1, "y": 2}})
+
+        d1 = {"a": {"x": 1}}
+        d2 = {"a": {"x": 2}}  # 嵌套 key 冲突
+        with self.assertRaises(Exception) as ctx:
+            update_dict(d1, d2)
+        self.assertIn("Error updating nested dict failed at key 'a'", str(ctx.exception))
+        self.assertIn("duplicate key: x", str(ctx.exception))
+
+        d1 = {"a": {"b": {"c": 1}}}
+        d2 = {"a": {"b": {"d": 2}}}
+        result = update_dict(d1, d2)
+        self.assertEqual(result, {"a": {"b": {"c": 1, "d": 2}}})
+
+    @patch("msprobe.pytorch.monitor.csv2tb.write_step")
+    @patch("msprobe.pytorch.monitor.csv2tb.update_dict")
+    @patch("msprobe.pytorch.monitor.csv2tb.parse_step_fn")
+    @patch("msprobe.pytorch.monitor.csv2tb.os.listdir")
+    def test_csv2tb_by_step_work(self, mock_listdir, mock_parse_step, mock_update_dict, mock_write_step):
+        # 模拟目录和文件
+        target_output_dirs = [{"path": "/tmp/dir1", "rank": 0}]
+        data_type_list = ["type1"]
+        # 模拟 os.listdir 返回文件名
+        mock_listdir.return_value = ["type1_1-1.csv", "other.txt"]
+        # parse_step_fn 返回示例 dict
+        mock_parse_step.return_value = {"step1": {"op1": 1}}
+        # update_dict 直接返回 parse_step_result
+        mock_update_dict.side_effect = lambda d1, d2: {**d1, **d2}
+        # 调用函数
+        csv2tb_by_step_work(target_output_dirs, "/tmp/output", data_type_list)
+        # 检查 os.listdir 被调用
+        mock_listdir.assert_called_once_with("/tmp/dir1")
+
+    def test_check_data_type_list(self):
+        # 输入 None 应该返回 None 并打印日志
+        result = check_data_type_list(None)
+        self.assertIsNone(result)
+
+        # 输入非 list 应该报 ValueError
+        with self.assertRaises(ValueError) as ctx:
+            check_data_type_list("not a list")
+        self.assertIn("is not a list", str(ctx.exception))
+
+        # list 中有不支持的元素 → 报 ValueError
+        invalid_type = "unsupported_type"
+        # 确保不在 all_data_type_list 中
+        while invalid_type in all_data_type_list:
+            invalid_type += "_x"
+        with self.assertRaises(ValueError) as ctx:
+            check_data_type_list([invalid_type])
+        self.assertIn("is not supported", str(ctx.exception))
+
+        # 使用 all_data_type_list 中的部分元素 → 不报错
+        valid_list = all_data_type_list[:1] if all_data_type_list else []
+        try:
+            check_data_type_list(valid_list)
+        except Exception as e:
+            self.fail(f"check_data_type_list raised Exception unexpectedly: {e}")
+
 
 inputs = [torch.rand(10, 10) for _ in range(10)]
 labels = [torch.randint(0, 5, (10,)) for _ in range(10)]
