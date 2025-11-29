@@ -66,15 +66,15 @@ PyTorch、MSAdapter 以及 MindSpore 动态图场景，"summary_mode" 配置为 
 
 ### 1.3 task 配置为 tensor
 
-| 参数         | 解释                                                                                                                                                                                   | 是否必选 |
-| -------------- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
-| scope          | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                         | 否       |
-| list           | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                         | 否       |
-| data_mode      | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同                                                                                                                          | 否       |
-| file_format    | tensor 数据的保存格式，str 类型，仅支持 MindSpore 静态图场景的 L2 级别配置该字段，其他场景不生效。可选参数：<br/> "bin"：dump 的 tensor 文件为二进制格式；<br/>"npy"：dump 的 tensor 文件后缀为 .npy，默认值。                                       | 否       |
-| summary_mode  | 控制 dump 文件输出的模式，str 类型，支持 PyTorch、MSAdapter、MindSpore 动态图。可选参数：<br/> md5：dump 输出包含 CRC-32 值以及 API 统计信息的 dump.json 文件，用于验证数据的完整性；<br/> statistics：dump 仅输出包含 API 统计信息的 dump.json 文件，默认值。 | 否 |
+| 参数         | 解释                                                                                                                                                                                                                                                                      | 是否必选 |
+| -------------- |-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+| scope          | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                                                                                                            | 否       |
+| list           | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同。                                                                                                                                                                                                            | 否       |
+| data_mode      | 与[ 1.2 task 配置为 statistics ](#12-task-配置为-statistics)中的解释相同                                                                                                                                                                                                             | 否       |
+| file_format    | tensor 数据的保存格式，str 类型，仅支持 MindSpore 静态图场景的 L2 级别配置该字段，其他场景不生效。可选参数：<br/> "bin"：dump 的 tensor 文件为二进制格式；<br/>"npy"：dump 的 tensor 文件后缀为 .npy，默认值。                                                                                                                          | 否       |
+| summary_mode  | 控制 dump 文件输出的模式，str 类型，支持 PyTorch、MSAdapter、MindSpore 动态图。可选参数：<br/> md5：dump 输出包含 CRC-32 值以及 API 统计信息的 dump.json 文件，用于验证数据的完整性；<br/> statistics：dump 仅输出包含 API 统计信息的 dump.json 文件，默认值。                                                                                 | 否 |
 | bench_path      | 自动控制在PyTorch确定性问题定位时进行md5实时差异分析，即dump存在差异的md5数据，str 类型，默认未配置本参数。 需要在bench_path参数传入提前预置的md5数据路径（即在上一次dump操作时，summary_mode参数配置为md5），并且本次dump时同样配置summary_mode为md5。配置本参数后，dump会判断本次任务中每个tensor与预置的md5数据的差异，识别到差异节点后，进行真实数据dump。**配置示例**："bench_path": "./bench_dump_path"。 | 否       |
-| diff_nums      | 最大差异次数，int 类型，默认为 1，仅PyTorch md5实时差异分析场景支持（即配置bench_path）。 表示第N次差异出现后，不再进行溢出检测。过程中检测到差异API对应的输入输出数据均dump。 **配置示例**："diff_nums": 3。配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
+| diff_nums      | 最大差异次数，int 类型，默认为 1，仅PyTorch md5实时差异分析场景支持（即配置bench_path）。 表示第N次差异出现后，不再进行差异分析。过程中检测到差异API对应的输入输出数据均dump。 **配置示例**："diff_nums": 3。配置为-1时，表示持续差异分析直到训练结束。                                                                                                                | 否       |
 
 
 
