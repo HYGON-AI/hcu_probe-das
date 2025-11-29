@@ -3,8 +3,9 @@ from unittest.mock import patch
 
 import torch
 from msprobe.pytorch.monitor.features import square_sum, get_min, get_mean, get_norm, get_max, get_zeros, \
-    get_sign_matches, eff_rank, mNTK, lambda_max_subsample, cal_histc, get_nans
+    get_sign_matches, eff_rank, mNTK, power_iteration, lambda_max_subsample, cal_histc, get_nans, check_tensor_dim
 from msprobe.pytorch.monitor.features import max_eigenvalue, cal_entropy, cal_qkt, cal_stable_rank
+
 
 class TestMathFunctions(unittest.TestCase):
     def test_square_sum(self):
@@ -65,6 +66,11 @@ class TestMathFunctions(unittest.TestCase):
         res = torch.allclose(result, torch.tensor([[1.]]), atol=1e-1)
         self.assertTrue(res)
 
+    def test_power_iteration(self):
+        a = torch.tensor([[2.0, 0.0], [0.0, 1.0]])
+        eigval = power_iteration(a, num_iterations=10)
+        self.assertAlmostEqual(eigval.item(), 2.0, places=2)
+
     def test_lambda_max_subsample(self):
         class MockModule(torch.nn.Module):
             def __init__(self):
@@ -88,6 +94,15 @@ class TestMathFunctions(unittest.TestCase):
         tensor = torch.tensor([1.0, float('nan'), 3.0])
         result = get_nans(tensor)
         self.assertEqual(result, 1)
+
+    def test_check_tensor_dim(self):
+        check_tensor_dim(torch.randn(2, 3, 4), 3)
+        # TypeError
+        with self.assertRaises(TypeError):
+            check_tensor_dim(123, 2)
+        # ValueError
+        with self.assertRaises(ValueError):
+            check_tensor_dim(torch.randn(2, 3), 3)
 
     def test_max_eigenvalue(self):
         """测试最大特征值计算"""
@@ -157,6 +172,7 @@ class TestMathFunctions(unittest.TestCase):
         sr, eig = cal_stable_rank(ortho)
         self.assertAlmostEqual(sr, torch.tensor(2.23/1), delta=.5)  # F范数应为2.23
         self.assertAlmostEqual(eig, torch.tensor(1.0), delta=.1)  # 特征值应为1
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -5,15 +5,44 @@ from unittest.mock import patch, MagicMock
 import torch
 from msprobe.core.common.const import MonitorConst
 
-from msprobe.core.monitor.utils import filter_special_chars, MsgConst, validate_ops, validate_ranks, \
-    validate_targets, validate_print_struct, validate_ur_distribution, validate_xy_distribution, \
-    validate_mg_distribution, validate_wg_distribution, validate_cc_distribution, validate_alert, validate_config, \
-    get_output_base_dir, validate_l2_targets, validate_recording_l2_features, validate_sa_order
-from msprobe.pytorch.monitor.utils import get_param_struct
+from msprobe.core.monitor.utils import get_output_base_dir, filter_special_chars, MsgConst, validate_ops, \
+    validate_ndigits, validate_ranks, validate_targets, validate_print_struct, validate_ur_distribution, \
+    validate_xy_distribution, validate_wg_distribution, validate_mg_distribution, validate_param_distribution, \
+    validate_cc_distribution, validate_squash_name, validate_alert, validate_step_count_per_record, \
+    validate_dynamic_on, validate_monitor_mbs_grad, validate_append_output, validate_config, time_str2time_digit, \
+    get_target_output_dir, validate_l2_targets, validate_recording_l2_features, validate_sa_order, \
+    validate_set_monitor, validate_int_arg
+from msprobe.pytorch.monitor.utils import get_nan_tensor, get_param_struct
 from msprobe.pytorch.common.utils import is_recomputation
 
+class TestMonitorUtils(unittest.TestCase):
+    def test_get_nan_tensor(self):
+        result = get_nan_tensor()
+        self.assertTrue(torch.isnan(result).item())
 
-class TestValidationFunctions(unittest.TestCase):
+    def test_get_param_struct(self):
+        param = (torch.tensor([1, 2, 3]), torch.tensor([4, 5, 6]))
+        res = get_param_struct(param)
+        self.assertEqual(res['config'], 'tuple[2]')
+
+        param = (torch.randn(1), 42, "abc")
+        result = get_param_struct(param)
+        self.assertEqual(result['config'], 'tuple[3]')
+        self.assertEqual(result[0], f'size={(1,)}, dtype={param[0].dtype}')
+        self.assertEqual(result[1], "<class 'int'>")
+        self.assertEqual(result[2], "<class 'str'>")
+
+        param = torch.randn(2, 3)
+        result = get_param_struct(param)
+        self.assertEqual(result['config'], 'tensor')
+        self.assertEqual(result['tensor'], f'size={(2, 3)}, dtype={param.dtype}')
+
+        param = {"a": 1}
+        result = get_param_struct(param)
+        self.assertEqual(result['config'], "<class 'dict'>")
+
+
+class TestCoreMonitorUtils(unittest.TestCase):
 
     def test_get_output_base_dir(self):
         # not set env
@@ -36,11 +65,6 @@ class TestValidationFunctions(unittest.TestCase):
 
         self.assertEqual(func(MsgConst.SPECIAL_CHAR[0]), '_')
 
-    def test_get_param_struct(self):
-        param = (torch.tensor([1, 2, 3]), torch.tensor([4, 5, 6]))
-        res = get_param_struct(param)
-        self.assertEqual(res['config'], 'tuple[2]')
-
     def test_validate_ops(self):
         ops = ['op1', 'op2', 'norm', 'max']
         valid_ops = validate_ops(ops)
@@ -52,10 +76,31 @@ class TestValidationFunctions(unittest.TestCase):
         target_ops = [MonitorConst.OP_LIST[0], "shape", "dtype"]
         self.assertEqual(valid_ops, target_ops)
 
+    def test_validate_ndigits(self):
+        validate_ndigits(None)
+        validate_ndigits(0)
+        validate_ndigits(MonitorConst.MAX_NDIGITS)
+
+        with self.assertRaises(ValueError):
+            validate_ndigits(3.5)
+        with self.assertRaises(ValueError):
+            validate_ndigits("abc")
+        with self.assertRaises(ValueError):
+            validate_ndigits(True)
+
+        with self.assertRaises(ValueError):
+            validate_ndigits(-1)
+        with self.assertRaises(ValueError):
+            validate_ndigits(MonitorConst.MAX_NDIGITS + 1)
+
     def test_validate_ranks(self):
         ranks = [0, 1, 2, 3]
         res = validate_ranks(ranks)
         self.assertIsNone(res)
+
+        with self.assertRaises(TypeError):
+            ranks = ["xxx", 1, 2, 3]
+            validate_ranks(ranks)
 
     def test_validate_targets(self):
         targets = {'module_name': {'input': 'tensor'}}
@@ -65,29 +110,103 @@ class TestValidationFunctions(unittest.TestCase):
         print_struct = True
         validate_print_struct(print_struct)
 
+        with self.assertRaises(TypeError):
+            print_struct = 2
+            validate_print_struct(print_struct)
+
     def test_validate_ur_distribution(self):
         ur_distribution = True
         validate_ur_distribution(ur_distribution)
+
+        with self.assertRaises(TypeError):
+            ur_distribution = 2
+            validate_ur_distribution(ur_distribution)
 
     def test_validate_xy_distribution(self):
         xy_distribution = True
         validate_xy_distribution(xy_distribution)
 
+        with self.assertRaises(TypeError):
+            xy_distribution = 2
+            validate_xy_distribution(xy_distribution)
+
     def test_validate_wg_distribution(self):
         wg_distribution = True
         validate_wg_distribution(wg_distribution)
+
+        with self.assertRaises(TypeError):
+            wg_distribution = 2
+            validate_wg_distribution(wg_distribution)
 
     def test_validate_mg_distribution(self):
         mg_distribution = True
         validate_mg_distribution(mg_distribution)
 
+        with self.assertRaises(TypeError):
+            mg_distribution = 2
+            validate_mg_distribution(mg_distribution)
+
+    def test_validate_param_distribution(self):
+        param_distribution = True
+        validate_param_distribution(param_distribution)
+
+        with self.assertRaises(TypeError):
+            param_distribution = 2
+            validate_param_distribution(param_distribution)
+
     def test_validate_cc_distribution(self):
         cc_distribution = {'enable': True, 'cc_codeline': ['line1'], 'cc_pre_hook': False, 'cc_log_only': True}
         validate_cc_distribution(cc_distribution)
 
+    def test_validate_squash_name(self):
+        squash_name = True
+        validate_squash_name(squash_name)
+
+        with self.assertRaises(TypeError):
+            squash_name = 2
+            validate_squash_name(squash_name)
+
     def test_validate_alert(self):
         alert = {'rules': [{'rule_name': 'AnomalyTurbulence', 'args': {'threshold': 10.0}}], 'dump': True}
         validate_alert(alert)
+
+    def test_validate_step_count_per_record(self):
+        validate_step_count_per_record(10)
+        with self.assertRaises(TypeError):
+            validate_step_count_per_record("10")
+        with self.assertRaises(ValueError):
+            validate_step_count_per_record(0)
+        with self.assertRaises(ValueError):
+            validate_step_count_per_record(100000000)
+
+    def test_validate_dynamic_on(self):
+        dynamic_on = True
+        validate_dynamic_on(dynamic_on)
+
+        with self.assertRaises(TypeError):
+            dynamic_on = 2
+            validate_dynamic_on(dynamic_on)
+
+    def test_validate_monitor_mbs_grad(self):
+        monitor_mbs_grad = True
+        result = validate_monitor_mbs_grad(monitor_mbs_grad)
+        self.assertEqual(result, True)
+
+        monitor_mbs_grad = 2
+        result = validate_monitor_mbs_grad(monitor_mbs_grad)
+        self.assertEqual(result, False)
+
+    def test_validate_append_output(self):
+        append_output = [1, 2]
+        validate_append_output(append_output)
+
+        with self.assertRaises(TypeError):
+            append_output = 2
+            validate_append_output(append_output)
+
+        with self.assertRaises(ValueError):
+            append_output = [1, 2, 3]
+            validate_append_output(append_output)
 
     def test_validate_config(self):
         config = {
@@ -110,6 +229,24 @@ class TestValidationFunctions(unittest.TestCase):
         validate_config(config)
         self.assertEqual(config["targets"], {"": {}})
         self.assertEqual(config["all_xy"], True)
+
+    def test_str2time_digit(self):
+        time_str = "Dec03_21-34-40"
+        time_str2time_digit(time_str)
+
+        with self.assertRaises(TypeError):
+            time_str2time_digit(12345)
+        with self.assertRaises(TypeError):
+            time_str2time_digit(None)
+        with self.assertRaises(TypeError):
+            time_str2time_digit(["Dec03_21-34-40"])
+
+        with self.assertRaises(RuntimeError):
+            time_str2time_digit("2025-11-28_21:34:40")  # 错误格式的字符串
+        with self.assertRaises(RuntimeError):
+            time_str2time_digit("Dec03-21-34-40")  # 少了下划线
+        with self.assertRaises(RuntimeError):
+            time_str2time_digit("Dec32_25-61-61")  # 无效日期时间
 
     # ===== validate_l2_targets 测试 =====
     def test_validate_l2_targets_valid_input(self):
@@ -170,6 +307,29 @@ class TestValidationFunctions(unittest.TestCase):
             validate_recording_l2_features("xx")
             self.assertEqual(str(cm.exception),
                              f'sa_order must be in {MonitorConst.SA_ORDERS}, got xx')
+
+    def test_validate_set_monitor(self):
+        grad_acc_steps = 8
+        start_iteration = 1
+        result = validate_set_monitor(grad_acc_steps, start_iteration)
+        self.assertEqual(result[0], grad_acc_steps)
+        self.assertEqual(result[1], start_iteration)
+
+    def test_validate_int_arg(self):
+        default = 10
+        result = validate_int_arg(None, "arg", 0, default)
+        self.assertEqual(result, default)
+        result = validate_int_arg(5, "arg", 0, 10)
+        self.assertEqual(result, 5)
+        # 非整数
+        result = validate_int_arg("abc", "arg", 0, default)
+        self.assertEqual(result, default)
+        result = validate_int_arg(3.5, "arg", 0, default)
+        self.assertEqual(result, default)
+        result = validate_int_arg(-5, "arg", 0, default)
+        self.assertEqual(result, default)
+        result = validate_int_arg(0, "arg", 0, default)
+        self.assertEqual(result, 0)  # 等于 minimum 时应该通过
 
 
 class TestIsRecomputation(unittest.TestCase):

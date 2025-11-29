@@ -25,8 +25,8 @@ from torch import distributed as dist
 
 from msprobe.pytorch import TrainerMon
 from msprobe.pytorch.dump.api_dump.api_register import get_api_register
-from msprobe.pytorch.monitor.module_hook import CommunicationContext, GradContext, ModuleHookContext, \
-    param_is_not_tensor_parallel_duplicate, param_is_data_parallel_duplicate
+from msprobe.pytorch.monitor.module_hook import FeatureHookContext, OptimizerContext, CommunicationContext, \
+    GradContext, ModuleHookContext, param_is_not_tensor_parallel_duplicate, param_is_data_parallel_duplicate
 from demo_model import monitor_demo
 
 get_api_register().restore_all_api()
@@ -274,6 +274,27 @@ class TestParamIsDataParallelDuplicate(unittest.TestCase):
 
 
 class TestContext(unittest.TestCase):
+
+    def test_feature_context(self):
+        feature_ctx = FeatureHookContext("linear")
+        feature_ctx.reset()
+        self.assertEqual(feature_ctx.attention_feature, {})
+        self.assertEqual(feature_ctx.linear_feature, {})
+
+    def test_optimizer_context(self):
+        optimizer_ctx = OptimizerContext()
+        optimizer_ctx.reset()
+        self.assertEqual(optimizer_ctx.param_mg_direction, {})
+        self.assertEqual(optimizer_ctx.param_adam_update, {})
+        self.assertEqual(optimizer_ctx.param_adam_ratio, {})
+        self.assertEqual(optimizer_ctx.param_weight_grad, {})
+        self.assertEqual(optimizer_ctx.param_exp_avg, {})
+        self.assertEqual(optimizer_ctx.exp_avg_metric, {})
+        self.assertEqual(optimizer_ctx.param_exp_avg_sq, {})
+        self.assertEqual(optimizer_ctx.exp_avg_sq_metric, {})
+        self.assertEqual(optimizer_ctx.metric_dict, {})
+        self.assertEqual(optimizer_ctx.param_metric, {})
+
     def test_communication_context(self):
         cc_ctx = CommunicationContext()
         cc_ctx.reset()
