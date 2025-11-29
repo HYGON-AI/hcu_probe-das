@@ -1,0 +1,15 @@
+{
+    "Tensor.__add__.0.forward": "",
+    "Tensor.__bool__.1.forward": "",
+    "Tensor.__add__.1.forward": "",
+    "Mint.logical_or.0.forward": "Cell.network_with_loss.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0",
+    "Distributed.all_reduce.0.forward": "Cell.network_with_loss.module.language_model.embedding.word_embeddings.reduce_from_mp_region.ReduceFromModelParallelRegion.forward.0",
+    "Cell.network_with_loss.module.language_model.embedding.word_embeddings.VocabParallelEmbedding.forward.0": "Cell.network_with_loss.module.language_model.embedding.Embedding.forward.0",
+    "Primitive.norm.RmsNorm.0.forward": "Cell.network_with_loss.module.language_model.encoder.layers.0.input_norm.FusedRMSNorm.forward.0",
+    "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0": "Cell.network_with_loss.module.language_model.encoder.ParallelTransformer.forward.0",
+    "Cell.network_with_loss.module.language_model.encoder.layers.0.input_norm.FusedRMSNorm.forward.0": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
+    "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
+    "Mint.cos.0.forward": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+    "Functional.flash_attention_score.0.forward": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+    "Functional.flash_attention_score.0.backward": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.backward.0"
+}
