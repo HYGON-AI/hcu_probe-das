@@ -10,7 +10,7 @@
 安装msProbe工具，详情请参见《[msProbe安装指南](msprobe_install_guide.md)》。
 
 ## 使用说明
-Megatron、MindSpeed的ckpt加载依赖megatron，请确保megatron在python环境中或megatron在当前路径下。
+Megatron、MindSpeed的ckpt加载依赖megatron，请确保megatron在Python环境中或megatron在当前路径下。
 
 
 启动命令如下

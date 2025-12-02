@@ -32,15 +32,15 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 ## 🚨 工具限制与注意事项
 
-1. 工具读写的所有路径，如`config_path`、`dump_path`等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。
+- 工具读写的所有路径，如`config_path`、`dump_path`等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。
 
-2. 出于安全性及权限最小化角度考虑，msProbe工具不应使用root等高权限账户使用，建议使用普通用户权限安装执行。
+- 出于安全性及权限最小化角度考虑，msProbe工具不应使用root等高权限账户使用，建议使用普通用户权限安装执行。
 
-3. 使用msProbe工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
+- 使用msProbe工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
 
-4. 用户须自行保证使用最小权限原则，如给工具输入的文件要求other用户不可写，在一些对安全要求更严格的功能场景下还需确保输入的文件group用户不可写。
+- 用户须自行保证使用最小权限原则，如给工具输入的文件要求other用户不可写，在一些对安全要求更严格的功能场景下还需确保输入的文件group用户不可写。
 
-5. 使用工具前，建议先浏览[工具功能模块简介、适用场景和当前版本局限性](docs/zh/limitations_and_precautions.md)，了解功能特性。
+- 使用工具前，建议先浏览[工具功能模块简介、适用场景和当前版本局限性](docs/zh/limitations_and_precautions.md)，了解功能特性。
 
 ## 🧰 功能介绍
 
@@ -50,9 +50,9 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 [**数据采集**](docs/zh/dump/torchair_dump_instruct.md)
 
-完成msProbe精度数据采集操作。
+通过config.json配置，完成msProbe精度数据采集操作。
 
-精度数据采集配置需要通过config.json配置文件，详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
 
 **[精度比对](docs/zh/accuracy_compare/torchair_compare_instruct.md)**
 
@@ -62,11 +62,21 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 #### [数据采集](docs/zh/dump/atb_data_dump_instruct.md)
 
-用于ATB模型运行过程中的精度数据采集，包括模型结构信息、输入输出Tensor的真实数据或统计量数据。并且支持在模型运行过程中修改dump配置文件，实现动态dump。
+在ATB框架中，通过dump模块加载脚本的方式，实现在ATB模型运行过程中对精度数据的采集。
 
 #### [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)
 
-用于比对采集到的ATB模型精度数据，包括真实数据比对与统计量数据比对，帮助定位精度问题发生点。
+提供ATB场景的精度比对功能，帮助定位精度问题。
+
+### 离线模型推理场景
+
+#### [**数据采集**](docs/zh/dump/infer_offline_dump_instruct.md)
+
+完成msProbe精度数据采集操作。
+
+#### **[精度比对](docs/zh/accuracy_compare/infer_compare_offline_model_instruct.md)**
+
+提供一键式离线模型比对功能，仅需输入模型即可完成比对，无需提前采集数据，快速输出结果。
 
 ### PyTorch训练场景
 
@@ -78,7 +88,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 通过config.json配置，完成msProbe精度数据采集操作。
 
-精度数据采集配置需要通过config.json配置文件，详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
 
 
 #### [精度预检](docs/zh/accuracy_checker/pytorch_accuracy_checker_instruct.md)
@@ -113,9 +123,9 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 #### [数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)
 
-完成msProbe精度数据采集操作。
+通过config.json配置，完成msProbe精度数据采集操作。
 
-精度数据采集配置需要通过config.json配置文件，详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
 
 
 #### [精度预检](docs/zh/accuracy_checker/mindspore_accuracy_checker_instruct.md)
@@ -148,9 +158,9 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 #### [数据采集](docs/zh/dump/msadapter_data_dump_instruct.md)
 
-完成msProbe精度数据采集操作。
+通过config.json配置，完成msProbe精度数据采集操作。
 
-精度数据采集配置需要通过config.json配置文件，详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
 
 #### [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
 
