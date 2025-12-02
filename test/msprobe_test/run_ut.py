@@ -9,7 +9,7 @@ from msprobe.core.common.log import logger
 def run_ut():
     cur_dir = os.path.realpath(os.path.dirname(__file__))
     ut_path = cur_dir
-    cov_dir = os.path.dirname(cur_dir)
+    cov_dir = os.path.dirname(f"{cur_dir}/../../python/msprobe")
     report_dir = os.path.join(cur_dir, "report")
     cov_config_path = os.path.join(cur_dir, ".coveragerc")
     final_xml_path = os.path.join(report_dir, "final.xml")

@@ -135,13 +135,17 @@ def redirect_wait():
                 store_func = dist_data_collect_func.pop(args[0])
                 store_func()
                 return
+            remove_value = None
             for value in dist_batch_data_collect_func:
                 if args[0] in value[0]:
                     value[0].remove(args[0])
                     if len(value[0]) == 0:
                         store_func = value[1]
                         store_func()
-                    return
+                        remove_value = value
+                    break
+            if remove_value:
+                dist_batch_data_collect_func.remove(remove_value)
 
         return wrapped_wait
 
