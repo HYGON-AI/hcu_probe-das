@@ -62,7 +62,7 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 
 #### [数据采集](docs/zh/dump/atb_data_dump_instruct.md)
 
-在ATB框架中，通过dump模块加载脚本的方式，实现在ATB模型运行过程中对精度数据的采集。
+通过在ATB模型运行前，加载ATB dump模块的方式，实现对ATB模型运行过程中的精度数据的采集。
 
 #### [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)
 
