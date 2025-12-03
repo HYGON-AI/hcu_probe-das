@@ -279,6 +279,8 @@ def cal_comparison_metrics_by_tensor(golden_stats_map, target_stats_map, compari
         if target_bin.is_valid and golden_bin.is_valid:
             comparison_metrics = compare_single_tensor(golden_tensor, target_tensor)
 
+        if len(comparison_metrics) < len(TENSOR_SPECIAL_HEADER):
+            comparison_metrics += [CompareConst.N_A] * (len(TENSOR_SPECIAL_HEADER) - len(comparison_metrics))
         for index, col_name in enumerate(TENSOR_SPECIAL_HEADER):
             comparison_result_map[col_name].append(comparison_metrics[index])
 
@@ -297,12 +299,6 @@ def cal_single_tensor_stats(tensor, is_valid=True):
         tensor_stats[Const.MAX] = str(torch.any(tensor))
         tensor_stats[Const.MIN] = str(torch.all(tensor))
         return tensor_stats
-
-    if torch.is_complex(tensor):
-        mean_value = str(tensor.mean().item())
-        norm_value = str(tensor.norm().item())
-        tensor_stats[Const.MEAN] = CompareConst.N_A if mean_value == 'nan' else mean_value
-        tensor_stats[Const.NORM] = CompareConst.N_A if norm_value == 'nan' else norm_value
 
     if not torch.is_complex(tensor) and (tensor.dtype == torch.float64 or not tensor.is_floating_point()):
         tensor = tensor.float()
