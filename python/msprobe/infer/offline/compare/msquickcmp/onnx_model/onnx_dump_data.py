@@ -26,7 +26,7 @@ import onnxruntime
 import numpy as np
 
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
@@ -195,11 +195,11 @@ class OnnxDumpData(DumpData):
     def _create_dir(self):
         # create input directory
         data_dir = os.path.join(self.output_path, "input")
-        utils.create_directory(data_dir)
+        create_directory(data_dir)
 
         # create dump_data/onnx directory
         onnx_dump_data_dir = os.path.join(self.output_path, "dump_data/onnx")
-        utils.create_directory(onnx_dump_data_dir)
+        create_directory(onnx_dump_data_dir)
 
         # create model directory
         model_dir = ""
@@ -208,7 +208,7 @@ class OnnxDumpData(DumpData):
         else:
             model_relative_name = "model"
             model_dir = os.path.join(self.output_path, model_relative_name)
-            utils.create_directory(model_dir)
+            create_directory(model_dir)
         return data_dir, onnx_dump_data_dir, model_dir
 
     def _modify_model_add_outputs_nodes(self, onnx_model, save_path):

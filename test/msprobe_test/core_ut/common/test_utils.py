@@ -65,12 +65,14 @@ class TestUtils(TestCase):
             file_path = ""
             path_type = ""
             ability = ""
+            file_suffix = None
             checked = False
 
-            def __init__(self, file_path, path_type, ability=None):
+            def __init__(self, file_path, path_type, ability=None, file_suffix=None):
                 TestFileChecker.file_path = file_path
                 TestFileChecker.path_type = path_type
                 TestFileChecker.ability = ability
+                TestFileChecker.file_suffix = file_suffix
 
             def common_check(self):
                 TestFileChecker.checked = True
@@ -79,7 +81,7 @@ class TestUtils(TestCase):
         dirname = os.path.dirname(file_path)
 
         with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
-            check_file_or_directory_path(file_path, isdir=False)
+            check_file_or_directory_path(file_path, isdir=False, is_strict=False, file_suffix=None)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, file_path)
         self.assertEqual(TestFileChecker.path_type, FileCheckConst.FILE)
@@ -87,7 +89,7 @@ class TestUtils(TestCase):
 
         TestFileChecker.checked = False
         with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
-            check_file_or_directory_path(dirname, isdir=True)
+            check_file_or_directory_path(dirname, isdir=True, is_strict=False, file_suffix=None)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, dirname)
         self.assertEqual(TestFileChecker.path_type, FileCheckConst.DIR)

@@ -17,24 +17,17 @@
 Function:
 This class mainly involves common function.
 """
-import argparse
 import enum
 import itertools
 import os
 import re
 import shutil
 import subprocess
-import json
 
 import numpy as np
-import pandas as pd
-from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 
-from msprobe.infer.utils.security_check import get_valid_write_path, ms_makedirs
+from msprobe.infer.offline.compare.msquickcmp.common.dynamic_argument_bean import DynamicArgumentEnum
 from msprobe.core.common.log import logger
-from msprobe.infer.utils.util import load_file_to_read_common_check
-from msprobe.infer.utils.file_open_check import ms_open
-from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
 
 ACCURACY_COMPARISON_INVALID_PARAM_ERROR = 1
 ACCURACY_COMPARISON_INVALID_DATA_ERROR = 2
@@ -643,32 +636,6 @@ def execute_command(cmd, info_need=True):
         raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_DATA_ERROR)
 
 
-def create_directory(dir_path):
-    """
-    Function Description:
-        creating a directory with specified permissions
-    Parameter:
-        dir_path: directory path
-    Exception Description:
-        when invalid data throw exception
-    """
-    if not os.path.exists(dir_path):
-        try:
-            ms_makedirs(dir_path, mode=0o700)
-        except OSError as ex:
-            logger.error(f"Failed to create {dir_path}. Please check the path permission or disk space .{str(ex)}")
-            raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR) from ex
-
-
-def save_numpy_data(file_path, data):
-    """
-    save_numpy_data
-    """
-    if not os.path.exists(os.path.dirname(file_path)):
-        ms_makedirs(os.path.dirname(file_path))
-    np.save(file_path, data)
-
-
 def handle_ground_truth_files(om_parser, npu_dump_data_path, golden_dump_data_path):
     _, scenario = om_parser.get_dynamic_scenario_info()
     if scenario in [DynamicArgumentEnum.DYM_BATCH, DynamicArgumentEnum.DYM_DIMS]:
@@ -682,59 +649,6 @@ def handle_ground_truth_files(om_parser, npu_dump_data_path, golden_dump_data_pa
                 current_op_name = BATCH_SCENARIO_OP_NAME.format(file_name[:first_dot_index], batch_index)
                 dst_file_name = current_op_name + file_name[first_dot_index:]
                 shutil.copy(os.path.join(root, file_name), os.path.join(root, dst_file_name))
-
-
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        logger.error('Boolean value expected true, 1, false, 0 with case insensitive.')
-        raise argparse.ArgumentTypeError
-
-
-def merge_csv(csv_list, output_dir, output_csv_name):
-    df_list = []
-    for csv_file in csv_list:
-        csv_file = load_file_to_read_common_check(csv_file)
-        df = pd.read_csv(csv_file)
-        df_list.append(df)
-    merged_df = pd.concat(df_list)
-    merged_df = merged_df.drop_duplicates()
-    merged_df = merged_df.fillna("NaN")
-    summary_csv_path = os.path.join(output_dir, output_csv_name)
-    merged_df.to_csv(summary_csv_path, index=False)
-    return summary_csv_path
-
-
-def safe_delete_path_if_exists(path, is_log=False):
-    if os.path.exists(path):
-        is_dir = os.path.isdir(path)
-        path = get_valid_write_path(path, extensions=None, check_user_stat=False, is_dir=is_dir)
-        if os.path.isfile(path):
-            if is_log:
-                logger.info(f"File {path} exist and will be deleted.")
-            os.remove(path)
-        else:
-            if is_log:
-                logger.info(f"Folder {path} exist and will be deleted.")
-            shutil.rmtree(path)
-
-
-def parse_json_file(json_path):
-    try:
-        json_path = load_file_to_read_common_check(json_path)
-        with ms_open(json_path, 'r', max_size=TENSOR_MAX_SIZE, encoding='utf-8') as file:
-            return json.load(file)
-    except FileNotFoundError as e:
-        logger.error(f"File '{json_path}' not found, Please check whether the json file path is . {e}")
-        raise FileNotFoundError from e
-    except json.JSONDecodeError as e:
-        logger.error(f"File '{json_path}' is not a valid JSON format. {e}")
-        raise RuntimeError from e
 
 
 def load_npy_from_buffer(raw_data, dtype, shape):

@@ -16,8 +16,12 @@ import unittest
 from unittest.mock import patch
 from itertools import product
 
-from msprobe.infer.utils.util import confirmation_interaction, check_file_ext, safe_int,check_file_size_based_on_ext, \
+from msprobe.infer.utils.util import (
+    confirmation_interaction,
+    check_file_ext,
+    check_file_size_based_on_ext,
     filter_cmd
+)
 
 
 class TestUtil(unittest.TestCase):
@@ -72,8 +76,7 @@ class TestUtil(unittest.TestCase):
         
             with patch('builtins.input', return_value='n'):
                 self.assertFalse(check_file_size_based_on_ext('random_file'))
-        
-    
+
     def test_check_file_size_based_on_ext_normal_size(self):
         config_file_size = 8 * 1024
         text_file_size = 8 * 1024 * 1024
@@ -90,15 +93,6 @@ class TestUtil(unittest.TestCase):
                     self.assertTrue(check_file_size_based_on_ext('random_file' + ext))
                     self.assertTrue(check_file_size_based_on_ext('random_file'))
 
-    def test_safe_int_when_value_is_valid(self):
-        self.assertEqual(safe_int("2147483647"), 2147483647)  # Max 32-bit signed int
-        self.assertEqual(safe_int("-2147483648"), -2147483648)  # Min 32-bit signed int
-        self.assertEqual(safe_int("999999999999999999"), 999999999999999999) # big int
-
-    def test_safe_int_given_invalid_value_then_raise_value_error(self):
-        with self.assertRaises(ValueError) as context:
-            safe_int("aasdf", "ENV")
-        assert "The value of the variable ENV is not valid, what we need is a value that can be convert to int." == str(context.exception)
 
 class TestFilterCmd(unittest.TestCase):
     def test_valid_characters(self):

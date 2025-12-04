@@ -126,8 +126,7 @@ def fake_arguments():
 
 
 def test_init_given_valid_when_any_then_pass(fake_arguments):
-    with mock.patch('msprobe.infer.utils.security_check._check_parent_dir_safe', return_value=True):
-        aa = OnnxDumpData(fake_arguments)
+    aa = OnnxDumpData(fake_arguments)
 
     assert aa.origin_model is not None
     assert aa.origin_model is aa.model_with_inputs

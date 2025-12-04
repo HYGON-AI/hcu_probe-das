@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 import shutil
 import threading
@@ -47,7 +46,7 @@ from msprobe.infer.offline.compare.msquickcmp.common.utils import (
     get_mbatch_op_name,
     get_batch_index_from_name,
     get_data_len_by_shape,
-    safe_delete_path_if_exists, parse_json_file, load_npy_from_buffer,
+    load_npy_from_buffer,
     find_om_files
 )
 
@@ -442,34 +441,6 @@ class TestExecuteCommand(unittest.TestCase):
             execute_command(['echo', 'test'])
 
 
-class TestCreateDirectory(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.os.path.exists', return_value=False)
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.ms_makedirs')
-    def test_create_success(self, mock_mkdirs, mock_exists):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import create_directory
-        create_directory('/tmp/fake')
-
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.os.path.exists', return_value=False)
-    @patch(
-        'msprobe.infer.offline.compare.msquickcmp.common.utils.ms_makedirs',
-        side_effect=OSError("Permission denied")
-    )
-    def test_create_fail(self, mock_mkdirs, mock_exists):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import create_directory, AccuracyCompareException
-        with patch('msprobe.infer.offline.compare.msquickcmp.common.utils.logger.error'):
-            with self.assertRaises(AccuracyCompareException):
-                create_directory('/tmp/fake')
-
-
-class TestSaveNumpyData(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.os.path.exists', return_value=False)
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.ms_makedirs')
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.np.save')
-    def test_save(self, mock_save, mock_mkdirs, mock_exists):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import save_numpy_data
-        save_numpy_data('/tmp/data.npy', [1, 2, 3])
-
-
 class TestHandleGroundTruthFiles(unittest.TestCase):
     @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.get_batch_index', return_value=1)
     @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.shutil.copy')
@@ -481,90 +452,6 @@ class TestHandleGroundTruthFiles(unittest.TestCase):
         mock_walk.return_value = [('/root', [], ['x.bin'])]
         with patch('msprobe.infer.offline.compare.msquickcmp.common.utils.BATCH_SCENARIO_OP_NAME', '{}_{}'):
             handle_ground_truth_files(parser_mock, '/npu', '/golden')
-
-
-class TestStr2Bool(unittest.TestCase):
-    def test_valid_true(self):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import str2bool
-        for val in ['yes', 'y', 'true', '1', 'True']:
-            self.assertTrue(str2bool(val))
-
-    def test_valid_false(self):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import str2bool
-        for val in ['no', 'n', 'false', '0', 'False']:
-            self.assertFalse(str2bool(val))
-
-    def test_invalid(self):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import str2bool
-        import argparse
-        with self.assertRaises(argparse.ArgumentTypeError):
-            str2bool("maybe")
-
-
-class TestMergeCSV(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.load_file_to_read_common_check')
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.pd.read_csv')
-    @patch('msprobe.infer.offline.compare.msquickcmp.common.utils.pd.concat')
-    def test_merge(self, mock_concat, mock_read, mock_load):
-        from msprobe.infer.offline.compare.msquickcmp.common.utils import merge_csv
-        df_mock = MagicMock()
-        mock_read.return_value = df_mock
-        mock_concat.return_value = df_mock
-        df_mock.drop_duplicates.return_value = df_mock
-        df_mock.fillna.return_value = df_mock
-        result = merge_csv(['a.csv', 'b.csv'], '/output', 'out.csv')
-        self.assertTrue(result.endswith('out.csv'))
-
-
-class TestSafeDeletePathIfExists(unittest.TestCase):
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.get_valid_write_path")
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.logger")
-    @patch("os.path.exists")
-    @patch("os.path.isdir")
-    @patch("os.path.isfile")
-    @patch("os.remove")
-    @patch("shutil.rmtree")
-    def test_delete_file(self, mock_rmtree, mock_remove, mock_isfile, mock_isdir, mock_exists, mock_logger,
-                         mock_get_valid_path):
-        mock_exists.return_value = True
-        mock_isdir.return_value = False
-        mock_isfile.return_value = True
-        mock_get_valid_path.return_value = "test_file.txt"
-        safe_delete_path_if_exists("test_file.txt", is_log=True)
-        mock_get_valid_path.assert_called_once()
-        mock_remove.assert_called_once_with("test_file.txt")
-        mock_logger.info.assert_called_once()
-
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.get_valid_write_path")
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.logger")
-    @patch("os.path.exists")
-    @patch("os.path.isdir")
-    @patch("os.path.isfile")
-    @patch("os.remove")
-    @patch("shutil.rmtree")
-    def test_delete_folder(self, mock_rmtree, mock_remove, mock_isfile, mock_isdir, mock_exists, mock_logger,
-                           mock_get_valid_path):
-        mock_exists.return_value = True
-        mock_isdir.return_value = True
-        mock_isfile.return_value = False
-        mock_get_valid_path.return_value = "test_folder"
-        safe_delete_path_if_exists("test_folder", is_log=True)
-        mock_get_valid_path.assert_called_once()
-        mock_rmtree.assert_called_once_with("test_folder")
-        mock_logger.info.assert_called_once()
-
-
-class TestParseJsonFile(unittest.TestCase):
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.load_file_to_read_common_check")
-    @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.ms_open", read_data='{"key": "value"}')
-    @patch("json.load")
-    def test_parse_json_success(self, mock_json_load, mock_open_file, mock_load_check):
-        mock_load_check.return_value = "file.json"
-        mock_json_load.return_value = {"key": "value"}
-        result = parse_json_file("file.json")
-        mock_load_check.assert_called_once_with("file.json")
-        mock_json_load.assert_called_once()
-        self.assertEqual(result, {"key": "value"})
 
 
 class TestLoadNpyFromBuffer(unittest.TestCase):
