@@ -458,29 +458,6 @@ csv2tensorboard_by_step(
 ```
 参数详细介绍请参见[公开接口](#公开接口)的“csv输出件转tensorboard输出件”
 
-**将csv数据转换为sqlite db数据。**
-1. 创建Python脚本，以`csv2db.py`命名为例，将以下配置拷贝到文件中, 并按实际情况修改。
-
-```python
-from msprobe.core.monitor.csv2db import CSV2DBConfig, csv2db
-config = CSV2DBConfig(
-    monitor_path="~/monitor_output",
-    time_start="Dec03_21-34-40",
-    time_end="Dec03_21-34-42",
-    process_num=8,
-    data_type_list=["grad_unreduced"],
-    step_partition=500,
-    output_dirpath="~/monitor_output"
-)
-csv2db(config)
-```
-参数详细介绍请参见[公开接口](#公开接口)的“csv转sqlite数据库接口”
-
-2. 执行如下命令开启转换。
-```shell
-python csv2db.py
-```
-完成转换，在`~/monitor_output`目录下生成`monitor_metrics.db`文件。
 
 ### 动态启停
 动态启停模式：支持用户在训练过程中随时启动/更新监控。
@@ -609,21 +586,6 @@ csv2tensorboard_by_step(monitor_path, time_start, time_end, process_num=1, data_
 | data_type_list | 指定需要转换的数据类型, 数据类型应来自输出件文件前缀，所有类型数据：<br/> ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param_origin", "param_updated"]。<br/>不指定就转换全部数据。 | 否       |
 | output_dirpath | 指定转换后的输出路径，默认输出到"{curtime}_csv2tensorboard_by_step"文件夹，其中curtime为自动获取的当前时间戳。 | 否       |
 
-- csv转sqlite数据库接口
-```python
-csv2db(config: CSV2DBConfig) -> None
-```
-配置参数 (CSV2DBConfig)
-
-| 参数           | 说明                                                         | 是否必选 |
-| -------------- | ------------------------------------------------------------ | -------- |
-| monitor_path   | 待转换的csv存盘目录。                                        | 是       |
-| time_start     | 起始时间, 例如"Dec03_21-34-40"。搭配time_end一起使用，从而指定一个时间范围（闭区间），会对这个范围内的文件进行转换。默认为None不限制。 | 否       |
-| time_end       | 结束时间，例如"Dec03_21-34-41"。搭配time_start一起使用，从而指定一个时间范围（闭区间），会对这个范围内的文件进行转换。默认为None不限制。 | 否       |
-| process_num    | 指定拉起的进程个数，默认为1，更多的进程个数可以加速转换。    | 否       |
-| data_type_list | 指定需要转换的数据类型, 数据类型应来自输出件文件前缀，所有类型数据：<br/> ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"]。<br/>不指定就转换全部数据。 | 否       |
-| step_partition | 控制数据库中按step分区的间隔，默认每500步一个表。           | 否       |
-| output_dirpath | 指定转换后的输出路径，默认输出到"{curtime}_csv2db"文件夹，其中curtime为自动获取的当前时间戳。 | 否       |
 
 
 - 在模型任意位置获取当前参数**梯度**统计量
