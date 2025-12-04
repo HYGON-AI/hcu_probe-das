@@ -115,6 +115,10 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 
 多rank场景下通过dump数据找到首个出现Nan或Inf的节点。
 
+#### [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
+
+将msProbe工具数据采集或训练状态监控的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
+
 ### MindSpore训练场景
 
 #### [训练前配置检查](docs/zh/config_check_instruct.md)
@@ -153,6 +157,10 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 #### [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
 
 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
+
+#### [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
+
+将msProbe工具数据采集或训练状态监控的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
 
 ### MSAdapter场景
 
