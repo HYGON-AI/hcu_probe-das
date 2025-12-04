@@ -19,8 +19,6 @@ import re
 import logging
 from enum import Enum
 
-import pandas as pd
-
 from msprobe.core.common.log import logger
 from msprobe.infer.utils.constants import PATH_WHITE_LIST_REGEX
 from msprobe.infer.utils.check import Rule

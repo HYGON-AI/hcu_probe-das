@@ -173,15 +173,3 @@ def filter_cmd(paras):
             raise ValueError(f"The command contains invalid characters. Only the '{pattern}' pattern is allowed.")
         filtered.append(arg_str)
     return filtered
-
-
-def safe_int(str_value, log_print_variable_name=None):
-    try:
-        int_value = int(str_value)
-    except ValueError as e:
-        if log_print_variable_name:  # 报错信息中将变量名称进行打印，适用于环境变量场景
-            raise ValueError(f"The value of the variable {log_print_variable_name} is not valid, "
-                             "what we need is a value that can be convert to int.") from e
-        raise ValueError(f"The value {str_value} is not valid, "
-                         "what we need is a value that can be convert to int.") from e
-    return int_value

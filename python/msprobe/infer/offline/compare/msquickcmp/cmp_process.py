@@ -27,7 +27,7 @@ import onnxruntime
 import pandas as pd
 
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
+from msprobe.core.common.file_utils import create_directory
 from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import CmpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.atc import atc_utils
 from msprobe.infer.offline.compare.msquickcmp.common import utils
@@ -279,10 +279,6 @@ def _find_previous_node(graph, output_name):
 
 
 def check_and_run(args: CmpArgsAdapter):
-    check_file_or_directory_path(args.golden_path, False)
-    check_file_or_directory_path(args.target_path, False)
-    utils.check_device_param_valid(args.rank)
-
     time_dir = time.strftime("%Y%m%d%H%M%S", time.localtime())
     original_out_path = os.path.realpath(os.path.join(args.output_path, time_dir))
     args.output_path = original_out_path

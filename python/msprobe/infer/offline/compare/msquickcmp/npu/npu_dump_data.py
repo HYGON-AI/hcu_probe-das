@@ -27,7 +27,7 @@ import shutil
 import numpy as np
 
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, save_npy
 from msprobe.infer.offline.compare.msquickcmp.atc import atc_utils
 from msprobe.infer.offline.compare.msquickcmp.common import utils
 from msprobe.infer.offline.compare.msquickcmp.common.dump_data import DumpData
@@ -302,7 +302,7 @@ class NpuDumpData(DumpData):
             self.output_path,
             NPU_DUMP_DATA_GOLDEN_PATH if self.is_golden else NPU_DUMP_DATA_BASE_PATH
         )
-        utils.create_directory(npu_data_output_dir)
+        create_directory(npu_data_output_dir)
         model_name, extension = utils.get_model_name_and_extension(self.target_path)
         acl_json_path = os.path.join(npu_data_output_dir, ACL_JSON_PATH)
         if not os.path.exists(acl_json_path):
@@ -358,7 +358,7 @@ class NpuDumpData(DumpData):
 
     def _create_dir(self):
         data_dir = os.path.join(self.output_path, "input")
-        utils.create_directory(data_dir)
+        create_directory(data_dir)
         return data_dir
 
     def _get_inputs_info_from_aclruntime(self):
@@ -488,7 +488,7 @@ class NpuDumpData(DumpData):
                 new_each_file = "output_" + each_file_index
                 file_name = os.path.basename(new_each_file).split('.')[0]
                 numpy_file_path = os.path.join(npu_net_output_data_path, file_name)
-                utils.save_numpy_data(numpy_file_path, net_output_data)
+                save_npy(net_output_data, numpy_file_path)
                 new_each_file_path = os.path.join(dir_path, new_each_file)
                 os.rename(each_file_path, new_each_file_path)
 

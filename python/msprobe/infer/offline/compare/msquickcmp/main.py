@@ -22,8 +22,6 @@ from msprobe.infer.offline.compare.msquickcmp.adapter_cli.args_adapter import Cm
 from msprobe.infer.offline.compare.msquickcmp.cmp_process import cmp_process
 from msprobe.infer.offline.compare.msquickcmp.common.args_check import (
     check_model_path_legality,
-    check_target_model_path_legality,
-    check_input_path_legality,
     check_output_path_legality,
     check_dict_kind_string,
     check_rank_range_valid,
@@ -34,7 +32,7 @@ from msprobe.infer.offline.compare.msquickcmp.common.args_check import (
 )
 from msprobe.infer.offline.compare.msquickcmp.dump.args_adapter import DumpArgsAdapter
 from msprobe.infer.offline.compare.msquickcmp.dump.dump_process import dump_process
-from msprobe.infer.utils.security_check import is_enough_disk_space_left
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 CANN_PATH = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
@@ -51,7 +49,7 @@ def _offline_dump_parser(parser):
         '--input_data',
         default='',
         dest="input_data",
-        type=check_input_path_legality,
+        type=check_input_data_path,
         help='The input data path of the model. Separate multiple inputs with commas(,).'
              ' E.g: input_0.bin,input_1.bin'
     )
@@ -104,8 +102,6 @@ def _offline_dump_parser(parser):
 
 
 def offline_dump_cli(args):
-    if not is_enough_disk_space_left(args.output_path):
-        raise OSError("Please make sure that the remaining disk space in the dump path is greater than 2 GB")
     dump_args = DumpArgsAdapter(
         args.model_path,
         input_data=args.input_data,
@@ -160,9 +156,9 @@ def set_args_default(args):
 
 def check_compare_args(args):
     if args.target_path:
-        args.target_path = check_target_model_path_legality(args.target_path)
+        check_file_or_directory_path(args.target_path, False, False, [".om"])
     if args.golden_path:
-        args.golden_path = check_model_path_legality(args.golden_path)
+        check_file_or_directory_path(args.golden_path, False, False, [".onnx", ".om"])
     if args.output_path:
         args.output_path = check_output_path_legality(args.output_path)
     if args.input_data:

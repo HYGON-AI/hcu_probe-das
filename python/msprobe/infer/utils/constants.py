@@ -14,10 +14,6 @@
 
 import re
 
-
-AIT_FAQ_HOME = "gitcode repo: Ascend/msit, wiki"
-MIND_STUDIO_LOGO = "[Powered by MindStudio]"
-
 PATH_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.-]")
 
 CONFIG_FILE_MAX_SIZE = 1 * 1024 * 1024  # work for .ini config file
@@ -41,7 +37,6 @@ EXT_SIZE_MAPPING = {
     '.onnx': ONNX_MODEL_MAX_SIZE,
 }
 
-MAX_DEPTH_LIMIT = 100
 MAX_RECUR_DEPTH = 998
 
 

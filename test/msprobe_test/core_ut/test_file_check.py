@@ -196,7 +196,7 @@ class TestFileCheckUtil(TestCase):
             check_file_suffix(file_path, suffix)
         self.assertEqual(str(context.exception),
                          FileCheckException.err_strs.get(FileCheckException.INVALID_FILE_ERROR))
-        mock_logger_error.assert_called_with(f"The {file_path} should be a {suffix} file!")
+        mock_logger_error.assert_called_with(f"{file_path} should be one of the following types of files: {[suffix]}!")
 
     @patch.object(logger, "error")
     def test_check_path_type(self, mock_logger_error):

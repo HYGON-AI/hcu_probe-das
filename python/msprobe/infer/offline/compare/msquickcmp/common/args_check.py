@@ -14,87 +14,15 @@
 # limitations under the License.
 
 import argparse
-import os
 import re
 
 from msprobe.core.common.log import logger
-from msprobe.infer.utils.file_open_check import FileStat, is_legal_args_path_string
-from msprobe.infer.utils.file_utils import check_input_file_path, check_input_dir_path, check_output_dir_path, \
-    check_path_no_group_others_write
-from msprobe.infer.utils.security_check import is_endswith_extensions
-
-STR_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]")
-MAX_SIZE_LIMITE_NORMAL_MODEL = 32 * 1024 * 1024 * 1024  # 32GB
-MAX_SIZE_LIMITE_FUSION_FILE = 1 * 1024 * 1024 * 1024  # 1GB
-
-
-def check_target_model_path_legality(path):
-    if not isinstance(path, str) or not path:
-        logger.error(f"target model path:{path} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    if os.path.isdir(path):
-        check_input_dir_path(path)
-        check_path_no_group_others_write(path)
-        return path
-    else:
-        check_input_file_path(path, file_max_size=MAX_SIZE_LIMITE_NORMAL_MODEL)
-        if not is_endswith_extensions(path, ['om']):
-            logger.error(f"target model path:{path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        check_path_no_group_others_write(path)
-        return path
+from msprobe.core.common.file_utils import check_file_or_directory_path, check_output_dir_path
 
 
 def check_model_path_legality(path):
-    if not isinstance(path, str) or not path:
-        logger.error(f"model path:{path} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    if os.path.isdir(path):
-        check_input_dir_path(path)
-        check_path_no_group_others_write(path)
-        return path
-    else:
-        check_input_file_path(path, file_max_size=MAX_SIZE_LIMITE_NORMAL_MODEL)
-        if not is_endswith_extensions(path, ["onnx", "om"]):
-            logger.error(f"model path:{path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        check_path_no_group_others_write(path)
-        return path
-
-
-def check_input_path_legality(value):
-    if not value:
-        return value
-    inputs_list = value.split(',')
-    for input_path in inputs_list:
-        try:
-            file_stat = FileStat(input_path)
-        except Exception as err:
-            logger.error(f"input path:{input_path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError from err
-        if not file_stat.is_basically_legal('read'):
-            logger.error(f"input path:{input_path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        check_path_no_group_others_write(input_path)
-    return value
-
-
-def check_input_data_path_legality(value):
-    if not value:
-        return value
-    inputs_list = value.split(',')
-    for input_path in inputs_list:
-        check_input_file_path(input_path)
-        try:
-            file_stat = FileStat(input_path)
-        except Exception as err:
-            logger.error(f"input path:{input_path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError from err
-        if not file_stat.is_basically_legal('read'):
-            logger.error(f"input path:{input_path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        check_path_no_group_others_write(input_path)
-    return value
+    check_file_or_directory_path(path, False, False, [".onnx", ".om"])
+    return path
 
 
 def check_input_data_path(path):
@@ -105,11 +33,7 @@ def check_input_data_path(path):
         return path
     input_item_paths = path.split(',')
     for input_item_path in input_item_paths:
-        input_item_path = check_input_data_path_legality(input_item_path)
-        if not is_endswith_extensions(input_item_path, ['.npy', '.bin']):
-            logger.error(f"input data path:{path} is illegal. Please check.")
-            raise argparse.ArgumentTypeError
-        check_path_no_group_others_write(input_item_path)
+        check_file_or_directory_path(input_item_path, False, False, [".npy", ".bin"])
     return path
 
 
@@ -167,16 +91,6 @@ def check_dym_range_string(value):
         logger.error(f"dym range string \"{dym_string}\" is not a legal string")
         raise argparse.ArgumentTypeError
     return value
-
-
-def check_quant_json_path_legality(path):
-    if not path:
-        return path
-    check_input_file_path(path)
-    if not is_endswith_extensions(path, ['.json']):
-        logger.error(f"quant fusion rule file path:{path} is illegal. Please check.")
-        raise argparse.ArgumentTypeError
-    return path
 
 
 def str2bool(v):

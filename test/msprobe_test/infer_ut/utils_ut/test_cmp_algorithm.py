@@ -22,7 +22,6 @@ import pytest
 from msprobe.infer.utils.cmp_algorithm import cosine_similarity, max_relative_error, mean_relative_error, \
     max_absolute_error, kl_divergence, mean_absolute_error, relative_euclidean_distance, \
     CMP_ALG_MAP, register_custom_compare_algorithm
-from msprobe.infer.utils.file_utils import FileCheckException
 
 
 class TestMetrics(unittest.TestCase):

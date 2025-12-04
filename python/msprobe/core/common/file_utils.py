@@ -256,9 +256,19 @@ def check_common_file_size(file_path):
 
 
 def check_file_suffix(file_path, file_suffix):
+    # 如果 file_suffix 为 None，直接返回
+    if file_suffix is None:
+        return
+
+    # 如果 file_suffix 是字符串，则将其转化为列表
+    if isinstance(file_suffix, str):
+        file_suffix = [file_suffix]
+    elif not isinstance(file_suffix, (list, tuple)):
+        raise TypeError("file_suffix must be a string, list, or tuple.")
+
     if file_suffix:
-        if not file_path.endswith(file_suffix):
-            logger.error(f"The {file_path} should be a {file_suffix} file!")
+        if not any(file_path.endswith(suffix) for suffix in file_suffix):
+            logger.error(f"{file_path} should be one of the following types of files: {file_suffix}!")
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
@@ -344,7 +354,7 @@ def check_dirpath_permission(path):
             logger.warning(f"The directory {dirpath} is not yours.")
 
 
-def check_file_or_directory_path(path, isdir=False, is_strict=False):
+def check_file_or_directory_path(path, isdir=False, is_strict=False, file_suffix=None):
     """
     Function Description:
         check whether the path is valid
@@ -358,7 +368,7 @@ def check_file_or_directory_path(path, isdir=False, is_strict=False):
     if isdir:
         path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
     else:
-        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
+        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, file_suffix)
     path_checker.common_check()
 
     if is_strict:
@@ -400,13 +410,13 @@ def find_existing_path(path, depth=16):
     if os.path.exists(path):
         return path
     if depth <= 0:
-        raise RecursionError("Output path was not valied")
+        raise RecursionError("Output path was not valid")
     parent_path = os.path.dirname(path)
     # 递归查找父目录
     if parent_path and parent_path != path:
         return find_existing_path(parent_path, depth - 1)
     else:
-        raise ValueError("Output path was not valied.")
+        raise ValueError("Output path was not valid.")
 
 
 def check_and_get_real_path(path, ability, file_type=None, must_exist=True, is_strict=False):
@@ -1007,6 +1017,16 @@ def dedup_log(func_name, filter_name):
         exist_names.add(filter_name)
         shared_dict[func_name] = exist_names
         return True
+
+
+def check_output_dir_path(path):
+    path = os.path.realpath(path)
+    check_link(path)
+    check_path_length(path)
+    check_path_pattern_valid(path)
+    if os.path.exists(path):
+        check_path_writability(path)
+        check_path_owner_consistent(path)
 
 
 class SharedDict:
