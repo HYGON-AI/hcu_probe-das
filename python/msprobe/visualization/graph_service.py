@@ -242,11 +242,15 @@ def _compare_graph_ranks(input_param, args, step=None):
 def _get_compare_graph_results(input_param, serializable_args, step, pool, err_call):
     dump_rank_n = input_param.get('npu_path')
     dump_rank_b = input_param.get('bench_path')
-    npu_ranks = sorted(check_and_return_dir_contents(dump_rank_n, Const.RANK))
-    bench_ranks = sorted(check_and_return_dir_contents(dump_rank_b, Const.RANK))
+    npu_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_n, Const.RANK))
+    bench_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_b, Const.RANK))
     if npu_ranks != bench_ranks:
-        logger.error('The number of ranks in the two runs are different. Unable to match the ranks.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
+        intersection_ranks = sort_rank_number_strings(list(set(npu_ranks) & set(bench_ranks)))
+        if not intersection_ranks:
+            logger.error('The ranks in the two runs are completely different. Unable to match the ranks.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        npu_ranks = intersection_ranks
+        bench_ranks = intersection_ranks
     compare_graph_results = []
     if is_real_data_compare(input_param, npu_ranks, bench_ranks):
         mp_task_dict = {}
@@ -282,12 +286,16 @@ def _compare_graph_steps(input_param, args):
     dump_step_n = input_param.get('npu_path')
     dump_step_b = input_param.get('bench_path')
 
-    npu_steps = sorted(check_and_return_dir_contents(dump_step_n, Const.STEP))
-    bench_steps = sorted(check_and_return_dir_contents(dump_step_b, Const.STEP))
+    npu_steps = check_and_return_dir_contents(dump_step_n, Const.STEP)
+    bench_steps = check_and_return_dir_contents(dump_step_b, Const.STEP)
 
     if npu_steps != bench_steps:
-        logger.error('The number of steps in the two runs is different. Unable to match the steps.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
+        intersection_steps = sort_rank_number_strings(list(set(npu_steps) & set(bench_steps)))
+
+        if not intersection_steps:
+            logger.error('The steps in the two runs are completely different. Unable to match the steps.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        npu_steps = intersection_steps
 
     args.step_list = sorted([get_step_or_rank_int(step) for step in npu_steps])
 
@@ -355,8 +363,10 @@ def _build_graph_steps(dump_steps_path, args):
         _build_graph_ranks(dump_ranks_path, args, step)
 
 
-def _compare_and_export_graph(graph_task_info, input_param, args):
+def _compare_and_export_graph(graph_task_info, input_param, args, step=None):
     result = _run_graph_compare(graph_task_info, input_param, args)
+    if step is not None:
+        result.step = get_step_or_rank_int(step)
     return _export_compare_graph_result(args, result)
 
 
@@ -413,7 +423,7 @@ def _compare_graph_ranks_parallel(input_param, args, step=None):
                 _build_graph_info(os.path.join(bench_path, f'rank{graph_b.root.rank}'), args, graph_b),
                 f'rank{graph_n.root.rank}', f'rank{graph_b.root.rank}', current_time)
             export_res_task_list.append(pool.apply_async(_compare_and_export_graph,
-                                                         args=(graph_task_info, input_param, serializable_args),
+                                                         args=(graph_task_info, input_param, serializable_args, step),
                                                          error_callback=err_call))
         export_res_list = [res.get() for res in export_res_task_list]
         if any(export_res_list):
