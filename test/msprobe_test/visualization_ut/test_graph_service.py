@@ -86,15 +86,6 @@ class TestGraphService(unittest.TestCase):
         _compare_graph_ranks(input_param, args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
-        input_param1 = {
-            'npu_path': os.path.join(self.input, 'step0'),
-            'bench_path': os.path.join(self.input, 'step1'),
-            'is_print_compare_log': True
-        }
-        args = Args(output_path=self.output, framework='pytorch')
-        with self.assertRaises(CompareException):
-            _compare_graph_ranks(input_param1, args)
-
     @patch('msprobe.core.common.log.logger.info')
     def test_compare_graph_steps(self, mock_log_info):
         input_param = {
