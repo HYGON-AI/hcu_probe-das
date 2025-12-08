@@ -22,6 +22,7 @@ import torch.distributed as dist
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.runtime import Runtime
 from msprobe.core.dump.api_dump.api_registry import ApiRegistry
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import (
@@ -91,6 +92,12 @@ _inner_used_api = {
 }
 
 
+def reset_dist_collect_func():
+    global dist_data_collect_func, dist_batch_data_collect_func
+    dist_data_collect_func.clear()
+    dist_batch_data_collect_func.clear()
+
+
 @parameter_adapter
 def tensor_module_forward(module, *args, **kwargs):
     return module.api_func(*args, **kwargs)
@@ -114,9 +121,9 @@ def dist_module_forward(module, *args, **kwargs):
 
         return store_data
 
-    if use_async_op_flag or module.api_name in ['isend', 'irecv']:
+    if Runtime.is_running and (use_async_op_flag or module.api_name in ['isend', 'irecv']):
         dist_data_collect_func[handle] = create_async_callback_func(module.distributed_forward_hook)
-    if module.api_name == 'batch_isend_irecv':
+    if Runtime.is_running and module.api_name == 'batch_isend_irecv':
         dist_batch_data_collect_func.append([handle, create_async_callback_func(module.distributed_forward_hook)])
     return handle
 
