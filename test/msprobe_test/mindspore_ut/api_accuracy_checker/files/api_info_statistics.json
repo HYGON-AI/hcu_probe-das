@@ -1,0 +1,35 @@
+{
+    "task": "statistics",
+    "dump_data_dir": "",
+    "data": {
+        "MintFunctional.relu.0.forward": {
+            "input_args": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Float32",
+                    "shape": [
+                        2,
+                        3
+                    ],
+                    "Max": 3.0,
+                    "Min": 1.0,
+                    "data_name": "2_3_input.npy"
+                }
+            ],
+            "input_kwargs": {},
+            "output": [
+                {
+                    "type": "mindspore.Tensor",
+                    "dtype": "Float32",
+                    "shape": [
+                        2,
+                        3
+                    ],
+                    "Max": 3.0,
+                    "Min": 1.0,
+                    "data_name": "2_3_input.npy"
+                }
+            ]
+        }
+    }
+}
