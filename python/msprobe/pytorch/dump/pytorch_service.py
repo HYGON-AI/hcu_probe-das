@@ -18,7 +18,12 @@ from msprobe.core.dump.service import BaseService
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
-from msprobe.pytorch.dump.api_dump.api_register import get_api_register, ApiTemplate, redirect_wait
+from msprobe.pytorch.dump.api_dump.api_register import (
+    get_api_register,
+    ApiTemplate,
+    redirect_wait,
+    reset_dist_collect_func
+)
 from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
 from msprobe.pytorch.dump.api_dump.pt_hook_manager import PytorchHookManager
 from msprobe.pytorch.dump.api_dump.register_optimizer_hook import register_optimizer_hook
@@ -33,7 +38,7 @@ class PytorchService(BaseService):
     @staticmethod
     def _get_current_rank():
         return get_rank_if_initialized()
-    
+
     def reset_status(self):
         self._reset_status()
 
@@ -63,3 +68,4 @@ class PytorchService(BaseService):
         super()._reset_status()
         ModuleProcessor.reset_module_stats()
         HOOKModule.reset_module_stats()
+        reset_dist_collect_func()
