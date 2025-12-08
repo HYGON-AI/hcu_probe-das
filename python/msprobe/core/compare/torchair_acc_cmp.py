@@ -642,15 +642,31 @@ def acc_compare(golden_path, my_path, output_path='./', rank_id=None, rank_info_
     else:
         compared_ranks = [-1]
 
-    args = []
-    for rank_id in compared_ranks:
-        args.append((golden_path, my_path, output_path, rank_id))
-    processes_pool = Pool(min(len(compared_ranks), int(cpu_count() * 1.3)))
-    processes_pool.map(acc_compare_once, args)
-    processes_pool.close()
-    processes_pool.join()
+    args = [(golden_path, my_path, output_path, rid) for rid in compared_ranks]
+    # If only a single rank needs comparison, run synchronously so that any exceptions
+    # raised inside `acc_compare_once` are propagated directly.
+    if len(args) == 1:
+        acc_compare_once(args[0])
+    else:
+        # Use multiprocessing for multiple ranks but make sure to propagate exceptions
+        processes_pool = Pool(min(len(args), int(cpu_count() * 1.3)))
+        async_results = [processes_pool.apply_async(save_compare_once, (arg,)) for arg in args]
+        processes_pool.close()
+        # Ensure that exceptions in worker processes are not silenced. Calling `get()` will
+        # re-raise any exception occurred in the worker process in the main process.
+        for res in async_results:
+            res.get()
+        processes_pool.join()
 
     return output_path
+
+
+def save_compare_once(args):
+    try:
+        return acc_compare_once(args)
+    except Exception as e:
+        error_msg = f"Error in acc_compare_once: {str(e)}"
+        raise ValueError(error_msg) from e
 
 
 def compare_torchair_mode(args):
