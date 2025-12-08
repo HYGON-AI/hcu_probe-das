@@ -134,37 +134,43 @@ class TestCompareOfflineDataMode(unittest.TestCase):
 class TestCheckMsaccucmpFile(unittest.TestCase):
 
     @patch('os.path.exists')
-    def test_check_msaccucmp_file_exists(self, mock_exists):
-        mock_exists.return_value = True
-        script_path = "/test/path"
-        result = _check_msaccucmp_file(script_path)
-        expected_path = os.path.join(script_path, "msaccucmp.py")
+    def test_check_msaccucmp_file_exists_first_path(self, mock_exists):
+        """测试在第一个路径选项中找到文件"""
+        def exists_side_effect(path):
+            # 第一个路径存在，返回 True
+            if "toolkit/tools/operator_cmp/compare" in path and path.endswith("msaccucmp.py"):
+                return True
+            return False
+        
+        mock_exists.side_effect = exists_side_effect
+        cann_path = "/test/path"
+        result = _check_msaccucmp_file(cann_path)
+        expected_path = os.path.join(cann_path, "toolkit/tools/operator_cmp/compare", "msaccucmp.py")
         self.assertEqual(result, expected_path)
-        mock_exists.assert_called_once_with(expected_path)
 
     @patch('msprobe.core.compare.offline_data_compare.logger')
     @patch('os.path.exists')
     def test_check_msaccucmp_file_not_exists(self, mock_exists, mock_logger):
+        """测试所有路径选项都不存在文件"""
         mock_exists.return_value = False
-        script_path = "/test/path"
+        cann_path = "/test/path"
         
         with self.assertRaises(CompareException) as context:
-            _check_msaccucmp_file(script_path)
+            _check_msaccucmp_file(cann_path)
         
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
         # 验证日志被调用
-        mock_logger.warning.assert_called_once()
         mock_logger.error.assert_called_once()
+        # 验证尝试了所有路径选项（应该调用2次，对应两个路径选项）
+        self.assertEqual(mock_exists.call_count, 2)
 
 
 class TestCallMsaccucmp(unittest.TestCase):
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_success(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_success(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         # 模拟 subprocess.Popen
         mock_process = MagicMock()
@@ -193,12 +199,11 @@ class TestCallMsaccucmp(unittest.TestCase):
         self.assertTrue(mock_logger.raw.called)
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_file_not_found(self, mock_logger, mock_exists, mock_check_file):
+    def test_call_msaccucmp_file_not_found(self, mock_logger, mock_check_file):
         """测试 msaccucmp 文件不存在的情况"""
-        mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = False
+        # _check_msaccucmp_file 会抛出异常
+        mock_check_file.side_effect = CompareException(CompareException.INVALID_PATH_ERROR)
         
         cmd_args = ['-m', '/path/to/target']
         
@@ -206,15 +211,12 @@ class TestCallMsaccucmp(unittest.TestCase):
             call_msaccucmp(cmd_args)
         
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_logger.error.assert_called()
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_with_return_code_2(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_with_return_code_2(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()
@@ -234,12 +236,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         self.assertTrue(any('successfully' in call for call in info_calls))
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_with_error_return_code(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_with_error_return_code(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()
@@ -259,12 +259,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         self.assertTrue(any('failed' in call.lower() for call in error_calls))
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_filters_non_date_lines(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_filters_non_date_lines(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()
@@ -289,12 +287,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         mock_process.wait.assert_called_once()
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_exception_handling(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_exception_handling(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         # 模拟 Popen 抛出异常
         mock_popen.side_effect = Exception("Subprocess error")
@@ -308,12 +304,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         mock_logger.error.assert_called()
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_command_format(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_command_format(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()
@@ -340,12 +334,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         self.assertIn('/path/to/output', call_args)
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_empty_cmd_args(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_empty_cmd_args(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()
@@ -364,12 +356,10 @@ class TestCallMsaccucmp(unittest.TestCase):
         self.assertEqual(len(call_args), 3)
 
     @patch('msprobe.core.compare.offline_data_compare._check_msaccucmp_file')
-    @patch('os.path.exists')
     @patch('subprocess.Popen')
     @patch('msprobe.core.compare.offline_data_compare.logger')
-    def test_call_msaccucmp_stdout_close_called(self, mock_logger, mock_popen, mock_exists, mock_check_file):
+    def test_call_msaccucmp_stdout_close_called(self, mock_logger, mock_popen, mock_check_file):
         mock_check_file.return_value = "/path/to/msaccucmp.py"
-        mock_exists.return_value = True
         
         mock_process = MagicMock()
         mock_stdout = MagicMock()

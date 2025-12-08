@@ -21,8 +21,11 @@ import subprocess
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 
-CANN_PATH = os.environ.get("ASCEND_TOOLKIT_PATH", "/usr/local/Ascend/ascend-toolkit/latest")
-MSACCUCMP_DIR_PATH = "toolkit/tools/operator_cmp/compare"
+CANN_PATH = os.environ.get("ASCEND_TOOLKIT_HOME", "/usr/local/Ascend/ascend-toolkit/latest")
+MSACCUCMP_DIR_PATH_OPTIONS = [
+    "toolkit/tools/operator_cmp/compare", 
+    "tools/operator_cmp/compare"  
+]
 MSACCUCMP_SCRIPT = "msaccucmp.py"
 
 
@@ -52,15 +55,15 @@ def compare_offline_data_mode(args):
     call_msaccucmp(cmd_args)
 
 
-def _check_msaccucmp_file(msaccucmp_script_path):
-    msaccucmp_command_file_path = os.path.join(msaccucmp_script_path, MSACCUCMP_SCRIPT)
-    if os.path.exists(msaccucmp_command_file_path):
-        return msaccucmp_command_file_path
-    else:
-        logger.warning(
-            'The path {} is not exist.Please check the file'.format(msaccucmp_command_file_path))
-    logger.error(
-        'Does not exist in {} directory msaccucmp.py and msaccucmp.pyc file'.format(msaccucmp_script_path))
+def _check_msaccucmp_file(cann_path):
+    for dir_path_option in MSACCUCMP_DIR_PATH_OPTIONS:
+        full_path = os.path.join(cann_path, dir_path_option)
+        script_path = os.path.join(full_path, MSACCUCMP_SCRIPT)
+        if os.path.exists(script_path):
+            return script_path
+    
+    error_msg = f"msaccucmp.py file not found. Please check the path: {CANN_PATH}"
+    logger.error(error_msg)
     raise CompareException(CompareException.INVALID_PATH_ERROR)
 
 
@@ -75,11 +78,7 @@ def call_msaccucmp(cmd_args):
     Returns:
         subprocess.CompletedProcess: 命令执行结果
     """
-    msaccucmp_script_path = _check_msaccucmp_file(os.path.join(CANN_PATH, MSACCUCMP_DIR_PATH))
-    
-    if not os.path.exists(msaccucmp_script_path):
-        logger.error(f"msaccucmp script not found at: {msaccucmp_script_path}")
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    msaccucmp_script_path = _check_msaccucmp_file(CANN_PATH)
     
     # 构建完整命令
     python_cmd = sys.executable  # 使用当前 Python 解释器
