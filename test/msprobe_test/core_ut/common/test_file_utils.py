@@ -591,3 +591,190 @@ class TestCheckZipFile(unittest.TestCase):
             self.assertIn("Total extracted size exceeds the limit", str(cm.exception))
         finally:
             os.remove(zip_path)
+
+
+class TestMoveDirectory:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.src_dir = tmp_path / "src_dir"
+        self.dst_dir = tmp_path / "dst_dir"
+        self.src_dir.mkdir()
+        self.test_file = self.src_dir / "test_file.txt"
+        self.test_file.write_text("test content")
+
+    def test_move_directory_success(self):
+        """Test successful directory move"""
+        with patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_path_before_create', return_value=None), \
+                patch('os.chmod') as mock_chmod:
+            move_directory(str(self.src_dir), str(self.dst_dir))
+
+            assert not self.src_dir.exists()
+            assert self.dst_dir.exists()
+            assert (self.dst_dir / "test_file.txt").exists()
+            assert (self.dst_dir / "test_file.txt").read_text() == "test content"
+
+
+class TestCreateFileWithList:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.test_file = tmp_path / "test_file.txt"
+        self.test_data = ["line1", "line2", "line3"]
+
+    def test_create_file_with_list_success(self):
+        """Test successful file creation with list content"""
+        with patch('builtins.open', mock_open()) as mock_file, \
+                patch('os.chmod') as mock_chmod, patch('fcntl.flock') as mock_flock:
+            create_file_with_list(self.test_data, str(self.test_file))
+
+            mock_file.assert_called_once_with(str(self.test_file), 'w', encoding='utf-8')
+
+
+class TestCreateFileWithContent:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.test_file = tmp_path / "test_file.txt"
+        self.test_content = "test file content"
+
+    def test_create_file_with_content_success(self):
+        """Test successful file creation with content"""
+        with patch('builtins.open', mock_open()) as mock_file, \
+                patch('os.chmod') as mock_chmod, \
+                patch('fcntl.flock') as mock_flock:
+            create_file_with_content(self.test_content, str(self.test_file))
+
+            mock_file.assert_called_once_with(str(self.test_file), 'w', encoding='utf-8')
+            mock_file().write.assert_called_once_with(self.test_content)
+
+
+class TestAddFileToZip:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.zip_file = tmp_path / "test.zip"
+        self.content_file = tmp_path / "content.txt"
+        self.content_file.write_text("test content")
+
+    def test_add_file_to_zip_success(self):
+        """Test successful file addition to zip"""
+        with patch('zipfile.ZipFile') as mock_zip_class, \
+                patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None):
+            mock_zip = MagicMock()
+            mock_zip_class.return_value.__enter__.return_value = mock_zip
+
+            add_file_to_zip(str(self.zip_file), str(self.content_file), "archive_name.txt")
+
+            mock_zip_class.assert_called_once_with(str(self.zip_file), 'a')
+            mock_zip.write.assert_called_once_with(str(self.content_file), "archive_name.txt")
+
+
+class TestCreateFileInZip:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.zip_file = tmp_path / "test.zip"
+        self.file_content = "test file content"
+
+    def test_create_file_in_zip_success(self):
+        """Test successful file creation in zip"""
+        with patch('zipfile.ZipFile') as mock_zip_class:
+            mock_zip = MagicMock()
+            mock_zip_class.return_value.__enter__.return_value = mock_zip
+
+            create_file_in_zip(str(self.zip_file), "internal_file.txt", self.file_content)
+
+            mock_zip_class.assert_called_once()
+            mock_zip.writestr.assert_called_once()
+
+
+class TestExtractZip:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.zip_file = tmp_path / "test.zip"
+        self.extract_dir = tmp_path / "extracted"
+
+    def test_extract_zip_success(self):
+        """Test successful zip extraction"""
+        with patch('zipfile.ZipFile') as mock_zip_class, \
+                patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_output_dir_path', return_value=None):
+            mock_zip = MagicMock()
+            mock_zip_class.return_value.__enter__.return_value = mock_zip
+
+            extract_zip(str(self.zip_file), str(self.extract_dir))
+
+            mock_zip_class.assert_called()
+            mock_zip.extractall.assert_called_once_with(str(self.extract_dir))
+
+
+class TestSplitZipFilePath:
+    def test_split_zip_file_path_valid(self):
+        """Test splitting valid zip file path"""
+        zip_path = "path/to/archive.zip"
+        result_zip, result_internal = split_zip_file_path(zip_path)
+        assert result_internal == "archive.zip"
+
+
+class TestSharedDict:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.shared_dict = None
+
+    def teardown_method(self):
+        """Clean up shared dictionary after each test"""
+        if self.shared_dict is not None:
+            try:
+                self.shared_dict.cleanup()
+            except:
+                pass
+
+    def test_shared_dict_creation_and_basic_operations(self):
+        """Test SharedDict creation and basic operations"""
+        self.shared_dict = SharedDict()
+        self.shared_dict._load_shared_memory()
+
+        # Test setting and getting values
+        self.shared_dict['key1'] = 'value1'
+        self.shared_dict['key2'] = 42
+        self.shared_dict['key3'] = [1, 2, 3]
+
+        assert self.shared_dict.get('key1') == 'value1'
+        assert self.shared_dict.get('key2') == 42
+        assert self.shared_dict.get('key3') == [1, 2, 3]
+
+
+class TestDeserializationScanner:
+    def test_deserialization_scanner_creation(self):
+        """Test DeserializationScanner creation"""
+        scanner = DeserializationScanner()
+
+        assert scanner.DANGEROUS_METHODS is not None
+        assert scanner.DANGEROUS_MODULES is not None
+        assert isinstance(scanner.DANGEROUS_METHODS, set)
+        assert isinstance(scanner.DANGEROUS_MODULES, set)
+
+    def test_scan_pickle_content_safe_data(self):
+        """Test scanning safe pickle content"""
+        scanner = DeserializationScanner()
+
+        # Create safe pickle data (just a simple string)
+        safe_data = b"test string data"
+        with patch('msprobe.core.common.file_utils.FileOpen.check_file_path', return_value=None), \
+                patch('builtins.open', mock_open(read_data=safe_data)):
+            result = scanner.scan_pickle_content(safe_data)
+
+        # Safe data should not raise any warnings
+        assert result is True  # Method doesn't return anything, just logs warnings
+
+    def test_scan_pickle_content_with_dangerous_methods(self):
+        """Test scanning pickle content with dangerous methods"""
+        scanner = DeserializationScanner()
+
+        # Create pickle data that contains a dangerous method name
+        # This is a simplified test - in reality, we'd need actual pickle data
+        dangerous_content = b"os.system"
+
+        with patch('msprobe.core.common.file_utils.logger') as mock_logger, \
+                patch('msprobe.core.common.file_utils.FileOpen.check_file_path', return_value=None), \
+                patch('builtins.open', mock_open(read_data=dangerous_content)):
+            result = scanner.scan_pickle_content(dangerous_content)
+
+            assert result is False
