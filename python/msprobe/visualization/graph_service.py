@@ -23,7 +23,7 @@ from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException, get_dump_mode
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs, load_parallel_param, \
-    sort_rank_number_strings, check_whether_parallel_merge, validate_parallel_param, get_step_or_rank_int
+    sort_rank_number_strings, validate_parallel_param, get_step_or_rank_int
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
@@ -308,7 +308,8 @@ def _compare_graph_steps(input_param, args):
             else _compare_graph_ranks_parallel(input_param, args, step=folder_step)
 
 
-def _build_graph_ranks(dump_ranks_path, args, step=None):
+def _build_graph_ranks(args, step=None):
+    dump_ranks_path = os.path.join(args.target_path, step) if step is not None else args.target_path
     ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     serializable_args = SerializableArgs(args)
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
@@ -353,14 +354,13 @@ def _build_graph_ranks(dump_ranks_path, args, step=None):
             logger.info(f'Successfully exported build graph results.')
 
 
-def _build_graph_steps(dump_steps_path, args):
-    steps = sorted(check_and_return_dir_contents(dump_steps_path, Const.STEP))
+def _build_graph_steps(args):
+    steps = sorted(check_and_return_dir_contents(args.target_path, Const.STEP))
     args.step_list = sorted([get_step_or_rank_int(step) for step in steps])
 
     for step in steps:
         logger.info(f'Start processing data for {step}...')
-        dump_ranks_path = os.path.join(dump_steps_path, step)
-        _build_graph_ranks(dump_ranks_path, args, step)
+        _build_graph_ranks(args, step)
 
 
 def _compare_and_export_graph(graph_task_info, input_param, args, step=None):
@@ -376,7 +376,7 @@ def _compare_graph_ranks_parallel(input_param, args, step=None):
     bench_path = input_param.get('bench_path')
     ranks_n = sort_rank_number_strings(check_and_return_dir_contents(npu_path, Const.RANK))
     ranks_b = sort_rank_number_strings(check_and_return_dir_contents(bench_path, Const.RANK))
-    parallel_params = load_parallel_param(input_param)
+    parallel_params = args.parallel_params
     if len(parallel_params) != 2:
         raise RuntimeError('Parallel params error in compare graph!')
     validate_parallel_param(parallel_params[0], npu_path)
@@ -434,24 +434,46 @@ def _compare_graph_ranks_parallel(input_param, args, step=None):
 
 
 def _graph_service_parser(parser):
-    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.", required=True)
+    # -------------------------- 基础必填参数 --------------------------
+    parser.add_argument("-tp", "--target_path", dest="target_path", type=str,
+                        help="<Required> The target path.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path.", required=True)
+                        help="<Required> The visualization task result out path.", required=True)
+    # -------------------------- 基础可选参数 --------------------------
+    parser.add_argument("-gp", "--golden_path", dest="golden_path", type=str,
+                        help="<Optional> The golden path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<Optional> The layer mapping file path.", required=False)
     parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
                         help="<Optional> whether open overflow_check for graph.", required=False)
-    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
-                        help="<Optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-fm", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<Optional> whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-log", "--is_print_compare_log", dest="is_print_compare_log", action="store_true",
+                        help="<Optional> whether print compare log for visualization task.", required=False)
+
+    # -------------------------- 不同并行切分策略合并可选参数 --------------------------
+    group_n = parser.add_argument_group("Parallel Parameters, "
+                                        "used for graph merging under different parallel partitioning strategies")
+
+    group_n.add_argument("--rank_size", type=int, nargs='+', help="<Optional> The rank size of dump path.",
+                         required=False)
+    group_n.add_argument("--tp", type=int, nargs='+',
+                         help="<Optional, but required if rank_size is not empty> The tp size of dump path.",
+                         required=False)
+    group_n.add_argument("--pp", type=int, nargs='+',
+                         help="<Optional, but required if rank_size is not empty> The pp size of dump path.",
+                         required=False)
+    group_n.add_argument("--vpp", type=int, nargs='+', default=[1], help="<Optional> The vpp size of dump path.",
+                         required=False)
+    group_n.add_argument("--order", type=str, nargs='+', default=['tp-cp-ep-dp-pp'],
+                         help="<Optional> The order of dump path.", required=False)
 
 
 def _graph_service_command(args):
-    input_param = load_json(args.input_path)
-    npu_path = input_param.get("npu_path")
-    bench_path = input_param.get("bench_path")
-    args.parallel_merge = check_whether_parallel_merge(input_param)
-    args.parallel_params = load_parallel_param(input_param) if args.parallel_merge else None
+    npu_path = args.target_path
+    bench_path = args.golden_path
+    args.parallel_merge = True if args.rank_size else False
+    args.parallel_params = load_parallel_param(args) if args.parallel_merge else None
     check_file_or_directory_path(npu_path, isdir=True)
     if bench_path:
         check_file_or_directory_path(bench_path, isdir=True)
@@ -459,9 +481,9 @@ def _graph_service_command(args):
         content = check_directory_content(npu_path)
         output_db_path = os.path.join(args.output_path, build_output_db_name)
         if content == GraphConst.RANKS:
-            _build_graph_ranks(npu_path, args)
+            _build_graph_ranks(args)
         elif content == GraphConst.STEPS:
-            _build_graph_steps(npu_path, args)
+            _build_graph_steps(args)
         else:
             result = _build_graph_result(npu_path, args)
             create_directory(args.output_path)
@@ -474,6 +496,11 @@ def _graph_service_command(args):
         output_db_path = os.path.join(args.output_path, compare_output_db_name)
         if content_n != content_b:
             raise ValueError('The directory structures of npu_path and bench_path are inconsistent.')
+        input_param = {
+            'npu_path': args.target_path,
+            'bench_path': args.golden_path,
+            'is_print_compare_log': args.is_print_compare_log
+        }
         if content_n == GraphConst.RANKS:
             if args.parallel_merge:
                 _compare_graph_ranks_parallel(input_param, args)

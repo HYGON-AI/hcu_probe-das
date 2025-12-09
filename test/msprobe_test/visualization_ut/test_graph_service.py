@@ -12,17 +12,34 @@ from msprobe.visualization.graph_service import _compare_graph_result, _build_gr
 from msprobe.core.common.utils import CompareException
 
 
+# @dataclass
+# class Args:
+#     input_path: str = None
+#     output_path: str = None
+#     layer_mapping: str = None
+#     framework: str = None
+#     overflow_check: bool = False
+#     fuzzy_match: bool = False
+#     complete_stack: bool = False
+#     parallel_merge: bool = False
+#     parallel_params: tuple = None
 @dataclass
 class Args:
-    input_path: str = None
+    target_path: str = None
+    golden_path: str = None
     output_path: str = None
     layer_mapping: str = None
-    framework: str = None
     overflow_check: bool = False
     fuzzy_match: bool = False
-    complete_stack: bool = False
+    is_print_compare_log: bool = True
     parallel_merge: bool = False
     parallel_params: tuple = None
+
+    rank_size: list = None
+    tp: list = None
+    pp: list = None
+    vpp: list = (1,)
+    order: list = ('tp-cp-ep-dp-pp',)
 
 
 class TestGraphService(unittest.TestCase):
@@ -52,20 +69,20 @@ class TestGraphService(unittest.TestCase):
 
     @patch('msprobe.core.common.log.logger.info')
     def test_compare_graph_result(self, mock_log_info):
-        args = Args(output_path=self.output, framework='pytorch')
+        args = Args(output_path=self.output)
         result = _compare_graph_result(self.input_param, args)
         self.assertEqual(mock_log_info.call_count, 2)
         self.assertIsNotNone(result)
 
-        args = Args(output_path=self.output, framework='mindspore')
+        args = Args(output_path=self.output)
         result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
-        args = Args(output_path=self.output, framework='pytorch', layer_mapping=self.layer_mapping)
+        args = Args(output_path=self.output, layer_mapping=self.layer_mapping)
         result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
-        args = Args(output_path=self.output, framework='pytorch', overflow_check=True)
+        args = Args(output_path=self.output, overflow_check=True)
         result = _compare_graph_result(self.input_param, args)
         self.assertIsNotNone(result)
 
@@ -82,7 +99,7 @@ class TestGraphService(unittest.TestCase):
             'bench_path': os.path.join(self.input, 'step0'),
             'is_print_compare_log': True
         }
-        args = Args(output_path=self.output, framework='pytorch')
+        args = Args(output_path=self.output)
         _compare_graph_ranks(input_param, args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
@@ -93,7 +110,7 @@ class TestGraphService(unittest.TestCase):
             'bench_path': self.input,
             'is_print_compare_log': True
         }
-        args = Args(output_path=self.output, framework='pytorch')
+        args = Args(output_path=self.output)
         _compare_graph_steps(input_param, args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
@@ -102,118 +119,78 @@ class TestGraphService(unittest.TestCase):
             'bench_path': os.path.join(self.current_path, "input"),
             'is_print_compare_log': True
         }
-        args = Args(output_path=self.output, framework='pytorch')
+        args = Args(output_path=self.output)
         with self.assertRaises(CompareException):
             _compare_graph_steps(input_param1, args)
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_ranks(self, mock_log_info):
-        _build_graph_ranks(os.path.join(self.input, 'step0'), Args(output_path=self.output))
+        _build_graph_ranks(Args(target_path=self.input, output_path=self.output), 'step0')
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph_steps(self, mock_log_info):
-        _build_graph_steps(self.input, Args(output_path=self.output))
+        _build_graph_steps(Args(target_path=self.input, output_path=self.output))
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command(self, mock_log_info):
-        with open(self.output_json[0], 'w') as f:
-            json.dump(self.input_param, f, indent=4)
-
-        args = Args(input_path=self.output_json[0], output_path=self.output, framework='pytorch')
+        args = Args(target_path=self.input_param.get('npu_path'), golden_path=self.input_param.get('bench_path'),
+                    output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command1(self, mock_log_info):
-        input_param1 = {
-            'npu_path': os.path.join(self.input, 'step0', 'rank0'),
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[1], 'w') as f:
-            json.dump(input_param1, f, indent=4)
-        args = Args(input_path=self.output_json[1], output_path=self.output, framework='pytorch')
+        args = Args(target_path=os.path.join(self.input, 'step0', 'rank0'), output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command2(self, mock_log_info):
-        input_param2 = {
-            'npu_path': os.path.join(self.input, 'step0'),
-            'bench_path': os.path.join(self.input, 'step0'),
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[2], 'w') as f:
-            json.dump(input_param2, f, indent=4)
-        args = Args(input_path=self.output_json[2], output_path=self.output, framework='pytorch')
+        args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step0'),
+                    output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command3(self, mock_log_info):
-        input_param3 = {
-            'npu_path': self.input,
-            'bench_path': self.input,
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[3], 'w') as f:
-            json.dump(input_param3, f, indent=4)
-        args = Args(input_path=self.output_json[3], output_path=self.output, framework='pytorch')
+        args = Args(target_path=self.input, golden_path=self.input, output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command4(self, mock_log_info):
-        input_param4 = {
-            'npu_path': os.path.join(self.input, 'step0'),
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[4], 'w') as f:
-            json.dump(input_param4, f, indent=4)
-        args = Args(input_path=self.output_json[4], output_path=self.output, framework='pytorch')
+        args = Args(target_path=os.path.join(self.input, 'step0'), output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command5(self, mock_log_info):
-        input_param5 = {
-            'npu_path': self.input,
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[5], 'w') as f:
-            json.dump(input_param5, f, indent=4)
-        args = Args(input_path=self.output_json[5], output_path=self.output, framework='pytorch')
+        args = Args(target_path=self.input, output_path=self.output)
         _graph_service_command(args)
         self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command6(self, mock_log_info):
-        input_param6 = {
-            'npu_path': self.input,
-            'bench_path': os.path.join(self.input, 'step0'),
-            'is_print_compare_log': True
-        }
-        with open(self.output_json[6], 'w') as f:
-            json.dump(input_param6, f, indent=4)
-        args = Args(input_path=self.output_json[6], output_path=self.output, framework='pytorch')
+        args = Args(target_path=self.input, golden_path=os.path.join(self.input, 'step0'), output_path=self.output)
         with self.assertRaises(ValueError):
             _graph_service_command(args)
 
     def test_graph_service_parser(self):
         parser = argparse.ArgumentParser()
         _graph_service_parser(parser)
-        args = parser.parse_args(['-i', 'input.json', '-o', 'output.json'])
-        self.assertEqual(args.input_path, 'input.json')
+        args = parser.parse_args(['-tp', 'input.json', '-o', 'output.json'])
+        self.assertEqual(args.target_path, 'input.json')
         self.assertEqual(args.output_path, 'output.json')
 
-        args = parser.parse_args(['-i', 'input.json', '-o', 'output.json', '-lm', 'mapping.json'])
+        args = parser.parse_args(['-tp', 'input.json', '-o', 'output.json', '-lm', 'mapping.json'])
         self.assertEqual(args.layer_mapping, 'mapping.json')
 
-        args = parser.parse_args(['-i', 'input.json', '-o', 'output.json', '-oc'])
+        args = parser.parse_args(['-tp', 'input.json', '-o', 'output.json', '-oc'])
         self.assertTrue(args.overflow_check)
 
-        args = parser.parse_args(['-i', 'input.json', '-o', 'output.json'])
+        args = parser.parse_args(['-tp', 'input.json', '-o', 'output.json'])
         self.assertFalse(args.overflow_check)
 
     def tearDown(self):

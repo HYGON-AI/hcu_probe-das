@@ -131,24 +131,37 @@ def sort_rank_number_strings(rank_number_strings):
     return sorted_list
 
 
-def check_whether_parallel_merge(input_param):
-    parallel_merge = input_param.get("parallel_merge")
-    if not isinstance(parallel_merge, dict) or not parallel_merge:
-        return False
-    if not parallel_merge.get('npu'):
-        return False
-    return True
+def load_parallel_param(args):
+    param_t = [args.rank_size, args.tp, args.pp]
+    if any(not x for x in param_t):
+        logger.error('In the graph merge task, parameters "tp/pp/rank_size" is required!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
+    if args.golden_path and len(args.rank_size) != 2:
+        logger.error('In the graph merge compare task, '
+                     'the number of parameters "tp/pp/rank_size" to be filled in is either 2!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
-def load_parallel_param(input_param):
-    parallel_merge = input_param.get("parallel_merge", {})
-    config_n = parallel_merge.get('npu', {})
-    config_b = parallel_merge.get('bench', {})
-    param_n = ParallelParam(config_n.get('rank_size'), config_n.get('tp'), config_n.get('pp'), config_n.get('vpp', 1),
-                            config_n.get('order', 'tp-cp-ep-dp-pp'))
-    param_b = ParallelParam(config_b.get('rank_size'), config_b.get('tp'), config_b.get('pp'), config_b.get('vpp', 1),
-                            config_b.get('order', 'tp-cp-ep-dp-pp'))
-    return (param_n,) if not config_b else (param_n, param_b)
+    if len(args.rank_size) == 1:
+        if any(len(x) != 1 for x in param_t):
+            logger.error('In the graph merge build task, '
+                         'the number of parameters "tp/pp/rank_size" to be filled in is either 1!')
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+        param_n = ParallelParam(args.rank_size[0], args.tp[0], args.pp[0], args.vpp[0] if args.vpp else 1,
+                                args.order[0] if args.order else 'tp-cp-ep-dp-pp')
+        return (param_n,)
+    else:
+        if any(len(x) != 2 for x in param_t):
+            logger.error('In the graph merge compare task, '
+                         'the number of parameters "tp/pp/rank_size" to be filled in is either 2!')
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+        param_n = ParallelParam(args.rank_size[0], args.tp[0], args.pp[0], args.vpp[0] if len(args.vpp) == 2 else 1,
+                                args.order[0] if len(args.order) == 2 else 'tp-cp-ep-dp-pp')
+        param_b = ParallelParam(args.rank_size[1], args.tp[1], args.pp[1], args.vpp[1] if len(args.vpp) == 2 else 1,
+                                args.order[1] if len(args.order) == 2 else 'tp-cp-ep-dp-pp')
+        return param_n, param_b
 
 
 def validate_parallel_param(parallel_param, dump_path, log_prefix='[NPU]'):
