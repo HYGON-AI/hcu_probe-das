@@ -177,6 +177,20 @@ class TestGraphService(unittest.TestCase):
         with self.assertRaises(ValueError):
             _graph_service_command(args)
 
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command7(self, mock_log_info):
+        args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step0'),
+                    output_path=self.output, rank_size=[2, 2], tp=[2, 2], pp=[1, 1])
+        _graph_service_command(args)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+
+    @patch('msprobe.core.common.log.logger.info')
+    def test_graph_service_command8(self, mock_log_info):
+        args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step1'),
+                    output_path=self.output)
+        _graph_service_command(args)
+        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+
     def test_graph_service_parser(self):
         parser = argparse.ArgumentParser()
         _graph_service_parser(parser)
