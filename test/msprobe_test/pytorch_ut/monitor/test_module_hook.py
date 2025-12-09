@@ -34,6 +34,370 @@ get_api_register().restore_all_api()
 base_dir = os.path.dirname(os.path.realpath(__file__))
 
 
+class TestTrainerMon(unittest.TestCase):
+
+    def setUp(self):
+        self.mon = TrainerMon(config_file_path=base_dir + "/config/xy_config.json")
+
+    def test_init_with_dynamic_env(self):
+        os.environ["DYNAMIC_MONITOR"] = "True"
+        mon = TrainerMon(config_file_path=base_dir + "/config/xy_config.json")
+        self.assertEqual(mon.monitoring, False)
+        os.environ["DYNAMIC_MONITOR"] = "False"
+
+    def test_has_register_backward_hook(self):
+        # 1. 覆盖返回True分支（所有条件满足，会触发日志但不mock）
+        module1 = MagicMock()
+        module1._backward_hooks = {1: "hook"}  # 非空
+        module1._is_full_backward_hook = False
+        self.assertEqual(TrainerMon.has_register_backward_hook("mod1", module1), True)
+        # 2. 覆盖返回False分支（_backward_hooks不存在）
+        module2 = MagicMock()
+        del module2._backward_hooks  # 删除该属性
+        self.assertEqual(TrainerMon.has_register_backward_hook("mod2", module2), False)
+        # 3. 覆盖返回False分支（_backward_hooks为空）
+        module3 = MagicMock()
+        module3._backward_hooks = {}  # 空字典
+        module3._is_full_backward_hook = False
+        self.assertEqual(TrainerMon.has_register_backward_hook("mod3", module3), False)
+        # 4. 覆盖返回False分支（_is_full_backward_hook为True）
+        module4 = MagicMock()
+        module4._backward_hooks = {1: "hook"}
+        module4._is_full_backward_hook = True
+        self.assertEqual(TrainerMon.has_register_backward_hook("mod4", module4), False)
+
+    def test_get_linear_hook_target(self):
+        # 1. 覆盖分支：Embedding模块 → 返回空字符串
+        embedding_module = torch.nn.Embedding(10, 5)
+        self.assertEqual(TrainerMon.get_linear_hook_target(embedding_module), '')
+        # 2. 覆盖分支：有num_embeddings属性 → 返回空字符串
+        module_with_num_emb = MagicMock()
+        module_with_num_emb.num_embeddings = 10
+        self.assertEqual(TrainerMon.get_linear_hook_target(module_with_num_emb), '')
+        # 3. 覆盖分支：有vocab_start_index属性 → 返回空字符串
+        module_with_vocab = MagicMock()
+        module_with_vocab.vocab_start_index = 0
+        del module_with_vocab.num_embeddings  # 确保只走vocab分支
+        self.assertEqual(TrainerMon.get_linear_hook_target(module_with_vocab), '')
+        # 4. 覆盖分支：有weight属性且是2维Tensor → 返回'weight'
+        module_with_2d_weight = MagicMock()
+        del module_with_2d_weight.num_embeddings, module_with_2d_weight.vocab_start_index
+        module_with_2d_weight.weight = torch.randn(10, 5)  # 2维Tensor
+        self.assertEqual(TrainerMon.get_linear_hook_target(module_with_2d_weight), 'weight')
+        # 5. 覆盖分支：weight是1维Tensor → 继续检查wg
+        module_with_1d_weight = MagicMock()
+        del module_with_1d_weight.num_embeddings, module_with_1d_weight.vocab_start_index
+        module_with_1d_weight.weight = torch.randn(10)  # 1维Tensor
+        module_with_1d_weight.wg = torch.randn(8, 4)  # 2维wg
+        self.assertEqual(TrainerMon.get_linear_hook_target(module_with_1d_weight), 'wg')
+        # 6. 覆盖分支：weight/wg都不满足 → 返回空字符串
+        module_no_valid_weight = MagicMock()
+        del module_no_valid_weight.num_embeddings, module_no_valid_weight.vocab_start_index
+        module_no_valid_weight.weight = "not tensor"  # 非Tensor
+        module_no_valid_weight.wg = torch.randn(5)  # 1维Tensor
+        self.assertEqual(TrainerMon.get_linear_hook_target(module_no_valid_weight), '')
+
+    def test_monitor_gnorm_with_ad(self):
+        # 初始化监控器实例（Mock核心依赖）
+        self.mon.set_monitor = MagicMock()  # Mock set_monitor避免执行真实逻辑
+        self.mon.logger = MagicMock()  # Mock logger避免日志输出
+
+        # 1. 测试set_wrapped_optimizer：覆盖赋值逻辑
+        mock_optimizer = MagicMock()
+        self.mon.set_wrapped_optimizer(mock_optimizer)
+        self.assertEqual(self.mon.optimizer_trans, mock_optimizer)
+
+        # 2. 测试monitor_gnorm_with_ad：传入optimizer → 调用set_monitor
+        mock_model = MagicMock()
+        self.mon.monitor_gnorm_with_ad(model=mock_model, optimizer=mock_optimizer)
+        self.mon.set_monitor.assert_called_once_with(mock_model, mock_optimizer, 1, None, None, 0)
+
+        # 3. 测试monitor_gnorm_with_ad：optimizer=None但已通过set_wrapped_optimizer设置 → 调用set_monitor
+        self.mon.set_monitor.reset_mock()
+        self.mon.monitor_gnorm_with_ad(model=mock_model, optimizer=None)
+        self.mon.set_monitor.assert_called_once_with(mock_model, mock_optimizer, 1, None, None, 0)
+
+        # 4. 测试monitor_gnorm_with_ad：optimizer=None且未设置optimizer_trans → 输出错误日志并返回
+        self.mon.optimizer_trans = None  # 清空已设置的optimizer
+        self.mon.set_monitor.reset_mock()
+        self.mon.monitor_gnorm_with_ad(model=mock_model, optimizer=None)
+        # 验证未调用set_monitor
+        self.mon.set_monitor.assert_not_called()
+
+    def test_write_metrics_if_not_empty(self):
+        self.mon.summary_writer.write_metrics = MagicMock()
+        # 1. 覆盖分支：features为空 → 直接return（不调用write_metrics）
+        empty_features = {}
+        self.mon.write_metrics_if_not_empty(empty_features, ["entropy"], 0, "attention_hook")
+        self.mon.summary_writer.write_metrics.assert_not_called()  # 验证未调用
+        self.assertEqual(len(empty_features), 0)
+
+        # 2. 覆盖分支：features为None → 直接return
+        self.mon.write_metrics_if_not_empty(None, ["entropy"], 0, "attention_hook")
+        self.mon.summary_writer.write_metrics.assert_not_called()
+
+        # 3. 覆盖分支：features非空 + hook_name≠linear_hook → 调用write_metrics+clear
+        non_empty_features = {"tag1": "value1"}
+        self.mon.write_metrics_if_not_empty(non_empty_features, ["entropy"], 1, "attention_hook")
+        # 验证write_metrics被正确调用（参数完全匹配）
+        self.mon.summary_writer.write_metrics.assert_called_once_with(
+            ["entropy"], non_empty_features, 1, "attention_hook", use_micro_step=True
+        )
+        # 验证features被清空（调用clear方法）
+        self.assertEqual(non_empty_features, {})
+
+        # 4. 覆盖分支：features非空 + hook_name=linear_hook → 调用write_metrics(use_micro_step=False)+clear
+        self.mon.summary_writer.write_metrics.reset_mock()  # 重置mock计数
+        linear_features = {"tag2": "value2"}
+        self.mon.write_metrics_if_not_empty(linear_features, ["sr"], 2, "linear_hook")
+        # 验证参数（重点：use_micro_step=False）
+        self.mon.summary_writer.write_metrics.assert_called_once_with(
+            ["sr"], linear_features, 2, "linear_hook", use_micro_step=False
+        )
+        self.assertEqual(linear_features, {})
+
+    def test_write_features_tb(self):
+        # Mock核心属性/方法
+        self.mon.write_metrics_if_not_empty = MagicMock()
+
+        # 1. 覆盖分支：recording_l2_features=False → 直接return
+        self.mon.recording_l2_features = False
+        self.mon.write_features_tb(step=0)
+        self.mon.write_metrics_if_not_empty.assert_not_called()  # 验证无后续调用
+
+        # 2. 覆盖分支：recording_l2_features=True，但context无特征 → 跳过
+        self.mon.recording_l2_features = True
+        # 模拟空的feature_hook_context_by_module
+        empty_context = MagicMock()
+        empty_context.attention_feature = {}
+        empty_context.linear_feature = {}
+        self.mon.feature_hook_context_by_module = {"ctx1": empty_context}
+
+        self.mon.write_features_tb(step=1)
+        self.mon.write_metrics_if_not_empty.assert_not_called()  # 验证无调用
+
+        # 3. 覆盖分支：recording_l2_features=True + context有特征 → 调用write_metrics_if_not_empty
+        self.mon.write_metrics_if_not_empty.reset_mock()  # 重置mock
+        # 模拟有特征的context
+        valid_context = MagicMock()
+        valid_context.attention_feature = {"tag1": "val1"}  # 非空
+        valid_context.linear_feature = {"tag2": "val2"}  # 非空
+        self.mon.feature_hook_context_by_module = {"ctx2": valid_context}
+        self.mon.write_features_tb(step=2)
+
+        # 4. 覆盖分支：仅attention_feature有值 → 仅调用attention分支
+        self.mon.write_metrics_if_not_empty.reset_mock()
+        attention_only_context = MagicMock()
+        attention_only_context.attention_feature = {"tag3": "val3"}
+        attention_only_context.linear_feature = {}  # 空
+        self.mon.feature_hook_context_by_module = {"ctx3": attention_only_context}
+        self.mon.write_features_tb(step=3)
+
+        # 5. 覆盖分支：仅linear_feature有值 → 仅调用linear分支
+        self.mon.write_metrics_if_not_empty.reset_mock()
+        linear_only_context = MagicMock()
+        linear_only_context.attention_feature = {}
+        linear_only_context.linear_feature = {"tag4": "val4"}
+        self.mon.feature_hook_context_by_module = {"ctx4": linear_only_context}
+        self.mon.write_features_tb(step=4)
+
+    def test_set_wrapped_optimizer(self):
+        mock_opt = MagicMock()
+        self.mon.set_wrapped_optimizer(mock_opt)
+        self.assertEqual(self.mon.optimizer_trans, mock_opt)
+
+        # 传入None → 赋值为None（边界场景）
+        self.mon.set_wrapped_optimizer(None)
+        self.assertEqual(self.mon.optimizer_trans, None)
+
+    @patch("os.path.getmtime", return_value=123456)
+    @patch("json.load", return_value={})
+    def test_dynamic_monitor_when_config_updated(self, mock_load, mock_mtime):
+        self.mon.dynamic_enable = True
+        self.mon.config_timestamp = 0
+        self.mon.monitoring = False
+        optimizer = MagicMock()
+        self.mon.optimizer_context[optimizer] = OptimizerContext()
+        self.mon.dynamic_monitor(optimizer)
+        self.assertEqual(self.mon.config_timestamp, 123456)
+
+    @patch("torch.distributed.fsdp._runtime_utils._post_backward_hook")
+    @patch("importlib.reload")
+    @patch("msprobe.pytorch.monitor.module_hook.logger.info")
+    @patch("msprobe.pytorch.monitor.module_hook.api_register.restore_api")
+    def test_remove_all_hooks(self, mock_restore_api, mock_log_info, mock_reload,
+                              mock_fsdp_post_hook):
+        # 初始化所有属性
+        self.mon.optimizer = MagicMock()
+
+        # 初始化handles（模拟有hook handle）
+        mock_handle = MagicMock()
+        self.mon.handles = {
+            'xy': [mock_handle],
+            'L2_features': [mock_handle],
+            'wgrads': [mock_handle],
+            'cc': [mock_handle]
+        }
+        # 初始化context（模拟有值）
+        mock_fwd_context = MagicMock()
+        mock_bwd_context = MagicMock()
+        mock_opt_context = MagicMock()
+        mock_cc_context = MagicMock()
+        self.mon.module_fwd_hook_context_by_module = {"ctx1": mock_fwd_context}
+        self.mon.module_bwd_hook_context_by_module = {"ctx2": mock_bwd_context}
+        self.mon.optimizer_context = {"opt1": mock_opt_context}
+        self.mon.cc_context = {"cc1": mock_cc_context}
+        self.mon.grad_context = MagicMock()
+        # 初始化FSDP相关属性（覆盖FSDP分支）
+        self.mon.fsdp_post_backward_hook = MagicMock()
+        self.mon.fsdp2_foreach_reduce = None
+        # 初始化优化器相关属性
+        self.mon.optimizer_hooked = True
+        self.mon.optimizer_mon = MagicMock()
+        self.mon.pre_step_hooks = MagicMock()
+        self.mon.post_step_hooks = MagicMock()
+        # 初始化节点缓存属性（模拟有值）
+        self.mon.param2name = MagicMock()
+        self.mon.name2indices = MagicMock()
+        self.mon.name2param = MagicMock()
+        self.mon.duplicate_param = MagicMock()
+        self.mon.name2tag = MagicMock()
+        self.mon.module_struct = MagicMock()
+        self.mon.grad_accs = MagicMock()
+        # 初始化采集状态
+        self.mon.monitoring = True
+        # 执行方法
+        self.mon._remove_all_hooks(self.mon.optimizer)
+        # 验证节点缓存清空
+        self.mon.param2name.clear.assert_called_once()
+        self.mon.name2indices.clear.assert_called_once()
+        self.mon.name2param.clear.assert_called_once()
+        self.mon.duplicate_param.clear.assert_called_once()
+        self.mon.name2tag.clear.assert_called_once()
+        self.mon.module_struct.clear.assert_called_once()
+        self.mon.grad_accs.clear.assert_called_once()
+        # 验证采集状态关闭
+        self.assertEqual(self.mon.monitoring, False)
+        # ------------------------------
+        # 覆盖optimizer_hooked=False分支
+        # ------------------------------
+        self.mon.optimizer_hooked = False
+        self.mon.pre_step_hooks.clear.reset_mock()
+        self.mon.post_step_hooks.clear.reset_mock()
+        self.mon._remove_all_hooks(self.mon.optimizer)
+        # 验证pre/post_step_hooks未被清空
+        self.mon.pre_step_hooks.clear.assert_not_called()
+        self.mon.post_step_hooks.clear.assert_not_called()
+
+    @patch("msprobe.pytorch.monitor.module_hook.load_json")
+    @patch("msprobe.pytorch.monitor.module_hook.save_json")
+    @patch("os.path.getmtime")
+    def test_remove_all_hooks_final_all_lines(self, mock_getmtime,
+                                               mock_save_json, mock_load_json):
+        # 1. 初始化属性
+        self.mon.optimizer = MagicMock()
+        self.mon._remove_all_hooks = MagicMock()  # Mock内部调用的_remove_all_hooks
+        # ------------------------------
+        # 场景1：dynamic_enable=True + 正常执行（无异常）
+        # ------------------------------
+        self.mon.dynamic_enable = True
+        self.mon.config_file_path = "test_config.json"
+        mock_load_json.return_value = {"dynamic_on": True}  # 模拟配置文件内容
+        mock_getmtime.return_value = 123456789  # 模拟文件时间戳
+        # 执行方法
+        self.mon._remove_all_hooks_final(self.mon.optimizer)
+        # 验证核心逻辑
+        # 验证配置加载/修改/保存
+        mock_load_json.assert_called_once_with("test_config.json")
+        mock_save_json.assert_called_once_with("test_config.json", {"dynamic_on": False}, indent=2)
+        # 验证时间戳更新
+        mock_getmtime.assert_called_once_with("test_config.json")
+        self.assertEqual(self.mon.config_timestamp, 123456789)
+
+        # 验证调用_remove_all_hooks
+        self.mon._remove_all_hooks.assert_called_once_with(self.mon.optimizer)
+        # ------------------------------
+        # 场景2：dynamic_enable=True + 执行异常（触发except）
+        # ------------------------------
+        # 重置所有Mock状态
+        mock_load_json.reset_mock()
+        mock_save_json.reset_mock()
+        mock_getmtime.reset_mock()
+        # 模拟加载配置时抛出异常
+        mock_load_json.side_effect = Exception("File not found")
+        # 执行方法
+        self.mon._remove_all_hooks_final(self.mon.optimizer)
+        # 验证_save_json/getmtime未调用（异常中断）
+        mock_save_json.assert_not_called()
+        mock_getmtime.assert_not_called()
+        # ------------------------------
+        # 场景3：dynamic_enable=False（跳过配置修改逻辑）
+        # ------------------------------
+        # 重置所有Mock状态
+        mock_load_json.reset_mock()
+        mock_save_json.reset_mock()
+        mock_getmtime.reset_mock()
+        self.mon.dynamic_enable = False
+        # 执行方法
+        self.mon._remove_all_hooks_final(self.mon.optimizer)
+        # 验证核心逻辑
+        # 验证配置相关方法未调用
+        mock_load_json.assert_not_called()
+        mock_save_json.assert_not_called()
+        mock_getmtime.assert_not_called()
+
+    def test_is_recording_module(self):
+        # 1. 初始化核心属性
+        self.mon.squash_name = True  # 模拟squash_name配置
+        # ------------------------------
+        # 场景1：l2_targets非空 + 第一个pattern匹配
+        # ------------------------------
+        l2_targets = ["stage1mod1"]
+        result = self.mon._is_recording_module(
+            module_name="mod1",
+            l2_targets=l2_targets,
+            vpp_stage="stage1",
+            hook_name="any_hook"
+        )
+        # 验证返回匹配的pattern
+        self.assertEqual(result, "stage1mod1")
+
+        # ------------------------------
+        # 场景3：l2_targets非空 + 无匹配pattern
+        # ------------------------------
+        l2_targets = ["stage1mod2"]
+        result = self.mon._is_recording_module(
+            module_name="mod1",
+            l2_targets=l2_targets,
+            vpp_stage="stage1",
+            hook_name="any_hook"
+        )
+        self.assertEqual(result, "")
+
+        # ------------------------------
+        # 场景4：l2_targets为空 + hook_name=linear_hook
+        # ------------------------------
+        l2_targets = []
+        result = self.mon._is_recording_module(
+            module_name="mod1",
+            l2_targets=l2_targets,
+            vpp_stage="stage1",
+            hook_name="linear_hook"
+        )
+        self.assertEqual(result, "stage1mod1")
+
+        # ------------------------------
+        # 场景5：l2_targets为空 + hook_name≠linear_hook
+        # ------------------------------
+        l2_targets = []
+        result = self.mon._is_recording_module(
+            module_name="mod1",
+            l2_targets=l2_targets,
+            vpp_stage="stage1",
+            hook_name="attention_hook"
+        )
+        self.assertEqual(result, "")
+
 def clean_output(path):
     if os.path.exists(path):
         shutil.rmtree(path)
