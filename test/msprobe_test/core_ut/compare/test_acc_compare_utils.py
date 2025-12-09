@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import zlib
 import tempfile
 
@@ -16,7 +16,8 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.utils import ApiItemInfo, _compare_parser, check_and_return_dir_contents, extract_json, \
     count_struct, get_accuracy, get_rela_diff_summary_mode, merge_tensor, op_item_parse, read_op, result_item_init, \
     stack_column_process, table_value_is_valid, reorder_op_name_list, gen_op_item, ApiBatch, get_paired_dirs, \
-    reorder_index, gen_api_batches
+    reorder_index, gen_api_batches, check_input_param_path, check_input_param_path_and_framework, compare_entry, \
+    multi_ranks_compare, mp_logger_init, make_result_table, get_sorted_ranks
 
 # test_read_op_1
 op_data = {
@@ -564,6 +565,219 @@ class TestUtilsMethods(unittest.TestCase):
         result = table_value_is_valid("=1.00")
         self.assertFalse(result)
 
+    @patch("msprobe.core.compare.utils.check_file_or_directory_path")
+    def test_check_input_param_path_both_exist(self, mock_check):
+        """两个路径都传入时，应调用两次 check_file_or_directory_path"""
+        input_param = {
+            "npu_path": "/path/to/npu",
+            "bench_path": "/path/to/bench",
+        }
+
+        check_input_param_path(input_param)
+
+        # 断言总共调用 2 次
+        self.assertEqual(mock_check.call_count, 2)
+
+        # 分别断言调用过指定参数
+        mock_check.assert_any_call("/path/to/npu")
+        mock_check.assert_any_call("/path/to/bench")
+
+    @patch("msprobe.core.compare.utils.is_module_available")
+    @patch("msprobe.core.compare.utils.get_compare_framework")
+    def test_check_input_param_path_and_framework_ok(self, mock_get_framework, mock_is_available):
+        """框架一致且依赖库存在，应该正常执行，不抛异常"""
+
+        class Args:
+            target_path = "/tmp/npu"
+            golden_path = "/tmp/bench"
+
+        mock_get_framework.return_value = "pytorch"
+        mock_is_available.return_value = True
+
+        # 不应该抛异常
+        check_input_param_path_and_framework(Args(), "pytorch")
+
+        mock_get_framework.assert_called_once()
+        mock_is_available.assert_called_once_with("torch")
+
+    @patch("msprobe.core.compare.utils.is_module_available")
+    @patch("msprobe.core.compare.utils.get_compare_framework")
+    def test_check_input_param_path_and_framework_framework_mismatch(self, mock_get_framework, mock_is_available):
+        """框架不一致，应抛 CompareException"""
+
+        class Args:
+            target_path = "/tmp/a"
+            golden_path = "/tmp/b"
+
+        mock_get_framework.return_value = "mindspore"  # 故意不一致
+        mock_is_available.return_value = True
+
+        with self.assertRaises(CompareException):
+            check_input_param_path_and_framework(Args(), "pytorch")
+
+        mock_get_framework.assert_called_once()
+
+    @patch("msprobe.core.compare.utils.is_module_available")
+    @patch("msprobe.core.compare.utils.get_compare_framework")
+    def test_check_input_param_path_and_framework_dependency_missing(self, mock_get_framework, mock_is_available):
+        """框架一致但库不存在，应抛 Exception"""
+
+        class Args:
+            target_path = "/tmp/a"
+            golden_path = "/tmp/b"
+
+        mock_get_framework.return_value = "pytorch"
+        mock_is_available.return_value = False  # 模拟 torch 不存在
+
+        with self.assertRaises(Exception):
+            check_input_param_path_and_framework(Args(), "pytorch")
+
+        mock_is_available.assert_called_once_with("torch")
+
+    @patch("msprobe.core.compare.utils.logger")
+    def test_compare_entry_normal(self, mock_logger):
+        """compare_func 正常执行时不应抛异常，也不会记录 error"""
+
+        mock_compare = MagicMock()
+
+        compare_entry(
+            compare_func=mock_compare,
+            input_param={"a": 1},
+            output_path="/tmp",
+            nr=1,
+            kwargs={"x": 10}
+        )
+
+        mock_compare.assert_called_once_with(
+            input_param={"a": 1},
+            output_path="/tmp",
+            suffix="_1",
+            x=10
+        )
+
+        mock_logger.error.assert_not_called()
+
+    @patch("msprobe.core.compare.utils.logger")
+    def test_compare_entry_invalid_data(self, mock_logger):
+        """compare_func 抛 INVALID_DATA_ERROR 时，应记录对应错误日志"""
+
+        def raise_invalid_data(*args, **kwargs):
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
+
+        mock_compare = MagicMock(side_effect=raise_invalid_data)
+
+        compare_entry(
+            compare_func=mock_compare,
+            input_param={"a": 1},
+            output_path="/tmp",
+            nr=2,
+            kwargs={}
+        )
+
+        mock_logger.error.assert_called_once()
+        self.assertIn("Invalid or missing 'data' in dump.json", mock_logger.error.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.logger")
+    def test_compare_entry_invalid_task(self, mock_logger):
+        """compare_func 抛 INVALID_TASK_ERROR 时，应记录对应错误日志"""
+
+        def raise_invalid_task(*args, **kwargs):
+            raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+        mock_compare = MagicMock(side_effect=raise_invalid_task)
+
+        compare_entry(
+            compare_func=mock_compare,
+            input_param={"a": 1},
+            output_path="/tmp",
+            nr=3,
+            kwargs={}
+        )
+
+        mock_logger.error.assert_called_once()
+        self.assertIn("Invalid or missing 'task' in dump.json", mock_logger.error.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.compare_entry")
+    @patch("msprobe.core.compare.utils.mp_logger_init")
+    def test_multi_ranks_compare(self, mock_logger_init, mock_compare_entry):
+        """验证：logger 初始化正确 + compare_entry 调用次数和参数正确"""
+
+        # 1. 构造输入
+        input_param_nr_list = [
+            ({"p": 1}, "0"),
+            ({"p": 2}, "3"),
+            ({"p": 9}, "7"),
+        ]
+        output_path = "/tmp"
+        kwargs = {"x": 10}
+
+        # 2. 执行
+        multi_ranks_compare(
+            compare_func=MagicMock(),
+            input_param_nr_list=input_param_nr_list,
+            output_path=output_path,
+            kwargs=kwargs,
+        )
+
+        # 3. 验证 mp_logger_init 是否按 rank_list 被调用
+        mock_logger_init.assert_called_once_with("[0 3 7]")
+
+        # 4. compare_entry 调用次数应与 input_param_nr_list 相同
+        self.assertEqual(mock_compare_entry.call_count, 3)
+
+        # 5. 逐次验证 compare_entry 调用参数
+        expected_calls = [
+            ({"p": 1}, "0"),
+            ({"p": 2}, "3"),
+            ({"p": 9}, "7"),
+        ]
+
+        for call_args, expected in zip(mock_compare_entry.call_args_list, expected_calls):
+            ((_, input_param, out_path, nr, kw), _) = call_args  # 解构 MagicMock 调用参数
+
+            self.assertEqual(input_param, expected[0])
+            self.assertEqual(nr, expected[1])
+            self.assertEqual(out_path, output_path)
+            self.assertEqual(kw, kwargs)
+
+    @patch("msprobe.core.compare.utils.logger")   # patch logger 本身
+    def test_mp_logger_init(self, mock_logger):
+        """验证 logger 的 info/warning/error 都被正确 wrap 并添加前缀"""
+
+        # 1. 创建可监控的 fake logger 方法
+        mock_logger.info = MagicMock()
+        mock_logger.warning = MagicMock()
+        mock_logger.error = MagicMock()
+
+        # 2. 调用 mp_logger_init
+        mp_logger_init("[0] ")
+
+        # 3. 调用 wrap 后的 logger 方法
+        mock_logger.info("hello")
+        mock_logger.warning("abc")
+        mock_logger.error("xyz")
+
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("msprobe.core.compare.utils.check_and_return_dir_contents")
+    def test_get_sorted_ranks_mismatch(self, mock_check, mock_logger):
+        """异常情况：两个 rank 列表长度不一致 → 触发 if 分支并抛异常"""
+
+        mock_check.side_effect = [
+            ["rank0", "rank1"],   # npu → len = 2
+            ["rank0"],            # bench → len = 1
+        ]
+
+        with self.assertRaises(CompareException) as cm:
+            get_sorted_ranks("npu_dir", "bench_dir")
+
+        # 验证抛出 INVALID_PATH_ERROR
+        self.assertEqual(cm.exception.code, CompareException.INVALID_PATH_ERROR)
+
+        # 验证 logger.error 被调用
+        mock_logger.error.assert_called_once()
+        self.assertIn("The number of ranks", mock_logger.error.call_args[0][0])
+
 
 class TestReorderIndex(unittest.TestCase):
     def test_reorder_index_mixed_states(self):
@@ -925,3 +1139,317 @@ class TestGetPairedSteps(unittest.TestCase):
     def test_get_paired_steps(self):
         paired = get_paired_dirs(self.npu_dir.name, self.bench_dir.name)
         self.assertEqual(set(paired), {'step2'})
+
+
+class FakeConst:
+    ALL = "ALL"
+
+
+class FakeCompareConst:
+    HEAD_OF_COMPARE_MODE = {
+        "ALL": ["a", "b"],
+        "OTHER": ["x", "y"]
+    }
+    STACK = "stack"
+    DATA_NAME = "data_name"
+
+
+class TestMakeResultTable(unittest.TestCase):
+
+    @patch("msprobe.core.compare.utils.CompareConst", FakeCompareConst)
+    @patch("msprobe.core.compare.utils.Const", FakeConst)
+    def test_stack_mode_all(self):
+        """stack_mode=True 且 dump_mode=ALL → header += [stack, data_name]"""
+
+        result = [[1, 2, "stack_val", "data_val"]]
+
+        df = make_result_table(result, dump_mode="ALL", stack_mode=True)
+
+        self.assertListEqual(df.columns.tolist(), ["a", "b", "stack", "data_name"])
+        self.assertEqual(df.iloc[0].tolist(), [1, 2, "stack_val", "data_val"])
+
+    @patch("msprobe.core.compare.utils.CompareConst", FakeCompareConst)
+    @patch("msprobe.core.compare.utils.Const", FakeConst)
+    def test_stack_mode_other(self):
+        """stack_mode=True 且 dump_mode!=ALL → header += [stack]"""
+
+        result = [[10, 20, "stack_info"]]
+
+        df = make_result_table(result, dump_mode="OTHER", stack_mode=True)
+
+        self.assertListEqual(df.columns.tolist(), ["x", "y", "stack"])
+        self.assertEqual(df.iloc[0].tolist(), [10, 20, "stack_info"])
+
+    @patch("msprobe.core.compare.utils.CompareConst", FakeCompareConst)
+    @patch("msprobe.core.compare.utils.Const", FakeConst)
+    def test_no_stack_all(self):
+        """stack_mode=False 且 dump_mode=ALL → 删除每行倒数第二列"""
+
+        result = [[1, 2, "stack_to_delete", "data_name_val"]]
+
+        df = make_result_table(result, dump_mode="ALL", stack_mode=False)
+
+        # 删除倒数第二列 → 剩 [1, 2, data_name_val]
+        self.assertListEqual(result[0], [1, 2, "data_name_val"])
+
+        self.assertListEqual(df.columns.tolist(), ["a", "b", "data_name"])
+        self.assertEqual(df.iloc[0].tolist(), [1, 2, "data_name_val"])
+
+    @patch("msprobe.core.compare.utils.CompareConst", FakeCompareConst)
+    @patch("msprobe.core.compare.utils.Const", FakeConst)
+    def test_no_stack_other(self):
+        """stack_mode=False 且 dump_mode!=ALL → 删除每行最后一列"""
+
+        result = [[11, 22, "stack_to_delete"]]
+
+        df = make_result_table(result, dump_mode="OTHER", stack_mode=False)
+
+        # 删除倒数第一列 → 剩 [11, 22]
+        self.assertListEqual(result[0], [11, 22])
+
+        self.assertListEqual(df.columns.tolist(), ["x", "y"])
+        self.assertEqual(df.iloc[0].tolist(), [11, 22])
+
+
+class TestGetAccuracyNLenGtBLen(unittest.TestCase):
+
+    @patch("msprobe.core.compare.utils.process_summary_data")
+    @patch("msprobe.core.compare.utils.ApiItemInfo")
+    @patch("msprobe.core.compare.utils.result_item_init")
+    @patch("msprobe.core.compare.utils.stack_column_process")
+    @patch("msprobe.core.compare.utils.safe_get_value")
+    def test_n_len_gt_b_len_md5_mode(
+        self,
+        mock_safe_get_value,
+        mock_stack_column_process,
+        mock_result_item_init,
+        mock_ApiItemInfo,
+        mock_process_summary_data,
+    ):
+        """
+        覆盖 n_len > b_len 分支，dump_mode=MD5。
+        mock_xxx 注入方式完全隔离内部逻辑。
+        """
+
+
+        # -------------------------------
+        # mock 行为定义
+        # -------------------------------
+        def fake_safe_get_value(d, idx, name, key=None):
+            if isinstance(d.get(key), list):
+                return d[key][idx]
+            return d[key]
+
+        mock_safe_get_value.side_effect = fake_safe_get_value
+
+        mock_stack_column_process.side_effect = lambda item, *a, **k: item
+        mock_result_item_init.side_effect = lambda *a, **k: []
+        mock_process_summary_data.side_effect = lambda s: s
+        mock_ApiItemInfo.side_effect = lambda name, struct, stack: MagicMock()
+
+        # -------------------------------
+        # 输入构造：n_len = 2, b_len = 1
+        # -------------------------------
+        n_dict = {
+            "op_name": ["n_op0", "n_op1"],
+            "requires_grad": [True, False],
+            CompareConst.SUMMARY: [
+                [1, 2, 3],
+                [4, 5, 6]
+            ],
+            CompareConst.INPUT_STRUCT: [
+                ["n0_a", "n0_b", "n0_c"],
+                ["n1_a", "n1_b", "n1_c"],
+            ]
+        }
+
+        b_dict = {
+            "op_name": ["b_op0"],
+            "requires_grad": [True],
+            CompareConst.SUMMARY: [
+                [7, 8, 9]
+            ],
+            CompareConst.INPUT_STRUCT: [
+                ["b0_a", "b0_b", "b0_c"],
+            ]
+        }
+
+        result = []
+        get_accuracy(result, n_dict, b_dict, Const.MD5)
+
+        # -------------------------------
+        # 断言结果：应有 2 行，第 2 行来自 n_len > b_len 分支
+        # -------------------------------
+        self.assertEqual(len(result), 2)
+
+        tail = result[1]
+
+        # MD5 模式的 tail 应为：
+        # [n_name, NAN, struct[0], NAN, struct[1], NAN,
+        #  requires_grad, NAN, struct[2], NAN, False, NAN, None]
+
+        self.assertEqual(tail[0], "n_op1")
+        self.assertEqual(tail[1], CompareConst.NAN)
+        self.assertEqual(tail[2], "n1_a")
+        self.assertEqual(tail[3], CompareConst.NAN)
+        self.assertEqual(tail[4], "n1_b")
+        self.assertEqual(tail[5], CompareConst.NAN)
+        self.assertEqual(tail[6], False)
+        self.assertEqual(tail[7], CompareConst.NAN)
+        self.assertEqual(tail[8], "n1_c")
+        self.assertEqual(tail[9], CompareConst.NAN)
+        self.assertEqual(tail[10], False)
+        self.assertEqual(tail[11], CompareConst.NAN)
+        self.assertIsNone(tail[12])
+
+    @patch("msprobe.core.compare.utils.process_summary_data")
+    @patch("msprobe.core.compare.utils.ApiItemInfo")
+    @patch("msprobe.core.compare.utils.result_item_init")
+    @patch("msprobe.core.compare.utils.stack_column_process")
+    @patch("msprobe.core.compare.utils.safe_get_value")
+    def test_n_len_gt_b_len_tensor_mode(
+        self,
+        mock_safe_get_value,
+        mock_stack_column_process,
+        mock_result_item_init,
+        mock_ApiItemInfo,
+        mock_process_summary_data,
+    ):
+        """
+        覆盖 n_len > b_len 分支，dump_mode=TENSOR。
+        """
+
+        # -------------------------------
+        # mock 行为
+        # -------------------------------
+        def fake_safe_get_value(d, idx, name, key=None):
+            if isinstance(d.get(key), list):
+                return d[key][idx]
+            return d[key]
+
+        mock_safe_get_value.side_effect = fake_safe_get_value
+        mock_stack_column_process.side_effect = lambda item, *a, **k: item
+        mock_result_item_init.side_effect = lambda *a, **k: []
+        mock_process_summary_data.side_effect = lambda s: s
+        mock_ApiItemInfo.side_effect = lambda *a, **k: MagicMock()
+
+        # -------------------------------
+        # 输入构造：n_len = 2, b_len = 1
+        # -------------------------------
+        n_dict = {
+            "op_name": ["n_op0", "n_op1"],
+            "requires_grad": [True, False],
+            CompareConst.SUMMARY: [
+                [1, 2, 3],
+                [4, 5, 6]
+            ],
+            CompareConst.INPUT_STRUCT: [
+                ["n0_a", "n0_b", "n0_c"],
+                ["n1_a", "n1_b", "n1_c"],
+            ]
+        }
+
+        b_dict = {
+            "op_name": ["b_op0"],
+            "requires_grad": [True],
+            CompareConst.SUMMARY: [
+                [7, 8, 9]
+            ],
+            CompareConst.INPUT_STRUCT: [
+                ["b0_a", "b0_b", "b0_c"],
+            ]
+        }
+
+        result = []
+        get_accuracy(result, n_dict, b_dict, Const.TENSOR)
+
+        # -------------------------------
+        # 断言：应有两行（第 2 行来自 n_len > b_len）
+        # -------------------------------
+        self.assertEqual(len(result), 2)
+        tail = result[1]
+
+        # TENSOR 模式应该走这个分支:
+        # [n_name, NAN, struct[0], NAN, struct[1], NAN,
+        #  requires_grad, NAN, " ", " ", " ", " ", " ", " "]
+        self.assertEqual(tail[0], "n_op1")
+        self.assertEqual(tail[1], CompareConst.NAN)
+        self.assertEqual(tail[2], "n1_a")
+        self.assertEqual(tail[3], CompareConst.NAN)
+        self.assertEqual(tail[4], "n1_b")
+        self.assertEqual(tail[5], CompareConst.NAN)
+        self.assertEqual(tail[6], False)
+        self.assertEqual(tail[7], CompareConst.NAN)
+
+        # 6 个空格字段
+        self.assertEqual(tail[8:14], [" ", " ", " ", " ", " ", " "])
+
+        # summary + nan summary + False + PASS + ""（err_msg）
+        self.assertEqual(tail[14:17], [4, 5, 6])
+        self.assertEqual(tail[17:20], [CompareConst.NAN]*3)
+        self.assertEqual(tail[20], False)
+        self.assertEqual(tail[21], CompareConst.PASS)
+        self.assertEqual(tail[22], "")
+
+
+class TestExtractJson(unittest.TestCase):
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("os.listdir")
+    def test_invalid_json_file_type(self, mock_listdir, mock_logger):
+        """覆盖 invalid json_file_type 分支"""
+        mock_listdir.return_value = ["stack.json"]
+
+        with self.assertRaises(CompareException):
+            extract_json("/some/dir", "NOT_EXIST_TYPE")
+
+        mock_logger.error.assert_called_once()
+        self.assertIn("invalid json_file_type", mock_logger.error.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("os.listdir")
+    def test_stack_json_not_found(self, mock_listdir, mock_logger):
+        """覆盖 stack.json 未找到（warning）"""
+        mock_listdir.return_value = []  # 空目录
+
+        path = extract_json("/tmp", Const.STACK_JSON_FILE)
+
+        self.assertEqual(path, "")  # 返回空
+        mock_logger.warning.assert_called_once()
+        self.assertIn("stack.json is not found", mock_logger.warning.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("os.listdir")
+    def test_dump_json_not_found(self, mock_listdir, mock_logger):
+        """覆盖 dump.json 未找到（error）"""
+        mock_listdir.return_value = []
+
+        path = extract_json("/tmp", Const.DUMP_JSON_FILE)
+
+        self.assertEqual(path, "")
+        mock_logger.error.assert_called_once()
+        self.assertIn("dump.json is not found", mock_logger.error.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("os.listdir")
+    def test_debug_json_not_found(self, mock_listdir, mock_logger):
+        """覆盖 debug.json 未找到（warning）"""
+        mock_listdir.return_value = []
+
+        path = extract_json("/tmp", Const.DEBUG_JSON_FILE)
+
+        self.assertEqual(path, "")
+        mock_logger.warning.assert_called_once()
+        self.assertIn("debug.json is not found", mock_logger.warning.call_args[0][0])
+
+    @patch("msprobe.core.compare.utils.logger")
+    @patch("os.listdir")
+    def test_found_json_success(self, mock_listdir, mock_logger):
+        """覆盖正常找到文件分支"""
+        mock_listdir.return_value = ["abc.txt", "dump.json"]  # 目标文件存在
+
+        path = extract_json("/tmp", Const.DUMP_JSON_FILE)
+
+        self.assertEqual(path, "/tmp/dump.json")
+        mock_logger.error.assert_not_called()
+        mock_logger.warning.assert_not_called()
