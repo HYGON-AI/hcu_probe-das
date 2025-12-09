@@ -30,6 +30,15 @@ from msprobe.core.dump.data_dump.data_processor.pytorch_processor import (
     TensorStatInfo,
     KernelDumpDataProcessor
 )
+from msprobe.core.common.log import logger
+from msprobe.core.dump.data_dump.data_processor.pytorch_processor import (
+    PytorchDataProcessor,
+    TensorDataProcessor,
+    TensorStatInfo,
+    KernelDumpDataProcessor,
+    DiffCheckDataProcessor,   # 新增
+)
+
 
 
 class TestPytorchDataProcessor(unittest.TestCase):
@@ -38,6 +47,45 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.config = MagicMock()
         self.data_writer = MagicMock()
         self.processor = PytorchDataProcessor(self.config, self.data_writer)
+
+    def test_tensor_bytes_view_cpu_and_crc32(self):
+        # 构造一个 CPU contiguous 的 tensor
+        t = torch.arange(12, dtype=torch.int32).reshape(3, 4)
+        t = t.contiguous()
+
+        mv = PytorchDataProcessor.tensor_bytes_view_cpu(t)
+        # 可能返回 memoryview / bytes / numpy.ndarray 都要兼容处理
+        if isinstance(mv, np.ndarray):
+            expected_crc = zlib.crc32(mv.tobytes())
+        else:
+            expected_crc = zlib.crc32(mv)
+
+        crc_hex = PytorchDataProcessor.compute_crc32_from_tensor(t)
+        self.assertEqual(crc_hex, f"{expected_crc:08x}")
+
+    def test_tensor_bytes_view_cpu_empty_tensor(self):
+        t = torch.tensor([], dtype=torch.float32)
+        mv = PytorchDataProcessor.tensor_bytes_view_cpu(t)
+        # 空 tensor 应该返回空的内存视图/bytes
+        if isinstance(mv, np.ndarray):
+            self.assertEqual(mv.size, 0)
+        else:
+            self.assertEqual(len(mv), 0)
+
+    def test_dump_async_data(self):
+        # 准备缓存两条 tensor
+        t1 = torch.tensor([1.0])
+        t2 = torch.tensor([2.0])
+        self.processor._async_dump_cache = {
+            "path1": t1,
+            "path2": t2,
+        }
+
+        with patch.object(self.processor.tensor_handler, "save_tensor") as mock_save:
+            self.processor.dump_async_data()
+
+        self.assertEqual(mock_save.call_count, 2)
+        self.assertEqual(self.processor._async_dump_cache, {})
 
     def test_get_md5_for_tensor(self):
         tensor = torch.tensor([1, 2, 3])
@@ -478,3 +526,179 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
         self.assertIsNone(self.processor.forward_kwargs)
         self.assertIsNone(self.processor.forward_output_tensor)
         self.assertIsNone(self.processor.grad_input_tensor)
+
+
+class TestDiffCheckDataProcessor(unittest.TestCase):
+
+    def setUp(self):
+        self.config = MagicMock()
+        # diff_nums 用于 is_terminated / handle_diff 分支
+        self.config.diff_nums = 2
+        self.config.precision = MagicMock()
+        self.config.async_dump = False
+        self.config.summary_mode = MagicMock()
+        self.config.task = MagicMock()
+        self.data_writer = MagicMock()
+        self.processor = DiffCheckDataProcessor(self.config, self.data_writer)
+
+    def test_is_terminated_property(self):
+        # diff_nums = -1 时永不终止
+        self.processor.diff_nums = -1
+        self.processor.real_diff_nums = 100
+        self.assertFalse(self.processor.is_terminated)
+
+        # 正常计数
+        self.processor.diff_nums = 2
+        self.processor.real_diff_nums = 1
+        self.assertFalse(self.processor.is_terminated)
+        self.processor.real_diff_nums = 2
+        self.assertTrue(self.processor.is_terminated)
+
+    def test_parse_data_name(self):
+        # 带 name: 前缀
+        name = "name:Functional.relu.2.forward.input.0.pt"
+        parsed = DiffCheckDataProcessor._parse_data_name(name)
+        self.assertEqual(parsed, ("Functional.relu.2.forward", "input", 0))
+
+        # 不带前缀
+        name2 = "MyApi.output.3.pt"
+        parsed2 = DiffCheckDataProcessor._parse_data_name(name2)
+        self.assertEqual(parsed2, ("MyApi", "output", 3))
+
+        # 非法格式
+        self.assertIsNone(DiffCheckDataProcessor._parse_data_name("invalid_name"))
+
+    def test_build_bench_map_from_json_and_expected_counts(self):
+        data = {
+            "MyApi.forward": {
+                "input_args": [
+                    {"type": "torch.Tensor", "md5": "aaa", "shape": [1, 2]},
+                    {"type": "int", "value": 1},  # 非 tensor，应该被忽略
+                ],
+                "output": [
+                    {"type": "torch.Tensor", "md5": "bbb", "shape": [3, 4]},
+                    {"type": "str", "value": "xxx"},  # 非 tensor
+                ],
+            }
+        }
+
+        mp = self.processor._build_bench_map_from_json(data)
+        self.processor._bench_map = mp
+
+        # input / output 键存在
+        self.assertIn(("MyApi.forward", "input", 0), mp)
+        self.assertIn(("MyApi.forward", "output", 0), mp)
+        # 非 tensor 的条目不会出现在 map 里
+        self.assertNotIn(("MyApi.forward", "input", 1), mp)
+        self.assertNotIn(("MyApi.forward", "output", 1), mp)
+
+        n_in, n_out = self.processor._bench_expected_counts_for_api("MyApi.forward")
+        self.assertEqual(n_in, 1)
+        self.assertEqual(n_out, 1)
+
+    def test_ensure_bench_map_loaded_success(self):
+        # 模拟 dump.json 存在且能够被加载
+        with patch.object(self.processor, "_resolve_bench_json_path", return_value="/fake/dump.json"), \
+             patch("os.path.getmtime", return_value=123456), \
+             patch("msprobe.core.dump.data_dump.data_processor.pytorch_processor.load_json",
+                   return_value={"data": {"Api": {"input_args": [], "output": []}}}) as mock_load, \
+             patch.object(self.processor, "_build_bench_map_from_json",
+                          return_value={"dummy": {"md5": "xx", "shape": [1]}}) as mock_build:
+            ok = self.processor._ensure_bench_map_loaded()
+
+        self.assertTrue(ok)
+        mock_load.assert_called_once()
+        mock_build.assert_called_once()
+        self.assertEqual(self.processor._bench_ref_path, "/fake/dump.json")
+        self.assertEqual(self.processor._bench_ref_mtime, 123456)
+        self.assertIn("dummy", self.processor._bench_map)
+
+    def test_ensure_bench_map_loaded_path_none(self):
+        # 无 bench 路径时直接 False
+        with patch.object(self.processor, "_resolve_bench_json_path", return_value=None):
+            ok = self.processor._ensure_bench_map_loaded()
+        self.assertFalse(ok)
+
+    def test_analyze_maybe_diff_tensor_input_not_in_ref(self):
+        # bench map 已加载，但没有对应的 (api, io, idx)
+        with patch.object(self.processor, "_ensure_bench_map_loaded", return_value=True):
+            self.processor._bench_map = {}
+            tensor_json = {
+                "data_name": "MyApi.forward.input.0.pt",
+                "shape": [1, 2],
+                "md5": "0011",
+            }
+            self.processor._analyze_maybe_diff_tensor(tensor_json)
+
+        st = self.processor._bench_state["MyApi.forward"]
+        self.assertFalse(st["inputs_equal"])
+        self.assertTrue(st["seen_input_not_in_ref"])
+        self.assertFalse(self.processor.has_diff)
+
+    def test_analyze_maybe_diff_tensor_input_in_ref_equal(self):
+        # bench 有 input，shape/md5 一致
+        self.processor._bench_map = {
+            ("MyApi.forward", "input", 0): {"md5": "abcd", "shape": [1, 2]},
+        }
+        with patch.object(self.processor, "_ensure_bench_map_loaded", return_value=True):
+            tensor_json = {
+                "data_name": "MyApi.forward.input.0.pt",
+                "shape": [1, 2],
+                "md5": "abcd",
+            }
+            self.processor._analyze_maybe_diff_tensor(tensor_json)
+
+        st = self.processor._bench_state["MyApi.forward"]
+        self.assertTrue(st["inputs_equal"])
+        self.assertEqual(st["checked_in"], 1)
+        self.assertEqual(st["expected_in"], 1)
+        self.assertFalse(st["seen_input_not_in_ref"])
+
+    def test_analyze_maybe_diff_tensor_output_diff_when_inputs_ok(self):
+        # 手动构造 bench_map 和 bench_state，模拟：输入已经全部一致，输出 md5 不一致 -> has_diff = True
+        api = "MyApi.forward"
+        self.processor._bench_map = {
+            (api, "input", 0): {"md5": "in_md5", "shape": [2, 2]},
+            (api, "output", 0): {"md5": "out_ref", "shape": [2, 2]},
+        }
+        self.processor._bench_state[api] = {
+            "expected_in": 1,
+            "checked_in": 1,
+            "inputs_equal": True,
+            "seen_input_not_in_ref": False,
+            "any_output_neq": False,
+        }
+
+        with patch.object(self.processor, "_ensure_bench_map_loaded", return_value=True):
+            tensor_json = {
+                "data_name": f"{api}.output.0.pt",
+                "shape": [2, 2],
+                "md5": "out_cur_not_equal",
+            }
+            self.processor.has_diff = False
+            self.processor._analyze_maybe_diff_tensor(tensor_json)
+
+        st = self.processor._bench_state[api]
+        self.assertTrue(st["any_output_neq"])
+        self.assertTrue(self.processor.has_diff)
+
+    def test_handle_diff_and_clear_bench_state(self):
+        # 准备 has_diff = True，且有缓存的 tensor
+        fake_tensor = torch.tensor([1.0])
+        self.processor.cached_tensors_and_file_paths = {
+            "/tmp/a.pt": fake_tensor,
+        }
+        self.processor.has_diff = True
+        self.processor.real_diff_nums = 0
+        self.processor.diff_nums = 2
+        self.processor.current_api_or_module_name = "TestApi"
+        self.processor._bench_state["TestApi"] = {"dummy": 1}
+
+        with patch.object(self.processor.tensor_handler, "save_tensor") as mock_save:
+            self.processor.handle_diff()
+
+        # 有 diff 时会调用 save_tensor，并且 real_diff_nums +1，bench_state 对应 api 被清掉
+        mock_save.assert_called_once()
+        self.assertEqual(self.processor.real_diff_nums, 1)
+        self.assertNotIn("TestApi", self.processor._bench_state)
+        self.assertEqual(self.processor.cached_tensors_and_file_paths, {})
