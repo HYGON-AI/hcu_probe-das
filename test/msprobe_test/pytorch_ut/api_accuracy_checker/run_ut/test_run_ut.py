@@ -4,11 +4,22 @@ import copy
 import shutil
 import tempfile
 import unittest
+import argparse
+from unittest.mock import patch, MagicMock
 from unittest.mock import patch, DEFAULT
+import torch
+import numpy as np
 from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import *
 from msprobe.core.common.file_utils import get_json_contents, create_directory, save_json, write_csv
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check_utils import UtDataInfo, exec_api
+from msprobe.pytorch.api_accuracy_checker.acc_check.data_generate import (
+    gen_data, gen_real_tensor, gen_random_tensor, gen_common_tensor,
+    gen_bool_tensor, gen_args, gen_kwargs, gen_list_kwargs,
+    get_output_dtype, gen_api_params
+)
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.pytorch.api_accuracy_checker.common.utils import CompareException
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 forward_file = os.path.join(base_dir, "forward.json")
@@ -282,6 +293,281 @@ class TestRunUtMethods(unittest.TestCase):
         self.assertTrue(os.path.exists(result))
         self.assertIn("ut_error_data", result)
         self.temp_dir.cleanup()
+
+    @patch('msprobe.pytorch.api_accuracy_checker.acc_check.acc_check.UtDataProcessor')
+    def test_do_save_error_data_not_called_when_all_success(self, mock_processor):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import do_save_error_data
+
+        data_info = UtDataInfo(
+            None,  # bench_grad_out
+            None,  # device_grad_out
+            None,  # device_output
+            None,  # bench_output
+            None,  # grad_in
+            [],    # in_fwd_data_list
+            "",    # backward_message
+        )
+        # 前向、反向都成功，不应该落盘错误数据
+        do_save_error_data("torch.add", data_info, "/tmp/error_data", True, True)
+        mock_processor.assert_not_called()
+
+    def test_run_backward_without_grad_index(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import run_backward
+
+        x = torch.tensor([1.0], requires_grad=True)
+        grad = torch.ones_like(x)
+        out = x * 2
+
+        grads = run_backward([x], grad, None, out)
+        self.assertEqual(len(grads), 1)
+        self.assertIsNotNone(grads[0])
+
+    def test_run_backward_invalid_grad_index_type(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import run_backward
+
+        x = torch.tensor([1.0], requires_grad=True)
+        grad = torch.ones_like(x)
+        out = [x * 2]
+
+        with self.assertRaises(TypeError):
+            run_backward([x], grad, "0", out)
+
+    def test_run_backward_grad_index_out_of_range(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import run_backward
+
+        x = torch.tensor([1.0], requires_grad=True)
+        grad = torch.ones_like(x)
+        out = [x * 2]
+
+        with self.assertRaises(IndexError):
+            run_backward([x], grad, 1, out)
+
+    def test_extract_tensors_grad_nested(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import extract_tensors_grad
+
+        x1 = torch.tensor([1.0], requires_grad=True)
+        x2 = torch.tensor([2.0], requires_grad=True)
+        y = x1 + x2
+        y.backward(torch.tensor([1.0]))
+
+        grads = extract_tensors_grad([[x1, (x2,)]])
+        self.assertEqual(len(grads), 2)
+        self.assertIsNotNone(grads[0])
+        self.assertIsNotNone(grads[1])
+
+    def test_extract_tensors_grad_depth_exceeded(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import extract_tensors_grad
+        from msprobe.core.common.const import Const
+        from msprobe.core.common.utils import CompareException
+
+        args = [torch.tensor([1.0])]
+        with self.assertRaises(CompareException):
+            extract_tensors_grad(args, depth=Const.MAX_DEPTH + 1)
+
+    def test_preprocess_forward_content_filter_max_min_only(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import preprocess_forward_content
+
+        forward_content = {
+            "torch.add.1": {
+                "input_args": [{"value": 1, "Max": 10, "Min": -10}],
+                "input_kwargs": {}
+            },
+            "torch.add.2": {
+                "input_args": [{"value": 1}],  # 去掉 Max / Min 之后与上面等价
+                "input_kwargs": {}
+            },
+        }
+
+        result = preprocess_forward_content(forward_content)
+        # 两个 add 只保留一个
+        self.assertEqual(len(result), 1)
+        self.assertIn("torch.add.1", result)  # 第一个会先进入
+
+    def test_acc_check_parser_device_unique_ok(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import _acc_check_parser
+
+        parser = argparse.ArgumentParser()
+        _acc_check_parser(parser)
+        args = parser.parse_args(["-d", "0", "1"])
+        self.assertEqual(args.device_id, [0, 1])
+
+    def test_acc_check_parser_device_duplicate_raises(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import _acc_check_parser
+
+        parser = argparse.ArgumentParser()
+        _acc_check_parser(parser)
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["-d", "0", "0"])
+
+    def test_acc_check_parser_device_negative_raises(self):
+        from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import _acc_check_parser
+
+        parser = argparse.ArgumentParser()
+        _acc_check_parser(parser)
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["-d", "-1"])
+
+
+
+class TestDataGenerate(unittest.TestCase):
+
+    # -----------------------
+    # Test gen_real_tensor
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.FileChecker")
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.load_pt")
+    def test_gen_real_tensor_pt(self, mock_load_pt, mock_checker):
+        mock_checker.return_value.common_check.return_value = "/tmp/a.pt"
+        mock_load_pt.return_value = torch.ones(3)
+
+        data = gen_real_tensor("/tmp/a.pt", convert_type=None)
+        self.assertTrue(torch.equal(data, torch.ones(3)))
+
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.FileChecker")
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.load_npy")
+    def test_gen_real_tensor_npy(self, mock_load_npy, mock_checker):
+        mock_checker.return_value.common_check.return_value = "/tmp/a.npy"
+        mock_load_npy.return_value = np.array([1, 2, 3])
+
+        data = gen_real_tensor("/tmp/a.npy", convert_type=None)
+        self.assertTrue(torch.equal(data, torch.tensor([1, 2, 3])))
+
+    # -----------------------
+    # Test gen_bool_tensor
+    # -----------------------
+    def test_gen_bool_tensor(self):
+        t = gen_bool_tensor(0, 1, (3, 3))
+        self.assertEqual(t.dtype, torch.bool)
+        self.assertEqual(t.shape, (3, 3))
+
+    # -----------------------
+    # Test gen_common_tensor
+    # -----------------------
+    def test_gen_common_tensor_float(self):
+        low = [0.1, 0.1]
+        high = [1.0, 1.0]
+        out = gen_common_tensor(low, high, (2, 2), "torch.float32", None)
+        self.assertEqual(out.shape, (2, 2))
+
+    def test_gen_common_tensor_int(self):
+        low = [0, 0]
+        high = [5, 5]
+        out = gen_common_tensor(low, high, (2, 2), "torch.int32", None)
+        self.assertTrue(out.dtype == torch.int32)
+
+    # -----------------------
+    # Test gen_random_tensor
+    # -----------------------
+    def test_gen_random_tensor_bool(self):
+        info = {"Min": 0, "Max": 1, "shape": [2, 2], "dtype": "torch.bool"}
+        out = gen_random_tensor(info, None)
+        self.assertEqual(out.dtype, torch.bool)
+
+    def test_gen_random_tensor_invalid(self):
+        info = {"Min": "a", "Max": 1, "shape": [2, 2], "dtype": "torch.float32"}
+        with self.assertRaises(CompareException):
+            gen_random_tensor(info, None)
+
+    # -----------------------
+    # Test gen_data
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_real_tensor")
+    def test_gen_data_real_tensor(self, mock_real):
+        mock_real.return_value = torch.zeros(2)
+        info = {"type": "torch.Tensor", "datapath": "a.pt", "dtype": "torch.float32"}
+        out = gen_data(info, "add", need_grad=False, convert_type=None, real_data_path="")
+        self.assertTrue(torch.equal(out, torch.zeros(2)))
+
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_random_tensor")
+    def test_gen_data_random_tensor(self, mock_random):
+        mock_random.return_value = torch.ones(2)
+        info = {"type": "torch.Tensor", "shape": [2], "dtype": "torch.float32"}
+        out = gen_data(info, "add", need_grad=False, convert_type=None)
+        self.assertTrue(torch.equal(out, torch.ones(2)))
+
+    def test_gen_data_numpy(self):
+        info = {"type": "numpy.float32", "value": 1.5, "dtype": ""}
+        out = gen_data(info, "add", False, None)
+        self.assertTrue(isinstance(out, np.float32))
+
+    # -----------------------
+    # Test gen_list_kwargs
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_data")
+    def test_gen_list_kwargs(self, mock_gen_data):
+        mock_gen_data.return_value = torch.ones(1)
+        info = [{"type": "torch.Tensor", "dtype": "torch.float32", "shape": [1]}]
+        out = gen_list_kwargs(info, "add", None)
+        self.assertEqual(len(out), 1)
+
+    # -----------------------
+    # Test gen_kwargs
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_data")
+    def test_gen_kwargs_tensor(self, mock_gen_data):
+        mock_gen_data.return_value = torch.ones(1)
+        info = {
+            "input_kwargs": {
+                "x": {"type": "torch.Tensor", "dtype": "torch.float32", "shape": [1]}
+            }
+        }
+        out = gen_kwargs(info, "add", None)
+        self.assertTrue(torch.equal(out["x"], torch.ones(1)))
+
+    def test_gen_kwargs_value(self):
+        info = {"input_kwargs": {"alpha": {"type": "int", "value": 10}}}
+        out = gen_kwargs(info, "add", None)
+        self.assertEqual(out["alpha"], 10)
+
+    # -----------------------
+    # Test gen_args
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_data")
+    def test_gen_args_dict(self, mock_gen_data):
+        mock_gen_data.return_value = torch.ones(1)
+        info = [{"type": "torch.Tensor", "dtype": "torch.float32"}]
+        out = gen_args(info, "add", {"need_grad": False, "convert_type": None, "depth": 0})
+        self.assertEqual(len(out), 1)
+
+    def test_gen_args_depth_exceed(self):
+        info = [[[[[[1]]]]]]
+        with self.assertRaises(CompareException):
+            gen_args(info, "add", {"need_grad": True, "convert_type": None, "depth": Const.MAX_DEPTH + 1})
+
+    # -----------------------
+    # Test get_output_dtype
+    # -----------------------
+    def test_get_output_dtype(self):
+        info = {
+            "output": [{"dtype": "torch.float32"}]
+        }
+        out = get_output_dtype(info)
+        self.assertEqual(out, torch.float32)
+
+    def test_get_output_dtype_none(self):
+        info = {"output": None}
+        out = get_output_dtype(info)
+        self.assertIsNone(out)
+
+    # -----------------------
+    # Test gen_api_params
+    # -----------------------
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_args")
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.data_generate.gen_kwargs")
+    def test_gen_api_params(self, mock_kwargs, mock_args):
+        mock_kwargs.return_value = {"x": 1}
+        mock_args.return_value = [torch.ones(1)]
+
+        info = {
+            "input_args": [{"type": "torch.Tensor", "dtype": "torch.float32"}],
+            "input_kwargs": {},
+            "output": [{"dtype": "torch.float32"}],
+        }
+
+        args, kwargs, out_dtype = gen_api_params(info, "add")
+        self.assertEqual(out_dtype, torch.float32)
+        self.assertEqual(kwargs["x"], 1)
+        self.assertEqual(len(args), 1)
 
 
 if __name__ == '__main__':
