@@ -1,13 +1,14 @@
+import re
 import unittest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, Mock
 from msprobe.visualization.builder.graph_merger import (
     GraphMerger, BaseGraphMerger, PPMerger, TPMerger,
-    NoParallelMerger, TPPPMerger, FullMerger
+    NoParallelMerger, TPPPMerger, FullMerger, VPPMerger
 )
 from msprobe.core.common.const import Const
 from msprobe.visualization.utils import GraphConst, ParallelParam
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.graph.graph import Graph
+from msprobe.visualization.graph.graph import Graph, BaseNode
 from msprobe.core.common.exceptions import MsprobeException
 
 
@@ -403,6 +404,443 @@ class TestFullMerger(unittest.TestCase):
 
         results = self.merger.merge_graphs()
         self.assertEqual(len(results), 1)
+
+
+class TestVPPMerger(unittest.TestCase):
+    def setUp(self):
+        """初始化测试环境，完整模拟父类初始化逻辑"""
+        # 1. 模拟并行参数
+        self.parallel_param = Mock()
+        self.parallel_param.vpp = 3  # 3个VPP chunk: 0,1,2
+
+        # 2. 模拟build_graph_results
+        self.build_graph_results = [
+            Mock(graph=Graph(model_name="test_model_0")),
+            Mock(graph=Graph(model_name="test_model_1"))
+        ]
+
+        # 3. 创建VPPMerger实例（完整初始化父类）
+        with patch.object(BaseGraphMerger, '_add_all_nodes_rank') as mock_add_rank:
+            self.merger = VPPMerger(
+                build_graph_results=self.build_graph_results,
+                parallel_param=self.parallel_param,
+                is_bench=False
+            )
+            # 验证父类初始化逻辑
+            mock_add_rank.assert_called_once()
+
+        # 4. 验证父类属性初始化
+        self.assertEqual(self.merger.unmerged_module, [Const.CLIP_GRAD, Const.OPTIMIZER])
+        self.assertEqual(self.merger.dtype_list,
+                         Const.TORCH_INT_DTYPE + Const.TORCH_FLOAT_DTYPE + [Const.FLOAT16, Const.FLOAT32,
+                                                                            Const.BFLOAT16])
+        self.assertEqual(self.merger.build_graph_results, self.build_graph_results)
+        self.assertEqual(self.merger.parallel_param, self.parallel_param)
+        self.assertEqual(self.merger.is_bench, False)
+        self.assertEqual(self.merger.log_prefix, '[NPU]')
+
+        # 5. 验证VPPMerger类属性
+        self.assertEqual(self.merger.LAYERS_NUM_PATTERN, re.compile(r"(layers\.|layer\.)(\d+)(\.)"))
+        self.assertEqual(self.merger.FORWARD_PATTERN, re.compile(r'\.forward\.\d+$'))
+
+        # 6. 构建测试用Graph和Node
+        self.graph = self._create_test_graph()
+        self.test_results = self._create_test_results()
+
+    @staticmethod
+    def _create_base_node(node_id, op=NodeOp.module, up_node=None):
+        """创建BaseNode实例，完整初始化属性"""
+        node = BaseNode(op, node_id, up_node)
+        node.input_data = {}
+        node.output_data = {}
+        node.subnodes = []
+        node.rank = 0  # 父类_add_all_nodes_rank会添加的属性
+        return node
+
+    def _create_test_graph(self):
+        """创建包含多VPP chunk的测试用Graph实例"""
+        graph = Graph(model_name="test_model")
+        graph.rank = 0
+
+        # 创建不同chunk的模块节点
+        # Chunk 0
+        chunk0_forward = self._create_base_node("Module.0.forward.0")
+        chunk0_backward = self._create_base_node("Module.0.backward.0")
+        # Chunk 1
+        chunk1_forward = self._create_base_node("Module.1.forward.0")
+        chunk1_backward = self._create_base_node("Module.1.backward.0")
+        # Chunk 2
+        chunk2_forward = self._create_base_node("Module.2.forward.0")
+        chunk2_backward = self._create_base_node("Module.2.backward.0")
+
+        # 为前向节点添加layers子节点
+        chunk0_forward.subnodes = [
+            self._create_base_node("Module.0.forward.0.layers.0.conv", up_node=chunk0_forward),
+            self._create_base_node("Module.0.forward.0.layers.1.relu", up_node=chunk0_forward)
+        ]
+        chunk1_forward.subnodes = [
+            self._create_base_node("Module.1.forward.0.layers.0.fc", up_node=chunk1_forward),
+            self._create_base_node("Module.1.forward.0.layers.1.bn", up_node=chunk1_forward)
+        ]
+        chunk2_forward.subnodes = [
+            self._create_base_node("Module.2.forward.0.layers.0.pool", up_node=chunk2_forward),
+            self._create_base_node("Module.2.forward.0.layers.1.dropout", up_node=chunk2_forward)
+        ]
+
+        # 构建图节点映射
+        graph.node_map = {
+            chunk0_forward.id: chunk0_forward,
+            chunk0_backward.id: chunk0_backward,
+            chunk1_forward.id: chunk1_forward,
+            chunk1_backward.id: chunk1_backward,
+            chunk2_forward.id: chunk2_forward,
+            chunk2_backward.id: chunk2_backward,
+            **{n.id: n for n in chunk0_forward.subnodes},
+            **{n.id: n for n in chunk1_forward.subnodes},
+            **{n.id: n for n in chunk2_forward.subnodes}
+        }
+        graph.root.subnodes = [chunk0_forward, chunk0_backward, chunk1_forward, chunk1_backward, chunk2_forward,
+                               chunk2_backward]
+
+        return graph
+
+    def _create_test_results(self):
+        """创建模拟的build_graph_results格式测试数据"""
+        result1 = Mock()
+        result1.graph = self.graph
+        result2 = Mock()
+        result2.graph = self.graph  # 模拟多个VPP chunk的图
+        result3 = Mock()
+        result3.graph = self.graph
+        return [result1, result2, result3]
+
+    # ------------------------ 测试父类初始化 ------------------------
+    def test_base_init(self):
+        """测试BaseGraphMerger初始化逻辑"""
+        # 测试bench模式
+        with patch.object(BaseGraphMerger, '_add_all_nodes_rank') as mock_add_rank:
+            bench_merger = VPPMerger(
+                build_graph_results=self.build_graph_results,
+                parallel_param=self.parallel_param,
+                is_bench=True
+            )
+            self.assertEqual(bench_merger.log_prefix, '[Bench]')
+            self.assertEqual(bench_merger.is_bench, True)
+            mock_add_rank.assert_called_once()
+
+        # 测试NPU模式
+        self.assertEqual(self.merger.log_prefix, '[NPU]')
+        self.assertEqual(self.merger.is_bench, False)
+
+        # 验证unmerged_module初始化
+        self.assertEqual(
+            self.merger.unmerged_module,
+            [Const.CLIP_GRAD, Const.OPTIMIZER]
+        )
+
+        # 验证dtype_list初始化
+        expected_dtype = Const.TORCH_INT_DTYPE + Const.TORCH_FLOAT_DTYPE + [Const.FLOAT16, Const.FLOAT32,
+                                                                            Const.BFLOAT16]
+        self.assertEqual(self.merger.dtype_list, expected_dtype)
+
+    # ------------------------ 测试静态方法 ------------------------
+    def test_replace_vpp_id(self):
+        """测试VPP ID替换逻辑"""
+        # 正常替换场景
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("Module.1.forward.0", 2),
+            "Module.2.forward.0"
+        )
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("Layer.5.backward.1", 0),
+            "Layer.0.backward.1"
+        )
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("Module.99.forward.100", 50),
+            "Module.50.forward.100"
+        )
+
+        # 边界场景 - 无效格式
+        # 无分隔符
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("InvalidNode", 2),
+            "InvalidNode"
+        )
+        # 第二部分非数字
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("Module.abc.forward.0", 2),
+            "Module.abc.forward.0"
+        )
+        # 格式过短（仅两部分）
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("Module.1", 2),
+            "Module.2"
+        )
+        # 空字符串
+        self.assertEqual(
+            VPPMerger._replace_vpp_id("", 2),
+            ""
+        )
+
+    # ------------------------ 测试merge_pp_graphs ------------------------
+    def test_merge_pp_graphs_empty(self):
+        """测试空/单元素results场景"""
+        # 空列表
+        self.assertEqual(self.merger.merge_pp_graphs([]), [])
+
+        # 单元素列表
+        single_result = [Mock(graph=self.graph)]
+        self.assertEqual(self.merger.merge_pp_graphs(single_result), single_result)
+
+    def test_merge_pp_graphs_normal(self):
+        """测试正常合并流程"""
+        # Mock父类/子类的依赖方法
+        with patch.object(self.merger, '_merge_nodes') as mock_merge, \
+                patch.object(self.merger, '_sort_nodes') as mock_sort, \
+                patch.object(self.merger, '_merge_vpp_data') as mock_data, \
+                patch.object(self.merger, '_merge_vpp_chunks') as mock_chunks:
+            # 执行合并
+            result = self.merger.merge_pp_graphs(self.test_results)
+
+            # 验证返回结果
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0], self.test_results[0])
+
+            # 验证方法调用次数和参数
+            main_nodes = [n for n in self.test_results[0].graph.root.subnodes if n.op == NodeOp.module]
+            self.assertEqual(mock_merge.call_count, len(main_nodes))
+            self.assertEqual(mock_sort.call_count, len(main_nodes))
+
+            # 验证第一个节点的调用参数
+            first_main_node = main_nodes[0]
+            mock_merge.assert_any_call(self.graph, first_main_node, [self.graph, self.graph])
+            mock_sort.assert_any_call(self.graph, first_main_node)
+
+            # 验证数据合并和chunk合并方法调用
+            mock_data.assert_called_once_with(self.graph)
+            mock_chunks.assert_called_once_with(self.graph)
+
+    # ------------------------ 测试_merge_vpp_data ------------------------
+    def test_merge_vpp_data_empty(self):
+        """测试空模块列表场景"""
+        # 清空graph.root.subnodes
+        empty_graph = Graph(model_name="empty")
+        empty_graph.root.subnodes = []
+        # 执行无异常
+        self.merger._merge_vpp_data(empty_graph)
+
+    def test_merge_vpp_data_forward(self):
+        """测试前向节点数据合并逻辑"""
+        # 准备目标节点（最后一个chunk）
+        target_node_id = "Module.2.forward.0"
+        target_node = self._create_base_node(target_node_id)
+        target_node.output_data = {
+            f"{target_node_id}.output.0": {"shape": [1, 2], "dtype": "float32"},
+            f"{target_node_id}.output.1": {"shape": [3, 4]}
+        }
+        self.graph.node_map[target_node_id] = target_node
+
+        # 准备当前节点（chunk0）
+        current_node_id = "Module.0.forward.0"
+        current_node = self.graph.node_map[current_node_id]
+        current_node.output_data = {}
+
+        # Mock数据更新方法
+        with patch.object(self.merger, '_update_node_data_key') as mock_update:
+            mock_update.side_effect = lambda old_id, new_id, data: {
+                k.replace(old_id, new_id): v for k, v in data.items()
+            }
+
+            # 执行数据合并
+            self.merger._merge_vpp_data(self.graph)
+
+            # 验证输出数据更新
+            self.assertEqual(
+                current_node.output_data,
+                {
+                    f"{current_node_id}.output.0": {"shape": [1, 2], "dtype": "float32"},
+                    f"{current_node_id}.output.1": {"shape": [3, 4]}
+                }
+            )
+
+    def test_merge_vpp_data_backward(self):
+        """测试反向节点数据合并逻辑"""
+        # 准备目标节点（最后一个chunk）
+        target_node_id = "Module.2.backward.0"
+        target_node = self._create_base_node(target_node_id)
+        target_node.input_data = {
+            f"{target_node_id}.input.0": {"dtype": "float32"},
+            f"{target_node_id}.input.1": {"shape": [10, 20]}
+        }
+        self.graph.node_map[target_node_id] = target_node
+
+        # 准备当前节点（chunk0）
+        current_node_id = "Module.0.backward.0"
+        current_node = self.graph.node_map[current_node_id]
+        current_node.input_data = {}
+
+        # Mock数据更新方法
+        with patch.object(self.merger, '_update_node_data_key') as mock_update:
+            mock_update.side_effect = lambda old_id, new_id, data: {
+                k.replace(old_id, new_id): v for k, v in data.items()
+            }
+
+            # 执行数据合并
+            self.merger._merge_vpp_data(self.graph)
+
+            # 验证输入数据更新
+            self.assertEqual(
+                current_node.input_data,
+                {
+                    f"{current_node_id}.input.0": {"dtype": "float32"},
+                    f"{current_node_id}.input.1": {"shape": [10, 20]}
+                }
+            )
+
+    # ------------------------ 测试_merge_vpp_chunks ------------------------
+    def test_merge_vpp_chunks_empty(self):
+        """测试空chunk0列表场景"""
+        empty_graph = Graph(model_name="empty")
+        empty_graph.root.subnodes = []
+        # 执行无异常
+        self.merger._merge_vpp_chunks(empty_graph)
+
+    def test_merge_vpp_chunks_forward(self):
+        """测试前向节点chunk合并（子节点追加）"""
+        # 获取测试节点
+        chunk0_forward = self.graph.node_map["Module.0.forward.0"]
+        chunk1_forward = self.graph.node_map["Module.1.forward.0"]
+        chunk2_forward = self.graph.node_map["Module.2.forward.0"]
+
+        # 记录初始状态
+        initial_subnodes = chunk0_forward.subnodes.copy()
+        initial_subnode_count = len(initial_subnodes)
+
+        # 执行chunk合并
+        self.merger._merge_vpp_chunks(self.graph)
+
+        # # 验证子节点合并结果
+        self.assertEqual(
+            len(chunk0_forward.subnodes),
+            initial_subnode_count
+        )
+        self.assertEqual(
+            chunk0_forward.subnodes[:initial_subnode_count],
+            initial_subnodes
+        )
+
+        # 验证父节点更新
+        for sub_node in chunk1_forward.subnodes + chunk2_forward.subnodes:
+            self.assertEqual(sub_node.upnode, chunk0_forward)
+
+    def test_merge_vpp_chunks_backward(self):
+        """测试反向节点chunk合并（子节点前置）"""
+        # 准备反向节点数据
+        chunk0_backward = self.graph.node_map["Module.0.backward.0"]
+        chunk0_backward.subnodes = [
+            self._create_base_node("Module.0.backward.0.layers.0.grad", up_node=chunk0_backward)]
+
+        chunk1_backward = self._create_base_node("Module.1.backward.0")
+        chunk1_backward.subnodes = [
+            self._create_base_node("Module.1.backward.0.layers.0.grad", up_node=chunk1_backward)]
+        self.graph.node_map["Module.1.backward.0"] = chunk1_backward
+        self.graph.root.subnodes.append(chunk1_backward)
+
+        chunk2_backward = self._create_base_node("Module.2.backward.0")
+        chunk2_backward.subnodes = [
+            self._create_base_node("Module.2.backward.0.layers.0.grad", up_node=chunk2_backward)]
+        self.graph.node_map["Module.2.backward.0"] = chunk2_backward
+        self.graph.root.subnodes.append(chunk2_backward)
+
+        # 记录初始状态
+        initial_subnodes = chunk0_backward.subnodes.copy()
+
+        # 执行chunk合并
+        self.merger._merge_vpp_chunks(self.graph)
+
+        # 验证反向节点子节点前置合并
+        self.assertEqual(
+            chunk0_backward.subnodes[:2],
+            chunk2_backward.subnodes
+        )
+
+    def test_sort_layers_forward(self):
+        """测试前向layers重排序"""
+        # 准备待排序节点列表
+        node_list = (
+                self.graph.node_map["Module.0.forward.0"].subnodes +
+                self.graph.node_map["Module.1.forward.0"].subnodes +
+                self.graph.node_map["Module.2.forward.0"].subnodes
+        )
+
+        # 执行排序
+        self.merger._sort_layers(node_list, self.graph, is_forward=True)
+
+        # 验证layers序号重排
+        layer_index = 0
+        for node in node_list:
+            if "layers." in node.id:
+                # 验证layers序号递增
+                self.assertIn(f"layers.{layer_index}.", node.id)
+                # 验证chunk号改为0
+                self.assertIn(".0.", node.id)
+                # 验证节点在图映射中
+                self.assertIn(node.id, self.graph.node_map)
+                layer_index += 1
+
+    def test_sort_layers_backward(self):
+        """测试反向layers重排序（先反转再排序）"""
+        # 准备反向layers节点
+        backward_nodes = [
+            self._create_base_node("Module.1.backward.0.layers.0.grad"),
+            self._create_base_node("Module.2.backward.0.layers.1.grad"),
+            self._create_base_node("Module.0.backward.0.layers.2.grad")
+        ]
+
+        # 执行反向排序
+        self.merger._sort_layers(backward_nodes, self.graph, is_forward=False)
+
+        # 验证节点顺序反转且序号重排
+        self.assertIn("layers.2.grad", backward_nodes[0].id)
+        self.assertIn("layers.1.grad", backward_nodes[1].id)
+        # 验证chunk号改为0
+        for node in backward_nodes:
+            self.assertIn(".0.", node.id)
+
+    def test_sort_layers_subnodes_recursive(self):
+        """测试子节点递归重命名"""
+        # 创建嵌套子节点
+        parent_node = self._create_base_node("Module.1.forward.0.layers.0.conv")
+        child_node = self._create_base_node("Module.1.forward.0.layers.0.conv.weight", up_node=parent_node)
+        grandchild_node = self._create_base_node("Module.1.forward.0.layers.0.conv.bias", up_node=child_node)
+        parent_node.subnodes = [child_node]
+        child_node.subnodes = [grandchild_node]
+        node_list = [parent_node]
+
+        # 执行排序
+        self.merger._sort_layers(node_list, self.graph, is_forward=True)
+
+        # 验证递归重命名
+        self.assertEqual(parent_node.id, "Module.0.forward.0.layers.0.conv")
+        self.assertEqual(child_node.id, "Module.0.forward.0.layers.0.conv.weight")
+        self.assertEqual(grandchild_node.id, "Module.0.forward.0.layers.0.conv.bias")
+        # 验证图映射更新
+        self.assertIn(parent_node.id, self.graph.node_map)
+        self.assertIn(child_node.id, self.graph.node_map)
+        self.assertIn(grandchild_node.id, self.graph.node_map)
+
+    def test_sort_layers_no_layers_pattern(self):
+        """测试非layers层节点重命名"""
+        # 创建无layers模式的节点
+        no_layer_node = self._create_base_node("Module.1.forward.0.conv.0")
+        node_list = [no_layer_node]
+
+        # 执行排序
+        self.merger._sort_layers(node_list, self.graph, is_forward=True)
+
+        # 验证仅替换chunk号，不修改layers序号
+        self.assertEqual(no_layer_node.id, "Module.0.forward.0.conv.0")
+        self.assertNotIn("layers.", no_layer_node.id)
 
 
 if __name__ == '__main__':
