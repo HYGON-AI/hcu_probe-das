@@ -5,6 +5,8 @@ import shutil
 import threading
 import unittest
 from unittest.mock import patch
+import tempfile
+from unittest import mock
 
 import numpy as np
 import pandas as pd
@@ -15,6 +17,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.acc_compare import ModeConfig, MappingConfig, MappingDict, Comparator, ParseData, \
     ProcessDf, Match, CreateTable, CalcStatsDiff
+
 
 npu_op_item_data_fuzzy = {
     'op_name': 'Functional.conv2d.0.forward.input.0',
