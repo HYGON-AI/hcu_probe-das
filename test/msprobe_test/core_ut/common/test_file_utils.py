@@ -685,6 +685,33 @@ class TestCreateFileInZip:
             mock_zip.writestr.assert_called_once()
 
 
+class TestCheckOutputDirPath:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.test_dir = tmp_path / "test_output_dir"
+        self.test_dir.mkdir(exist_ok=True)
+        
+    def test_check_output_dir_path_existing_dir(self):
+        """Test check_output_dir_path with existing directory"""
+        existing_dir = str(self.test_dir)
+        
+        with patch('msprobe.core.common.file_utils.check_link') as mock_check_link, \
+                patch('msprobe.core.common.file_utils.check_path_length') as mock_check_length, \
+                patch('msprobe.core.common.file_utils.check_path_pattern_valid') as mock_check_pattern, \
+                patch('msprobe.core.common.file_utils.check_path_writability') as mock_check_writability, \
+                patch('msprobe.core.common.file_utils.check_path_owner_consistent') as mock_check_owner, \
+                patch('os.path.exists', return_value=True):
+            
+            check_output_dir_path(existing_dir)
+            
+            # Should call all checks for existing path
+            mock_check_link.assert_called_once()
+            mock_check_length.assert_called_once()
+            mock_check_pattern.assert_called_once()
+            mock_check_writability.assert_called_once()
+            mock_check_owner.assert_called_once()
+
+
 class TestExtractZip:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
@@ -740,6 +767,14 @@ class TestSharedDict:
         assert self.shared_dict.get('key2') == 42
         assert self.shared_dict.get('key3') == [1, 2, 3]
 
+    def test_destroy_shared_memory(self):
+        """Test SharedDict cleanup"""
+        self.shared_dict = SharedDict()
+        self.shared_dict._load_shared_memory()
+
+        # Test cleanup
+        self.shared_dict.destroy_shared_memory()
+
 
 class TestDeserializationScanner:
     def test_deserialization_scanner_creation(self):
@@ -778,3 +813,36 @@ class TestDeserializationScanner:
             result = scanner.scan_pickle_content(dangerous_content)
 
             assert result is False
+
+
+class TestReadXlsx:
+    """Test class for read_xlsx function"""
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
+        self.test_dir = tmp_path / "test_output_dir"
+        self.test_dir.mkdir(exist_ok=True)
+    
+    def teardown_method(self):
+        """Clean up test environment"""
+        if self.test_dir.exists():
+            shutil.rmtree(self.test_dir)
+    
+    def test_read_xlsx_success(self):
+        """Test read_xlsx function with successful reading"""
+        test_file = str(self.test_dir / "test.xlsx")
+        
+        with patch('msprobe.core.common.file_utils.check_file_or_directory_path') as mock_check_path, \
+                patch('msprobe.core.common.file_utils.check_zip_file') as mock_check_zip, \
+                patch('pandas.read_excel') as mock_read_excel:
+            
+            # Mock the return value
+            mock_df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+            mock_read_excel.return_value = mock_df
+            
+            # Test without sheet_name
+            result = read_xlsx(test_file)
+            
+            mock_check_path.assert_called_once_with(test_file)
+            mock_check_zip.assert_called_once_with(test_file)
+            mock_read_excel.assert_called_once_with(test_file, keep_default_na=False)
+            assert result is mock_df
