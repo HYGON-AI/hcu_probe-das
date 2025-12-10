@@ -7,6 +7,7 @@ import unittest
 import argparse
 from unittest.mock import patch, MagicMock
 from unittest.mock import patch, DEFAULT
+import pandas as pd
 import torch
 import numpy as np
 from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import *
@@ -20,6 +21,14 @@ from msprobe.pytorch.api_accuracy_checker.acc_check.data_generate import (
 )
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.api_accuracy_checker.common.utils import CompareException
+from msprobe.pytorch.api_accuracy_checker.acc_check.acc_check import (
+    blacklist_and_whitelist_filter,
+    check_need_grad,
+    need_to_backward,
+    extract_tensors_grad,
+    run_backward,
+    preprocess_forward_content,
+)
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 forward_file = os.path.join(base_dir, "forward.json")
@@ -407,6 +416,64 @@ class TestRunUtMethods(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["-d", "-1"])
 
+class TestAccCheckBasic(unittest.TestCase):
+
+    def test_blacklist_and_whitelist_filter(self):
+        black = ["add"]
+        white = ["add", "mul"]
+        # 在黑名单则 True（不执行）
+        self.assertTrue(blacklist_and_whitelist_filter("add", black, white))
+        # 不在黑名单且在白名单 False（执行）
+        self.assertFalse(blacklist_and_whitelist_filter("mul", black, white))
+        # 有白名单但未命中 True（不执行）
+        self.assertTrue(blacklist_and_whitelist_filter("sub", black, white))
+
+    def test_check_need_grad(self):
+        self.assertTrue(check_need_grad({"input_kwargs": {}}))
+        self.assertFalse(check_need_grad({"input_kwargs": {"out": 1}}))
+
+    def test_need_to_backward(self):
+        # 当输出是 list 且没有 grad_index → False
+        self.assertFalse(need_to_backward(None, [torch.tensor(1)]))
+        # 标量 → True
+        self.assertTrue(need_to_backward(None, torch.tensor(1)))
+        # 指定 grad index → True
+        self.assertTrue(need_to_backward(0, [torch.tensor(1)]))
+
+    def test_extract_tensors_grad(self):
+        a = torch.tensor(1.0, requires_grad=True)
+        b = torch.tensor(2.0, requires_grad=True)
+        (a + b).backward()
+
+        result = extract_tensors_grad([a, [b]])
+        self.assertEqual(len(result), 2)
+        self.assertIsNotNone(result[0])
+        self.assertIsNotNone(result[1])
+
+    def test_extract_tensors_grad_depth_exceed(self):
+        deep_list = []
+        cur = deep_list
+        for _ in range(200):
+            nxt = []
+            cur.append(nxt)
+            cur = nxt
+
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.acc_check.logger")
+    def test_run_backward(self, mock_logger):
+        a = torch.tensor([1.0, 2.0], requires_grad=True)
+        out = a * 2
+        grad = torch.tensor([1.0, 1.0])
+        result = run_backward([a], grad, None, out)
+        self.assertEqual(len(result), 1)
+        self.assertIsNotNone(result[0])
+
+    def test_preprocess_forward_content(self):
+        sample = {
+            "Func.add.0": {"input_args": [{"a": 1, "Max": 10}], "input_kwargs": {}},
+            "Func.add.1": {"input_args": [{"a": 1, "Max": 10}], "input_kwargs": {}},  # duplicate
+        }
+        output = preprocess_forward_content(sample)
+        self.assertEqual(len(output), 1)
 
 
 class TestDataGenerate(unittest.TestCase):
