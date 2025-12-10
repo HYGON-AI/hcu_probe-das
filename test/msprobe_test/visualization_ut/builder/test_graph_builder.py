@@ -10,6 +10,7 @@ class TestGraphBuilder(unittest.TestCase):
 
     def setUp(self):
         self.construct_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "construct.json")
+        self.construct_path_empty = os.path.join(os.path.dirname(os.path.realpath(__file__)), "construct_empty.json")
         self.data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dump.json")
         self.stack_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "stack.json")
         self.model_name = "TestModel"
@@ -31,6 +32,9 @@ class TestGraphBuilder(unittest.TestCase):
         self.assertIsNotNone(graph)
         self.assertIsInstance(graph, Graph)
         self.assertEqual(len(graph.node_map), 3)
+
+        with self.assertRaises(RuntimeError):
+            GraphBuilder.build(self.construct_path_empty, self.data_path, self.stack_path, self.model_name)
 
     @patch('msprobe.visualization.graph.node_op.NodeOp.get_node_op')
     @patch('msprobe.visualization.builder.msprobe_adapter.get_input_output', return_value=([], []))
@@ -145,3 +149,15 @@ class TestGraphBuilder(unittest.TestCase):
                                                            'Module.module.layer1.BasicBlock.backward.0',
                                                            'Module.module.Float16Model.backward.0')
         self.assertEqual(up_node_id, 'Module.module.Float16Model.backward.0')
+
+    def test_is_valid_batch_p2p_output(self):
+        self.assertFalse(GraphBuilder._is_valid_batch_p2p_output('a'))
+        self.assertFalse(GraphBuilder._is_valid_batch_p2p_output([]))
+        self.assertTrue(GraphBuilder._is_valid_batch_p2p_output([['a']]))
+
+    def test_extract_batch_p2p_info(self):
+        node_data = {
+            "output": [[{'a': 1}], [{'b': 1}]]
+        }
+        GraphBuilder._extract_batch_p2p_info(self.graph.root, node_data)
+        self.assertEqual(self.graph.root.batch_p2p_info, [{'group_id': None, 'op': None, 'peer': None}])

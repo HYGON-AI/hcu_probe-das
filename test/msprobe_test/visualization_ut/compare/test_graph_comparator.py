@@ -122,6 +122,34 @@ class TestGraphComparator(unittest.TestCase):
         self.assertEqual(node_n.matched_node_link, ['Tensor.a.0'])
         self.assertEqual(node_b.matched_node_link, ['Tensor.a.0'])
 
+    @patch('msprobe.visualization.builder.msprobe_adapter.compare_node')
+    @patch('msprobe.visualization.graph.graph.Graph.match')
+    @patch('msprobe.visualization.graph.graph.Graph.fuzzy_match')
+    @patch('msprobe.visualization.compare.graph_comparator.get_compare_mode')
+    def test_compare_nodes_fuzzy(self, mock_get_compare_mode, mock_fuzzy_match, mock_match, mock_compare_node):
+        node_n = BaseNode(NodeOp.function_api, 'Tensor.a.0')
+        node_b = BaseNode(NodeOp.function_api, 'Tensor.b.0')
+        node_module_n = BaseNode(NodeOp.module, 'Module.a.0')
+        node_module_n.subnodes = [node_n]
+        node_n.upnode = node_module_n
+        node_module_b = BaseNode(NodeOp.module, 'Module.b.0')
+        node_module_b.subnodes = [node_b]
+        node_b.upnode = node_module_b
+        self.graphs[0].node_map[node_n.id] = node_n
+        self.graphs[1].node_map[node_b.id] = node_b
+        self.graphs[0].node_map[node_module_n.id] = node_module_n
+        self.graphs[1].node_map[node_module_b.id] = node_module_b
+        mock_get_compare_mode.return_value = GraphConst.SUMMARY_COMPARE
+        mock_fuzzy_match.return_value = (node_module_b, [], [])
+        mock_compare_node.return_value = ['result']
+        comparator = GraphComparator(self.graphs, self.dump_path_param,
+                                     Args(output_path=self.output_path, layer_mapping=True), True)
+        comparator.mapping_dict = True
+        comparator._compare_nodes_fuzzy(node_module_n)
+        self.assertEqual(node_n.matched_node_link, ['Module.b.0', 'Module.b.0'])
+        self.assertEqual(node_b.matched_node_link, [])
+
+
     def test_add_compare_result_node(self):
         compare_result_list = [
             ['Tensor.__truediv__.139.backward.input.0', 'Tensor.__truediv__.139.backward.input.0', 'torch.float32',
