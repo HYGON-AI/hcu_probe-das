@@ -4,6 +4,7 @@
 import os
 import tempfile
 import unittest
+from collections import OrderedDict
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
@@ -109,27 +110,53 @@ node {
         mock_filechecker.assert_called_with("/tmp/file", tac.FileCheckConst.FILE, ability=tac.FileCheckConst.READ_ABLE)
         instance.common_check.assert_called_once()
 
-    def test_gather_data_with_token_id_fx_when_rank_info_existed_then_pass(self):
+    def test_get_torchair_ge_graph_path_when_rank_filtered_then_pass(self):
         with tempfile.TemporaryDirectory() as tmp:
-            # create token dirs "0" and "1", each with one .npy file
-            token0 = os.path.join(tmp, "0")
-            token1 = os.path.join(tmp, "1")
-            os.makedirs(token0)
-            os.makedirs(token1)
-            f0 = os.path.join(token0, "a.npy")
-            f1 = os.path.join(token1, "b.npy")
-            open(f0, "wb").close()
-            open(f1, "wb").close()
+            subdir = os.path.join(tmp, "sub")
+            os.makedirs(subdir)
+            # matching rank 0 file
+            f_match = os.path.join(subdir, f"{tac.GE_GRAPH_FILE_PREFIX}20250101120000_rank_0_x.txt")
+            with open(f_match, "w", encoding="utf-8"):
+                pass
+            # non-matching rank 1 file
+            f_other = os.path.join(subdir, f"{tac.GE_GRAPH_FILE_PREFIX}20240101120000_rank_1_x.txt")
+            with open(f_other, "w", encoding="utf-8"):
+                pass
 
-            gathered = tac.gather_data_with_token_id_fx(tmp, [], rank_info_existed=True)
+            result = tac.get_torchair_ge_graph_path(tmp, rank=0)
+
+        self.assertEqual(result, [f_match])
+
+    def test_get_torchair_ge_graph_path_when_not_directory_then_pass(self):
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            result = tac.get_torchair_ge_graph_path(tmp_file.name)
+        self.assertIsNone(result)
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.os.walk")
+    @patch("msprobe.core.compare.torchair_acc_cmp.os.listdir")
+    def test_gather_data_with_token_id_fx_when_rank_info_existed_then_pass(self, mock_listdir, mock_walk):
+        # simulate data_path containing subdirs "0" and "1", each with one .npy file
+        data_path = "/root"
+        mock_walk.return_value = [(data_path, ["0", "1"], [])]
+
+        def listdir_side_effect(path):
+            if path == os.path.join(data_path, "0"):
+                return ["a.npy"]
+            if path == os.path.join(data_path, "1"):
+                return ["b.npy"]
+            return []
+
+        mock_listdir.side_effect = listdir_side_effect
+
+        gathered = tac.gather_data_with_token_id_fx(data_path, [], rank_info_existed=True)
 
         self.assertEqual(len(gathered), 1)
         gathered_map = gathered[0]
         # token id is basename(token_dir)+1
         self.assertIn(1, gathered_map)
         self.assertIn(2, gathered_map)
-        self.assertEqual(gathered_map[1], [f0])
-        self.assertEqual(gathered_map[2], [f1])
+        self.assertEqual(gathered_map[1], [os.path.join(data_path, "0", "a.npy")])
+        self.assertEqual(gathered_map[2], [os.path.join(data_path, "1", "b.npy")])
 
     def test_gather_data_with_token_id_when_rank_info_existed_true_then_pass(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -146,12 +173,59 @@ node {
 
             gathered = tac.gather_data_with_token_id(parent, fx=False, rank_info_existed=True)
 
-        self.assertEqual(len(gathered), 1)
-        subdir_map = gathered[0]
-        self.assertIn(0, subdir_map)
-        self.assertIn(1, subdir_map)
-        self.assertIn(f0, subdir_map[0])
-        self.assertIn(f1, subdir_map[1])
+            self.assertEqual(len(gathered), 1)
+            subdir_map = gathered[0]
+            self.assertIn(0, subdir_map)
+            self.assertIn(1, subdir_map)
+            self.assertIn(f0, subdir_map[0])
+            self.assertIn(f1, subdir_map[1])
+
+    def test_sort_ge_dump_data_when_reorder_ops_then_pass(self):
+        dump_data = OrderedDict([("opB", "pathB"), ("opA", "pathA")])
+        graph_map = [
+            {"op": {"name": "opA"}},
+            {"op": {"name": "opB"}},
+        ]
+        sorted_data = tac.sort_ge_dump_data(dump_data, graph_map)
+        self.assertEqual(list(sorted_data.keys()), ["opA", "opB"])
+
+    def test_sort_by_timestamp_when_paths_with_timestamps_then_pass(self):
+        rows = [
+            {"my_data_path": "Op.Op.1.2.200,inputs,0"},
+            {"my_data_path": "Op.Op.1.2.100,inputs,0"},
+        ]
+        sorted_rows = tac.sort_by_timestamp(rows)
+        self.assertEqual(sorted_rows[0]["my_data_path"], "Op.Op.1.2.100,inputs,0")
+
+    def test_filter_valid_fx_desc_tensor_info_when_valid_and_invalid_then_pass(self):
+        valid = {
+            "key": "_fx_tensor_name",
+            "value": {"s": "add_1-aten.add.Tensor.OUTPUT.0"},
+        }
+        self.assertTrue(tac.filter_valid_fx_desc_tensor_info("attr", valid))
+        self.assertFalse(tac.filter_valid_fx_desc_tensor_info("other", valid))
+        self.assertFalse(tac.filter_valid_fx_desc_tensor_info("attr", {"key": "wrong"}))
+
+    def test_get_all_op_input_names_when_multiple_inputs_then_pass(self):
+        op_info = {
+            "input": "name1:0",
+            "input#1": "name2:1",
+            "other": "ignored",
+        }
+        names = tac.get_all_op_input_names(op_info)
+        self.assertEqual(names, ["name1", "name2"])
+
+    def test_find_longest_name_when_exact_and_prefix_then_pass(self):
+        op_map = {"abc": "v1", "ab": "v2"}
+        fused = {"xyz": "p"}
+        ge = {"abc": "p"}
+
+        self.assertEqual(tac.find_longest_name("abc", op_map, fused, ge), "abc")
+        self.assertEqual(tac.find_longest_name("abx", op_map, fused, ge), "ab")
+
+        # name hits fused/geo data but not op_map -> None
+        fused2 = {"xyz": "p"}
+        self.assertIsNone(tac.find_longest_name("xyzK", op_map, fused2, ge))
 
     @patch("msprobe.core.compare.torchair_acc_cmp.gather_data_with_token_id")
     def test_init_ge_dump_data_from_bin_path_when_valid_files_then_pass(self, mock_gather):
@@ -193,6 +267,83 @@ node {
         self.assertIn("mm-aten.mm.default", op_map)
         self.assertEqual(len(op_map["mm-aten.mm.default"]["input"]), 2)
         self.assertEqual(len(op_map["mm-aten.mm.default"]["output"]), 1)
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.fill_row_data", return_value={"ok": True})
+    @patch("msprobe.core.compare.torchair_acc_cmp.BasicDataInfo")
+    def test_compare_single_data_when_basic_flow_then_pass(self, mock_basic, mock_fill):
+        result = tac.compare_single_data("/golden", "/my", token_id=2, golden_data="g", my_data="m")
+
+        mock_basic.assert_called_once_with("/golden", "/my", 2)
+        mock_fill.assert_called_once()
+        self.assertEqual(result, {"ok": True})
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_single_data")
+    def test_compare_specials_private_ops_when_inputs_outputs_then_pass(self, mock_compare_single):
+        ge_inputs = ["gi0", "gi1"]
+        ge_outputs = ["go0", "go1"]
+        mock_compare_single.side_effect = ["row0", "row1"]
+
+        result = tac.compare_specials_private_ops(ge_inputs, ge_outputs, token_id=3, my_path="/my")
+
+        self.assertEqual(result, ["row0", "row1"])
+        mock_compare_single.assert_any_call("/my,inputs,0", "/my,outputs,0", 3, "gi0", "go0")
+        mock_compare_single.assert_any_call("/my,inputs,1", "/my,outputs,1", 3, "gi1", "go1")
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_single_data")
+    def test_compare_ops_when_inputs_outputs_then_pass(self, mock_compare_single):
+        fx_inputs = ["fi0"]
+        fx_outputs = ["fo0"]
+        ge_inputs = ["gi0"]
+        ge_outputs = ["go0"]
+        mock_compare_single.side_effect = ["row_in", "row_out"]
+
+        result = tac.compare_ops((fx_inputs, fx_outputs), (ge_inputs, ge_outputs), token_id=4, my_path="/my")
+
+        self.assertEqual(result, ["row_in", "row_out"])
+        mock_compare_single.assert_any_call("fi0", "/my,inputs,0", 4, my_data="gi0")
+        mock_compare_single.assert_any_call("fo0", "/my,outputs,0", 4, my_data="go0")
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_ops", return_value=["ok_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.parse_torchair_dump_data", return_value=(["gi"], ["go"]))
+    def test_compare_ge_with_fx_single_op_when_valid_desc_then_pass(self, mock_parse, mock_compare_ops):
+        op_info = {
+            "output_desc": {
+                "attr": {
+                    "key": "_fx_tensor_name",
+                    "value": {"s": "fx_tensor.OUTPUT.0"},
+                }
+            }
+        }
+        fx_dump_data = {
+            "fx_tensor": {"input": ["fi"], "output": ["fo"]},
+        }
+
+        rows = tac.compare_ge_with_fx_single_op(op_info, fx_dump_data, "ge_op", "/my", token_id=1)
+
+        self.assertEqual(rows, ["ok_row"])
+        mock_compare_ops.assert_called_once()
+        mock_parse.assert_called_once_with("/my")
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_single_data", return_value="row")
+    @patch("msprobe.core.compare.torchair_acc_cmp.parse_torchair_dump_data", return_value=(["gi"], ["go"]))
+    def test_compare_ge_with_fx_multiple_ops_details_when_input_then_pass(self, mock_parse, mock_compare_single):
+        op_info = {
+            "output_desc": {
+                "attr": {
+                    "key": "_fx_tensor_name",
+                    "value": {"s": "fx_tensor.OUTPUT.0"},
+                }
+            }
+        }
+        fx_dump_data = {
+            "fx_tensor": {"input": ["fi"], "output": ["fo"]},
+        }
+
+        rows = tac.compare_ge_with_fx_multiple_ops_details(op_info, fx_dump_data, "ge_op", "/my", "input", 1)
+
+        self.assertEqual(rows, ["row"])
+        mock_compare_single.assert_called_once()
+        mock_parse.assert_called_once_with("/my")
 
     @patch("msprobe.core.compare.torchair_acc_cmp.acc_compare")
     @patch("msprobe.core.compare.torchair_acc_cmp._has_rank_directory", return_value=False)
@@ -256,6 +407,36 @@ node {
 
         self.assertIn("Can not get ge graph", str(cm.exception))
         mock_get_graph.assert_called_once_with("/my", -1)
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.set_msaccucmp_path_from_cann")
+    @patch("msprobe.core.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=None)
+    def test_acc_compare_when_no_ge_graph_then_raise(self, mock_get_graph, mock_set_path):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(Exception) as cm:
+                tac.acc_compare(tmp, tmp, "/out", rank_id=None, rank_info_existed=False)
+        self.assertIn("Can not get ge graph", str(cm.exception))
+        mock_get_graph.assert_called_once()
+        mock_set_path.assert_called_once()
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.set_msaccucmp_path_from_cann")
+    @patch("msprobe.core.compare.torchair_acc_cmp.acc_compare_once")
+    @patch("msprobe.core.compare.torchair_acc_cmp.get_torchair_ge_graph_path", return_value=["graph.pbtxt"])
+    def test_acc_compare_when_single_rank_and_rank_info_existed_then_pass(self, mock_get_graph, mock_acc_once, mock_set_path):
+        with tempfile.TemporaryDirectory() as golden, tempfile.TemporaryDirectory() as my:
+            os.makedirs(os.path.join(golden, "worldsize2_rank0"))
+            os.makedirs(os.path.join(my, "worldsize2_rank0"))
+
+            out = tac.acc_compare(golden, my, "/out", rank_id=None, rank_info_existed=True)
+
+        self.assertEqual(out, "/out")
+        mock_acc_once.assert_called_once()
+        mock_set_path.assert_called_once()
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.acc_compare_once", side_effect=RuntimeError("inner_error"))
+    def test_save_compare_once_when_acc_compare_once_raises_then_pass(self, mock_acc_once):
+        with self.assertRaises(ValueError) as cm:
+            tac.save_compare_once(("/golden", "/my", "/out", -1))
+        self.assertIn("Error in acc_compare_once: inner_error", str(cm.exception))
 
 
 if __name__ == "__main__":
