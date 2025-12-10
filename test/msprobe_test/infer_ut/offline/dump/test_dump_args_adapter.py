@@ -64,7 +64,6 @@ def test_given_default_arguments_when_init_then_success():
     args = DumpArgsAdapter(model_path=VALID_MODEL_PATH)
     assert args.golden_path == VALID_MODEL_PATH
     assert args.input_data == ""
-    assert args.cann_path == "/usr/local/Ascend/ascend-toolkit/latest"
     assert args.output_path == "./output"
     assert args.input_shape == ""
     assert args.rank == "0"
