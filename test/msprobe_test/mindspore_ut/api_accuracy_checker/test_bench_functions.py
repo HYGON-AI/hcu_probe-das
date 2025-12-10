@@ -10,8 +10,9 @@ from msprobe.mindspore.api_accuracy_checker.bench_functions.flash_attention_scor
     rebuild_softmax_by_max_sum, FlashAttentionScore,
     npu_fusion_attention_forward_patch, npu_fusion_attention_backward_patch,
     FaForwardParams, FaBackwardParams, RebuildSoftmaxParams, GTYPE,
-    get_head_num, get_input_layout
+    get_head_num, get_input_layout, SOFTMAX_BUILD_MODE
 )
+
 
 class TestBenchFunctions(unittest.TestCase):
 
@@ -391,6 +392,60 @@ class TestBenchFunctions(unittest.TestCase):
             npu_fusion_attention_backward_patch(q,k,None,dx,3)
         args2, dims2, new_kwargs2 = npu_fusion_attention_backward_patch(q,k,None,dx,2, "BSH")
         self.assertIn("s1", dims2)
+
+
+class TestBenchFunctionsExtra(unittest.TestCase):
+
+    def test_calculate_qk_fallback(self):
+        q = torch.randn(1, 1, 2, 4)
+        k = torch.randn(1, 2, 4)  # dim=3
+        with self.assertRaises(ValueError):
+            calculate_qk(q, k, None, None, 1.0)
+
+    def test_fusion_forward_keep_prob_zero(self):
+        B,N,S,D = 1,1,2,4
+        fwd = FaForwardParams(
+            q=torch.randn(B,N,S,D),
+            k=torch.randn(B,N,S,D),
+            v=torch.randn(B,N,S,D),
+            drop_mask=None,
+            attn_mask=None,
+            pse=None,
+            scalar_value=1.0,
+            keep_prob=0.0)
+        with self.assertRaises(ValueError):
+            fusion_attention_forward(fwd)
+
+    def test_fusion_backward_keep_prob_zero(self):
+        B,N,S,D = 1,1,2,4
+        bwd = FaBackwardParams(
+            dx=torch.randn(B,N,S,D),
+            q=torch.randn(B,N,S,D),
+            k=torch.randn(B,N,S,D),
+            v=torch.randn(B,N,S,D),
+            softmax_res=torch.softmax(torch.randn(B,N,S,S),dim=-1),
+            drop_mask=None,
+            pse=None,
+            scalar_value=1.0,
+            keep_prob=0.0)
+        with self.assertRaises(ValueError):
+            fusion_attention_backward(bwd)
+
+    def test_convert_from_bnsd_tnd_error(self):
+        x = torch.randn(1,2,3,4)
+        with self.assertRaises(ValueError):
+            convert_from_bnsd(x, "TND")
+
+    def test_npu_patch_error_head_mismatch(self):
+        q = torch.randn(1,2,8)
+        k = torch.randn(1,2,8)
+        with self.assertRaises(ValueError):
+            npu_fusion_attention_forward_patch(q,k,None,3,"BSH")  # 3不可整除
+
+    def test_attn_mask_dim4(self):
+        mask = torch.ones(1,1,3,3)
+        out = generate_attn_mask(1, mask, 1,1,3,3,0,0,torch.float32)
+        self.assertEqual(out.shape, (1,1,3,3))
 
 
 if __name__ == '__main__':
