@@ -27,7 +27,7 @@
 进行精度比对时，需要判断 CPU 或 GPU 的 API 与 NPU 的 API 是否可以比对，须满足以下匹配条件：
 
 - 两个 API 的名称相同，API 命名规则：`{api_type}.{api_name}.{api调用次数}.{正反向}.{输入输出}.{index}`，如：Functional.conv2d.1.backward.input.0。
-- 两个 API 输入输出的 Tensor 数量相同且各个 Tensor 的 Shape 相同。
+- 两个 API 输入输出的 Tensor 数量相同。
 
 通常满足以上两个条件，工具就认为是同一个 API，成功进行 API 的匹配，后续进行相应的计算。
 
@@ -239,18 +239,19 @@ NormRelativeErr: $\vert\frac{l2norm(N)-l2norm(B)}{l2norm(B)}\vert*100\%$
 在比对结果中的Err_message列呈现比对结果标记的原因，具体含义如下：
 
 error标记情况：
-1. 一个API或模块的NPU的最大值或最小值中存在 nan/inf/-inf，如果Bench指标存在相同现象则忽略（真实数据模式、统计数据模式）；
-2. 一个API或模块的One Thousandth Err Ratio的input/parameters > 0.9同时output < 0.6（真实数据模式）（仅标记output）（使用输入进行计算）；
+1. 一个API或模块的NPU的最大值或最小值中存在 nan/inf/-inf，如果Bench指标存在相同现象则忽略（真实数据模式、统计数据模式）。
+2. 一个API或模块的One Thousandth Err Ratio的input/parameters > 0.9同时output < 0.6（真实数据模式）（仅标记output）（使用输入进行计算）。
 3. 一个API或模块的input的norm值相对误差 < 0.1 且 output 的norm值相对误差 > 0.5（统计数据模式）（仅标记output）（使用输入进行计算）。
-4. 一个API或模块的Requires_grad(计算梯度) 不一致（真实数据模式、统计数据模式）；
-5. 一个API或模块的非tensor标量参数不一致（真实数据模式、统计数据模式）;
+4. 一个API或模块的Requires_grad（计算梯度）不一致（真实数据模式、统计数据模式）。
+5. 一个API或模块的非tensor标量参数不一致（真实数据模式、统计数据模式）。
 6. 一个API或模块的CRC-32值不一致（md5模式）。
+7. 一个API或模块的dtype不一致（真实数据模式、统计数据模式）。
+8. 一个API或模块的shape不一致（真实数据模式、统计数据模式）
 
 warning标记情况：
-1. 一个API或模块的output的norm值相对误差是 input/parameters 的norm值相对误差的10倍（统计数据模式）（仅标记output）（使用输入进行计算）；
-2. 一个API或模块的Cosine的input/parameters > 0.9且input/parameters - output > 0.1（真实数据模式）（仅标记output）（使用输入进行计算）；
-3. 一个API或模块的dtype不一致（真实数据模式、统计数据模式）；
-4. 一个API或模块的参数未匹配（md5模式）。
+1. 一个API或模块的output的norm值相对误差是 input/parameters 的norm值相对误差的10倍（统计数据模式）（仅标记output）（使用输入进行计算）。
+2. 一个API或模块的Cosine的input/parameters > 0.9且input/parameters - output > 0.1（真实数据模式）（仅标记output）（使用输入进行计算）。
+3. 一个API或模块的参数未匹配（md5模式）。
 
 特殊场景：
 1. 输入存在占位的API，涉及到使用输入进行计算的指标规则不适用，包括：['_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv']

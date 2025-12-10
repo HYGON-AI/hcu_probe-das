@@ -16,7 +16,8 @@
 
 from abc import ABC, abstractmethod
 from msprobe.core.compare.indicator_analysis.api_data import ApiData
-from msprobe.core.compare.indicator_analysis.utils import is_inf_or_nan, str2float, ResultLevel, IgnoreInfo
+from msprobe.core.compare.indicator_analysis.utils import is_inf_or_nan, str2float, ResultLevel, IgnoreInfo, \
+    get_data_list_by_ignore_info
 from msprobe.core.common.const import CompareConst
 
 
@@ -45,12 +46,9 @@ class InfNanErrChecker(BaseAlgorithm):
         self.err_msg = f'{self.result_level.value}: There is nan/inf/-inf in the maximum or minimum value of NPU.'
 
     def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
-        if ignore_info == IgnoreInfo.ALL_IGNORE:
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
             return
-        elif ignore_info == IgnoreInfo.INPUT_IGNORE:
-            data_lists = api_data.output_data
-        else:
-            data_lists = api_data.input_data + api_data.output_data
 
         for data_list in data_lists:
             bench_max = api_data.get_data_by_header(CompareConst.BENCH_MAX, data_list)
@@ -134,12 +132,9 @@ class RequiresGradErrChecker(BaseAlgorithm):
         self.err_msg = f'{self.result_level.value}: The Required_Grad of NPU and Bench are inconsistent'
 
     def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
-        if ignore_info == IgnoreInfo.ALL_IGNORE:
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
             return
-        elif ignore_info == IgnoreInfo.INPUT_IGNORE:
-            data_lists = api_data.output_data
-        else:
-            data_lists = api_data.input_data + api_data.output_data
 
         for data_list in data_lists:
             # not match
@@ -211,12 +206,9 @@ class CRC32ErrChecker(BaseAlgorithm):
         self.warn_msg = f'{self.warn_level.value}: The parameter of NPU does not match the bench.'
 
     def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
-        if ignore_info == IgnoreInfo.ALL_IGNORE:
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
             return
-        elif ignore_info == IgnoreInfo.INPUT_IGNORE:
-            data_lists = api_data.output_data
-        else:
-            data_lists = api_data.input_data + api_data.output_data
 
         null_set = (CompareConst.N_A, CompareConst.NAN)
         for data_list in data_lists:
@@ -232,23 +224,20 @@ class CRC32ErrChecker(BaseAlgorithm):
                     api_data.set_err_msg(data_list, self.err_msg)
 
 
-class DTypeWarnChecker(BaseAlgorithm):
+class DTypeErrChecker(BaseAlgorithm):
     """
     适用于真实数据模式、统计数据模式
-    一个 API 或模块的 dtype 不一致，标记为 warning
+    一个 API 或模块的 dtype 不一致，标记为 error
     """
 
     def __init__(self):
-        self.result_level = ResultLevel.WARNING
+        self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The dtype of NPU and Bench are inconsistent.'
 
     def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
-        if ignore_info == IgnoreInfo.ALL_IGNORE:
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
             return
-        elif ignore_info == IgnoreInfo.INPUT_IGNORE:
-            data_lists = api_data.output_data
-        else:
-            data_lists = api_data.input_data + api_data.output_data
 
         for data_list in data_lists:
             # not match
@@ -263,6 +252,37 @@ class DTypeWarnChecker(BaseAlgorithm):
                 continue
 
             if npu_dtype != bench_dtype:
+                api_data.set_result(data_list, self.result_level)
+                api_data.set_err_msg(data_list, self.err_msg)
+
+
+class ShapeErrChecker(BaseAlgorithm):
+    """
+    适用于真实数据模式、统计数据模式
+    一个 API 或模块的 shape 不一致，标记为 error
+    """
+
+    def __init__(self):
+        self.result_level = ResultLevel.ERROR
+        self.err_msg = f'{self.result_level.value}: The shape of NPU and Bench are inconsistent.'
+
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
+            return
+        for data_list in data_lists:
+            # not match
+            bench_name = api_data.get_data_by_header(CompareConst.BENCH_NAME, data_list)
+            if not bench_name or bench_name == CompareConst.N_A:
+                continue
+
+            npu_shape = api_data.get_data_by_header(CompareConst.NPU_SHAPE, data_list)
+            bench_shape = api_data.get_data_by_header(CompareConst.BENCH_SHAPE, data_list)
+
+            if npu_shape is None or bench_shape is None:
+                continue
+
+            if npu_shape != bench_shape:
                 api_data.set_result(data_list, self.result_level)
                 api_data.set_err_msg(data_list, self.err_msg)
 
@@ -334,7 +354,7 @@ class CosineWarnChecker(BaseAlgorithm):
 
 
 TENSOR_CHECKERS = [InfNanErrChecker, OneThousandthErrChecker, RequiresGradErrChecker, ParametersErrChecker,
-                   DTypeWarnChecker, CosineWarnChecker]
+                   DTypeErrChecker, ShapeErrChecker, CosineWarnChecker]
 STATISTICS_CHECKERS = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChecker, ParametersErrChecker,
-                       DTypeWarnChecker, RelativeWarnChecker]
+                       DTypeErrChecker, ShapeErrChecker, RelativeWarnChecker]
 MD5_CHECKERS = [CRC32ErrChecker]

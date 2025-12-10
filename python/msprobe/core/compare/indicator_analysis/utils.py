@@ -104,3 +104,13 @@ class IgnoreInfo(Enum):
     ALL_IGNORE = 'all_ignore'
     INPUT_IGNORE = 'input_ignore'
     NO_IGNORE = 'no_ignore'
+
+
+def get_data_list_by_ignore_info(api_data, ignore_info: IgnoreInfo):
+    if ignore_info == IgnoreInfo.ALL_IGNORE:
+        data_lists = []
+    elif ignore_info == IgnoreInfo.INPUT_IGNORE:
+        data_lists = api_data.output_data
+    else:
+        data_lists = api_data.input_data + api_data.output_data
+    return data_lists
