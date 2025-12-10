@@ -464,8 +464,7 @@ class Match:
     def check_op_item(self, npu_op_item, bench_op_item):
         name_match = self.rename_api(npu_op_item[CompareConst.CMP_KEY]) == self.rename_api(
             bench_op_item[CompareConst.CMP_KEY])
-        shape_match = npu_op_item[CompareConst.CMP_SHAPE] == bench_op_item[CompareConst.CMP_SHAPE]
-        if name_match and shape_match:
+        if name_match:
             return True
         else:
             npu_op_name = npu_op_item[CompareConst.OP_NAME]
@@ -489,7 +488,7 @@ class Match:
             match_result = match_result.sort_values(CompareConst.OP_NAME_X).reset_index(drop=True)
             match_result[CompareConst.OP_NAME_X] = match_result[CompareConst.OP_NAME_X].astype('object')
         elif not self.mode_config.fuzzy_match:
-            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY, CompareConst.CMP_SHAPE],
+            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY],
                                     how='outer')
         else:
             match_result = self.process_fuzzy_match(npu_df, bench_df)

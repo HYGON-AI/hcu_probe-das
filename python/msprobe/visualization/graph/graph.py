@@ -50,8 +50,6 @@ class Graph:
         if not node_n or node_n.id not in graph_b.node_map:
             return None, []
         node_b = graph_b.node_map.get(node_n.id)
-        if node_n != node_b:
-            return None, []
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()
         if ancestors_n != ancestors_b:
@@ -71,10 +69,8 @@ class Graph:
         return node_b, ancestors_n, ancestors_b
 
     @staticmethod
-    def fuzzy_match(node_n, node_b, check_shape=True):
+    def fuzzy_match(node_n, node_b):
         if not node_n or not node_b:
-            return None, [], []
-        if check_shape and not node_n.fuzzy_eq(node_b):
             return None, [], []
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()

@@ -4,7 +4,6 @@ from msprobe.visualization.builder.msprobe_adapter import (
     get_compare_mode,
     run_real_data,
     get_input_output,
-    compare_data,
     format_node_data,
     compare_node,
     _format_decimal_string,
@@ -39,15 +38,6 @@ class TestMsprobeAdapter(unittest.TestCase):
         input_data, output_data = get_input_output(node_data, node_id)
         self.assertIn("Distributed.broadcast.0.forward.output.0", output_data)
         self.assertIn("Distributed.broadcast.0.forward.input.0", input_data)
-
-    def test_compare_data(self):
-        data_dict_list1 = {'key1': {'type': 'Type1', 'dtype': 'DType1', 'shape': 'Shape1'}}
-        data_dict_list2 = {'key1': {'type': 'Type1', 'dtype': 'DType1', 'shape': 'Shape1'}}
-        data_dict_list3 = {'key1': {'type': 'Type2', 'dtype': 'DType1', 'shape': 'Shape1'}}
-        data_dict_list4 = {}
-        self.assertTrue(compare_data(data_dict_list1, data_dict_list2))
-        self.assertFalse(compare_data(data_dict_list1, data_dict_list3))
-        self.assertFalse(compare_data(data_dict_list1, data_dict_list4))
 
     def test_format_node_data(self):
         data_dict = {'node1': {'data_name': 'data1', 'full_op_name': 'op1'}}

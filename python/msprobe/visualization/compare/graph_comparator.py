@@ -46,7 +46,7 @@ class GraphComparator:
         比较函数，初始化结束后单独调用。比较结果写入graph_n
         """
         if self.fuzzy_match:
-            self._compare_nodes_fuzzy(self.graph_n.root, False if self.parallel_merge else True)
+            self._compare_nodes_fuzzy(self.graph_n.root)
         else:
             self._compare_nodes(self.graph_n.root)
         self._postcompare()
@@ -99,12 +99,11 @@ class GraphComparator:
         while node_list:
             compare_single_node(node_list.pop(0))
 
-    def _compare_nodes_fuzzy(self, node_root, check_shape=True):
+    def _compare_nodes_fuzzy(self, node_root):
         def compare_single_nodes_fuzzy(node_n):
             if node_n.op != NodeOp.function_api:
                 # 模块经过模糊匹配
-                node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id),
-                                                                     check_shape)
+                node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(node_n, self.graph_b.node_map.get(node_n.id))
                 if node_b:
                     self._process_matched_nodes(node_n, node_b, ancestors_n, ancestors_b)
                     # 匹配上的两个模块中的所有api, 忽略dump调用次数，按照名称一致+模块中的调用顺序进行匹配
@@ -115,7 +114,7 @@ class GraphComparator:
                         if not api_node_n:
                             continue
                         api_node_b, ancestors_n, ancestors_b = Graph.fuzzy_match(
-                            api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)), check_shape)
+                            api_node_n, self.graph_b.node_map.get(recount_result_b.get(recount_node_id)))
                         if api_node_b:
                             self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
             node_list.extend(node_n.subnodes)

@@ -96,37 +96,6 @@ def get_input_output(node_data, node_id):
     return input_data, output_data
 
 
-def compare_data(data_dict_list1, data_dict_list2):
-    """
-    比较get_input_output中输出的结果是否结构一致，比较一致返回True
-    """
-    if len(data_dict_list1) != len(data_dict_list2):
-        return False
-    # 用于比较两个节点是否相等的关键字段
-    tag_keys = ['type', 'shape']
-    for key1, key2 in zip(data_dict_list1, data_dict_list2):
-        dict1 = data_dict_list1[key1]
-        dict2 = data_dict_list2[key2]
-        for tag_key in tag_keys:
-            tag_value1 = dict1.get(tag_key, None)
-            tag_value2 = dict2.get(tag_key, None)
-            if tag_value1 != tag_value2:
-                return False
-    return True
-
-
-def compare_data_fuzzy(data_dict_list1, data_dict_list2):
-    """
-    模糊匹配，仅校验参数shape是否一致
-    """
-    for x, y in zip(data_dict_list1.values(), data_dict_list2.values()):
-        x_shape = x.get(Const.SHAPE)
-        y_shape = y.get(Const.SHAPE)
-        if x_shape != y_shape:
-            return False
-    return True
-
-
 def format_node_data(data_dict, node_id=None, compare_mode=None):
     """
     删除节点数据中不需要展示的字段

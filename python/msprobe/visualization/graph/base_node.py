@@ -15,7 +15,6 @@
 
 from msprobe.core.overflow_check.level import OverflowLevel
 from msprobe.visualization.utils import GraphConst
-from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data, compare_data_fuzzy
 from msprobe.core.common.log import logger
 
 
@@ -44,21 +43,9 @@ class BaseNode:
         return info
 
     def __eq__(self, other):
-        """
-        用来判断两个节点是否可以被匹配上，认为结构上是否一致
-        """
-        if not compare_data(self.input_data, other.input_data):
-            return False
-        if not compare_data(self.output_data, other.output_data):
-            return False
-        return True
-
-    def fuzzy_eq(self, other):
-        if not compare_data_fuzzy(self.input_data, other.input_data):
-            return False
-        if not compare_data_fuzzy(self.output_data, other.output_data):
-            return False
-        return True
+        if self.id == other.id:
+            return True
+        return False
 
     def set_input_output(self, input_data, output_data):
         self.input_data = input_data
