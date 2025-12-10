@@ -36,7 +36,7 @@ from msprobe.core.dump.data_dump.data_processor.pytorch_processor import (
     TensorDataProcessor,
     TensorStatInfo,
     KernelDumpDataProcessor,
-    DiffCheckDataProcessor,   # 新增
+    DiffCheckDataProcessor,  TensorHandler # 新增
 )
 
 

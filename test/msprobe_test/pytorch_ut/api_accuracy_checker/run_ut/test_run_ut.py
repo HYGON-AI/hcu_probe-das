@@ -475,6 +475,79 @@ class TestAccCheckBasic(unittest.TestCase):
         output = preprocess_forward_content(sample)
         self.assertEqual(len(output), 1)
 
+class TestAccCheckFunctions(unittest.TestCase):
+
+    def test_blacklist_and_whitelist_filter(self):
+        # black_list 优先级最高
+        black_list = ["add"]
+        white_list = ["add"]
+        self.assertTrue(blacklist_and_whitelist_filter("add", black_list, white_list))
+
+        # white_list 限制
+        black_list = []
+        white_list = ["mul"]
+        self.assertTrue(blacklist_and_whitelist_filter("add", black_list, white_list))
+
+        # 都不影响 → allow run
+        self.assertFalse(blacklist_and_whitelist_filter("mul", black_list, white_list))
+
+    def test_check_need_grad(self):
+        info_no_out = {Const.INPUT_KWARGS: {}}
+        info_with_out = {Const.INPUT_KWARGS: {"out": "x"}}
+
+        self.assertTrue(check_need_grad(info_no_out))
+        self.assertFalse(check_need_grad(info_with_out))
+
+    def test_need_to_backward(self):
+        out = (torch.tensor([1.0]), torch.tensor([2.0]))
+        self.assertFalse(need_to_backward(None, out))  # tuple + grad_index None
+        self.assertTrue(need_to_backward(1, out))       # tuple + valid index
+
+    def test_extract_tensors_grad(self):
+        x = torch.tensor([1.0], requires_grad=True)
+        y = torch.tensor([2.0], requires_grad=True)
+        out = x + y
+        out.backward()
+
+        grads = extract_tensors_grad([x, [y]])
+        self.assertEqual(len(grads), 2)
+
+    def test_extract_tensors_grad_depth_exceed(self):
+        deep_list = []
+        ref = deep_list
+        for _ in range(Const.MAX_DEPTH + 2):
+            new = [ref]
+            ref = new
+        with self.assertRaises(CompareException):
+            extract_tensors_grad(ref)
+
+    def test_run_backward_invalid_grad_index_type(self):
+        x = torch.tensor([1.0], requires_grad=True)
+        with self.assertRaises(TypeError):
+            run_backward([x], torch.tensor([1.0]), "a", [x])
+
+    def test_run_backward_grad_index_out_of_range(self):
+        x = torch.tensor([1.0], requires_grad=True)
+        with self.assertRaises(IndexError):
+            run_backward([x], torch.tensor([1.0]), 5, [x])
+
+    def test_preprocess_forward_content_basic(self):
+        content = {
+            "add.0": {"input_args": [{"A": 1}], "input_kwargs": {}},
+            "add.1": {"input_args": [{"A": 1}], "input_kwargs": {}},
+            "mul.0": {"input_args": [{"B": 2}], "input_kwargs": {}}
+        }
+        res = preprocess_forward_content(content)
+        # add 只有一份被保留，mul 也保留
+        self.assertEqual(len(res), 2)
+
+    @patch("msprobe.pytorch.api_accuracy_checker.acc_check.acc_check.logger")
+    def test_preprocess_forward_content_keyerror(self, mock_logger):
+        content = {"bad": {"input_args": [{}], "input_kwargs": {}}}
+        # 触发 KeyError, 被捕获并记录日志
+        res = preprocess_forward_content(content)
+
+
 
 class TestDataGenerate(unittest.TestCase):
 
