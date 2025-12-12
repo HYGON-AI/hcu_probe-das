@@ -18,7 +18,7 @@ from typing import Union
 from msprobe.infer.utils.check.checker import Checker, CheckResult, rule
 
 
-WHITE_LIST_PATTERN = r"^(?!.*\.\.)[a-zA-Z0-9_./-]+$"
+WHITE_LIST_PATTERN = r"^(?!.*\.\.)(?!:)[a-zA-Z0-9_./:-]+$"
 BLACK_LIST_PATTERN = r"[^_A-Za-z0-9/.-]"
 IDS_PATTERN = r'^(\d+(?:_\d+)*)(,\d+(?:_\d+)*)*$'
 INVALID_CHAR = "[\n\f\r\b\t\v\u000D\u000A\u000C\u000B\u0009\u0008\u007F&%$*^#@;]"
