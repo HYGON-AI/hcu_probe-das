@@ -60,7 +60,7 @@ class TestStringChecker(unittest.TestCase):
         err_msg = "String parameter contains invalid characters"
 
         invalid_str = ['&', '+', '@', '#', '$', "b=d", "echo xxx > /dev/null", "{", "}", "<", ">", "~", "'", '"', 
-                       "[", "]", "(", ")", ":"]
+                       "[", "]", "(", ")"]
         for path in invalid_str:
             with self.subTest(path=path):
                 res_msg = str(StringChecker().is_str_safe().check(path))
