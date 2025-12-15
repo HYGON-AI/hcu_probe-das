@@ -53,6 +53,17 @@ class TestFileChecks:
             check_path_exists(self.test_file)
         assert exc_info.value.code == FileCheckException.ILLEGAL_PATH_ERROR
 
+    def test_check_path_not_exists(self):
+        # path does not exist: should pass
+        with patch('os.path.exists', return_value=False):
+            check_path_not_exists(self.test_file)
+
+        # path exists: should raise ILLEGAL_PATH_ERROR
+        with patch('os.path.exists', return_value=True), \
+                pytest.raises(FileCheckException) as exc_info:
+            check_path_not_exists(self.test_file)
+        assert exc_info.value.code == FileCheckException.ILLEGAL_PATH_ERROR
+
     def test_check_path_readability(self):
         with patch('os.access', return_value=False), \
                 pytest.raises(FileCheckException) as exc_info:
@@ -142,6 +153,13 @@ class TestFileChecks:
             else:
                 check_file_size(self.test_file, max_size)
 
+    def test_check_file_size_os_error(self):
+        # os.path.getsize 触发 OSError 时应抛出 INVALID_FILE_ERROR
+        with patch('os.path.getsize', side_effect=OSError("stat failed")), \
+                pytest.raises(FileCheckException) as exc_info:
+            check_file_size(self.test_file, 1024)
+        assert exc_info.value.code == FileCheckException.INVALID_FILE_ERROR
+
 
 class TestFileOperations:
     @pytest.fixture(autouse=True)
@@ -173,6 +191,10 @@ class TestFileOperations:
         assert exc_info.value.code == FileCheckException.INVALID_FILE_ERROR
 
         check_file_suffix((self.test_file.with_suffix('.txt')), None)
+
+        # 非字符串 / list / tuple 类型的 file_suffix 应抛出 TypeError
+        with pytest.raises(TypeError):
+            check_file_suffix(str(self.test_file.with_suffix('.txt')), 123)
 
     def test_make_dir(self):
         with patch('os.path.isdir', return_value=False), \
@@ -261,7 +283,14 @@ class TestFileOperations:
             save_yaml(str(self.yaml_file), test_data)
             mock_file.assert_called_once_with(str(self.yaml_file), 'w', encoding='utf-8')
             assert mock_flock.call_count == 2
-            mock_dump.assert_called_once_with(test_data, mock_file(), sort_keys=False)\
+            mock_dump.assert_called_once_with(test_data, mock_file(), sort_keys=False)
+
+        # 保存过程中异常被包装为 RuntimeError
+        with patch('builtins.open', mock_file), \
+                patch('yaml.dump', side_effect=Exception("yaml fail")), \
+                patch('msprobe.core.common.file_utils.FileOpen.check_file_path', return_value=None), \
+                pytest.raises(RuntimeError):
+            save_yaml(str(self.yaml_file), test_data)
 
     def test_save_excel_tiny(self):
         df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
@@ -666,6 +695,32 @@ class TestAddFileToZip:
             mock_zip_class.assert_called_once_with(str(self.zip_file), 'a')
             mock_zip.write.assert_called_once_with(str(self.content_file), "archive_name.txt")
 
+    def test_add_file_to_zip_size_exceeded(self):
+        """当 ZIP 总大小超过上限时抛出 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_whether_exist_or_not', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_size', return_value=None), \
+                patch('os.path.exists', return_value=True), \
+                patch('os.path.getsize',
+                      side_effect=[FileCheckConst.MAX_ZIP_SIZE, 1]):
+            with pytest.raises(RuntimeError) as exc_info:
+                add_file_to_zip(str(self.zip_file), str(self.content_file), "archive_name.txt")
+            assert "ZIP file size exceeds the limit" in str(exc_info.value)
+
+    def test_add_file_to_zip_runtime_error_on_write(self):
+        """写 ZIP 过程中异常应被包装为 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_whether_exist_or_not', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_size', return_value=None), \
+                patch('os.path.exists', return_value=False), \
+                patch('os.path.getsize', return_value=0), \
+                patch('zipfile.ZipFile', side_effect=Exception("zip fail")):
+            with pytest.raises(RuntimeError) as exc_info:
+                add_file_to_zip(str(self.zip_file), str(self.content_file), "archive_name.txt")
+            assert "add file to zip" in str(exc_info.value)
+
 
 class TestCreateFileInZip:
     @pytest.fixture(autouse=True)
@@ -683,6 +738,31 @@ class TestCreateFileInZip:
 
             mock_zip_class.assert_called_once()
             mock_zip.writestr.assert_called_once()
+
+    def test_create_file_in_zip_size_exceeded(self):
+        """ZIP 大小超过上限时抛出 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_whether_exist_or_not', return_value=None), \
+                patch('os.path.exists', return_value=True), \
+                patch('os.path.getsize', return_value=FileCheckConst.MAX_ZIP_SIZE), \
+                patch('msprobe.core.common.file_utils.sys.getsizeof', return_value=1):
+            with pytest.raises(RuntimeError) as exc_info:
+                create_file_in_zip(str(self.zip_file), "internal_file.txt", self.file_content)
+            assert "ZIP file size exceeds the limit" in str(exc_info.value)
+
+    def test_create_file_in_zip_runtime_error_on_write(self):
+        """写 ZIP 内容异常时应抛出 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_whether_exist_or_not', return_value=None), \
+                patch('os.path.exists', return_value=False), \
+                patch('os.path.getsize', return_value=0), \
+                patch('msprobe.core.common.file_utils.sys.getsizeof', return_value=0), \
+                patch('builtins.open', mock_open()) as mock_file, \
+                patch('fcntl.flock'), \
+                patch('zipfile.ZipFile', side_effect=Exception("zip fail")):
+            with pytest.raises(RuntimeError) as exc_info:
+                create_file_in_zip(str(self.zip_file), "internal_file.txt", self.file_content)
+            assert "Save content to file" in str(exc_info.value)
 
 
 class TestCheckOutputDirPath:
@@ -730,6 +810,31 @@ class TestExtractZip:
 
             mock_zip_class.assert_called()
             mock_zip.extractall.assert_called_once_with(str(self.extract_dir))
+
+    def test_extract_zip_check_zip_failed(self):
+        """check_zip_file 抛异常时应包装为 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.create_directory', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_zip_file', side_effect=Exception("invalid zip")):
+            with pytest.raises(RuntimeError) as exc_info:
+                extract_zip(str(self.zip_file), str(self.extract_dir))
+            assert "Save content to file" in str(exc_info.value)
+
+    def test_extract_zip_extract_failed(self):
+        """解压过程中失败时应抛出 RuntimeError"""
+        with patch('msprobe.core.common.file_utils.check_file_suffix', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_file_or_directory_path', return_value=None), \
+                patch('msprobe.core.common.file_utils.create_directory', return_value=None), \
+                patch('msprobe.core.common.file_utils.check_zip_file', return_value=None), \
+                patch('zipfile.ZipFile') as mock_zip_class:
+            mock_zip = MagicMock()
+            mock_zip.extractall.side_effect = Exception("extract fail")
+            mock_zip_class.return_value.__enter__.return_value = mock_zip
+
+            with pytest.raises(RuntimeError) as exc_info:
+                extract_zip(str(self.zip_file), str(self.extract_dir))
+            assert "extract zip file" in str(exc_info.value)
 
 
 class TestSplitZipFilePath:

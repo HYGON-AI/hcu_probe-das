@@ -19,6 +19,8 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
+import sys
+import types
 import torch
 from msprobe.core.common.const import MonitorConst, Const
 from torch import distributed as dist
@@ -221,6 +223,116 @@ class TestTrainerMon(unittest.TestCase):
         self.mon.dynamic_monitor(optimizer)
         self.assertEqual(self.mon.config_timestamp, 123456)
 
+    @patch("msprobe.pytorch.monitor.module_hook.is_recomputation", return_value=False)
+    @patch("msprobe.pytorch.monitor.module_hook.get_entropy_metric")
+    @patch("msprobe.pytorch.monitor.module_hook.cal_qkt")
+    def test_extract_attention_feature_hook(self, mock_cal_qkt, mock_get_entropy_metric, mock_is_recompute):
+        self.mon.recording_l2_features = True
+        self.mon.print_struct = False
+        self.mon.micro_batch_number = 1
+        self.mon.build_tbtag_tensor_map = MagicMock(return_value={"tag": torch.tensor(1.0)})
+
+        module = MagicMock()
+        submodule = MagicMock()
+        module.__dict__['_modules'] = {'sub': submodule}
+        module.named_modules.return_value = [("sub", submodule)]
+        submodule.register_forward_hook = MagicMock()
+
+        l2_targets = {
+            "attention_hook": ["0:sub"],
+            "linear_hook": []
+        }
+
+        self.mon.feature_hook_context_by_module.clear()
+        hooked_count = self.mon._hook_module([], l2_targets, module, vpp_stage="0:")
+        self.assertEqual(hooked_count, 3)
+        # 查找真正的 attention 特征 hook（排除普通 fwd_hook_fun）
+        attention_hook = None
+        for call in submodule.register_forward_hook.call_args_list:
+            hook = call.args[0]
+            base = getattr(hook, "func", hook)
+            if getattr(base, "__name__", "") == "extract_attention_feature_hook":
+                attention_hook = hook
+                break
+        self.assertIsNotNone(attention_hook)
+
+        submodule.training = True
+        # 覆盖 len(module_input) < 2 分支
+        attention_hook(submodule, [torch.randn(2, 2)], None)
+        mock_cal_qkt.assert_not_called()
+
+        mock_cal_qkt.return_value = torch.randn(2, 2)
+        attention_hook(submodule, [torch.randn(2, 2), torch.randn(2, 2)], None)
+        context = self.mon.feature_hook_context_by_module[submodule]
+        self.assertEqual(context.step, 1)
+        mock_get_entropy_metric.assert_called_once()
+
+    @patch("msprobe.pytorch.monitor.module_hook.is_recomputation", return_value=False)
+    @patch("msprobe.pytorch.monitor.module_hook.get_sr_metric")
+    def test_extract_linear_sr_hook(self, mock_get_sr_metric, mock_is_recompute):
+        self.mon.recording_l2_features = True
+        self.mon.print_struct = False
+        self.mon.micro_batch_number = 2
+        self.mon.build_tbtag_tensor_map = MagicMock(return_value={"tag": torch.tensor(1.0)})
+
+        module = MagicMock()
+        submodule = MagicMock()
+        module.__dict__['_modules'] = {'sub': submodule}
+        module.named_modules.return_value = [("sub", submodule)]
+        submodule.register_forward_hook = MagicMock()
+
+        l2_targets = {
+            "attention_hook": [],
+            "linear_hook": ["0:sub"]
+        }
+
+        self.mon.get_linear_hook_target = MagicMock(return_value="weight")
+        submodule.weight = torch.randn(2, 2)
+
+        self.mon.feature_hook_context_by_module.clear()
+        hooked_count = self.mon._hook_module([], l2_targets, module, vpp_stage="0:")
+        self.assertEqual(hooked_count, 2)
+        # 查找真正的 linear_sr 特征 hook
+        linear_hook = None
+        for call in submodule.register_forward_hook.call_args_list:
+            hook = call.args[0]
+            base = getattr(hook, "func", hook)
+            if getattr(base, "__name__", "") == "extract_linear_sr_hook":
+                linear_hook = hook
+                break
+        self.assertIsNotNone(linear_hook)
+
+        submodule.training = True
+        # 第一次调用：micro_step 从 0 增加到 1，不触发 sr 计算
+        linear_hook(submodule, [torch.randn(2, 2)], None)
+        context = self.mon.feature_hook_context_by_module[submodule]
+        self.assertEqual(context.micro_step, 1)
+        mock_get_sr_metric.assert_not_called()
+
+        # 第二次调用：命中 micro_step == micro_batch_number - 1，触发 sr 计算
+        linear_hook(submodule, [torch.randn(2, 2)], None)
+        self.assertEqual(context.step, 1)
+        mock_get_sr_metric.assert_called_once()
+
+    def test_hook_module_registers_l2_feature_hooks(self):
+        self.mon.recording_l2_features = True
+        self.mon.print_struct = False
+
+        module = MagicMock()
+        submodule = MagicMock()
+        module.__dict__['_modules'] = {'sub': submodule}
+        module.named_modules.return_value = [("sub", submodule)]
+        submodule.register_forward_hook = MagicMock(return_value="handle")
+
+        l2_targets = {
+            "attention_hook": ["0:sub"],
+            "linear_hook": ["0:sub"]
+        }
+
+        hooked_count = self.mon._hook_module([], l2_targets, module, vpp_stage="0:")
+        self.assertEqual(hooked_count, 3)
+        self.assertEqual(len(self.mon.handles["L2_features"]), 2)
+
     @patch("torch.distributed.fsdp._runtime_utils._post_backward_hook")
     @patch("importlib.reload")
     @patch("msprobe.pytorch.monitor.module_hook.logger.info")
@@ -345,6 +457,138 @@ class TestTrainerMon(unittest.TestCase):
         mock_load_json.assert_not_called()
         mock_save_json.assert_not_called()
         mock_getmtime.assert_not_called()
+
+    @patch("msprobe.pytorch.monitor.module_hook.get_sign_matches")
+    @patch("msprobe.pytorch.monitor.module_hook.get_metrics")
+    def test_hook_optimizer_mg_direction_branch(self, mock_get_metrics, mock_get_sign_matches):
+        class DummyOptimizer:
+            def step(self):
+                return None
+
+        optimizer = DummyOptimizer()
+        self.mon.params_have_main_grad = False
+        self.mon.wg_distribution = False
+        self.mon.mv_distribution = False
+        self.mon.ur_distribution = False
+        self.mon.mg_direction = True
+
+        param = MagicMock()
+        param.grad = torch.tensor([1.0, -1.0])
+        self.mon.param2name = {param: "p1"}
+
+        mv_result = MagicMock()
+        mv_result.exp_avg = {"p1": torch.ones_like(param.grad)}
+        mv_result.exp_avg_sq = {}
+        mv_result.update = {}
+        mv_result.ratio = {}
+
+        self.mon.optimizer_mon = MagicMock()
+        self.mon.optimizer_mon.fetch_mv.return_value = mv_result
+        self.mon.generate_wgrad_metrics = MagicMock(return_value=({}, {}))
+        self.mon.generate_mv_metrics = MagicMock()
+        self.mon.generate_param_metrics = MagicMock()
+        self.mon.generate_param_map = MagicMock(return_value={})
+
+        context = self.mon.optimizer_context[optimizer]
+        context.step = 0
+
+        self.mon.hook_optimizer(optimizer)
+        self.assertTrue(self.mon.optimizer_hooked)
+        pre_hook = self.mon.pre_step_hooks[-1]
+
+        mock_get_sign_matches.return_value = torch.tensor(0.5)
+        pre_hook(optimizer, (), {})
+        self.assertIn("p1", context.param_mg_direction)
+        self.assertTrue(torch.equal(context.param_mg_direction["p1"], torch.tensor(1.0)))
+
+        context.step = 1
+        context.param_mg_direction.clear()
+        pre_hook(optimizer, (), {})
+        mock_get_sign_matches.assert_called_once()
+        self.assertTrue(torch.equal(context.param_mg_direction["p1"], mock_get_sign_matches.return_value))
+
+    @patch("msprobe.pytorch.monitor.module_hook.get_metrics")
+    @patch("torch.distributed.fsdp._runtime_utils._post_backward_hook")
+    def test_patch_fsdp_post_backward_hook(self, mock_post_hook, mock_get_metrics):
+        from msprobe.core.common.const import MonitorConst as MC
+
+        class DummyFlatParam:
+            def __init__(self):
+                self._fqns = ["param"]
+                self._shapes = [(2, 2)]
+                self.grad = torch.arange(4.0)
+
+        class DummyHandle:
+            def __init__(self):
+                self.flat_param = DummyFlatParam()
+
+            def _get_flat_param_offsets(self):
+                return [(0, 3)]
+
+        flat_prefix = "0:"
+        full_name = f"{flat_prefix}{MC.FSDP_FLAT_SEP}param"
+        self.mon.origin2squash = {full_name: "sq_param"}
+        self.mon.name2tag = {"sq_param": {MC.PRE_GRAD: "pre_grad_tag"}}
+        self.mon.flat_prefix_reverse_iter = iter([flat_prefix])
+        self.mon.ops = []
+        self.mon.eps = 1e-8
+
+        self.mon._patch_fsdp_post_backward_hook()
+
+        from torch.distributed.fsdp import _runtime_utils
+        wrapped = _runtime_utils._post_backward_hook
+        handle = DummyHandle()
+        wrapped(None, handle)
+
+        mock_post_hook.assert_called_once()
+        args, _ = mock_get_metrics.call_args
+        grad_dict = args[1]
+        self.assertIn("pre_grad_tag", grad_dict)
+
+    @patch("msprobe.pytorch.monitor.module_hook.importlib.reload")
+    @patch("msprobe.pytorch.monitor.module_hook.get_metrics")
+    def test_patch_fsdp2_foreach_reduce(self, mock_get_metrics, mock_reload):
+        from msprobe.core.common.const import MonitorConst as MC
+
+        # 构造假的 fully_shard 子模块，放入 sys.modules，避免环境缺少该模块时报错
+        fake_collectives = types.SimpleNamespace()
+        original_called = {"flag": False}
+
+        def original_foreach_reduce(fsdp_params, unsharded_grads, *unused):
+            original_called["flag"] = True
+
+        fake_collectives.foreach_reduce = MagicMock(side_effect=original_foreach_reduce)
+        fake_param_group = types.SimpleNamespace()
+        fake_fully_shard = types.SimpleNamespace(
+            _fsdp_collectives=fake_collectives,
+            _fsdp_param_group=fake_param_group,
+        )
+
+        with patch.dict(sys.modules, {
+            "torch.distributed.fsdp._fully_shard": fake_fully_shard,
+            "torch.distributed.fsdp._fully_shard._fsdp_collectives": fake_collectives,
+            "torch.distributed.fsdp._fully_shard._fsdp_param_group": fake_param_group,
+        }):
+            self.mon.origin2squash = {"param_fqn": "sq_param"}
+            self.mon.name2tag = {"sq_param": {MC.PRE_GRAD: "pre_grad_tag"}}
+            self.mon.ops = []
+            self.mon.eps = 1e-8
+
+            self.mon._patch_fsdp2_foreach_reduce()
+
+            # patch 后的 foreach_reduce
+            wrapped = fake_collectives.foreach_reduce
+
+            param = MagicMock()
+            param._param_fqn = "param_fqn"
+            grad = torch.tensor([1.0, 2.0])
+
+            wrapped([param], [grad])
+
+        args, _ = mock_get_metrics.call_args
+        grad_dict = args[1]
+        self.assertIn("pre_grad_tag", grad_dict)
+        self.assertTrue(original_called["flag"])
 
     def test_is_recording_module(self):
         # 1. 初始化核心属性
