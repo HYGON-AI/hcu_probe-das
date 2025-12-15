@@ -15,10 +15,17 @@
 import unittest
 from collections import namedtuple
 from unittest.mock import patch, MagicMock, Mock
+import tempfile
+import os
+
+import numpy as np
 
 from msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data import (
-    DynamicInput
+    DynamicInput,
+    NpuDumpData,
 )
+from msprobe.infer.offline.compare.msquickcmp.common import utils
+from msprobe.infer.offline.compare.msquickcmp.common.utils import AccuracyCompareException
 
 DynamicArgInfo = namedtuple('DynamicArgInfo', ['atc_arg', 'benchmark_arg'])
 
@@ -265,3 +272,405 @@ class TestDynamicInput(unittest.TestCase):
 
         mock_parse_arg.assert_called_once_with("5~10")
         mock_parse_comma.assert_called_once_with("8")
+
+    @patch('msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.utils.parse_arg_value')
+    @patch('msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.utils.parse_input_shape')
+    @patch('msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.DynamicInput.get_input_shape_from_om')
+    def test_check_dynamic_dims_valid_success(
+        self,
+        mock_get_input_shape,
+        mock_parse_input_shape,
+        mock_parse_arg_value
+    ):
+        mock_get_input_shape.return_value = "input:-1,3,224,224"
+
+        # 第一次调用 parse_input_shape: atc 输入 shape；第二次：当前输入 shape
+        mock_parse_input_shape.side_effect = [
+            {"input": ["-1", "3", "224", "224"]},
+            {"input": ["8", "3", "224", "224"]},
+        ]
+        mock_parse_arg_value.return_value = [[8]]
+
+        di = object.__new__(DynamicInput)
+        di.om_parser = self.mock_om_parser
+        di.dynamic_arg_value = "input:8,3,224,224"
+        # 不应抛出异常
+        di.check_dynamic_dims_valid("1~8")
+
+        assert mock_parse_input_shape.call_count == 2
+        mock_parse_arg_value.assert_called_once_with("1~8")
+
+    @patch('msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.utils.parse_input_shape')
+    @patch('msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.DynamicInput.get_input_shape_from_om')
+    def test_check_dynamic_dims_valid_parse_error(self, mock_get_input_shape, mock_parse_input_shape):
+        mock_get_input_shape.return_value = "input:-1,3,224,224"
+        mock_parse_input_shape.side_effect = AccuracyCompareException(0)
+
+        di = object.__new__(DynamicInput)
+        di.om_parser = self.mock_om_parser
+        di.dynamic_arg_value = "input:8,3,224,224"
+        with self.assertRaises(AccuracyCompareException) as cm:
+            di.check_dynamic_dims_valid("1~8")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR
+        )
+
+
+class TestNpuDumpData(unittest.TestCase):
+
+    def _build_npu_dump_instance(self):
+        """构造一个未调用 __init__ 的 NpuDumpData 实例，手动注入属性，避免真实依赖。"""
+        inst = object.__new__(NpuDumpData)
+        inst.target_path = "model.om"
+        inst.output_path = "/tmp/out"
+        inst.input_data = ""
+        inst.input_shape = ""
+        inst.output_size = ""
+        inst.device = "0"
+        inst.is_golden = False
+        inst.dump = True
+        inst.benchmark_input_path = ""
+        inst.om_parser = MagicMock()
+        inst.dynamic_input = MagicMock()
+        inst.python_version = "python3"
+        return inst
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.create_directory")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.DynamicInput")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.OmParser")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.atc_utils.convert_model_to_json")
+    def test_npu_dump_data_init_non_golden(
+        self, mock_convert, mock_om_parser, mock_dynamic_input, mock_create_dir
+    ):
+        mock_convert.return_value = "out.json"
+        mock_om_parser.return_value = "OM_PARSER"
+        mock_dynamic_input.return_value = "DYN_INPUT"
+
+        class Args:
+            pass
+
+        args = Args()
+        args.golden_path = "golden.om"
+        args.target_path = "model.om"
+        args.output_path = "/out"
+        args.input_data = ""
+        args.input_shape = "input:1,3,224,224"
+        args.output_size = ""
+        args.rank = "0"
+        args.cann_path = "/cann"
+
+        inst = NpuDumpData(args, is_golden=False)
+
+        self.assertEqual(inst.target_path, "model.om")
+        self.assertEqual(inst.output_path, "/out")
+        self.assertEqual(inst.input_data, "")
+        self.assertEqual(inst.input_shape, "input:1,3,224,224")
+        self.assertEqual(inst.output_size, "")
+        self.assertEqual(inst.device, "0")
+        self.assertFalse(inst.is_golden)
+        self.assertEqual(inst.benchmark_input_path, "")
+        self.assertEqual(inst.om_parser, "OM_PARSER")
+        self.assertEqual(inst.dynamic_input, "DYN_INPUT")
+        self.assertEqual(inst.data_dir, "/out/input")
+
+        mock_convert.assert_called_once_with("/cann", "model.om", "/out")
+        mock_om_parser.assert_called_once_with("out.json")
+        mock_dynamic_input.assert_called_once_with("OM_PARSER", "input:1,3,224,224")
+        mock_create_dir.assert_called_once_with("/out/input")
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.create_directory")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.DynamicInput")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.OmParser")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.atc_utils.convert_model_to_json")
+    def test_npu_dump_data_init_golden(
+        self, mock_convert, mock_om_parser, mock_dynamic_input, mock_create_dir
+    ):
+        mock_convert.return_value = "out.json"
+        mock_om_parser.return_value = "OM_PARSER"
+        mock_dynamic_input.return_value = "DYN_INPUT"
+
+        class Args:
+            pass
+
+        args = Args()
+        args.golden_path = "golden.om"
+        args.target_path = "model.om"
+        args.output_path = "/out"
+        args.input_data = ""
+        args.input_shape = ""
+        args.output_size = ""
+        args.rank = "1"
+        args.cann_path = "/cann"
+
+        inst = NpuDumpData(args, is_golden=True)
+
+        self.assertEqual(inst.target_path, "golden.om")
+        self.assertTrue(inst.is_golden)
+        mock_convert.assert_called_once_with("/cann", "golden.om", "/out")
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.ms_open")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.remove")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.stat")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.access")
+    def test_write_content_to_acl_json_success(
+        self, mock_access, mock_stat, mock_remove, mock_ms_open
+    ):
+        mock_access.return_value = True
+        mock_stat.return_value.st_uid = 1000
+        with patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.getuid", return_value=1000):
+            mock_file = MagicMock()
+            mock_ms_open.return_value.__enter__.return_value = mock_file
+            with patch("json.dump") as mock_dump:
+                NpuDumpData._write_content_to_acl_json(
+                    "acl.json", "model", "/dump_dir", ["sub1", "sub2"]
+                )
+
+            mock_remove.assert_called_once_with("acl.json")
+            mock_dump.assert_called_once()
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.access", return_value=False)
+    def test_write_content_to_acl_json_no_permission(self, mock_access):
+        with self.assertRaises(AccuracyCompareException) as cm:
+            NpuDumpData._write_content_to_acl_json("acl.json", "model", "/dump_dir", [])
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_INVALID_PATH_ERROR
+        )
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.access", return_value=True)
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.stat")
+    def test_write_content_to_acl_json_wrong_owner(self, mock_stat, mock_access):
+        mock_stat.return_value.st_uid = 2000
+        with patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.getuid", return_value=1000):
+            with self.assertRaises(AccuracyCompareException) as cm:
+                NpuDumpData._write_content_to_acl_json("acl.json", "model", "/dump_dir", [])
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_PARSER_JSON_FILE_ERROR
+        )
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.ms_open")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.remove")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.stat")
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.access")
+    def test_write_content_to_acl_json_value_error_in_dump(
+        self, mock_access, mock_stat, mock_remove, mock_ms_open
+    ):
+        mock_access.return_value = True
+        mock_stat.return_value.st_uid = 1000
+        with patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.getuid", return_value=1000):
+            mock_file = MagicMock()
+            mock_ms_open.return_value.__enter__.return_value = mock_file
+            with patch("json.dump", side_effect=ValueError("bad json")):
+                with self.assertRaises(AccuracyCompareException) as cm:
+                    NpuDumpData._write_content_to_acl_json(
+                        "acl.json", "model", "/dump_dir", []
+                    )
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_WRITE_JSON_FILE_ERROR
+        )
+
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.access", return_value=True)
+    @patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.stat")
+    @patch(
+        "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.ms_open",
+        side_effect=IOError("open fail"),
+    )
+    def test_write_content_to_acl_json_io_error(
+        self, mock_ms_open, mock_stat, mock_access
+    ):
+        mock_stat.return_value.st_uid = 1000
+        with patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.getuid", return_value=1000), \
+                patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.os.remove"):
+            with self.assertRaises(AccuracyCompareException) as cm:
+                NpuDumpData._write_content_to_acl_json("acl.json", "model", "/dump_dir", [])
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_OPEN_FILE_ERROR
+        )
+
+    def test_generate_inputs_data_with_invalid_input_file(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_data = "not_exist.bin"
+        with patch("os.path.isfile", return_value=False):
+            with self.assertRaises(AccuracyCompareException) as cm:
+                inst.generate_inputs_data()
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR
+        )
+
+    def test_generate_inputs_data_with_valid_files(self):
+        inst = self._build_npu_dump_instance()
+        inst.output_path = "/out"
+        inst.input_data = "/in/a.bin,/in/b.bin"
+        with patch("os.path.isfile", return_value=True), \
+                patch("shutil.copy") as mock_copy, \
+                patch("os.chmod") as mock_chmod:
+            inst.generate_inputs_data()
+
+        # 两个 input 文件各 copy 一次
+        self.assertEqual(mock_copy.call_count, 2)
+        self.assertEqual(mock_chmod.call_count, 2)
+
+    def test_check_input_path_param_from_generated_input_dir(self):
+        inst = self._build_npu_dump_instance()
+        inst.output_path = "/out_dir"
+        inst.input_data = ""
+        fake_files = ["input_0.bin", "input_1.bin"]
+        with patch("os.path.realpath", return_value="/out_dir/input"), \
+                patch("msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.check_file_or_directory_path"), \
+                patch("os.listdir", return_value=fake_files):
+            inst._check_input_path_param()
+
+        self.assertEqual(
+            inst.benchmark_input_path,
+            "/out_dir/input/input_0.bin,/out_dir/input/input_1.bin",
+        )
+
+    def test_check_input_path_param_from_input_data_arg(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_data = "/in/0.bin,/in/1.bin"
+        with patch(
+            "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.utils.check_input_bin_file_path",
+            return_value=["/in/0.bin", "/in/1.bin"],
+        ):
+            inst._check_input_path_param()
+        self.assertEqual(inst.benchmark_input_path, "/in/0.bin,/in/1.bin")
+
+    def test_get_inputs_info_from_aclruntime(self):
+        inst = self._build_npu_dump_instance()
+        inst.target_path = "model.om"
+        inst.device = "0"
+
+        fake_input = MagicMock()
+        fake_input.shape = (1, 3, 224, 224)
+        fake_dtype = MagicMock()
+        fake_dtype.name = "float32"
+        fake_input.datatype = fake_dtype
+
+        class FakeSession:
+            def __init__(self, *args, **kwargs):
+                self._inputs = [fake_input]
+
+            def get_inputs(self):
+                return self._inputs
+
+            def free_resource(self):
+                self._freed = True
+
+        fake_aclruntime = MagicMock()
+        fake_aclruntime.session_options.return_value = "opts"
+        fake_aclruntime.InferenceSession = FakeSession
+
+        with patch.dict(
+            "sys.modules", {"aclruntime": fake_aclruntime}, clear=False
+        ), patch(
+            "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.Rule.input_file"
+        ) as mock_rule, patch(
+            "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.load_file_to_read_common_check",
+            return_value="model.om",
+        ):
+            mock_rule.return_value.check.return_value = None
+            shapes, dtypes = inst._get_inputs_info_from_aclruntime()
+
+        self.assertEqual(shapes, [(1, 3, 224, 224)])
+        self.assertEqual(dtypes, ["float32"])
+
+    def test_generate_inputs_data_without_aipp_dynamic_without_shape(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_shape = ""
+        inst.dynamic_input.is_dynamic_shape_scenario.return_value = True
+
+        with patch("os.listdir", return_value=[]), \
+                patch.object(
+                    inst, "_get_inputs_info_from_aclruntime", return_value=([(1, 3, 224, 224)], ["float32"])
+                ):
+            with self.assertRaises(AccuracyCompareException) as cm:
+                inst._generate_inputs_data_without_aipp("/input_dir")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_INVALID_PARAM_ERROR
+        )
+
+    def test_generate_inputs_data_without_aipp_normal(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_shape = "input:1,3,224,224"
+        inst.dynamic_input.is_dynamic_shape_scenario.return_value = False
+
+        with tempfile.TemporaryDirectory() as tmpdir, \
+                patch.object(
+                    inst, "_get_inputs_info_from_aclruntime", return_value=([(1, 3, 224, 224)], ["float32"])
+                ), \
+                patch(
+                    "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.parse_input_shape_to_list",
+                    return_value=[(1, 3, 224, 224)],
+                ), \
+                patch("numpy.random.random", return_value=np.ones((1, 3, 224, 224))), \
+                patch("os.chmod") as mock_chmod:
+            inst._generate_inputs_data_without_aipp(tmpdir)
+
+        mock_chmod.assert_called_once()
+
+    def test_generate_inputs_data_for_aipp_invalid_src_size(self):
+        inst = self._build_npu_dump_instance()
+        inst.om_parser.get_aipp_config_content.return_value = [
+            'src_image_size_h:224,input_format:RGB888_U8'
+        ]
+        with self.assertRaises(AccuracyCompareException) as cm:
+            inst._generate_inputs_data_for_aipp("/input_dir")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT
+        )
+
+    def test_generate_inputs_data_for_aipp_invalid_hw_number(self):
+        inst = self._build_npu_dump_instance()
+        inst.om_parser.get_aipp_config_content.return_value = [
+            'src_image_size_h:224,src_image_size_w:224,src_image_size_h:112'
+        ]
+        with self.assertRaises(AccuracyCompareException) as cm:
+            inst._generate_inputs_data_for_aipp("/input_dir")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT
+        )
+
+    def test_generate_inputs_data_for_aipp_mismatch_inputs_number(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_shape = ""
+        inst.om_parser.get_aipp_config_content.return_value = [
+            'src_image_size_h:224,src_image_size_w:224,input_format:RGB888_U8'
+        ]
+        inst.om_parser.get_shape_list.return_value = [(1, 3, 224, 224), (1, 3, 112, 112)]
+
+        with self.assertRaises(AccuracyCompareException) as cm:
+            inst._generate_inputs_data_for_aipp("/input_dir")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT
+        )
+
+    def test_generate_inputs_data_for_aipp_invalid_input_format(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_shape = "input:1,3,224,224"
+        inst.om_parser.get_aipp_config_content.return_value = [
+            'src_image_size_h:224,src_image_size_w:224,input_format:UNKNOWN'
+        ]
+        with self.assertRaises(AccuracyCompareException) as cm:
+            inst._generate_inputs_data_for_aipp("/input_dir")
+        self.assertEqual(
+            cm.exception.error_info, utils.ACCURACY_COMPARISON_WRONG_AIPP_CONTENT
+        )
+
+    def test_generate_inputs_data_for_aipp_normal(self):
+        inst = self._build_npu_dump_instance()
+        inst.input_shape = "input:1,3,224,224"
+        inst.om_parser.get_aipp_config_content.return_value = [
+            'src_image_size_h:224,src_image_size_w:224,input_format:RGB888_U8'
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir, \
+                patch(
+                    "msprobe.infer.offline.compare.msquickcmp.npu.npu_dump_data.parse_input_shape_to_list",
+                    return_value=[[1, 3, 224, 224]],
+                ), \
+                patch("numpy.random.randint", return_value=np.ones((1, 3, 224, 224), dtype=np.uint8)), \
+                patch("os.chmod") as mock_chmod:
+            inst.output_path = tmpdir
+            os.makedirs(os.path.join(tmpdir, "input"), exist_ok=True)
+            inst._generate_inputs_data_for_aipp(tmpdir)
+
+        mock_chmod.assert_called_once()
