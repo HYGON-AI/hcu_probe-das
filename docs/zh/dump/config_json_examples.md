@@ -1,10 +1,10 @@
-# config.json配置示例
+# config.json配置样例
 
 以下示例包含当前支持的所有场景可配置的完整参数。
 
-## 1 PyTorch 场景
+## PyTorch场景
 
-### 1.1 task 配置为 statistics
+### task配置为statistics
 
 ```json
 {
@@ -25,7 +25,7 @@
 }
 ```
 
-### 1.2 task 配置为 tensor
+### task配置为tensor
 
 ```json
 {
@@ -47,7 +47,7 @@
 }
 ```
 
-### 1.3 task 配置为 acc_check
+### task配置为acc_check
 
 ```json
 {
@@ -65,7 +65,7 @@
 }
 ```
 
-### 1.4 task 配置为 structure
+### task配置为structure
 
 ```json
 {
@@ -77,9 +77,9 @@
 }
 ```
 
-## 2 MindSpore 静态图场景
+## MindSpore静态图场景
 
-### 2.1 task 配置为 statistics
+### task配置为statistics
 
 ```json
 {
@@ -97,7 +97,7 @@
 }
 ```
 
-### 2.2 task 配置为 tensor
+### task配置为tensor
 
 ```json
 {
@@ -114,7 +114,7 @@
 }
 ```
 
-### 2.3 task 配置为 overflow_check
+### task配置为overflow_check
 
 ```json
 {
@@ -130,7 +130,7 @@
 }
 ```
 
-### 2.4 task 配置为 exception_dump
+### task配置为exception_dump
 
 ```json
 {
@@ -142,9 +142,9 @@
 }
 ```
 
-## 3 MindSpore 动态图场景
+## MindSpore动态图场景
 
-### 3.1 task 配置为 statistics
+### task配置为statistics
 
 ```json
 {
@@ -163,7 +163,7 @@
 }
 ```
 
-### 3.2 task 配置为 tensor
+### task配置为tensor
 
 ```json
 {
@@ -181,7 +181,7 @@
 }
 ```
 
-### 3.3 task 配置为 structure
+### task配置为structure
 
 ```json
 {
@@ -193,7 +193,7 @@
 }
 ```
 
-### 3.4 task 配置为 exception_dump
+### task配置为exception_dump
 
 ```json
 {
