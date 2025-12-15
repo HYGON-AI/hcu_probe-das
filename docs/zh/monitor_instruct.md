@@ -140,7 +140,7 @@ monitor.monitor_gnorm_with_ad(
 | [采集module堆栈信息](#采集module堆栈信息)                               | 采集监控的第一个 step 的 module 对应的堆栈信息辅助问题定位                              | PyTorch、MindSpore |
 | [指定监控对象](#指定监控对象)                                | 指定监控的nn.Module(nn.Cell)及对应的输入输出                 | PyTorch、MindSpore |
 | [打印模型结构](#打印模型结构)                                | 打印模型结构                                                 | PyTorch           |
-| [l2可解释特征监控](#l2可解释特征监控)                         | 开启模型状态的高阶监控                                        | PyTorch           |
+| [l2可解释特征监控](#l2可解释特征监控)                         | 开启模型状态的高阶监控                                        | PyTorch、MindSpore |
 | [mbs粒度梯度监控](#mbs粒度梯度监控)                    | 开启梯度监控时，采集聚合前梯度时支持`micro_batch_size`粒度                 | PyTorch、MindSpore |
 | [异常告警](#异常告警)                    | 监控对象指标异常时自动告警，支持异常数据落盘                  | PyTorch、MindSpore |
 | [csv格式数据转tensorboard可视化显示](#csv格式数据转tensorboard可视化显示) | 将csv转为tensorboard文件显示                                 | PyTorch           |
