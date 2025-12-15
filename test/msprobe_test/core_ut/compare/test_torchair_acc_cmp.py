@@ -8,6 +8,8 @@ from collections import OrderedDict
 from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
+import numpy as np
+
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare import torchair_acc_cmp as tac
 
@@ -437,6 +439,137 @@ node {
         with self.assertRaises(ValueError) as cm:
             tac.save_compare_once(("/golden", "/my", "/out", -1))
         self.assertIn("Error in acc_compare_once: inner_error", str(cm.exception))
+
+    def test_gather_fused_op_data_when_partial_ge_and_missing_ge_then_pass(self):
+        fused_op_name = "OpAOpB"
+        op_map = {
+            "OpA": {
+                "input": "x:0",
+                "input#1": "OpB:0",
+            },
+            "OpB": {
+                "input": "y:0",
+            },
+        }
+        fused_ge_dump_data = {}
+        ge_dump_data = {
+            "OpA": "/path/opA.bin",
+        }
+        with patch(
+            "msprobe.core.compare.torchair_acc_cmp.parse_torchair_dump_data",
+            return_value=([np.array([1.0], dtype="float32")], [np.array([2.0], dtype="float32")]),
+        ) as mock_parse, patch("msprobe.core.compare.torchair_acc_cmp.logger") as mock_logger:
+            golden_inputs_tuple, golden_outputs_tuple = tac.gather_fused_op_data(
+                fused_op_name, op_map, fused_ge_dump_data, ge_dump_data
+            )
+
+        inputs, input_paths = golden_inputs_tuple
+        outputs, output_path = golden_outputs_tuple
+        # Should contain two inputs: one from OpA (non-fused) and one empty for OpB
+        self.assertEqual(len(inputs), 2)
+        self.assertEqual(len(input_paths), 2)
+        self.assertTrue(input_paths[0].startswith("/path/opA.bin,inputs,"))
+        self.assertEqual(input_paths[1], "")
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(output_path, "/path/opA.bin")
+        mock_parse.assert_called_once_with("/path/opA.bin")
+        mock_logger.warning.assert_called()
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_specials_private_ops", return_value=["sp_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_ge_with_fx_single_op", return_value=["single_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_ge_with_fx_multiple_ops", return_value=["multi_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.get_all_ops_from_fusion_op")
+    @patch("msprobe.core.compare.torchair_acc_cmp.sort_ge_dump_data")
+    def test_compare_ge_with_fx_when_single_multi_and_special_ops_then_pass(
+        self, mock_sort, mock_get_all_ops, mock_multi, mock_single, mock_special
+    ):
+        graph_map = [{"op": {"name": "op1"}}, {"op": {"name": "op2"}}, {"op": {"name": "Cast_0"}}]
+        ge_dump_data = OrderedDict(
+            [
+                ("op1", "/ge/op1.bin"),
+                ("op2op3", "/ge/op2op3.bin"),
+                ("Cast_0", "/ge/Cast_0.bin"),
+            ]
+        )
+        fx_dump_data = {"fx": "dummy"}
+        mock_sort.return_value = ge_dump_data
+
+        def get_all_ops_side_effect(op_name, *_):
+            if op_name == "op1":
+                return ["op1"]
+            if op_name == "op2op3":
+                return ["op2", "op3"]
+            return []
+
+        mock_get_all_ops.side_effect = get_all_ops_side_effect
+        with patch(
+            "msprobe.core.compare.torchair_acc_cmp.parse_torchair_dump_data",
+            return_value=(["gi"], ["go"]),
+        ) as mock_parse:
+            rows = tac.compare_ge_with_fx(graph_map, ge_dump_data, fx_dump_data, token_id=5)
+
+        # At least single and multi-op branches should contribute rows; Cast branch is also exercised
+        self.assertIn("single_row", rows)
+        self.assertIn("multi_row", rows)
+        mock_single.assert_called_once()
+        mock_multi.assert_called_once()
+        mock_special.assert_called_once()
+        mock_parse.assert_called_once_with("/ge/Cast_0.bin")
+
+    @patch("msprobe.core.compare.torchair_acc_cmp.save_compare_result_to_csv")
+    @patch("msprobe.core.compare.torchair_acc_cmp.sort_by_timestamp", side_effect=lambda x: x)
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_ge_with_ge", return_value=["ge_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.compare_ge_with_fx", return_value=["fx_row"])
+    @patch("msprobe.core.compare.torchair_acc_cmp.init_ge_dump_data_from_bin_path")
+    @patch("msprobe.core.compare.torchair_acc_cmp.init_fx_dump_data_from_path")
+    @patch("msprobe.core.compare.torchair_acc_cmp.parse_pbtxt_to_dict", return_value=[{"op": {"name": "op1"}}])
+    @patch("msprobe.core.compare.torchair_acc_cmp.get_torchair_ge_graph_path")
+    @patch("msprobe.core.compare.torchair_acc_cmp.logger")
+    def test_acc_compare_once_when_rank_and_ge_vs_fx_and_ge_vs_ge_then_pass(
+        self,
+        mock_logger,
+        mock_get_graph,
+        mock_parse_pbtxt,
+        mock_init_fx,
+        mock_init_ge,
+        mock_compare_fx,
+        mock_compare_ge,
+        mock_sort_ts,
+        mock_save_csv,
+    ):
+        golden_root = "/golden"
+        my_root = "/my"
+        output_path = "/out"
+        rank_id = -1
+
+        mock_get_graph.side_effect = [
+            ["/graph_rank.pbtxt"],  # for dir_of_my_path with rank_id
+            None,  # for dir_of_golden_path -> is_golden_fx True
+        ]
+
+        mock_init_ge.return_value = [{0: {"op1": "/my/op1.bin"}}]
+        mock_init_fx.return_value = [{0: {"op1": "/golden/op1.bin"}}]
+
+        args = (golden_root, my_root, output_path, rank_id)
+        tac.acc_compare_once(args)
+
+        mock_compare_fx.assert_called_once()
+        mock_compare_ge.assert_not_called()
+        mock_save_csv.assert_called_once()
+
+        # Now test is_golden_fx False path
+        mock_get_graph.reset_mock()
+        mock_get_graph.side_effect = [
+            ["/graph_rank.pbtxt"],  # for dir_of_my_path with rank_id
+            ["/graph_rank_golden.pbtxt"],  # for dir_of_golden_path -> is_golden_fx False
+        ]
+        mock_compare_fx.reset_mock()
+        mock_compare_ge.reset_mock()
+
+        tac.acc_compare_once(args)
+
+        mock_compare_ge.assert_called_once()
+        mock_compare_fx.assert_not_called()
 
 
 if __name__ == "__main__":
