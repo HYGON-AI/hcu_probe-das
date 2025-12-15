@@ -52,7 +52,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和
 
 通过config.json配置，完成msProbe精度数据采集操作。
 
-config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
 
 **[精度比对](docs/zh/accuracy_compare/torchair_compare_instruct.md)**
 
@@ -88,7 +88,7 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 
 通过config.json配置，完成msProbe精度数据采集操作。
 
-config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
 
 
 #### [精度预检](docs/zh/accuracy_checker/pytorch_accuracy_checker_instruct.md)
@@ -129,7 +129,7 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 
 通过config.json配置，完成msProbe精度数据采集操作。
 
-config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
 
 
 #### [精度预检](docs/zh/accuracy_checker/mindspore_accuracy_checker_instruct.md)
@@ -168,7 +168,7 @@ config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_in
 
 通过config.json配置，完成msProbe精度数据采集操作。
 
-config.json配置文件详细介绍请参见[介绍](docs/zh/dump/config_json_introduct.md)和[示例](docs/zh/dump/config_json_examples.md)。
+config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
 
 #### [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
 
