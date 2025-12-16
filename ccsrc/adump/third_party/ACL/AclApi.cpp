@@ -21,6 +21,11 @@
 #include "base/ErrorInfosManager.h"
 #include "AclApi.h"
 
+extern "C" {
+    struct acldumpChunk;
+    aclError acldumpRegCallback(int32_t (* const messageCallback)(const acldumpChunk *, int32_t), int32_t Flag);
+}
+
 namespace MindStudioDebugger {
 namespace AscendCLApi {
 
@@ -41,8 +46,8 @@ static AclInitFuncType g_aclInitFunc = nullptr;
 static AclmdlInitDumpFuncType g_aclmdlInitDumpFunc = nullptr;
 static AclmdlSetDumpFuncType g_aclmdlSetDumpFunc = nullptr;
 static AclmdlFinalizeDumpFuncType g_aclmdlFinalizeDumpFunc = nullptr;
-static AcldumpRegCallbackFuncType g_acldumpRegCallbackFunc = nullptr;
-static AcldumpRegCallbackFuncType g_acldumpRegCallbackFuncInSo = nullptr;
+static AcldumpRegCallbackFuncType g_acldumpRegCallbackFunc = reinterpret_cast<AcldumpRegCallbackFuncType>(acldumpRegCallback);
+static AcldumpRegCallbackFuncType g_acldumpRegCallbackFuncInSo = reinterpret_cast<AcldumpRegCallbackFuncType>(acldumpRegCallback);
 static AclrtSynchronizeDeviceFuncType g_aclrtSynchronizeDeviceFunc = nullptr;
 
 static const std::map<const char*, void**> functionMap = {
@@ -81,37 +86,6 @@ DebuggerErrno LoadAclApi()
         }
         LOG_DEBUG("Load function " + std::string(iter.first) + " from libascendcl.so.");
     }
-
-    /* 规避adump的bug，mindspore场景优先使用libmindspore_ascend.so中的符号 */
-    void* handler = dlopen(LIB_MS_ASCEND_NAME, RTLD_LAZY | RTLD_NOLOAD);
-    std::string libName = LIB_MS_ASCEND_NAME;
-    if (handler == nullptr) {
-        handler = hLibAscendcl;
-        libName = LIB_ASCEND_CL_NAME;
-    }
-
-    g_acldumpRegCallbackFunc = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(handler, "acldumpRegCallback"));
-    if (g_acldumpRegCallbackFunc == nullptr) {
-        LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load function acldumpRegCallback from " +
-                    libName + ".");
-    }
-    LOG_DEBUG("Load function acldumpRegCallback from " + libName + ".");
-
-    if (handler != hLibAscendcl) { dlclose(handler); }
-
-    void* dumpHandler = dlopen(LIB_ASCEND_DUMP_NAME, RTLD_LAZY | RTLD_NOLOAD);
-    if (dumpHandler == nullptr) {
-        LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load libascend_dump.so.");
-    } else {
-        g_acldumpRegCallbackFuncInSo = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(dumpHandler, "acldumpRegCallback"));
-        if (g_acldumpRegCallbackFuncInSo == nullptr) {
-            LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND,
-                        "Failed to load function acldumpRegCallback from libascend_dump.so.");
-        }
-        LOG_DEBUG("Load function acldumpRegCallback from libascend_dump.so.");
-        dlclose(dumpHandler);
-    }
-
     return DebuggerErrno::OK;
 }
 
