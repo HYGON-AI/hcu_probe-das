@@ -3,12 +3,15 @@ cmake_minimum_required(VERSION 3.14)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(ASCEND_TOOLKIT_PATH $ENV{ASCEND_TOOLKIT_HOME})
 
 find_package(cpython MODULE REQUIRED)
 find_package(openssl MODULE REQUIRED)
 find_package(nlohmannjson MODULE REQUIRED)
 find_package(protobuf MODULE REQUIRED)
 find_package(re2 MODULE REQUIRED)
+
+find_library(adump_server NAMES adump_server PATHS ${ASCEND_TOOLKIT_PATH}/lib64 REQUIRED)
 
 if (DEFINED CANN_PATH AND NOT "${CANN_PATH}" STREQUAL "")
     file(GLOB_RECURSE DUMP_DATA_PROTOS "${CANN_PATH}/**/dump_data.proto")
@@ -42,6 +45,7 @@ target_link_options(_msprobe_c PRIVATE "-Wl,-z,relro")
 target_link_options(_msprobe_c PRIVATE "-Wl,-z,now")
 target_link_options(_msprobe_c PRIVATE "-Wl,-z,noexecstack")
 
+target_link_libraries(_msprobe_c PRIVATE ${adump_server})
 target_link_libraries(_msprobe_c PUBLIC dl)
 target_link_libraries(_msprobe_c PUBLIC pthread)
 target_link_libraries(_msprobe_c PUBLIC ${cpython_LIBRARIES})
