@@ -24,8 +24,10 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 # 构建config.ini的路径
 CONFIG_FILE="$SCRIPT_DIR/config.ini"
 WHL_BASE_URL=$(grep 'whl_base_url' "$CONFIG_FILE" | sed 's/whl_base_url=//')
+ACLRUNTIME_SHA_BASE_URL=$(grep 'aclruntime_sha_base_url' "$CONFIG_FILE" | sed 's/aclruntime_sha_base_url=//')
 TOOLS_BAS_URL_SUFFIX=$(grep 'tools_base_url' "$CONFIG_FILE" | sed 's/tools_base_url=//')
 AIS_BENCH_WHL_DOWNLOAD_URL=$(grep 'ais_bench_whl_download_url' "$CONFIG_FILE" | sed 's/ais_bench_whl_download_url=//')
+AIS_BENCH_SHA_BASE_URL=$(grep 'ais_bench_sha_base_url' "$CONFIG_FILE" | sed 's/ais_bench_sha_base_url=//')
 TOOLS_BAS_URL="git+$TOOLS_BAS_URL_SUFFIX"
 
 
@@ -59,45 +61,27 @@ download_and_install_aclruntime() {
         wget -c "${WHL_BASE_URL}${WHL_NAME}"
     fi
 
-    if [ "$PLATFORM" == "aarch64" ]; then
-        if [ "$PYTHON3_MINI_VERSION" == "7" ]; then
-            sha256Value="f1b6da04cb454bdf1f3f3373c346ec485dca7c425184806faa6b9f197e82016b"
-        elif [ "$PYTHON3_MINI_VERSION" == "8" ]; then
-            sha256Value="b7a15ac9fbb94f7f52e6cf574db4eb63101939a84c118e4c72dfd2bdf4f0c39a"
-        elif [ "$PYTHON3_MINI_VERSION" == "9" ]; then
-            sha256Value="af3be0a0fb0c74dabb0c3e7307dd2054673f635d22958011fa860f71a42d5dd4"
-        elif [ "$PYTHON3_MINI_VERSION" == "10" ]; then
-            sha256Value="2d7298ca9b0cf62c9914772f0d25c1326abef777bc451b3fdc345b0896835011"
-        elif [ "$PYTHON3_MINI_VERSION" == "11" ]; then
-            sha256Value="73ea49ee792a3051792219a9151138fdec70cd72cbd51fa4d5eb7ed82d89f9e2"
-        else
-            echo "Unsupported python3 version"
-            exit 1
-        fi
-    elif [ "$PLATFORM" == "x86_64" ]; then
-        if [ "$PYTHON3_MINI_VERSION" == "7" ]; then
-            sha256Value="a4be8a768e227f8b2db8f8b73a00e1541786cc9c42c726a5809f0a085bfd9168"
-        elif [ "$PYTHON3_MINI_VERSION" == "8" ]; then
-            sha256Value="c25e152364d3be7bff473162f8928547c3534f1826a35b867043372a58f0a380"
-        elif [ "$PYTHON3_MINI_VERSION" == "9" ]; then
-            sha256Value="9768354e32452c0073800064985f6b5169f7d7821452b008e3d95187162931b6"
-        elif [ "$PYTHON3_MINI_VERSION" == "10" ]; then
-            sha256Value="45d781faff585a92b58b7a6b4bd0564fc521bd0b578e31de6f852a19f069e664"
-        elif [ "$PYTHON3_MINI_VERSION" == "11" ]; then
-            sha256Value="7d7e774ae3c1fd5996cd6b546d81ab8a20d7e50a3e32587f750d8b066c1563a5"
-        else
-            echo "Unsupported python3 version"
-            exit 1
-        fi
-    else
-        echo "Unsupported platform"
+    if [ $PYTHON3_MINI_VERSION -gt 11 ]; then
+        echo "Unsupported python3 version"
         exit 1
     fi
+
+    SHA_NAME="${WHL_NAME%.whl}.sha256"
+    SHA_URL=${ACLRUNTIME_SHA_BASE_URL}${SHA_NAME}
+    echo "Downloading aclruntime SHA from: ${SHA_URL}"
+    if [ "$NO_CHECK_CERTIFICATE" == "True" ]; then
+        sha256Value=$(curl -kfsSL "${SHA_URL}" | awk '{print $1}')
+    else
+        sha256Value=$(curl -fsSL "${SHA_URL}" | awk '{print $1}')
+    fi
+
 
     sha256Data=$(sha256sum "$WHL_NAME" | cut -d' ' -f1)
     if [[ "${sha256Data}" != "${sha256Value}" ]]; then
         echo "Failed to verify sha256: $WHL_NAME"
         exit 1
+    else
+        echo "sha256 verification passed: $WHL_NAME"
     fi
 
     MAX_RETRIES=3  # 最大重试次数
@@ -143,11 +127,21 @@ download_and_install_ais_bench() {
         wget -c "${WHL_BASE_URL}${WHL_NAME}"
     fi
 
-    sha256Value="ff55373a11d9975eaad497a230c9fb0d93856dc184790b8f168143c9c5f1cccd"
+    SHA_NAME="${WHL_NAME%.whl}.sha256"
+    SHA_URL=${AIS_BENCH_SHA_BASE_URL}${SHA_NAME}
+    echo "Downloading ais_bench SHA from: ${SHA_URL}"
+    if [ "$NO_CHECK_CERTIFICATE" == "True" ]; then
+        sha256Value=$(curl -kfsSL "${SHA_URL}" | awk '{print $1}')
+    else
+        sha256Value=$(curl -fsSL "${SHA_URL}" | awk '{print $1}')
+    fi
+
     sha256Data=$(sha256sum "$WHL_NAME" | cut -d' ' -f1)
     if [[ "${sha256Data}" != "${sha256Value}" ]]; then
         echo "Failed to verify sha256: $WHL_NAME"
         exit 1
+    else
+        echo "sha256 verification passed: $WHL_NAME"
     fi
 
     MAX_RETRIES=3  # 最大重试次数
