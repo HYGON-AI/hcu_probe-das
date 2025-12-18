@@ -61,6 +61,9 @@ class TensorHandler:
         self.has_fake_tensor = hasattr(torch, "_subclasses") and hasattr(torch._subclasses, "fake_tensor")
         self.has_async_collective_tensor = hasattr(dist, "_functional_collectives") and \
                                            hasattr(dist._functional_collectives, "AsyncCollectiveTensor")
+        self.has_nested_tensor = hasattr(torch, "nested") and hasattr(torch.nested, "_internal") and \
+            hasattr(torch.nested._internal, "nested_tensor") and \
+            hasattr(torch.nested._internal.nested_tensor, "NestedTensor")
 
     @staticmethod
     def free_tensor(tensor, tensor_name):
@@ -84,6 +87,10 @@ class TensorHandler:
     def is_async_collective_tensor(self, tensor):
         return self.has_async_collective_tensor and \
             isinstance(tensor, dist._functional_collectives.AsyncCollectiveTensor)
+    
+    def is_nested_tensor(self, tensor):
+        return self.has_nested_tensor and \
+            isinstance(tensor, torch.nested._internal.nested_tensor.NestedTensor)
 
     def is_empty_data(self, tensor):
         return tensor.is_meta or self.is_fake_tensor(tensor) or self.is_async_collective_tensor(tensor)
@@ -94,6 +101,9 @@ class TensorHandler:
         if self.is_fake_tensor(tensor):
             logger.debug("FakeTensor cannot be converted to torch.Tensor type.")
             return tensor
+        if self.is_nested_tensor(tensor):
+            logger.debug(f"For NestedTensor, collecting information from the tensor returned by .values().")
+            return tensor.values()
         if is_float8_tensor(tensor):
             logger.debug(
                 f"The fp8/hifp8 tensor analyzing/saving is unsupported in dump function."
@@ -109,6 +119,8 @@ class TensorHandler:
             return Const.FAKE_TENSOR_TYPE
         if self.is_async_collective_tensor(tensor):
             return Const.AC_TENSOR_TYPE
+        if self.is_nested_tensor(tensor):
+            return Const.NESTED_TENSOR_TYPE
         return Const.TENSOR_TYPE
 
     def get_dtensor_info(self, tensor):
