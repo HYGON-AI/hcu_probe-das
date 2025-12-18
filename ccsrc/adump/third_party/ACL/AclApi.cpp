@@ -47,7 +47,7 @@ static AclmdlInitDumpFuncType g_aclmdlInitDumpFunc = nullptr;
 static AclmdlSetDumpFuncType g_aclmdlSetDumpFunc = nullptr;
 static AclmdlFinalizeDumpFuncType g_aclmdlFinalizeDumpFunc = nullptr;
 static AcldumpRegCallbackFuncType g_acldumpRegCallbackFunc = reinterpret_cast<AcldumpRegCallbackFuncType>(acldumpRegCallback);
-static AcldumpRegCallbackFuncType g_acldumpRegCallbackFuncInSo = reinterpret_cast<AcldumpRegCallbackFuncType>(acldumpRegCallback);
+static AcldumpRegCallbackFuncType g_acldumpRegCallbackFuncInSo = nullptr;
 static AclrtSynchronizeDeviceFuncType g_aclrtSynchronizeDeviceFunc = nullptr;
 
 static const std::map<const char*, void**> functionMap = {
@@ -85,6 +85,19 @@ DebuggerErrno LoadAclApi()
             return DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND;
         }
         LOG_DEBUG("Load function " + std::string(iter.first) + " from libascendcl.so.");
+    }
+
+    void* dumpHandler = dlopen(LIB_ASCEND_DUMP_NAME, RTLD_LAZY | RTLD_NOLOAD);
+    if (dumpHandler == nullptr) {
+        LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND, "Failed to load libascend_dump.so.");
+    } else {
+        g_acldumpRegCallbackFuncInSo = reinterpret_cast<AcldumpRegCallbackFuncType>(dlsym(dumpHandler, "acldumpRegCallback"));
+        if (g_acldumpRegCallbackFuncInSo == nullptr) {
+            LOG_WARNING(DebuggerErrno::ERROR_DEPENDENCY_NOT_FIND,
+                        "Failed to load function acldumpRegCallback from libascend_dump.so.");
+        }
+        LOG_DEBUG("Load function acldumpRegCallback from libascend_dump.so.");
+        dlclose(dumpHandler);
     }
     return DebuggerErrno::OK;
 }

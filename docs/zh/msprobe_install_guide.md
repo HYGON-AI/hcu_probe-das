@@ -59,7 +59,7 @@ pip install ./mindstudio_probe*.whl
 
 |参数|说明|可选/必选|
 |--|--|:--:|
-|--include-mod|指定可选模块，可取值`adump`，表示在编whl包时加入adump模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。|可选|
+|--include-mod|指定可选模块，可取值`adump`，表示在编whl包时加入adump模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本，`CANN`需要包含`libadump_server.a`。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。|可选|
 |--no-check|指定可选模块`adump`后，会下载所依赖的第三方库包，下载过程会进行证书校验。--no-check可以跳过证书校验。|可选|
 
 # 查看msprobe工具信息
