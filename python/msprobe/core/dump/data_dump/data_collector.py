@@ -117,136 +117,76 @@ class DataCollector:
             )
 
     def forward_output_data_collect(self, name, module, pid, module_input_output):
-        try:
-            self.update_construct(name)
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
 
-            data_info = {}
-            if self.config.task != Const.STRUCTURE:
-                data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
-            is_recompute = self.data_processor.is_recompute()
-            self.set_is_recomputable(data_info, is_recompute)
-            if self.config.level == Const.LEVEL_L2:
-                return
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-
-        except Exception as e:
-            # 取异常类名作为“类型”做去重
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] forward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
+        is_recompute = self.data_processor.is_recompute()
+        self.set_is_recomputable(data_info, is_recompute)
+        if self.config.level == Const.LEVEL_L2:
+            return
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        try:
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            self.data_processor.analyze_forward(name, module, module_input_output)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        self.data_processor.analyze_forward(name, module, module_input_output)
 
-        except Exception as e:
-            # 取异常类名作为“类型”做去重
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def forward_data_collect(self, name, module, pid, module_input_output):
-        try:
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_forward(name, module, module_input_output)
+        self.call_stack_collect(data_info, name)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-            self.update_construct(name)
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            data_info = {}
-            if self.config.task != Const.STRUCTURE:
-                data_info = self.data_processor.analyze_forward(name, module, module_input_output)
-            self.call_stack_collect(data_info, name)
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] forward_data_collect failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        try:
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            self.data_processor.analyze_backward(name, module, module_input_output)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        self.data_processor.analyze_backward(name, module, module_input_output)
 
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect_only_tensor failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def backward_data_collect(self, name, module, pid, module_input_output):
-        try:
-            self.update_construct(name)
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            data_info = {}
-            if self.config.task != Const.STRUCTURE:
-                data_info = self.data_processor.analyze_backward(name, module, module_input_output)
-            if self.config.level == Const.LEVEL_L2:
-                return
-            if data_info and name.split(Const.SEP)[0] in Const.MODULE_PREFIX:
-                module_name = name.rsplit(Const.SEP, 2)[0]
-                self.backward_module_names[module_name] = True
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        if self.config.level == Const.LEVEL_L2:
+            return
+        if data_info and name.split(Const.SEP)[0] in Const.MODULE_PREFIX:
+            module_name = name.rsplit(Const.SEP, 2)[0]
+            self.backward_module_names[module_name] = True
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] backward_data_collect failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
-        try:
-            self.update_construct(name)
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            data_info = {}
-            if self.config.task != Const.STRUCTURE:
-                data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
-            self.handle_data(name, data_info)
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        self.handle_data(name, data_info)
 
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] backward_input_data_collect failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def backward_output_data_collect(self, name, module, pid, module_input_output):
-        try:
-            self.update_construct(name)
-            if not self.check_scope_and_pid(self.scope, name, pid):
-                return
-            data_info = {}
-            if self.config.task != Const.STRUCTURE:
-                data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
-            self.handle_data(name, data_info)
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        data_info = {}
+        if self.config.task != Const.STRUCTURE:
+            data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
+        self.handle_data(name, data_info)
 
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] backward_output_data_collect failed: name={name}, pid={pid}\n{tb}",
-                error_type=error_type
-            )
 
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
@@ -301,25 +241,17 @@ class DataCollector:
         self.params_grad_record[grad_name] = False
 
     def params_data_collect_in_bw_hook(self, params_dict, name):
-        try:
-            if not params_dict:
-                return
-            ori_name = name.rsplit(Const.SEP, 2)[0]
-            for param_name, param in params_dict.items():
-                grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
-                self.update_api_or_module_name(grad_name)
-                if self.params_grad_record.get(grad_name, False):
-                    grad = param.grad if hasattr(param, "grad") else None
-                    data_info = self.data_processor.analyze_params(grad_name, param_name, grad)
-                    self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-        except Exception as e:
-            error_type = type(e).__name__
-            tb = traceback.format_exc()
-            self.data_writer.write_error_log(
-                f"[ERROR] params_data_collect_in_bw_hook failed: "
-                f"name={name}",
-                error_type=error_type
-            )
+        if not params_dict:
+            return
+        ori_name = name.rsplit(Const.SEP, 2)[0]
+        for param_name, param in params_dict.items():
+            grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+            self.update_api_or_module_name(grad_name)
+            if self.params_grad_record.get(grad_name, False):
+                grad = param.grad if hasattr(param, "grad") else None
+                data_info = self.data_processor.analyze_params(grad_name, param_name, grad)
+                self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
+
 
     def debug_data_collect_forward(self, variable, name_with_count):
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)
