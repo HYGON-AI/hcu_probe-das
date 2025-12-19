@@ -23,7 +23,6 @@ import os
 import stat
 import time
 
-import onnxruntime
 import pandas as pd
 
 from msprobe.core.common.log import logger
