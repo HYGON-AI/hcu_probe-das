@@ -79,10 +79,18 @@ class DumpDataItem:
             )
             raise CompareException(CompareException.INVALID_DATA_ERROR)
 
+        # 适配老的dump.json: xxx.word_embeddings.VocalParallelEmbedding.parameters_grad
         if data_name_list[Const.LAST_INDEX] == Const.PARAMS_GRAD:
             self.api_type = Const.PARAMS_GRAD
             self.api_name = data_name_list[Const.PARAMS_GRAD_NAME_INDEX]
             self.type_name = data_name_list[Const.PARAMS_GRAD_TYPE_NAME_INDEX]
+            self.state = Const.PARAMS_GRAD
+            return
+        # 适配老的dump.json: xxx.word_embeddings.VocalParallelEmbedding.parameters_grad.数字
+        if data_name_list[Const.LAST_INDEX - 1] == Const.PARAMS_GRAD and data_name_list[Const.LAST_INDEX].isdigit():
+            self.api_type = Const.PARAMS_GRAD
+            self.api_name = data_name_list[Const.PARAMS_GRAD_NAME_INDEX - 1]
+            self.type_name = data_name_list[Const.PARAMS_GRAD_TYPE_NAME_INDEX - 1]
             self.state = Const.PARAMS_GRAD
             return
 

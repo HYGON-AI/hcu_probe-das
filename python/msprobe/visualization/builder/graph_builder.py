@@ -257,13 +257,19 @@ class GraphBuilder:
         例如，graph有节点Module.a.backward.0, Module.a.backward.1, Module.a.backward.2
         则Module.a.parameters_grad添加在Module.a.backward.2内作为子节点
         """
-        prefixes = []
-        suffix = Const.SEP + Const.PARAMS_GRAD
+        prefix_suffix_map = {}
+        base_suffix = Const.SEP + Const.PARAMS_GRAD
+        pattern = re.compile(rf"{re.escape(base_suffix)}(?:\.\d+)?$")
         for node_id in data_dict.keys():
-            if node_id not in graph.node_map and node_id.endswith(suffix):
-                prefixes.append(node_id.replace(suffix, ''))
+            if node_id not in graph.node_map:
+                m = pattern.search(node_id)
+                if not m:
+                    continue
+                prefix = node_id[:m.start()]
+                suffix = node_id[m.start():]
+                prefix_suffix_map.setdefault(prefix, []).append(suffix)
 
-        max_info = {prefix: 0 for prefix in prefixes}
+        max_info = {prefix: 0 for prefix in prefix_suffix_map}
 
         for key in graph.node_map.keys():
             parts = key.split(Const.SEP)
@@ -277,12 +283,14 @@ class GraphBuilder:
             node_id = prefix + Const.SEP + Const.BACKWARD + Const.SEP + str(num)
             node = graph.get_node(node_id)
             if node:
-                parameters_grad_node_id = graph.add_node(NodeOp.module, prefix + suffix, up_node=node)
-                # 添加输入输出数据
-                node_data = data_dict.get(parameters_grad_node_id, {})
-                input_data, output_data = get_input_output(node_data, parameters_grad_node_id)
-                # 更新数据
-                graph.get_node(parameters_grad_node_id).set_input_output(input_data, output_data)
+                suffix_list = prefix_suffix_map[prefix]
+                for suffix in suffix_list:
+                    parameters_grad_node_id = graph.add_node(NodeOp.module, prefix + suffix, up_node=node)
+                    # 添加输入输出数据
+                    node_data = data_dict.get(parameters_grad_node_id, {})
+                    input_data, output_data = get_input_output(node_data, parameters_grad_node_id)
+                    # 更新数据
+                    graph.get_node(parameters_grad_node_id).set_input_output(input_data, output_data)
 
     @staticmethod
     def _handle_recompute(graph):
