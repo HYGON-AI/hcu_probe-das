@@ -102,7 +102,8 @@ def read_op(op_data, op_name):
     split_name = op_name.split(Const.SEP)
     if split_name[-1] == Const.DEBUG:
         op_parsed_list = op_item_parse(op_data, op_name, Const.DEBUG)
-    elif split_name[-1] == Const.PARAMS_GRAD:
+    # 倒序校验parameters_grad，先倒数1，再倒数2，排除因为parameters_grad在模块名中而误判的风险。-1适配老版，-2适配新版。
+    elif split_name[-1] == Const.PARAMS_GRAD or (len(split_name) >= 2 and split_name[-2] == Const.PARAMS_GRAD):
         op_parsed_list = op_item_parse(op_data, op_name, Const.PARAMS_GRAD)
     else:
         op_parsed_list = []
