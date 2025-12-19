@@ -137,7 +137,7 @@ INSTALL_REQUIRED = [
     "protobuf <= 3.20.2",
     "rich",
     "onnx >= 1.14.0",
-    "onnxruntime >= 1.14.1,< 1.16.0",
+    "onnxruntime >= 1.14.1, != 1.16.0",
     "skl2onnx >= 1.14.1"
 ]
 
