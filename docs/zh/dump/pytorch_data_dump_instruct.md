@@ -4,8 +4,7 @@
 
 msProbe工具通过在训练脚本中添加`PrecisionDebugger`接口并启动训练的方式，采集模型在运行过程中的精度数据。
 
-dump "statistics"模式的性能膨胀大小与"tensor"
-模式采集的数据量大小，可以参考[dump基线](../baseline/mindspore_data_dump_perf_baseline.md)。
+dump "statistics"模式的性能膨胀大小与"tensor"模式采集的数据量大小，可以参考[dump基线](../baseline/mindspore_data_dump_perf_baseline.md)。
 
 **注意**：
 
@@ -237,7 +236,7 @@ seed_all()
 debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
 # 模型定义及初始化等操作
 prompts = ["Hello, my name is"]
-sampling_params = SamplingParams(temprature=0.8, top_p=0.95)
+sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
 llm = LLM(model='...')
 model = llm.llm_engine.model_executor.driver_worker.worker.model_runner.get_model()
 # 开启数据dump, 指定采集推理模型逐字符循环推理中的第1~3次

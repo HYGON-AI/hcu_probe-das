@@ -56,15 +56,16 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 ```
 
 ### 参数说明
-| 参数名                                | 说明                                                                                                                        | 是否必选 |
-|------------------------------------|---------------------------------------------------------------------------------------------------------------------------| -------- |
-| -tp或--target_path                  | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。                                                                             | 是       |
-| -gp或--golden_path                  | CPU、GPU或NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。                                                                     | 是       |
-| -o或--output_path                   | 配置比对结果文件存盘目录，str 类型，默认在当前目录创建output目录。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.xlsx`。<br>提示：output目录下与结果件同名文件将被删除覆盖。 | 否       |
-| -fm或--fuzzy_match                  | 模糊匹配，bool 类型。开启后，对于网络中同一层级且命名相同仅调用次数不同的 API，可匹配并进行比对。通过直接配置该参数开启，默认未配置，表示关闭。                                              | 否       |
-| -dm或--data_mapping                 | 自定义映射关系比对。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件](#自定义映射文件)。仅[API和模块无法自动匹配场景](#API和模块无法自动匹配场景)需要配置。仅支持逐卡比对。              | 否       |
-| -da或--diff_analyze                 | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。                                                                                  | 否       |
-| -tensor_log或--is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。默认为 false。bool类型。                                               | 否 |
+| 参数名                              | 说明                                                         | 是否必选 |
+| ----------------------------------- | ------------------------------------------------------------ | -------- |
+| -tp或--target_path                  | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。 | 是       |
+| -gp或--golden_path                  | CPU、GPU或NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str 类型。 | 是       |
+| -o或--output_path                   | 配置比对结果文件存盘目录，str 类型，默认在当前目录创建output目录。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.xlsx`。<br>提示：output目录下与结果文件同名的文件将被删除覆盖。 | 否       |
+| -fm或--fuzzy_match                  | 模糊匹配。开启后，对于网络中同一层级且命名相同仅调用次数不同的 API，可匹配并进行比对。通过直接配置该参数开启，默认未配置，表示关闭。 | 否       |
+| -dm或--data_mapping                 | 自定义映射关系比对。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件](#自定义映射文件)。仅[API和模块无法自动匹配场景](#API和模块无法自动匹配场景)需要配置。仅支持逐卡比对。 | 否       |
+| -da或--diff_analyze                 | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。通过直接配置该参数开启，默认未配置，表示关闭。 | 否       |
+| -tensor_log或--is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。通过直接配置该参数开启，默认未配置，表示关闭。 | 否       |
+
 ### 使用示例
 
 #### 整网比对场景
@@ -141,13 +142,17 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
     - `diff_analyze_{timestamp}.json`：包含首差异算子节点识别结果，包括算子节点名、算子类型、算子位置等。
 
 ### 输出说明
-比对完成则打屏提示信息msprobe compare ends successfully. <br>
-单卡场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_{timestamp}.xlsx。<br>
-多卡场景：在配置的输出路径中，生成多个.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.xlsx。
+比对完成则打印提示信息：msprobe compare ends successfully. 
 
-首差异算子节点识别场景: <br>
-完成则打屏Saving json file to disk: /output_path/compare_result_rank{rank_id}_{timestamp}.json和The analyze result is saved in: /output_path/diff_analyze_{timestamp}.json<br>
-在配置的输出路径中，生成多个.json后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.json和diff_analyze_{timestamp}.json。
+- 单卡场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result\_{timestamp}.xlsx。
+
+- 多卡场景：在配置的输出路径中，生成多个.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.xlsx。
+
+- 首差异算子节点识别场景: 
+
+  完成则打印：Saving json file to disk: /output_path/compare_result_rank{rank_id}\_{timestamp}.json和The analyze result is saved in: /output_path/diff_analyze\_{timestamp}.json
+
+  在配置的输出路径中，生成多个.json后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}\_{timestamp}.json和diff_analyze\_{timestamp}.json。
 
 ### 输出结果文件说明
 
@@ -269,7 +274,7 @@ warning标记情况：
 
    当 dump 数据中存在 0 或 nan 时，比对结果中最大相对误差则出现 inf 或 nan 的情况，属于正常现象。
 
-5. One Thousandth Err Ratio（相对误差小于千分之一的元素比例）、Five Thousandths Err Ratio（相对误差小于千分之五的元素比例）精度指标：是指 NPU 的 Tensor 中的元素逐个与对应的标杆数据对比，相对误差小于千分之一、千分之五的比例占总元素个数的比例。该数据仅作为精度下降趋势的参考，并不参与计算精度是否通过的判定。
+5. One Thousandth Err Ratio（相对误差小于千分之一的元素比例）、Five Thousandth Err Ratio（相对误差小于千分之五的元素比例）精度指标：是指 NPU 的 Tensor 中的元素逐个与对应的标杆数据对比，相对误差小于千分之一、千分之五的比例占总元素个数的比例。该数据仅作为精度下降趋势的参考，并不参与计算精度是否通过的判定。
 
 
 ## 多卡数据汇总功能介绍
@@ -277,7 +282,7 @@ warning标记情况：
 ### 功能说明
 本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。<br>
 使用场景为：<br>
-已完成精度比对，获得多卡精度比对结果，但是通信算子数据分布在多个结果件中，不利于精度问题的分析。通过此功能，可以汇总多卡通信算子数据，减少问题定位时间。
+已完成精度比对，获得多卡精度比对结果，但是通信算子数据分布在多个结果文件中，不利于精度问题的分析。通过此功能，可以汇总多卡通信算子数据，减少问题定位时间。
 
 ### 注意事项
 不支持MD5比对结果。
@@ -292,8 +297,8 @@ msprobe merge_result -i <input_dir> -o <output_dir> -config <config-path>
 
 | 参数名                 | 说明                                                                                                                | 是否必选 |
 | --------------------- |-------------------------------------------------------------------------------------------------------------------| -------- |
-| -i 或 --input_dir      | 多卡比对结果存盘目录，即使用compare比对的结果输出目录，str类型。所有比对结果应全部为真实数据比对结果或统计数据比对结果，否则可能导致汇总数据不完整。                                   | 是       |
-| -o 或 --output_dir     | 数据提取汇总结果存盘目录，str类型。文件名称基于时间戳自动生成，格式为：`multi_ranks_compare_merge_{timestamp}.xlsx`。<br>提示：output目录下与结果件同名文件将被删除覆盖。 | 是       |
+| -i或--input_dir      | 多卡比对结果存盘目录，即使用compare比对的结果输出目录，str类型。所有比对结果应全部为真实数据比对结果或统计数据比对结果，否则可能导致汇总数据不完整。                                   | 是       |
+| -o或--output_dir     | 数据提取汇总结果存盘目录，str类型。文件名称基于时间戳自动生成，格式为：`multi_ranks_compare_merge_{timestamp}.xlsx`。<br>提示：output目录下与结果文件同名的文件将被删除覆盖。 | 是       |
 | -config或--config-path | 指定需要汇总数据的API和比对指标的yaml文件路径，str类型。<br>yaml文件详细介绍见下文“**yaml文件说明**”。                                                 | 是       |
 
 **yaml文件说明**
@@ -310,10 +315,10 @@ compare_index:
 - MeanRelativeErr
 ```
 
-| 参数名        | 说明                                                                                                                                                                                                                                                                                                                                                |
-| ------------- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| api           | 表示需要汇总的API或module名称。如果没有配置，工具会提示报错。<br>api名称配置格式为：`{api_type}.{api_name}.{API调用次数}.{前向反向}`<br>须按顺序配置以上四个字段，可按如下组合配置：<br/>        {api_type}<br/>        {api_type}.{api_name}<br/>        {api_type}.{api_name}.{API调用次数}<br/>        {api_type}.{api_name}.{API调用次数}.{前向反向}<br/>这里的api指代API或module。                                              |
-| compare_index | 表示需要汇总的比对指标。compare_index需为dump_mode对应比对指标的子集。如果没有配置，工具将根据比对结果自动提取dump_mode对应的全部比对指标进行汇总。<br>统计数据模式比对指标：Max diff、Min diff、Mean diff、L2norm diff、MaxRelativeErr、MinRelativeErr、MeanRelativeErr、NormRelativeErr、Requires_grad Consistent<br>真实数据模式比对指标：Cosine、EucDist、MaxAbsErr、MaxRelativeErr、One Thousandth Err Ratio、Five Thousandths Err Ratio、Requires_grad Consistent |
+| 参数名        | 说明                                                         |
+| ------------- | ------------------------------------------------------------ |
+| api           | 表示需要汇总的API或module名称。如果没有配置，工具会提示报错。<br>api名称配置格式为：`{api_type}.{api_name}.{API调用次数}.{前向反向}`<br>须按顺序配置以上四个字段，可按如下组合配置：<br/>        {api_type}<br/>        {api_type}.{api_name}<br/>        {api_type}.{api_name}.{API调用次数}<br/>        {api_type}.{api_name}.{API调用次数}.{前向反向}<br/>这里的api指代API或module。 |
+| compare_index | 表示需要汇总的比对指标。compare_index需为dump_mode对应比对指标的子集。如果没有配置，工具将根据比对结果自动提取dump_mode对应的全部比对指标进行汇总。<br>统计数据模式比对指标：Max diff、Min diff、Mean diff、L2norm diff、MaxRelativeErr、MinRelativeErr、MeanRelativeErr、NormRelativeErr、Requires_grad Consistent<br>真实数据模式比对指标：Cosine、EucDist、MaxAbsErr、MaxRelativeErr、One Thousandth Err Ratio、Five Thousandth Err Ratio、Requires_grad Consistent |
 
 ### 使用示例
 
