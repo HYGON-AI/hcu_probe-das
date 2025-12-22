@@ -113,3 +113,35 @@ class TestPytorchHookManager(unittest.TestCase):
         self.assertEqual(set(params_dict.keys()), {"weight", "bias"})
         self.assertEqual(params_dict["weight"], mock_named_params[0][1])
         self.assertEqual(params_dict["bias"], mock_named_params[1][1])
+
+    def test_register_param_hook(self):
+        BaseHookManager.hook_handle_dict.clear()
+        module = MagicMock()
+        param1 = MagicMock(requires_grad=True)
+        param1.expand_as.return_value.grad_fn = None
+        param2 = MagicMock(requires_grad=False)
+        params = {"param1": param1, "param2": param2}
+        full_name = "module.forward"
+
+        # data_mode包含backward时，应该注册hook
+        self.mock_config.data_mode = ["all"]
+        self.manager._register_param_hook(full_name, module, params)
+        # param1.requires_grad=True，但grad_fn为None，所以不会注册
+        self.assertEqual(len(BaseHookManager.hook_handle_dict), 0)
+
+        # 测试有grad_fn的情况
+        mock_grad_acc = MagicMock()
+        mock_grad_fn = MagicMock()
+        mock_grad_fn.next_functions = [(mock_grad_acc, None)]
+        param1.expand_as.return_value.grad_fn = mock_grad_fn
+        mock_grad_acc.register_hook.return_value = MagicMock()
+
+        self.manager._register_param_hook(full_name, module, params)
+        self.assertEqual(len(BaseHookManager.hook_handle_dict), 1)
+        self.assertTrue("module.param1" in BaseHookManager.hook_handle_dict)
+
+        # data_mode只有forward时，不注册hook
+        BaseHookManager.hook_handle_dict.clear()
+        self.mock_config.data_mode = ["forward"]
+        self.manager._register_param_hook(full_name, module, params)
+        self.assertEqual(len(BaseHookManager.hook_handle_dict), 0)

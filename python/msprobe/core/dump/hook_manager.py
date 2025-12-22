@@ -45,6 +45,7 @@ class BaseHookManager(ABC):
     inner_api_count = defaultdict(int)
     hook_handle_dict = {}
     params_grad_info = {}
+    grad_hook_call = {}
 
     def __init__(self, data_collector, config):
         self.data_collector = data_collector
@@ -77,6 +78,15 @@ class BaseHookManager(ABC):
         if hasattr(module, 'msprobe_input_kwargs') and tid in module.msprobe_input_kwargs:
             del module.msprobe_input_kwargs[tid]
 
+    @staticmethod
+    def _get_grad_hook_call_index(ori_name, param_name):
+        if ori_name not in BaseHookManager.grad_hook_call:
+            BaseHookManager.grad_hook_call[ori_name] = [0, param_name]
+        else:
+            if BaseHookManager.grad_hook_call.get(ori_name)[1] == param_name:
+                BaseHookManager.grad_hook_call[ori_name][0] += 1
+        return BaseHookManager.grad_hook_call.get(ori_name)[0]
+    
     @staticmethod
     @abstractmethod
     def _no_grad_context():
@@ -121,41 +131,9 @@ class BaseHookManager(ABC):
     def _need_exchange(self, module):
         pass
 
+    @abstractmethod
     def _register_param_hook(self, name, module, params_dict):
-        ori_name = name.rsplit(Const.SEP, 2)[0]
-        grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
-        # 首次执行前向hook时，添加params_grad_name属性，并注册参数hook
-        setattr(module, 'params_grad_name', grad_name)
-        # data_mode为forward时，不注册参数hook
-        if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
-            for param_name, param in params_dict.items():
-                if param.requires_grad:
-                    name = ori_name + Const.SEP + param_name
-                    old_handle = BaseHookManager.hook_handle_dict.get(name)
-                    if old_handle and hasattr(old_handle, "remove"):
-                        old_handle.remove()
-                    handle = param.register_hook(self._build_grad_hook(ori_name, param_name))
-                    BaseHookManager.hook_handle_dict[name] = handle
-
-    def _init_params_grad_info(self, module, params_dict):
-        '''
-        初始化参数梯度信息, 在前向hook结束后, 将参数梯度信息写入cache_data中用于占位
-        '''
-        if not params_dict:
-            return
-        if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
-            grad_name = module.params_grad_name if hasattr(module, 'params_grad_name') else None
-            # 判断是否已经在cache_data中进行了占位, 若没有则先写入cache_data中
-            if not BaseHookManager.params_grad_info.get(grad_name):
-                data_info = {grad_name: {key: [None] for key, value in params_dict.items() if value.requires_grad}}
-                # 当模块中的参数有requires_grad属性为True时，才会进行梯度计算，此时才需要占位
-                if data_info.get(grad_name):
-                    # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                    self.data_collector.handle_data(grad_name, data_info,
-                                                    flush=self.data_collector.data_processor.is_terminated)
-                    self.data_collector.params_grad_record[grad_name] = True
-                # 记录当前模块的参数梯度信息已占位
-                BaseHookManager.params_grad_info[grad_name] = True
+        pass
 
     def _should_execute_hook(self, hook_type, tid, is_forward=True):
         is_api_hook = hook_type == Const.API
@@ -168,21 +146,6 @@ class BaseHookManager(ABC):
         if not self.data_collector or self.data_collector.data_processor.is_terminated:
             return False
         return True
-
-    def _build_grad_hook(self, ori_name, param_name):
-        def hook_fn(grad):
-            tid = threading.get_ident()
-            if not self._should_execute_hook(Const.MODULE, tid):
-                return
-            with ThreadSafe():
-                original_state = self.ensure_gc_enabled()
-                BaseHookManager.inner_switch[tid] = True
-                self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad)
-                BaseHookManager.inner_switch[tid] = False
-                self.restore_gc_state(original_state)
-            return
-
-        return hook_fn
 
     def _build_forward_pre_hook(self, hook_type, api_name):
         def forward_pre_hook(module, args, kwargs=None):
@@ -266,7 +229,6 @@ class BaseHookManager(ABC):
                             self._pid,
                             module_input_output
                         )
-                        self._init_params_grad_info(module, params_dict)
                     else:
                         self.data_collector.update_api_or_module_name(full_forward_name)
                         self.data_collector.forward_output_data_collect(
@@ -306,9 +268,6 @@ class BaseHookManager(ABC):
                     self._pid,
                     module_input_output
                 )
-                if hook_type == Const.MODULE:
-                    params_dict = self._get_params_dict(module)
-                    self.data_collector.params_data_collect_in_bw_hook(params_dict, full_name)
                 BaseHookManager.inner_switch[tid] = False
                 self.restore_gc_state(original_state)
 

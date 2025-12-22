@@ -63,6 +63,9 @@ class TestBaseHookManager(unittest.TestCase):
         def _need_exchange(self, module):
             return False
 
+        def _register_param_hook(self, name, module, params_dict):
+            pass
+
     def setUp(self):
         self.mock_data_collector = MagicMock()
         self.mock_config = MagicMock()
@@ -111,31 +114,6 @@ class TestBaseHookManager(unittest.TestCase):
         module.msprobe_input_kwargs[tid] = {"key": "value"}
         self.manager._clear_input_kwargs(module, tid)
         self.assertFalse(tid in module.msprobe_input_kwargs)
-
-    def test_register_param_hook(self):
-        module = MagicMock()
-        params = {"param1": MagicMock(requires_grad=True)}
-        full_name = "module.forward"
-
-        with patch.object(self.manager, '_build_grad_hook') as mock_build:
-            self.manager._register_param_hook(full_name, module, params)
-
-            self.assertEqual(len(BaseHookManager.hook_handle_dict), 1)
-            self.assertTrue("module.param1" in BaseHookManager.hook_handle_dict)
-
-            self.assertEqual(module.params_grad_name, "module.parameters_grad")
-
-    def test_init_params_grad_info(self):
-        module = MagicMock()
-        module.params_grad_name = "grad_name"
-        params = {"param1": MagicMock(requires_grad=True)}
-
-        self.manager._init_params_grad_info(module, params)
-        self.mock_data_collector.handle_data.assert_called()
-        self.assertTrue(BaseHookManager.params_grad_info.get("grad_name"))
-
-        self.manager._init_params_grad_info(module, params)
-        self.mock_data_collector.handle_data.assert_called_once()
 
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_forward_pre_hook_behavior(self, mock_should_execute_hook):

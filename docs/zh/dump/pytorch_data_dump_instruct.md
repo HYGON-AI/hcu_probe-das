@@ -274,7 +274,7 @@ dump.json is at ./dump_path/step*
 |   |   |   |    ...
 |   |   |   |    ├── Module.conv1.Conv2d.forward.0.input.0.pt          # 命名格式为{Module}.{module_name}.{class_name}.{forward/backward}.{调用次数}.{input/output}.{参数序号}, 其中，“参数序号”表示该Module的第n个参数，例如1，则为第一个参数，若该参数为list格式，则根据list继续排序，例如1.1，表示该Module的第1个参数的第1个元素。
 |   |   |   |    ├── Module.conv1.Conv2d.forward.0.parameters.bias.pt  # 模块参数数据：命名格式为{Module}.{module_name}.{class_name}.forward.{调用次数}.parameters.{parameter_name}。
-|   |   |   |    └── Module.conv1.Conv2d.parameters_grad.weight.pt     # 模块参数梯度数据：命名格式为{Module}.{module_name}.{class_name}.parameters_grad.{parameter_name}。因为同一模块的参数使用同一梯度进行更新，所以参数梯度文件名不包含调用次数。
+|   |   |   |    └── Module.conv1.Conv2d.parameters_grad.0.weight.pt     # 模块参数梯度数据：命名格式为{Module}.{module_name}.{class_name}.parameters_grad.{参数的grad_fn触发次数}.{parameter_name}，其中，参数梯度中的计数是grad_fn触发次数，不是模块的调用次数。
 |   |   |   |                                                          # 当dump时传入的model参数为List[torch.nn.Module]或Tuple[torch.nn.Module]时，模块级数据的命名中包含该模块在列表中的索引index，命名格式为{Module}.{index}.*，*表示以上三种模块级数据的命名格式，例如：Module.0.conv1.Conv2d.forward.0.input.0.pt。
 │   |   |   ├── dump.json
 │   |   |   ├── stack.json
@@ -333,7 +333,7 @@ dump.json文件中包含以下数据名称：
 
 - `Module.conv2.Conv2d.forward.0`
   ：模块的前向数据，其中input_args为模块的输入数据（位置参数），input_kwargs为模块的输入数据（关键字参数），output为模块的输出数据，parameters为模块的参数数据，包括权重（weight）和偏置（bias）。
-- `Module.conv2.Conv2d.parameters_grad`：模块的参数梯度数据，包括权重（weight）和偏置（bias）的梯度。
+- `Module.conv2.Conv2d.parameters_grad.0`：模块的参数梯度数据，包括权重（weight）和偏置（bias）的梯度。
 - `Module.conv2.Conv2d.backward.0`：模块的反向数据，其中input为模块反向的输入梯度（对应前向输出的梯度），output为模块的反向输出梯度（对应前向输入的梯度）。
 
 **说明**：当dump时传入的model参数为List[torch.nn.Module]或Tuple[torch.nn.Module]
@@ -417,7 +417,7 @@ dump.json文件中包含以下数据名称：
         }
       }
     },
-    "Module.conv2.Conv2d.parameters_grad": {
+    "Module.conv2.Conv2d.parameters_grad.0": {
       "weight": [
         {
           "type": "torch.Tensor",
@@ -433,7 +433,7 @@ dump.json文件中包含以下数据名称：
           "Mean": 0.0006675920449197292,
           "Norm": 0.26084786653518677,
           "requires_grad": false,
-          "data_name": "Module.conv2.Conv2d.parameters_grad.weight.pt"
+          "data_name": "Module.conv2.Conv2d.parameters_grad.0.weight.pt"
         }
       ],
       "bias": [
@@ -448,7 +448,7 @@ dump.json文件中包含以下数据名称：
           "Mean": 0.002657240955159068,
           "Norm": 0.029451673850417137,
           "requires_grad": false,
-          "data_name": "Module.conv2.Conv2d.parameters_grad.bias.pt"
+          "data_name": "Module.conv2.Conv2d.parameters_grad.0.bias.pt"
         }
       ]
     },
