@@ -228,8 +228,8 @@ class DataCollector:
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)
 
-    def params_data_collect(self, name, param_name, pid, data):
-        grad_name = name + Const.SEP + Const.PARAMS_GRAD
+    def params_data_collect(self, name, param_name, pid, data, index):
+        grad_name = name + Const.SEP + Const.PARAMS_GRAD + Const.SEP + index
         self.update_api_or_module_name(grad_name)
         if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
             if self.data_writer.cache_data.get("data"):
@@ -239,19 +239,6 @@ class DataCollector:
         data_info = self.data_processor.analyze_params(grad_name, param_name, data)
         self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
         self.params_grad_record[grad_name] = False
-
-    def params_data_collect_in_bw_hook(self, params_dict, name):
-        if not params_dict:
-            return
-        ori_name = name.rsplit(Const.SEP, 2)[0]
-        for param_name, param in params_dict.items():
-            grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
-            self.update_api_or_module_name(grad_name)
-            if self.params_grad_record.get(grad_name, False):
-                grad = param.grad if hasattr(param, "grad") else None
-                data_info = self.data_processor.analyze_params(grad_name, param_name, grad)
-                self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
-
 
     def debug_data_collect_forward(self, variable, name_with_count):
         data_info = self.data_processor.analyze_debug_forward(variable, name_with_count)

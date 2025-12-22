@@ -208,3 +208,32 @@ class MindsporeHookManager(BaseHookManager):
                 self.restore_gc_state(original_state)
 
         return backward_pre_hook
+
+    def _register_param_hook(self, name, module, params_dict):
+        ori_name = name.rsplit(Const.SEP, 2)[0]
+        # data_mode为forward时，不注册参数hook
+        if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+            for param_name, param in params_dict.items():
+                if param.requires_grad:
+                    name = ori_name + Const.SEP + param_name
+                    old_handle = BaseHookManager.hook_handle_dict.get(name)
+                    if old_handle and hasattr(old_handle, "remove"):
+                        old_handle.remove()
+                    handle = param.register_hook(self._build_grad_hook(ori_name, param_name))
+                    BaseHookManager.hook_handle_dict[name] = handle
+
+    def _build_grad_hook(self, ori_name, param_name):
+        def hook_fn(grad):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(Const.MODULE, tid):
+                return
+            with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
+                BaseHookManager.inner_switch[tid] = True
+                index = self._get_grad_hook_call_index(ori_name, param_name)
+                self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad, str(index))
+                BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
+            return
+
+        return hook_fn

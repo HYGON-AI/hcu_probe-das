@@ -137,3 +137,26 @@ class TestMindsporeHookManager(unittest.TestCase):
         with patch.object(self.manager, '_should_execute_hook', return_value=True):
             hook_fn(mock_module, mock_grad_input)
             self.mock_data_collector.backward_input_data_collect.assert_called_once()
+
+    def test_register_param_hook(self):
+        BaseHookManager.hook_handle_dict.clear()
+        module = MagicMock()
+        param1 = MagicMock(requires_grad=True)
+        param1.register_hook.return_value = MagicMock()
+        param2 = MagicMock(requires_grad=False)
+        params = {"param1": param1, "param2": param2}
+        full_name = "module.forward"
+
+        # data_mode包含backward时，应该注册hook
+        self.mock_config.data_mode = ["all"]
+        self.manager._register_param_hook(full_name, module, params)
+        self.assertEqual(len(BaseHookManager.hook_handle_dict), 1)
+        self.assertTrue("module.param1" in BaseHookManager.hook_handle_dict)
+        param1.register_hook.assert_called_once()
+
+        # data_mode只有forward时，不注册hook
+        BaseHookManager.hook_handle_dict.clear()
+        self.mock_config.data_mode = ["forward"]
+        self.manager._register_param_hook(full_name, module, params)
+        self.assertEqual(len(BaseHookManager.hook_handle_dict), 0)
+        self.assertEqual(param1.register_hook.call_count, 1)

@@ -381,7 +381,7 @@ dump 结果目录结构示例如下：
 |   |   |   |    ├── Jit.AlexNet.0.forward.input.0.npy
 |   |   |   |    ├── Primitive.conv2d.Conv2d.0.forward.input.0.npy
 |   |   |   |    ├── Cell.conv1.Conv2d.forward.0.parameters.weight.npy # 模块参数数据：命名格式为{Cell}.{cell_name}.{class_name}.forward.{调用次数}.parameters.{parameter_name}。
-|   |   |   |    ├── Cell.conv1.Conv2d.parameters_grad.weight.npy      # 模块参数梯度数据：命名格式为{Cell}.{cell_name}.{class_name}.parameters_grad.{parameter_name}。因为同一模块的参数使用同一梯度进行更新，所以参数梯度文件名不包含调用次数。
+|   |   |   |    ├── Cell.conv1.Conv2d.parameters_grad.0.weight.npy      # 模块参数梯度数据：命名格式为{Cell}.{cell_name}.{class_name}.parameters_grad.{参数梯度的计算次数}.{parameter_name}，其中，参数梯度中的计数是参数梯度的计算次数，不是模块的调用次数。
 |   |   |   |    └── Cell.relu.ReLU.forward.0.input.0.npy              # 命名格式为{Cell}.{cell_name}.{class_name}.{forward/backward}.{调用次数}.{input/output}.{参数序号}, 其中，“参数序号”表示该Cell的第n个参数，例如1，则为第一个参数，若该参数为list格式，则根据list继续排序，例如1.1，表示该Cell的第1个参数的第1个元素。
 |   |   |   |                                                          # 当dump时传入的model参数为List[mindspore.nn.Cell]或Tuple[mindspore.nn.Cell]时，模块级数据的命名中包含该模块在列表中的索引index，命名格式为{Cell}.{index}.*，*表示以上三种模块级数据的命名格式，例如：Cell.0.relu.ReLU.forward.0.input.0.npy。
 │   |   |   ├── dump.json
@@ -468,7 +468,7 @@ L0级别的dump.json文件包括模块的前反向的输入输出，以及模块
 dump.json文件中包含以下数据名称：
 
 - `Cell.conv2.Conv2d.forward.0`：模块的前向数据，其中input_args为模块的输入数据（位置参数），input_kwargs为模块的输入数据（关键字参数），output为模块的输出数据，parameters为模块的参数数据，包括权重（weight）和偏置（bias）。
-- `Cell.conv2.Conv2d.parameters_grad`：模块的参数梯度数据，包括权重（weight）和偏置（bias）的梯度。
+- `Cell.conv2.Conv2d.parameters_grad.0`：模块的参数梯度数据，包括权重（weight）和偏置（bias）的梯度。
 - `Cell.conv2.Conv2d.backward.0`：模块的反向数据，其中input为模块反向的输入梯度（对应前向输出的梯度），output为模块的反向输出梯度（对应前向输入的梯度）。
 
 **说明**：当dump时传入的model参数为List[mindspore.nn.Cell]或Tuple[mindspore.nn.Cell]时，模块级数据的命名中包含该模块在列表中的索引index，命名格式为`{Cell}.{index}.*`，*表示以上三种模块级数据的命名格式，例如：`Cell.0.conv2.Conv2d.forward.0`。
@@ -546,7 +546,7 @@ dump.json文件中包含以下数据名称：
     }
    }
   },
-  "Cell.conv2.Conv2d.parameters_grad": {
+  "Cell.conv2.Conv2d.parameters_grad.0": {
    "weight": [
     {
      "type": "mindspore.Tensor",
@@ -561,7 +561,7 @@ dump.json文件中包含以下数据名称：
      "Min": -0.008627401664853096,
      "Mean": 0.0006675920449197292,
      "Norm": 0.26084786653518677,
-     "data_name": "Cell.conv2.Conv2d.parameters_grad.weight.npy"
+     "data_name": "Cell.conv2.Conv2d.parameters_grad.0.weight.npy"
     }
    ],
    "bias": [
@@ -575,7 +575,7 @@ dump.json文件中包含以下数据名称：
      "Min": -0.006656786892563105,
      "Mean": 0.002657240955159068,
      "Norm": 0.029451673850417137,
-     "data_name": "Cell.conv2.Conv2d.parameters_grad.bias.npy"
+     "data_name": "Cell.conv2.Conv2d.parameters_grad.0.bias.npy"
     }
    ]
   },

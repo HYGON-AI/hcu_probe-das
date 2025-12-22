@@ -31,7 +31,7 @@ from msprobe.pytorch.common.utils import (
     Const as PtConst
 )
 from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
-
+from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
 
 class PytorchHookManager(BaseHookManager):
     @staticmethod
@@ -143,3 +143,39 @@ class PytorchHookManager(BaseHookManager):
                 BaseHookManager.inner_switch[tid] = False
 
         return distributed_forward_hook
+
+    def _register_param_hook(self, name, module, params_dict):
+        ori_name = name.rsplit(Const.SEP, 2)[0]
+        # data_mode为forward时，不注册参数hook
+        if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+            for param_name, param in params_dict.items():
+                if param.requires_grad:
+                    name = ori_name + Const.SEP + param_name
+                    old_handle = BaseHookManager.hook_handle_dict.get(name)
+                    if old_handle and hasattr(old_handle, "remove"):
+                        old_handle.remove()
+                    param_tmp = param.expand_as(param)
+                    if param_tmp.grad_fn:
+                        grad_acc = param_tmp.grad_fn.next_functions[0][0]
+                        handle = grad_acc.register_hook(self._build_grad_hook(ori_name, param_name, param))
+                        BaseHookManager.hook_handle_dict[name] = handle
+
+    def _build_grad_hook(self, ori_name, param_name, param):
+        def hook_fn(*args):
+            tid = threading.get_ident()
+            if not self._should_execute_hook(Const.MODULE, tid):
+                return
+            with ThreadSafe():
+                original_state = self.ensure_gc_enabled()
+                BaseHookManager.inner_switch[tid] = True
+                index = self._get_grad_hook_call_index(ori_name, param_name)
+                if ModuleProcessor.is_megatron_module and hasattr(param, "main_grad"):
+                    grad = param.main_grad
+                else:
+                    grad = param.grad
+                self.data_collector.params_data_collect(ori_name, param_name, self._pid, grad, str(index))
+                BaseHookManager.inner_switch[tid] = False
+                self.restore_gc_state(original_state)
+            return
+
+        return hook_fn
