@@ -2,7 +2,7 @@
 
 ## 安装说明
 
-本文主要介绍msProbe工具的安装方式。包括**从PyPI安装**、**下载whl包安装**和**从源码安装**三种方式。
+本文主要介绍msProbe工具的安装方式。包括**PyPI安装**、**whl包安装**和**编译安装**三种方式。
 
 推荐使用[miniconda](https://docs.anaconda.com/miniconda/)管理环境依赖。
 
@@ -11,14 +11,20 @@ conda create -n msprobe python
 conda activate msprobe
 ```
 
-## 从PyPI安装
+## PyPI安装
 ```shell
 pip install mindstudio-probe
 ```
 
-## 下载whl包安装
+打印如下信息时，表示msProbe安装成功。
 
-下载msProbe的whl软件包，软件包下载请参见[版本说明](./release_notes.md)中的“版本配套说明”章节。
+```
+Successfully install mindstudio-probe-{version}
+```
+
+## whl包安装
+
+下载msProbe的whl软件包，软件包下载请参见《[版本说明](./release_notes.md)》中的“版本配套说明”章节。
 
 获取到whl软件包后执行如下命令进行安装。
 
@@ -36,9 +42,15 @@ pip install mindstudio-probe
    ```
    若覆盖安装，请在命令行末尾添加`--force-reinstall`参数。
 
-   上面提供的whl包链接不包含adump功能，如果需要使用adump功能，请参考[从源码安装](#3-从源码安装)下载源码编译whl包。
+   上面提供的whl包链接不包含adump功能，如果需要使用adump功能，请参考[编译安装](#编译安装)下载源码编译whl包。
+   
+   打印如下信息时，表示msProbe安装成功。
+   
+   ```
+   Successfully install mindstudio-probe-{version}
+   ```
 
-## 从源码安装
+## 安装
 
 执行如下命令安装：
 
@@ -57,10 +69,34 @@ pip install ./mindstudio_probe*.whl
 通过执行`build_tb_graph_ascend`构建指令来安装模型分级可视化功能。关于模型分级可视化插件的详细功能及使用说明请参见[tb_graph_ascend](./accuracy_compare/tb_graph_ascend.md)。
 
 
-|参数|说明|可选/必选|
-|--|--|:--:|
-|--include-mod|指定可选模块，可取值`adump`，表示在编whl包时加入adump模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本，`CANN`需要包含`libadump_server.a`。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。|可选|
-|--no-check|指定可选模块`adump`后，会下载所依赖的第三方库包，下载过程会进行证书校验。--no-check可以跳过证书校验。|可选|
+|参数|可选/必选|说明|
+|--|:--:|--|
+|--include-mod|可选|指定可选模块，可取值`adump`，表示在编whl包时加入adump模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本，要求CANN的安装包中包含`libadump_server.a`文件。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。|
+|--no-check|可选|指定可选模块`adump`后，会下载所依赖的第三方库包，下载过程会进行证书校验。--no-check可以跳过证书校验。|
+
+打印如下信息时，表示msProbe安装成功。
+
+```
+Successfully install mindstudio-probe-{version}
+```
+
+# 卸载
+
+执行如下命令卸载msProbe工具。
+
+```
+pip uninstall mindstudio-probe 
+```
+
+打印如下信息时，表示msProbe安装成功。
+
+```
+Successfully uninstall mindstudio-probe-{version}
+```
+
+# 升级
+
+msProbe工具不支持直接升级，需要先完成[卸载](#卸载)后再重新[安装](#msProbe工具安装指南)。
 
 # 查看msprobe工具信息
 
@@ -72,32 +108,32 @@ pip show mindstudio-probe
 
 ```bash
 Name: mindstudio-probe
-Version: 1.0.x
-Summary: Pytorch Ascend Probe Utils
+Version: 8.3.x
+Summary: Ascend Probe Utils
 Home-page: https://gitcode.com/Ascend/mstt/tree/master/debug/accuracy_tools/msprobe
 Author: Ascend Team
 Author-email: pmail_mindstudio@xx.com
 License: Apache License 2.0
-Location: /home/xxx/miniconda3/envs/xxx/lib/python3.x/site-packages/mindstudio_probe-1.0.x-py3.x.egg
-Requires: matplotlib, numpy, openpyxl, pandas, pyyaml, tqdm, wheel
-Required-by: 
+Location: /home/xxx/miniconda3/envs/xxx/lib/python3.x/site-packages/
+Requires: einops, matplotlib, numpy, openpyxl, pandas, psutil, pwinput, pyopenssl, pyyaml, rich, tabulate, tensorboard, tqdm, twisted, wheel
+Required-by:
 ```
 
 # Ascend生态链接
 
 ## 安装CANN包
 
-1. 根据CPU架构和NPU型号选择Toolkit或Kernel，可参见[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/700/envdeployment/instg/instg_0001.html)和[昇腾社区](https://www.hiascend.cn/developer/download/community/result?module=cann)。
+1. 根据CPU架构和NPU型号选择Toolkitk开发套件包和ops算子包，可参见《CANN 软件安装指南》和[昇腾社区](https://www.hiascend.cn/developer/download/community/result?module=cann)。
 
    运行示例：
    ```bash
-   Ascend-cann-toolkit_x.x.x_linux-xxxx.run --full --install-path={cann_path}
-   Ascend-cann-kernels_x.x.x_linux.run --install --install-path={cann_path}
+   Ascend-cann-toolkit_{version}_linux-{arch}.run --full --install-path={cann_path}
+   Ascend-cann-{chip_type}-ops_{version}_linux-{arch}.run --install --install-path={cann_path}
    ```
 
 2. 配置环境变量
    ```bash
-   source {cann_path}/ascend-toolkit/set_env.sh
+   source {cann_path}/Ascend/cann/set_env.sh
    ```
 
 ## 安装PyTorch_NPU
