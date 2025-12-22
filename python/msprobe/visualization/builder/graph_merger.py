@@ -20,7 +20,7 @@ from msprobe.core.common.const import Const
 from msprobe.visualization.graph.graph import Graph, BaseNode
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.core.common.log import logger
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, update_shared_dict, update_pbar_info
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.parallel_state import get_tp_pp_default_groups
 
@@ -31,32 +31,34 @@ NORM_INFO = 'The Norm value merging method for '
 
 
 class GraphMerger:
-    def __init__(self, build_graph_results, parallel_param, is_bench=False):
-        self.strategy = self._select_strategy(build_graph_results, parallel_param, is_bench)
+    def __init__(self, build_graph_results, parallel_param, is_bench=False, pbar_info=None):
+        self.strategy = self._select_strategy(build_graph_results, parallel_param, is_bench, pbar_info)
 
     @staticmethod
-    def _select_strategy(results, param, is_bench):
+    def _select_strategy(results, param, is_bench, pbar_info):
         if param.tp == param.pp == param.rank_size == 1:
-            return NoParallelMerger(results, param, is_bench)
+            return NoParallelMerger(results, param, is_bench, pbar_info)
         elif param.tp == param.rank_size:
-            return TPMerger(results, param, is_bench)
+            return TPMerger(results, param, is_bench, pbar_info)
         elif param.pp == param.rank_size:
-            return PPMerger(results, param, is_bench) if param.vpp == 1 else VPPMerger(results, param, is_bench)
+            return PPMerger(results, param, is_bench, pbar_info) if param.vpp == 1 \
+                else VPPMerger(results, param, is_bench, pbar_info)
         elif param.pp == 1:
-            return TPMerger(results, param, is_bench)
+            return TPMerger(results, param, is_bench, pbar_info)
         elif param.tp == 1:
-            return PPMerger(results, param, is_bench) if param.vpp == 1 else VPPMerger(results, param, is_bench)
+            return PPMerger(results, param, is_bench, pbar_info) if param.vpp == 1 \
+                else VPPMerger(results, param, is_bench, pbar_info)
         elif param.tp * param.pp == param.rank_size:
-            return TPPPMerger(results, param, is_bench)
+            return TPPPMerger(results, param, is_bench, pbar_info)
         else:
-            return FullMerger(results, param, is_bench)
+            return FullMerger(results, param, is_bench, pbar_info)
 
     def merge_graph(self):
         return self.strategy.merge_graphs()
 
 
 class BaseGraphMerger:
-    def __init__(self, build_graph_results, parallel_param, is_bench):
+    def __init__(self, build_graph_results, parallel_param, is_bench, pbar_info=None):
         self.unmerged_module = [Const.CLIP_GRAD, Const.OPTIMIZER]
         self.dtype_list = Const.TORCH_INT_DTYPE + Const.TORCH_FLOAT_DTYPE + [Const.FLOAT16, Const.FLOAT32,
                                                                              Const.BFLOAT16]
@@ -64,6 +66,7 @@ class BaseGraphMerger:
         self.parallel_param = parallel_param
         self.is_bench = is_bench
         self.log_prefix = '[Bench]' if self.is_bench else '[NPU]'
+        self.pbar_info = pbar_info
         self._add_all_nodes_rank()
 
     @staticmethod
@@ -335,14 +338,19 @@ class PPMerger(BaseGraphMerger):
         return results
 
     def merge_pp_graphs(self, results):
+        if self.pbar_info:
+            update_shared_dict(self.pbar_info.current_stage_dict, self.pbar_info.task_id, 1, update_all=True)
         if not results or len(results) < 2:
             return results
         graphs = [x.graph for x in results]
         main_graph_result = results[0]
-        for main_node in main_graph_result.graph.root.subnodes:
+        total = len(main_graph_result.graph.root.subnodes)
+        for i, main_node in enumerate(main_graph_result.graph.root.subnodes):
             if main_node.op == NodeOp.module and main_node.id not in self.unmerged_module:
                 self._merge_nodes(main_graph_result.graph, main_node, graphs[1:])
                 self._sort_nodes(main_graph_result.graph, main_node)
+            if self.pbar_info:
+                update_pbar_info(self.pbar_info, i + 1, total, update_all=True)
         return [main_graph_result]
 
     def get_groups(self):
@@ -625,11 +633,14 @@ class TPMerger(BaseGraphMerger):
         return results
 
     def merge_tp_graphs(self, results, tp_merge_mapping=None):
+        if self.pbar_info:
+            update_shared_dict(self.pbar_info.current_stage_dict, self.pbar_info.task_id, 1, update_all=True)
         if not results or len(results) < 2:
             return results
         graphs = [x.graph for x in results]
         main_graph_result = results[0]
-        for main_node in main_graph_result.graph.node_map.values():
+        total = len(main_graph_result.graph.node_map.values())
+        for i, main_node in enumerate(main_graph_result.graph.node_map.values()):
             should_continue = (
                     not main_node.upnode or main_node.upnode.op != NodeOp.module or
                     main_node.upnode.id in self.unmerged_module or main_node.id.startswith(Const.DISTRIBUTED) or
@@ -647,6 +658,8 @@ class TPMerger(BaseGraphMerger):
                 merge_info_in = self._merge_params(tp_need_merge_param_in)
                 merge_info_out = self._merge_params(tp_need_merge_param_out)
                 main_node.parallel_merge_info.extend(merge_info_in + merge_info_out)
+            if self.pbar_info:
+                update_pbar_info(self.pbar_info, i + 1, total, update_all=True)
         for main_node in main_graph_result.graph.node_map.values():
             self._merge_tp_megatron_column_row_parallel(main_node, graphs[1:], tp_merge_mapping)
         return [main_graph_result]
@@ -786,9 +799,10 @@ class NoParallelMerger(BaseGraphMerger):
 
 class TPPPMerger(BaseGraphMerger):
     def merge_graphs(self):
-        tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
-        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench) \
-            if self.parallel_param.vpp == 1 else VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
+        tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info)
+        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info) \
+            if self.parallel_param.vpp == 1 else \
+            VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info)
         pp_groups = pp_merger.get_groups()
         tp_groups = tp_merger.get_groups()
         # 进入TP+PP混合处理器，PP和TP必然大于1
@@ -809,9 +823,10 @@ class TPPPMerger(BaseGraphMerger):
 
 class FullMerger(BaseGraphMerger):
     def merge_graphs(self):
-        tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
-        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench) \
-            if self.parallel_param.vpp == 1 else VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench)
+        tp_merger = TPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info)
+        pp_merger = PPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info) \
+            if self.parallel_param.vpp == 1 else \
+            VPPMerger(self.build_graph_results, self.parallel_param, self.is_bench, self.pbar_info)
         pp_groups = pp_merger.get_groups()
         tp_groups = tp_merger.get_groups()
         tp_merge_mapping = {}
@@ -860,14 +875,19 @@ class VPPMerger(PPMerger):
         return Const.SEP.join(parts)
 
     def merge_pp_graphs(self, results):
+        if self.pbar_info:
+            update_shared_dict(self.pbar_info.current_stage_dict, self.pbar_info.task_id, 1, update_all=True)
         if not results or len(results) < 2:
             return results
         graphs = [x.graph for x in results]
         main_graph_result = results[0]
-        for main_node in main_graph_result.graph.root.subnodes:
+        total = len(main_graph_result.graph.root.subnodes)
+        for i, main_node in enumerate(main_graph_result.graph.root.subnodes):
             if main_node.op == NodeOp.module and main_node.id not in self.unmerged_module:
                 self._merge_nodes(main_graph_result.graph, main_node, graphs[1:])
                 self._sort_nodes(main_graph_result.graph, main_node)
+            if self.pbar_info:
+                update_pbar_info(self.pbar_info, i + 1, total, update_all=True)
         self._merge_vpp_data(main_graph_result.graph)
         self._merge_vpp_chunks(main_graph_result.graph)
         return [main_graph_result]

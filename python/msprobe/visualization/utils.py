@@ -17,11 +17,13 @@ import os
 import re
 import json
 import pickle
+import time
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.compare.utils import check_and_return_dir_contents
+from msprobe.core.common.utils import CompareException
 
 
 def load_json_file(file_path):
@@ -63,7 +65,7 @@ def get_step_or_rank_int(x: str, is_rank=False):
     """
     获取字符串rank{int}或者step{int}中的int值，如果x=rank或step，返回0
     """
-    if x in [Const.RANK, Const.STEP]:
+    if x in [Const.RANK, Const.STEP] or x is None:
         return 0
     description = Const.RANK if is_rank else Const.STEP
     try:
@@ -137,9 +139,14 @@ def load_parallel_param(args):
         logger.error('In the graph merge task, parameters "tp/pp/rank_size" is required!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
+    if not args.golden_path and len(args.rank_size) != 1:
+        logger.error('In the graph merge build task, '
+                     'the number of parameters "rank_size" to be filled in is either 1!')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
     if args.golden_path and len(args.rank_size) != 2:
         logger.error('In the graph merge compare task, '
-                     'the number of parameters "tp/pp/rank_size" to be filled in is either 2!')
+                     'the number of parameters "rank_size" to be filled in is either 2!')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
     if len(args.rank_size) == 1:
@@ -321,6 +328,15 @@ class GraphConst:
                               'empty_strided'}
     VPP_CHUNK_0 = '0'
 
+    PBAR_TOTAL = 100
+    BAR_FORMAT = "{l_bar}{bar}| {percentage:3.0f}% [{elapsed}<{remaining}, {rate_fmt}] "
+    PBAR_DESC_PREFIX = '[Graph] Overall Progress'
+    BUILD_STAGES_TOTAL = 2
+    COMPARE_STAGES_TOTAL = 5
+
+    INTERSECTION = 'intersection'
+    UNION = 'union'
+
 
 def is_serializable(obj):
     """
@@ -341,3 +357,200 @@ class SerializableArgs:
         for k, v in vars(args).items():
             if is_serializable(v):
                 setattr(self, k, v)
+
+
+def calculate_list(path_n, path_b, prefix_str=Const.RANK, mode=GraphConst.INTERSECTION):
+    """
+    计算列表，可取交集、并集
+    """
+    if prefix_str not in [Const.RANK, Const.STEP]:
+        logger.error(f'Parameter "prefix_str" is expected to be {Const.RANK} or {Const.STEP}, '
+                     f'but in reality it is {prefix_str}.')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if mode not in [GraphConst.INTERSECTION, GraphConst.UNION]:
+        logger.error(f'Parameter "mode" is expected to be {GraphConst.INTERSECTION} or {GraphConst.UNION}, '
+                     f'but in reality it is {mode}.')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+    npu_list = check_and_return_dir_contents(path_n, prefix_str)
+    bench_list = check_and_return_dir_contents(path_b, prefix_str)
+
+    if not npu_list:
+        logger.error(f'Cannot get {prefix_str} in {path_n}.')
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+    if npu_list != bench_list:
+        result_list = npu_list
+        if mode == GraphConst.INTERSECTION:
+            result_list = sort_rank_number_strings(list(set(npu_list) & set(bench_list)))
+        elif mode == GraphConst.UNION:
+            result_list = sort_rank_number_strings(list(set(npu_list) | set(bench_list)))
+
+        if not result_list:
+            logger.error(f'Two {prefix_str}s cannot obtain {mode}.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        return result_list
+    return npu_list
+
+
+POST_DB_PROCESS = 0
+
+
+class ProgressInfo:
+    """
+    前端监控此类属性获取进度信息
+    """
+    current_progress = 0
+    process_running = True
+    error_msg = []
+    info_dict = {}
+    print_progress_log = False
+
+    @classmethod
+    def reset(cls):
+        cls.current_progress = 0
+        cls.process_running = True
+        cls.error_msg = []
+
+    @classmethod
+    def update_current_progress(cls, value):
+        if cls.current_progress != value:
+            cls.current_progress = value
+            cls.print_info()
+
+    @classmethod
+    def update_process_running(cls, value):
+        if cls.process_running != value:
+            cls.process_running = value
+            cls.print_info()
+
+    @classmethod
+    def update_error_msg(cls, value):
+        cls.error_msg.append(value)
+        cls.print_info()
+
+    @classmethod
+    def print_info(cls):
+        if cls.print_progress_log:
+            cls.info_dict["current_progress"] = cls.current_progress
+            cls.info_dict["process_running"] = cls.process_running
+            cls.info_dict["error_msg"] = cls.error_msg
+            logger.info(f'PROGRESS: {json.dumps(cls.info_dict)}')
+
+
+def get_log_msg_wrapper(fn):
+    def decorated(self, msg):
+        ProgressInfo.update_error_msg(msg)
+        return fn(self, msg)
+
+    return decorated
+
+
+def monitor_progress(pbar_info, pbar, all_task_ids):
+    """监控所有任务进度（包括等待中的），取平均值更新总进度"""
+    ProgressInfo.total_stage = pbar_info.stage_total
+    task_progress = pbar_info.progress_dict
+    for task_id in all_task_ids:
+        task_progress[task_id] = 0
+    # 总进度卡99%，剩余的1%给db后处理函数
+    global POST_DB_PROCESS
+    POST_DB_PROCESS = pbar_info.total - 1
+    all_complete = False
+
+    while not all_complete:
+        if pbar_info.stop_monitor:
+            break
+        # 总进度取所有进程进度的平均值，但不超过数据库后处理进度
+        current_progress = min(sum(task_progress.values()) // len(task_progress), POST_DB_PROCESS)
+        ProgressInfo.update_current_progress(current_progress // pbar_info.step_total)
+        pbar.n = current_progress
+        pbar.refresh()
+        # 检查是否所有任务都已完成: 数据库后处理是否完成
+        all_complete = POST_DB_PROCESS == pbar_info.total
+        # 降低检查频率
+        time.sleep(0.1)
+
+    post_process_pbar(pbar_info, pbar)
+
+
+def update_shared_dict(shared_dict, key, value, update_all=False):
+    """
+    进程函数，根据键添加或更新共享字典
+    """
+    if update_all:
+        for k in shared_dict.keys():
+            shared_dict[k] += value
+    else:
+        shared_dict[key] = shared_dict.get(key, 0) + value
+
+
+def update_pbar_info(pbar_info, current_data, total_data, step_ratio=0.01, update_all=False):
+    """
+    带步长控制的进度条更新函数
+    :param pbar_info: 进度条信息对象
+    :param current_data: 当前进度位置
+    :param total_data: 总数据量
+    :param step_ratio: 更新步长比例（默认每1%更新一次）
+    :param update_all
+    """
+    step = max(1, int(total_data * step_ratio))
+
+    # 仅在最后一次/达到步长时执行更新
+    if current_data != total_data and current_data % step != 0:
+        return
+
+    progress = (current_data * pbar_info.total // total_data) // pbar_info.stage_total
+    progress += (pbar_info.stage_progress * (pbar_info.current_stage_dict.get(pbar_info.task_id) - 1))
+    if pbar_info.pbar is not None:
+        if progress == pbar_info.total:
+            # 卡99%，剩余的1%给db后处理函数
+            progress -= 1
+        pbar_info.pbar.n = progress
+        pbar_info.pbar.refresh()
+        ProgressInfo.update_current_progress(progress)
+    elif pbar_info.progress_dict is not None:
+        if update_all:
+            for task_id in pbar_info.progress_dict.keys():
+                pbar_info.progress_dict[task_id] = progress
+        else:
+            pbar_info.progress_dict[pbar_info.task_id] = progress
+
+
+def post_process_db_pbar(pbar_info):
+    if pbar_info.progress_dict is not None:
+        global POST_DB_PROCESS
+        POST_DB_PROCESS = pbar_info.total
+    elif pbar_info.pbar is not None:
+        pbar_info.pbar.n = pbar_info.total
+        pbar_info.pbar.refresh()
+        ProgressInfo.update_current_progress(pbar_info.total)
+
+
+def post_process_pbar(pbar_info, pbar):
+    pbar.n = pbar_info.total
+    ProgressInfo.update_current_progress(pbar_info.total // pbar_info.step_total)
+    pbar.set_description("[Graph] All tasks completed")
+    pbar.refresh()
+
+
+def update_progress_info(proc, progress_info: ProgressInfo):
+    """
+    通过管道获取日志，解析日志进度信息，更新进度类，供前端调用
+    """
+    try:
+        while True:
+            line = proc.stdout.readline()
+            if line == '':
+                if proc.poll() is not None:
+                    break
+            else:
+                line = line.strip()
+                if 'PROGRESS: ' in line:
+                    line = line.split('PROGRESS: ')[-1]
+                    info_dict = json.loads(line)
+                    progress_info.current_progress = info_dict.get('current_progress')
+                    progress_info.process_running = info_dict.get('process_running')
+                    progress_info.error_msg = info_dict.get('error_msg')
+            time.sleep(0.1)
+    finally:
+        proc.stdout.close()

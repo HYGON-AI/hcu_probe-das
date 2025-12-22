@@ -20,7 +20,7 @@ import re
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import change_mode, check_path_before_create, FileChecker
 from msprobe.core.common.const import FileCheckConst
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, update_shared_dict, update_pbar_info, post_process_db_pbar
 from msprobe.visualization.builder.msprobe_adapter import format_node_data
 
 TEXT_PRIMARY_KEY = 'TEXT PRIMARY KEY'
@@ -28,6 +28,7 @@ TEXT_NOT_NULL = 'TEXT NOT NULL'
 INTEGER_NOT_NULL = 'INTEGER NOT NULL'
 TEXT = 'TEXT'
 INTEGER = 'INTEGER'
+DB_INSERT_SIZE = 1000
 
 node_columns = {
     'id': TEXT_PRIMARY_KEY,
@@ -132,7 +133,7 @@ def create_insert_sql_from_dict(table_name, columns_dict, ignore_insert=False):
     return sql
 
 
-def to_db(db_path, create_table_sql, insert_sql, data, db_insert_size=1000):
+def to_db(db_path, create_table_sql, insert_sql, data, pbar_info=None):
     if not os.path.exists(db_path):
         check_path_before_create(db_path)
     else:
@@ -144,17 +145,27 @@ def to_db(db_path, create_table_sql, insert_sql, data, db_insert_size=1000):
         logger.error(f"Unable to create database connection: {e}")
         raise RuntimeError("Unable to create database connection") from e
 
+    total_data = len(data)
+    commited_data = 0
+
+    if pbar_info:
+        update_shared_dict(pbar_info.current_stage_dict, pbar_info.task_id, 1)
     try:
         cursor = conn.cursor()
         cursor.execute(create_table_sql)
-        if len(data) == 1:
+        if total_data == 1:
             cursor.execute(insert_sql, data[0])
             conn.commit()
         else:
-            for i in range(0, len(data), db_insert_size):
-                batch = data[i:i + db_insert_size]
+            for i in range(0, total_data, DB_INSERT_SIZE):
+                batch = data[i:i + DB_INSERT_SIZE]
                 cursor.executemany(insert_sql, batch)
                 conn.commit()
+
+                if pbar_info:
+                    commited_data += len(batch)
+                    update_pbar_info(pbar_info, commited_data, total_data)
+
     except sqlite3.Error as e:
         logger.error(f"An sqlite3 error occurred: {e}")
         raise RuntimeError("An sqlite3 error occurred") from e
@@ -193,12 +204,16 @@ def add_table_index(db_path):
         conn.close()
 
 
-def post_process_db(db_path):
+def post_process_db(db_path, pbar_info=None):
+    logger.info('Start adding index to db file, please wait...')
     add_table_index(db_path)
     change_mode(db_path, FileCheckConst.DATA_FILE_AUTHORITY)
+    if pbar_info:
+        post_process_db_pbar(pbar_info)
+    logger.info('Adding index to db file completed.')
 
 
-def node_to_db(graph, db_name):
+def node_to_db(graph, db_name, pbar_info=None):
     create_table_sql = create_table_sql_from_dict('tb_nodes', node_columns)
     insert_sql = create_insert_sql_from_dict('tb_nodes', node_columns)
     data = []
@@ -218,7 +233,7 @@ def node_to_db(graph, db_name):
                      json.dumps(format_node_data(node.input_data, node.id, graph.compare_mode)),
                      json.dumps(format_node_data(node.output_data, node.id, graph.compare_mode)),
                      graph.data_source, graph.data_path, graph.step, graph.rank))
-    to_db(db_name, create_table_sql, insert_sql, data)
+    to_db(db_name, create_table_sql, insert_sql, data, pbar_info=pbar_info)
     stack_to_db(stack_dict, db_name)
 
 
