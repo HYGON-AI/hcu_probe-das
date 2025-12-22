@@ -24,7 +24,7 @@ from msprobe.core.common.log import logger
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, update_shared_dict, update_pbar_info
 from msprobe.visualization.db_utils import node_to_db, config_to_db
 
 
@@ -36,7 +36,7 @@ class GraphBuilder:
     micro_step_dict = {}
 
     @staticmethod
-    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel', pbar_info=None):
         """
         GraphBuilder的对外提供的构图方法
         Args:
@@ -44,6 +44,7 @@ class GraphBuilder:
             data_path: dump.json路径
             stack_path: stack.json路径
             model_name: 模型名字，依赖外部输入
+            pbar_info: 进度条对象
         Returns: Graph，代表图的数据结构
         """
         construct_dict, micro_step_dict = load_construct_json(construct_path)
@@ -58,24 +59,24 @@ class GraphBuilder:
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
         graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict,
                       micro_step_num=micro_step_dict.get(Const.MEGATRON_MICRO_STEP_NUMBER))
-        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
+        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict, pbar_info=pbar_info)
         GraphBuilder._handle_recompute(graph)
         GraphBuilder._collect_apis_between_modules(graph)
         GraphBuilder._add_parameters_grad(graph, data_dict)
         return graph
 
     @staticmethod
-    def to_db(filename, config):
+    def to_db(filename, config, pbar_info=None):
         config.graph_n.step = config.step
         config.graph_n.rank = config.rank
         config.graph_n.compare_mode = config.compare_mode
-        node_to_db(config.graph_n, filename)
+        node_to_db(config.graph_n, filename, pbar_info)
         if config.graph_b:
             config.graph_b.data_source = GraphConst.JSON_BENCH_KEY
             config.graph_b.step = config.step
             config.graph_b.rank = config.rank
             config.graph_b.compare_mode = config.compare_mode
-            node_to_db(config.graph_b, filename)
+            node_to_db(config.graph_b, filename, pbar_info)
         config_to_db(config, filename)
 
     @staticmethod
@@ -136,8 +137,10 @@ class GraphBuilder:
         return up_node_id
 
     @staticmethod
-    def _init_nodes(graph, construct_dict, data_dict, stack_dict):
-        for subnode_id, upnode_id in construct_dict.items():
+    def _init_nodes(graph, construct_dict, data_dict, stack_dict, pbar_info=None):
+        if pbar_info:
+            update_shared_dict(pbar_info.current_stage_dict, pbar_info.task_id, 1)
+        for i, (subnode_id, upnode_id) in enumerate(construct_dict.items()):
             upnode_id = GraphBuilder._handle_backward_inplace(construct_dict, subnode_id, upnode_id) if upnode_id \
                 else GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
             if upnode_id:
@@ -147,6 +150,9 @@ class GraphBuilder:
                 upnode = graph.root
             node_op = NodeOp.get_node_op(subnode_id)
             GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], node_op, subnode_id, upnode)
+
+            if pbar_info:
+                update_pbar_info(pbar_info, i + 1, len(construct_dict))
 
     @staticmethod
     def _create_or_get_node(graph, data_stack_list, op, name, upnode=None):

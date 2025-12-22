@@ -1,6 +1,6 @@
 import os
 import re
-import json
+import signal
 import unittest
 import shutil
 import argparse
@@ -12,17 +12,6 @@ from msprobe.visualization.graph_service import _compare_graph_result, _build_gr
 from msprobe.core.common.utils import CompareException
 
 
-# @dataclass
-# class Args:
-#     input_path: str = None
-#     output_path: str = None
-#     layer_mapping: str = None
-#     framework: str = None
-#     overflow_check: bool = False
-#     fuzzy_match: bool = False
-#     complete_stack: bool = False
-#     parallel_merge: bool = False
-#     parallel_params: tuple = None
 @dataclass
 class Args:
     target_path: str = None
@@ -34,6 +23,7 @@ class Args:
     is_print_compare_log: bool = True
     parallel_merge: bool = False
     parallel_params: tuple = None
+    is_print_progress_log: bool = False
 
     rank_size: list = None
     tp: list = None
@@ -58,6 +48,8 @@ class TestGraphService(unittest.TestCase):
         self.output_json = []
         for i in range(7):
             self.output_json.append(os.path.join(self.current_path, f"compare{i}.json"))
+        self.original_sigpipe = signal.getsignal(signal.SIGPIPE)
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
 
     def assert_log_info(self, mock_log_info,
                         log_info='Model graphs compared successfully, the result file is saved in'):
@@ -138,38 +130,38 @@ class TestGraphService(unittest.TestCase):
         args = Args(target_path=self.input_param.get('npu_path'), golden_path=self.input_param.get('bench_path'),
                     output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Exporting compare graph result successfully, the result file is saved in')
+        self.assert_log_info(mock_log_info, 'Adding index to db file completed.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command1(self, mock_log_info):
         args = Args(target_path=os.path.join(self.input, 'step0', 'rank0'), output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Model graph exported successfully, the result file is saved in")
+        self.assert_log_info(mock_log_info, "Adding index to db file completed.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command2(self, mock_log_info):
         args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step0'),
                     output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+        self.assert_log_info(mock_log_info, 'Adding index to db file completed.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command3(self, mock_log_info):
         args = Args(target_path=self.input, golden_path=self.input, output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+        self.assert_log_info(mock_log_info, 'Adding index to db file completed.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command4(self, mock_log_info):
         args = Args(target_path=os.path.join(self.input, 'step0'), output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
+        self.assert_log_info(mock_log_info, "Adding index to db file completed.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command5(self, mock_log_info):
         args = Args(target_path=self.input, output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, "Successfully exported build graph results.")
+        self.assert_log_info(mock_log_info, "Adding index to db file completed.")
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command6(self, mock_log_info):
@@ -182,14 +174,14 @@ class TestGraphService(unittest.TestCase):
         args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step0'),
                     output_path=self.output, rank_size=[2, 2], tp=[2, 2], pp=[1, 1])
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+        self.assert_log_info(mock_log_info, 'Adding index to db file completed.')
 
     @patch('msprobe.core.common.log.logger.info')
     def test_graph_service_command8(self, mock_log_info):
         args = Args(target_path=os.path.join(self.input, 'step0'), golden_path=os.path.join(self.input, 'step1'),
                     output_path=self.output)
         _graph_service_command(args)
-        self.assert_log_info(mock_log_info, 'Successfully exported compare graph results.')
+        self.assert_log_info(mock_log_info, 'Adding index to db file completed.')
 
     def test_graph_service_parser(self):
         parser = argparse.ArgumentParser()
@@ -208,6 +200,7 @@ class TestGraphService(unittest.TestCase):
         self.assertFalse(args.overflow_check)
 
     def tearDown(self):
+        signal.signal(signal.SIGPIPE, self.original_sigpipe)
         if os.path.exists(self.output):
             shutil.rmtree(self.output)
         for json_data in self.output_json:

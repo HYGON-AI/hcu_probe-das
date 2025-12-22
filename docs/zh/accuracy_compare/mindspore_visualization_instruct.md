@@ -73,7 +73,8 @@ msprobe graph_visualize -tp <target_path> -o <output_path> [-oc] [-log]
 | -tp 或 --target_path           | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank构建、多rank批量构建或多step批量比构建，str 类型。                           | 是       |
 | -o 或 --output_path            | 配置构图结果文件存盘目录，str 类型。文件名称基于时间戳自动生成，格式为：`build_{timestamp}.vis.db`。                           | 是       |
 | -oc 或 --overflow_check        | 是否开启溢出检测模式，开启后会在输出db文件中（`build_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。                         | 否       |
-| -log 或 --is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。默认为 true。关闭后则只输出常规日志，bool类型。 | 否    |
+| -tensor_log 或 --is_print_compare_log    | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。 | 否    |
+| -progress_log 或 --is_print_progress_log | 配置是否开启任务详细进度的日志打印。默认不指定此参数只输出进度条。                            | 否    |
 
 **示例1：执行单rank图构建**
 
@@ -148,7 +149,8 @@ msprobe graph_visualize -i <compare_json_path> -o <output_path> [-lm] [-oc] [-f]
 | -lm 或 --layer_mapping| 跨框架比对，MindSpore和PyTorch的比对场景。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer）](#自定义映射文件layer), 如何配置自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。配置该参数后，将仅按节点名称进行比对，忽略节点的 type 和 shape。如果调试侧和标杆侧有名称不同的节点，则需要配置自定义映射文件，-lm参数传入自定义映射文件路径；如果调试侧和标杆侧节点名称相同，则仅指定-lm即可。 | 否    |
 | -oc 或 --overflow_check | 是否开启溢出检测模式，开启后会在输出db文件中（`compare_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。                                                                                                                                                                                                                                                                                                                                                                                         | 否       |
 | -fm 或 --fuzzy_match    | 是否开启模糊匹配，bool类型。模糊匹配与默认匹配的区别详见[匹配说明](#匹配说明)。                                                                                                                                                                                                                                                                                                                                                                                                                                                | 否       |
-| -log 或 --is_print_compare_log  | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。默认为 true。关闭后则只输出常规日志，bool类型。                                                                                                                                                                                                                                                                                                                                                                                                              | 否    |
+| -tensor_log 或 --is_print_compare_log    | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。 | 否    |
+| -progress_log 或 --is_print_progress_log | 配置是否开启任务详细进度的日志打印。默认不指定此参数只输出进度条。                            | 否    |
 
 **示例1：执行单rank图比对**
 
@@ -269,7 +271,8 @@ msprobe graph_visualize -tp <target_path> [-gp <golden_path>] -o <output_path> [
 | -lm 或 --layer_mapping| 跨框架比对，MindSpore和PyTorch的比对场景。配置该参数时表示开启跨框架Layer层的比对功能，指定模型代码中的Layer层后，可以识别对应dump数据中的模块或API。需要指定自定义映射文件*.yaml。自定义映射文件的格式请参见[自定义映射文件（Layer）](#自定义映射文件layer), 如何配置自定义映射文件请参考[模型分级可视化如何配置layer mapping映射文件](../examples/layer_mapping_example.md)。配置该参数后，将仅按节点名称进行比对，忽略节点的 type 和 shape。如果调试侧和标杆侧有名称不同的节点，则需要配置自定义映射文件，-lm参数传入自定义映射文件路径；如果调试侧和标杆侧节点名称相同，则仅指定-lm即可。 | 否    |
 | -oc 或 --overflow_check        | 是否开启溢出检测模式，开启后会在输出db文件中（`compare_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。                                                                                                                                                                                                                                                                                                                                                                                         | 否    |
 | -fm 或 --fuzzy_match           | 是否开启模糊匹配，bool类型。模糊匹配与默认匹配的区别详见[匹配说明](#匹配说明)。                                                                                                                                                                                                                                                                                                                                                                                                                                                   | 否    |
-| -log 或 --is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。默认为 true。关闭后则只输出常规日志，bool类型。 | 否 |
+| -tensor_log 或 --is_print_compare_log    | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。 | 否    |
+| -progress_log 或 --is_print_progress_log | 配置是否开启任务详细进度的日志打印。默认不指定此参数只输出进度条。                            | 否    |
 | --rank_size                   | 模型实际训练所用加速卡的数量，int类型。`rank_size=tp*pp*cp*dp`，由于暂不支持CP合并，图合并功能中默认cp=1。                                                                                                                             | 否，仅图合并场景必选 |
 | --tp                          | 张量并行大小，int类型。实际训练脚本中需指定`--tensor-model-parallel-size T`，其中`T`表示张量模型并行大小，即**图合并所需的参数tp**, `tp=T`。                                                                                                  | 否，仅图合并场景必选 |
 | --pp                          | 流水线并行的阶段数，int类型。实际训练脚本中需指定`--pipeline-model-parallel-size P`，其中`P`表示流水线并行的阶段数，即**图合并所需的参数pp**, `pp=P`。                                                                                            | 否，仅图合并场景必选 |

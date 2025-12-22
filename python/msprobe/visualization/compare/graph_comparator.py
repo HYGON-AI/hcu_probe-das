@@ -16,7 +16,7 @@
 import re
 from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data, get_csv_df, \
     get_api_indicator_info, get_real_api_data_list
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, update_shared_dict, update_pbar_info
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
 from msprobe.core.common.const import Const
@@ -26,7 +26,7 @@ from msprobe.core.compare.utils import get_compare_framework
 class GraphComparator:
     MAX_DEPTH = 1000
 
-    def __init__(self, graphs, dump_path_param, args, is_cross_framework, mapping_dict=None):
+    def __init__(self, graphs, dump_path_param, args, is_cross_framework, mapping_dict=None, pbar_info=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self.dump_path_param = dump_path_param
@@ -40,6 +40,7 @@ class GraphComparator:
         self.is_cross_framework = is_cross_framework
         self.parallel_merge = args.parallel_merge if hasattr(args, 'parallel_merge') else False
         self.rank_pattern = re.compile(r"_rank\d+")
+        self.pbar_info = pbar_info
 
     def compare(self):
         """
@@ -95,9 +96,15 @@ class GraphComparator:
                 self._get_and_add_result(node_n, node_b)
             node_list.extend(node_n.subnodes)
 
+        if self.pbar_info:
+            update_shared_dict(self.pbar_info.current_stage_dict, self.pbar_info.task_id, 1)
+        total = 0
         node_list = [node_root]
         while node_list:
             compare_single_node(node_list.pop(0))
+            total += 1
+            if self.pbar_info:
+                update_pbar_info(self.pbar_info, total, len(self.graph_n.node_map))
 
     def _compare_nodes_fuzzy(self, node_root):
         def compare_single_nodes_fuzzy(node_n):
@@ -119,9 +126,15 @@ class GraphComparator:
                             self._process_matched_nodes(api_node_n, api_node_b, ancestors_n, ancestors_b)
             node_list.extend(node_n.subnodes)
 
+        if self.pbar_info:
+            update_shared_dict(self.pbar_info.current_stage_dict, self.pbar_info.task_id, 1)
+        total = 0
         node_list = [node_root]
         while node_list:
             compare_single_nodes_fuzzy(node_list.pop(0))
+            total += 1
+            if self.pbar_info:
+                update_pbar_info(self.pbar_info, total, len(self.graph_n.node_map))
 
     def _postcompare(self):
         self._handle_api_collection_index()

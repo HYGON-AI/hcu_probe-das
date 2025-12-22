@@ -151,6 +151,8 @@ class TestMultiRunUT(unittest.TestCase):
             {'key1': 'TRUE', 'key2': 'TRUE'},
             {'key3': 'TRUE', 'key4': 'TRUE'}
         ]
+        self.original_sigint = signal.getsignal(signal.SIGINT)
+        self.original_sigterm = signal.getsignal(signal.SIGTERM)
 
     @patch('os.remove')
     @patch('os.path.realpath', side_effect=lambda x: x)
@@ -328,6 +330,8 @@ class TestMultiRunUT(unittest.TestCase):
             self.assertEqual(dt, torch.float32)
 
     def tearDown(self):
+        signal.signal(signal.SIGINT, self.original_sigint)
+        signal.signal(signal.SIGTERM, self.original_sigterm)
         current_directory = os.getcwd()
         pattern = os.path.join(current_directory, 'accuracy_checking_*')
         files = glob.glob(pattern)
