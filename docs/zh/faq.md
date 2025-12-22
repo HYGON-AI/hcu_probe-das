@@ -265,42 +265,27 @@ npu_scaled_masked_softmax融合算子工具已支持dump，本例仅供参考。
 
     带1.0/1.1/1.2后缀的npy是正常现象，例如，当输入数据为[[tensor1, tensor2, tensor3]]会生成这样的后缀。
 
-4. 进行compare报错：The current file contains stack information, please turn on the stack_mode。
-
-    在比对脚本中，设置`stack_mode=True`例如：
-
-    ```python
-    from msprobe.pytorch import compare
-    dump_result_param={
-    "npu_json_path": "./npu_dump/dump.json",
-    "bench_json_path": "./gpu_dump/dump.json",
-    "stack_json_path": "./npu_dump/stack.json",
-    "is_print_compare_log": True
-    }
-    compare(dump_result_param, output_path="./output", stack_mode=True)
-    ```
-
-5. dump指定反向API的kernel级别的数据报错：NameError：name 'torch_npu' is not defined。
+4. dump指定反向API的kernel级别的数据报错：NameError：name 'torch_npu' is not defined。
 
    答：如果是NPU环境，请安装torch_npu；如果是GPU环境，暂不支持dump指定API的kernel级别的数据。
 
-6. 配置dump_path后，使用工具报错：[ERROR] The file path /home/xxx/dump contains special characters。
+5. 配置dump_path后，使用工具报错：[ERROR] The file path /home/xxx/dump contains special characters。
 
    答：请检查你设置的dump绝对路径是否包含特殊字符，确保路径名只包含大小写字母、数字、下划线、斜杠、点和短横线；注意，如果执行脚本的路径为/home/abc++/，设置的dump_path="./dump"，工具实际校验的路径为绝对路径/home/abc++/dump，++为特殊字符，会引发本条报错。
 
-7. 无法dump matmul权重的反向梯度数据。
+6. 无法dump matmul权重的反向梯度数据。
 
    答：matmul期望的输入是二维，当输入不是二维时，会将输入通过view操作展成二维，再进行matmul运算，因此在反向求导时，backward_hook能拿到的是UnsafeViewBackward这步操作里面数据的梯度信息，取不到MmBackward这步操作里面数据的梯度信息，即权重的反向梯度数据。典型的例子有，当linear的输入不是二维，且无bias时，会调用output = input.matmul(weight.t())，因此拿不到linear层的weight的反向梯度数据。
 
-8. dump.json文件中的某些API的dtype类型为float16，但是读取此API的npy文件显示的dtype类型为float32。
+7. dump.json文件中的某些API的dtype类型为float16，但是读取此API的npy文件显示的dtype类型为float32。
 
     答：msProbe工具在dump数据时需要将原始数据从NPU to CPU上再转换为numpy类型，NPU to CPU的逻辑和GPU to CPU是保持一致的，都存在dtype可能从float16变为float32类型的情况，如果出现dtype不一致的问题，最终采集数据的dtype以pkl文件为准。
 
-9. 使用dataloader后raise异常Exception("msprobe: exit after iteration {}". format(max(self.config.step)))。
+8. 使用dataloader后raise异常Exception("msprobe: exit after iteration {}". format(max(self.config.step)))。
 
    答：正常现象，dataloader通过raise结束程序，堆栈信息可忽略。
 
-10. 使用msProbe工具数据采集功能后，模型出现报错，报错信息为：`activation_func must be F.gelu`或`ValueError(Only support fusion of gelu and swiglu)`。
+9. 使用msProbe工具数据采集功能后，模型出现报错，报错信息为：`activation_func must be F.gelu`或`ValueError(Only support fusion of gelu and swiglu)`。
 
     答：这一类报错常见于Megatron/MindSpeed/ModelLink等加速库或模型仓中，原因是工具本身会封装torch的API（API类型和地址会发生改变），而有些API在工具使能前类型和地址就已经确定，此时工具无法对这类API再进行封装，而加速库中会对某些API进行类型检查，即会把工具无法封装的原始的API和工具封装之后的API进行判断，所以会报错。
     规避方式包含如下三种：
@@ -311,6 +296,6 @@ npu_scaled_masked_softmax融合算子工具已支持dump，本例仅供参考。
 
     - 可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-11. 添加msProbe工具后触发与AsStrided算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
+10. 添加msProbe工具后触发与AsStrided算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 
      答：注释工具目录`MindStudio-Probe/python/msprobe/pytorch/dump/api_dump/support_wrap_ops.yaml`文件中`Tensor:`下的`- t`和`- transpose`。

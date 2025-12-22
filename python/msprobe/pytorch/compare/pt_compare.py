@@ -23,7 +23,7 @@ def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tup
     return n_value, b_value
 
 
-def compare(input_param, output_path, **kwargs):
+def pt_compare(input_param, output_path, **kwargs):
     config = setup_comparison(input_param, output_path, **kwargs)
 
     config_dict = {

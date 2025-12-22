@@ -52,6 +52,7 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 | -da或--diff_analyze | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。                                                                                                                                                                                                      | 否       |
 | --rank            | 配置比对的Rank ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Rank的数据。默认为空，表示比对所有Rank。可配置一个或多个Rank，多个Rank ID用逗号隔开，例如：1,2,3                                                                                                                  | 否       |
 | --step            | 配置比对的Step ID，仅用于kernel比对。target_path和golden_path目录下的dump文件需要存在对应Step的数据。默认为空，表示比对所有Step。可配置一个或多个Step，多个Step ID用逗号隔开，例如：1,2,3                                                                                                                  | 否       |
+| -tensor_log或--is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。默认为 false。bool类型。                                               | 否 |
 
 动态图模式没有填写任何mapping时，按照同框架比对的方式进行比对，比对数据和标杆数据的Cell或API名称需要完全相同才能匹配得上。
 

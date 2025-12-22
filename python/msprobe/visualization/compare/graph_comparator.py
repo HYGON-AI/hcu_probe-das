@@ -32,7 +32,7 @@ class GraphComparator:
         self.dump_path_param = dump_path_param
         self.output_path = args.output_path
         self.ma = ModeAdapter(get_compare_mode(self.dump_path_param))
-        self.framework = get_compare_framework(dump_path_param)
+        self.framework = get_compare_framework(dump_path_param.get("npu_path"), dump_path_param.get("bench_path"))
         self.layer_mapping = args.layer_mapping
         self.mapping_dict = mapping_dict
         self.fuzzy_match = args.fuzzy_match
