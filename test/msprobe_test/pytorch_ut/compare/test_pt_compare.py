@@ -6,7 +6,7 @@ import unittest
 import torch
 
 from msprobe.core.common.utils import CompareException
-from msprobe.pytorch.compare.pt_compare import compare
+from msprobe.pytorch.compare.pt_compare import pt_compare
 from ...core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_pt_compare1')
@@ -49,7 +49,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         output_path = base_dir2
 
-        compare(input_param, output_path)
+        pt_compare(input_param, output_path)
         output_files = os.listdir(output_path)
         self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
 
@@ -59,5 +59,5 @@ class TestUtilsMethods(unittest.TestCase):
             'is_print_compare_log': True
         }
         with self.assertRaises(CompareException) as context:
-            compare(input_param2, output_path)
+            pt_compare(input_param2, output_path)
         self.assertEqual(context.exception.code, 1)

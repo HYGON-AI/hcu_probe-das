@@ -750,7 +750,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             layer_mapping=kwargs.get('layer_mapping', {}),
             first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
-            is_print_compare_log=input_param.get('is_print_compare_log', True)
+            is_print_compare_log=kwargs.get('is_print_compare_log', False)
         )
 
         set_dump_path(input_param)

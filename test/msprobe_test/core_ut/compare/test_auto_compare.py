@@ -21,6 +21,7 @@ def _build_args(
     api_mapping=None,
     layer_mapping=None,
     rank=None,
+    is_print_compare_log=False
 ):
     return SimpleNamespace(
         target_path=target_path,
@@ -33,6 +34,7 @@ def _build_args(
         api_mapping=api_mapping,
         layer_mapping=layer_mapping,
         rank=rank,
+        is_print_compare_log=is_print_compare_log
     )
 
 
@@ -57,7 +59,7 @@ class TestCompareAutoMode(unittest.TestCase):
         mock_get_framework.return_value = Const.PT_FRAMEWORK
 
         pt_module = importlib.import_module("msprobe.pytorch.compare.pt_compare")
-        with inner_patch.object(pt_module, "compare") as mock_pt_compare:
+        with inner_patch.object(pt_module, "pt_compare") as mock_pt_compare:
             compare_auto_mode(args)
 
             mock_check_type.assert_any_call(args.target_path)
@@ -94,7 +96,7 @@ class TestCompareAutoMode(unittest.TestCase):
         mock_get_framework.return_value = Const.PT_FRAMEWORK
 
         pt_module = importlib.import_module("msprobe.pytorch.compare.pt_compare")
-        with inner_patch.object(pt_module, "compare") as mock_pt_compare:
+        with inner_patch.object(pt_module, "pt_compare") as mock_pt_compare:
             with self.assertRaises(Exception) as cm:
                 compare_auto_mode(args)
 
@@ -232,7 +234,7 @@ class TestCompareAutoMode(unittest.TestCase):
         self.assertEqual(call_args[0], args.target_path)
         self.assertEqual(call_args[1], args.golden_path)
         self.assertEqual(call_args[2], args.output_path)
-        self.assertTrue(call_kwargs.get("is_print_compare_log"))
+        self.assertFalse(call_kwargs.get("is_print_compare_log"))
         self.assertEqual(call_kwargs["cell_mapping"], args.cell_mapping)
         self.assertEqual(call_kwargs["api_mapping"], args.api_mapping)
         self.assertEqual(call_kwargs["layer_mapping"], args.layer_mapping)

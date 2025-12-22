@@ -17,8 +17,6 @@ import torch
 
 from msprobe.pytorch.dump.debugger.precision_debugger import PrecisionDebugger, module_dump, module_dump_end
 from .common.utils import seed_all
-from .compare.distributed_compare import compare_distributed
-from .compare.pt_compare import compare
 from .torchair_dump import set_fx_dump_config, set_ge_dump_config
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'

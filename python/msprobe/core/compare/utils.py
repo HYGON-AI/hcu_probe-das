@@ -683,6 +683,8 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
     parser.add_argument("-da", "--diff_analyze", dest="diff_analyze", action="store_true",
                         help="<optional> Whether to perform a diff analyze on the api name.", required=False)
+    parser.add_argument("-tensor_log", "--is_print_compare_log", dest="is_print_compare_log", action="store_true",
+                        help="<Optional> whether print compare log for compare auto mode task.", required=False)
     parser.add_argument("-fr", "--fusion_rule_file", dest="fusion_rule_file", type=str, default="",
                         help="<Optional> The fusion rule file path.", required=False)
     parser.add_argument("-qfr", "--quant_fusion_rule_file", dest="quant_fusion_rule_file", type=str, default="",
@@ -817,7 +819,7 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
         _input_param = {
             'npu_path': npu_path,
             'bench_path': bench_path,
-            'is_print_compare_log': kwargs.get('is_print_compare_log', True)
+            'is_print_compare_log': kwargs.get('is_print_compare_log', False)
         }
         return _input_param, False
 
@@ -835,8 +837,8 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
     dump_data = load_json(pre_check_dump_path)
     compare_framework = dump_data.get("framework", None)
     if compare_framework == Const.PT_FRAMEWORK:
-        from msprobe.pytorch.compare.pt_compare import compare
-        compare_func = compare
+        from msprobe.pytorch.compare.pt_compare import pt_compare
+        compare_func = pt_compare
     elif compare_framework == Const.MS_FRAMEWORK:
         from msprobe.mindspore.compare.ms_compare import ms_compare
         compare_func = ms_compare
@@ -870,28 +872,25 @@ def check_input_param_path(input_param):
     check_file_or_directory_path(bench_path)
 
 
-def get_compare_framework(input_param):
-    npu_path = input_param.get("npu_path", None)
-    bench_path = input_param.get("bench_path", None)
-    npu_dump_json_content = load_json(npu_path)
-    bench_dump_json_content = load_json(bench_path)
-    npu_framework = npu_dump_json_content.get("framework", None)
-    bench_framework = bench_dump_json_content.get("framework", None)
-    if npu_framework == Const.PT_FRAMEWORK and bench_framework == Const.PT_FRAMEWORK:
+def get_compare_framework(target_path, golden_path):
+    target_dump_json_content = load_json(target_path)
+    golden_dump_json_content = load_json(golden_path)
+    target_framework = target_dump_json_content.get("framework", None)
+    golden_framework = golden_dump_json_content.get("framework", None)
+    if target_framework == Const.PT_FRAMEWORK and golden_framework == Const.PT_FRAMEWORK:
         frame_name = Const.PT_FRAMEWORK
-    elif (npu_framework in [Const.MS_FRAMEWORK, Const.MT_FRAMEWORK] and
-          bench_framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]):
+    elif (target_framework in [Const.MS_FRAMEWORK, Const.MT_FRAMEWORK] and
+          golden_framework in [Const.PT_FRAMEWORK, Const.MS_FRAMEWORK]):
         frame_name = Const.MS_FRAMEWORK
     else:
-        logger.error(f"Unrecognized framework, npu now is {npu_framework}, bench now is {bench_framework},"
+        logger.error(f"Unrecognized framework, target now is {target_framework}, golden now is {golden_framework},"
                      f" please check dump.json.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
     return frame_name
 
 
 def check_input_param_path_and_framework(args, target_framework):
-    input_param = {"npu_path": args.target_path, "bench_path": args.golden_path}
-    compare_framework = get_compare_framework(input_param)
+    compare_framework = get_compare_framework(args.target_path, args.golden_path)
     if compare_framework != target_framework:
         logger.error(f"Expected frame to be {target_framework}, actual is {compare_framework}, please check dump.json.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)

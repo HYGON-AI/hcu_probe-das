@@ -36,25 +36,31 @@ def compare_auto_mode(args, depth=1):
     common_kwargs = {
         "fuzzy_match": args.fuzzy_match,
         "data_mapping": args.data_mapping,
-        "diff_analyze": args.diff_analyze
+        "diff_analyze": args.diff_analyze,
+        "is_print_compare_log": args.is_print_compare_log
     }
 
-    if (check_file_type(args.target_path) == FileCheckConst.FILE and
-            check_file_type(args.golden_path) == FileCheckConst.FILE):
+    tp_file_type = check_file_type(args.target_path)
+    gp_file_type = check_file_type(args.golden_path)
 
+    if tp_file_type == FileCheckConst.FILE and gp_file_type == FileCheckConst.FILE:
         check_file_or_directory_path(args.target_path)
         check_file_or_directory_path(args.golden_path)
 
-        input_param = {"npu_path": args.target_path, "bench_path": args.golden_path}
-        frame_name = get_compare_framework(input_param)
+        frame_name = get_compare_framework(args.target_path, args.golden_path)
+        input_param = {
+            "npu_path": args.target_path,
+            "bench_path": args.golden_path,
+            "is_print_compare_log": args.is_print_compare_log
+        }
 
         if frame_name == Const.PT_FRAMEWORK:
             if args.cell_mapping is not None or args.api_mapping is not None:
                 logger.error("Argument -cm or -am is not supported in PyTorch framework")
                 raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             kwargs = {**common_kwargs}
-            from msprobe.pytorch.compare.pt_compare import compare
-            compare(input_param, args.output_path, **kwargs)
+            from msprobe.pytorch.compare.pt_compare import pt_compare
+            pt_compare(input_param, args.output_path, **kwargs)
         else:
             kwargs = {
                 **common_kwargs,
@@ -64,8 +70,7 @@ def compare_auto_mode(args, depth=1):
             }
             from msprobe.mindspore.compare.ms_compare import ms_compare
             ms_compare(input_param, args.output_path, **kwargs)
-    elif (check_file_type(args.target_path) == FileCheckConst.DIR and
-          check_file_type(args.golden_path) == FileCheckConst.DIR):
+    elif tp_file_type == FileCheckConst.DIR and gp_file_type == FileCheckConst.DIR:
         check_file_or_directory_path(args.target_path, isdir=True)
         check_file_or_directory_path(args.golden_path, isdir=True)
 
@@ -76,7 +81,6 @@ def compare_auto_mode(args, depth=1):
 
         kwargs = {
             **common_kwargs,
-            "is_print_compare_log": True,
             "cell_mapping": args.cell_mapping,
             "api_mapping": args.api_mapping,
             "layer_mapping": args.layer_mapping
