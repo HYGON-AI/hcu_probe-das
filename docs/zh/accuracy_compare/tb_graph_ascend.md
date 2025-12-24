@@ -8,7 +8,7 @@
 
 ### 1. 相关依赖
 
-`python >= 3.8 ，tensorboard >= 2.11.2
+python >= 3.8 ，tensorboard >= 2.11.2
 
 ### 2. 安装方式
 
@@ -27,57 +27,20 @@
 
 #### 2.3 pip 安装（推荐）
 
-- 本插件已经上传到 pypi 社区，用户可在 python 环境下直接通过以下 pip 指令进行安装：
+- 本插件已经与msprobe合并，用户可在 python 环境下直接通过以下 pip 指令进行安装：
   ```
-  pip install tb-graph-ascend
+  pip install mindstudio-probe
   ```
-- 也可在 pypi 社区上下载离线 whl 包，传输到无法访问公网的环境上离线安装使用。访问[下载链接](https://pypi.org/project/tb-graph-ascend/#files)选择 whl 包进行下载，之后便可使用指令安装（此处{version}为 whl 包实际版本）
-  ```
-  pip install tb_graph_ascend_{version}-py3-none-any.whl
-  ```
-- 请注意: 如果在 Linux/Unix 环境上安装使用，请在 whl 包安装之前对本环境的 umask 码进行确认（建议至少配置为 0027），确保 pip 安装后的文件对其他用户及同组用户不可写，以规避可能出现的安全风险。
 
 #### 2.4 从源代码安装
 
-1. 从仓库下载源码并切换到 master 分支:
-
-   ```
-   git clone https://gitcode.com/Ascend/mstt.git -b master
-   ```
-
-2. 进入目录 `plugins/tensorboard-plugins/tb_graph_ascend` 下
-3. 编译前端代码，根据操作系统选取不同指令
-
-   ```
-   cd fe
-   // 安装前端依赖
-   npm install --force
-   // Windows系统
-   npm run buildWin
-   // 其他可使用cp指令的系统，如Linux或Mac
-   npm run buildLinux
-   ```
-
-   **注意**: 此步骤需要安装 [Node.js](https://nodejs.org/zh-cn/download) 环境
-
-4. 回到上级目录直接安装:
-   ```
-   cd ../
-   python setup.py develop
-   ```
-
-- 或： 构建 whl 包安装 用户应确保在安全的环境下进行 whl 包的构建
-  ```
-  python secure_build.py
-  ```
-  在 `plugins/tensorboard-plugins/tb_graph_ascend/dist` 目录下取出 whl 包，使用以下指令安装（此处{version}为 whl 包实际版本）
-  ```
-  pip install tb_graph_ascend_{version}-py3-none-any.whl
-  ```
+- 本插件已经与msprobe合并，请参考msprobe工具的[安装指导](../../../debug/accuracy_tools/msprobe/docs/zh/msprobe_install_guide.md)。
 
 ### 3. 解析数据说明
 
-将通过[msprobe](https://gitcode.com/Ascend/mstt/blob/master/debug/accuracy_tools/msprobe/README.md#3-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件放置于某个文件夹中，路径名称下文称之为 `output_path`
+将通过msprobe工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件放置于某个文件夹中，路径名称下文称之为 `output_path`
+pytorch框架请参考[pytorch_visualization](./pytorch_visualization_instruct.md)
+mindspore框架请参考[mindspore_visualization](./mindspore_visualization_instruct.md)
 
 图构建：
 
@@ -133,7 +96,7 @@
 
 ![vis_show_info.png](./doc/images/vis_show_info.png)
 
-MicroStep 是指在一次完整的权重更新前执行的多次前向和反向传播过程，一次完整的训练迭代（step）可以进一步细分为多个更小的步骤（micro step）。其中分级可视化工具通过识别模型首层结构中一次完整的前反向作为一次 micro step。
+MicroStep 是指在一次完整的权重更新前执行的多次前向和反向传播过程，一次完整的训练迭代（step）可以进一步细分为多个更小的步骤（micro step）。其中分级可视化工具通过识别模型首层结构中一次完整的前向和反向作为一次 micro step。
 
 ### 5.3 名称搜索
 
