@@ -11,15 +11,17 @@
 
 安装msProbe工具，详情请参加《[msProbe安装指南](../msprobe_install_guide.md)》。<br>
 比对OM模型依赖aisbench包和aclruntime包，用户使用前可通过以下命令安装这两个依赖包。<br>
+
  ```sh
   msprobe install_deps -m offline [--no_check]
-  ```
+ ```
 需要注意的是，--no_check参数，会跳过检查目标网站的证书信息，有一定的安全风险，用户需要谨慎使用并自行承担后果。
 
 **约束**
 
-仅支持ONNX、OM模型比对。<br>
-一键式精度比对依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/ascend-toolkit/latest。
+仅支持ONNX、OM模型比对。
+
+一键式精度比对依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/cann。
 
 **安全风险提示**
 
@@ -32,14 +34,15 @@
 
 ### 注意事项
 
-仅支持ONNX、OM模型比对。<br>
-一键式精度比对依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/ascend-toolkit/latest。
+仅支持ONNX、OM模型比对。
+
+一键式精度比对依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/cann。
 
 ### 命令格式
 
  ```sh
   msprobe compare -m offline_model -gp /golden_path/golden_model.onnx -tp /target_path/target_path.om -o /compare_output_path
-  ```
+ ```
 
 ### 参数说明
 

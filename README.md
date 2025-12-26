@@ -1,50 +1,52 @@
-# 📖MindStudio Probe
-
-![python](https://img.shields.io/badge/python-3.8|3.9|3.10-blue)
-![platform](https://img.shields.io/badge/platform-Linux-yellow)
+# MindStudio Probe
 
 ## 简介
 
-MindStudio Probe（简称msProbe）是模型开发的精度调试环节使用的工具包，是针对昇腾提供的全场景精度工具链，帮助用户快速提高模型精度定位效率。
+MindStudio Probe（msProbe，MindStudio精度调试工具）是针对昇腾提供的全场景精度工具链，专为模型开发的精度调试环节设计，可显著提升用户定位模型精度问题的效率。
 
-msProbe主要包括精度数据采集（dump）、精度预检、溢出检测和精度比对等功能，这些功能侧重不同的训练或推理场景，可以定位模型训练或推理中的精度问题。
+msProbe主要包括精度数据采集（dump）、精度预检、训练状态监控和精度比对等功能，这些功能侧重不同的训练或推理场景，可以帮助定位模型训练或推理中的精度问题。
 
 ## 版本说明
 
-msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载以及每个版本的特性变更说明，具体请参见《[版本说明](docs/zh/release_notes.md)》 。
+msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载以及每个版本的特性变更说明，具体请参见《[版本说明](docs/zh/release_notes.md)》。
 
-## ⚙️环境部署
+## 环境部署
 
 ### 环境和依赖
 
-使用msProbe工具前，要求已存在可执行的用户AI应用，其中昇腾环境要求：
+使用msProbe工具前，要求已存在可执行的用户AI应用，其中要求昇腾环境：
 
-- 可运行用户AI应用的昇腾设备，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
-- 安装配套版本的CANN Toolkit开发套件包和ops算子包并配置环境变量，详情请参见《CANN 软件安装指南》。
-
-以上环境依赖请根据实际环境选择适配的版本。
+- 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
+- 已安装配套版本的CANN Toolkit开发套件包和ops算子包并配置环境变量，详情请参见《CANN 软件安装指南》。
 
 ### 工具安装
 
-安装msProbe工具，包括从PyPI安装、下载whl包安装和从源码安装三种方式，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
+安装msProbe工具，包括PyPI安装、whl包安装和编译安装三种方式，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
 
-## 🚀 快速入门
+推荐使用PyPI安装，直接在环境中执行如下命令即可。
 
-详细快速入门可参见《训练场景工具快速入门》中的“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0023.html?framework=pytorch)（PyTorch场景）”或“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0006.html?framework=mindspore)（MindSpore场景）。
+```
+pip install mindstudio-probe
+```
 
-## 🚨 工具限制与注意事项
+## 快速入门
+
+msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监控及精度比对功能，帮助用户快速上手。详细快速入门可参见《训练场景工具快速入门》中的“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0023.html?framework=pytorch)（PyTorch场景）”或“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0006.html?framework=mindspore)（MindSpore场景）。
+
+## 工具限制与注意事项
 
 - 工具读写的所有路径，如`config_path`、`dump_path`等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。
 
-- 出于安全性及权限最小化角度考虑，msProbe工具不应使用root等高权限账户使用，建议使用普通用户权限安装执行。
+- 出于安全性及权限最小化角度考虑，本工具不应使用root等高权限账户，建议使用普通用户权限安装执行。
 
-- 使用msProbe工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
+- 使用本工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
 
 - 用户须自行保证使用最小权限原则，如给工具输入的文件要求other用户不可写，在一些对安全要求更严格的功能场景下还需确保输入的文件group用户不可写。
 
 - 使用工具前，建议先浏览[工具功能模块简介、适用场景和当前版本局限性](docs/zh/limitations_and_precautions.md)，了解功能特性。
 
-## 🧰 功能介绍
+
+## 功能介绍
 
 ### vLLM推理场景
 
@@ -69,7 +71,7 @@ msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载
 
 2. [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)
 
-   提供ATB场景的精度比对功能，帮助定位精度问题。
+   将ATB dump的精度数据进行精度比对，进而定位精度问题。
 
 
 ### 离线模型推理场景
@@ -109,7 +111,7 @@ msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载
 
 6. [训练状态监控](docs/zh/monitor_instruct.md)
 
-   收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
+   收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况。
 
 7. [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
 
@@ -180,7 +182,7 @@ msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载
    训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 
 
-## 📑补充材料
+## 补充材料
 
 - [PyTorch场景的精度数据采集基线报告](docs/zh/baseline/pytorch_data_dump_perf_baseline.md)
 
@@ -191,44 +193,46 @@ msProbe的版本说明包含msProbe的软件版本配套关系和软件包下载
 - [训练状态监控工具标准性能基线报告](docs/zh/baseline/monitor_perf_baseline.md)
 
 
-## ❓FAQ
+## FAQ
 
-[FAQ for PyTorch](docs/zh/faq.md)
+FAQ汇总了在使用msProbe工具过程中可能遇到的问题，具体请参见[FAQ](docs/zh/faq.md)。
 
-## ❗免责声明
+## 免责声明
 
-1. msProbe提供的所有内容仅供您用于非商业目的。
-2. 如您在使用msProbe过程中，发现任何问题（包括但不限于功能问题、合规问题），请在GitCode提交Issue，我们将及时审视并解决。
-4. msProbe功能依赖的第三方开源软件，均由第三方社区提供和维护，因第三方开源软件导致的问题的修复依赖相关社区的贡献和反馈。您应理解，msProbe仓库不保证对第三方开源软件本身的问题进行修复，也不保证会测试、纠正所有第三方开源软件的漏洞和错误。
-5. 对于您在使用msProbe功能过程中产生的数据属于用户责任范畴。建议您在使用完毕后及时删除相关数据，以防泄露或不必要的信息泄露。
-6. 对于您在使用msProbe功能过程中产生的数据，建议您避免通过本工具随意外发或传播，对于因此产生的信息泄露、数据泄露或其他不良后果，华为不承担任何责任。
-7. 对于您在使用msProbe功能过程中输入的命令行，需要您自行保证的命令行安全性，并承担因输入不当而导致的任何安全风险或损失。对于由于输入命令行不当所导致的问题，华为不承担任何责任。
-8. 本工具建议执行用户与安装用户保持一致，如果您要使用root执行，请自行关注root高权限触及的安全风险。
+- 本工具仅供调试和开发之用，使用者需自行承担使用风险，并理解以下内容：
+  - 数据处理及删除：用户在使用本工具过程中产生的数据属于用户责任范畴。建议用户在使用完毕后及时删除相关数据，以防信息泄露。
+  - 数据保密与传播：使用者了解并同意不得将通过本工具产生的数据随意外发或传播。对于由此产生的信息泄露、数据泄露或其他不良后果，本工具及其开发者概不负责。
+  - 用户输入安全性：用户需自行保证输入的命令行的安全性，并承担因输入不当而导致的任何安全风险或损失。对于由于输入命令行不当所导致的问题，本工具及其开发者概不负责。
+- 免责声明范围：本免责声明适用于所有使用本工具的个人或实体。使用本工具即表示您同意并接受本声明的内容，并愿意承担因使用该功能而产生的风险和责任，如有异议请停止使用本工具。
+- 在使用本工具之前，请谨慎阅读并理解以上免责声明的内容。对于使用本工具所产生的任何问题或疑问，请及时联系开发者。
+- msProbe建议执行用户与安装用户保持一致，如果使用root执行，请自行关注root高权限触及的安全风险。
 
 ## License
 
-介绍msProbe产品的BSD许可证，具体请参见[LICENSE](LICENSE)文件。
+介绍msProbe产品的使用许可证，具体请参见[LICENSE](LICENSE)文件。
+
+介绍msProbe工具docs目录下的文档适用CC-BY 4.0许可证，具体请参见[LICENSE](docs/LICENSE)文件。
 
 ## 贡献声明
 
 1. 提交错误报告：如果您在msProbe中发现了一个不存在安全问题的漏洞，请在msProbe仓库中的Issues中搜索，以防该漏洞被重复提交，如果找不到漏洞可以创建一个新的Issues。如果发现了一个安全问题请不要将其公开，请参阅安全问题处理方式。提交错误报告时应该包含完整信息。
 2. 安全问题处理：本项目中对安全问题处理的形式，请通过邮箱通知项目核心人员确认编辑。
-3. 解决现有问题：通过查看仓库的Issues列表可以发现需要处理的问题信息, 可以尝试解决其中的某个问题。
+3. 解决现有问题：通过查看仓库的Issues列表可以发现需要处理的问题信息，可以尝试解决其中的某个问题。
 4. 如何提出新功能：请使用Issues的Feature标签进行标记，我们会定期处理和确认开发。
 5. 开始贡献：
-   1. Fork本项目的仓库
-   2. Clone到本地
-   3. 创建开发分支
-   4. 本地自测，提交前请通过所有的已经单元测试，以及为您要解决的问题新增单元测试。
-   5. 提交代码
-   6. 新建Pull Request
-   7. 代码检视，您需要根据评审意见修改代码，并重新提交更新。此流程可能涉及多轮迭代。
+   1. Fork本项目的仓库。
+   2. Clone到本地。
+   3. 创建开发分支。
+   4. 本地测试：提交前请通过所有的单元测试，包括新增的测试用例。
+   5. 提交代码。
+   6. 新建Pull Request。
+   7. 代码检视：您需要根据评审意见修改代码，并重新提交更新。此流程可能涉及多轮迭代。
    8. 当您的PR获得足够数量的检视者批准后，Committer会进行最终审核。
    9. 审核和测试通过后，CI会将您的PR合并入到项目的主干分支。
 
 ## 建议与交流
 
-欢迎大家为社区做贡献。如果有任何疑问或建议，请提交issues，我们会尽快回复。感谢您的支持。
+欢迎大家为社区做贡献。如果有任何疑问或建议，请提交[Issues](https://gitcode.com/Ascend/mspti/issues)，我们会尽快回复。感谢您的支持。
 
 ## 致谢
 
