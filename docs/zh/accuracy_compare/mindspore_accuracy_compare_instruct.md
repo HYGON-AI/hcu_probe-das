@@ -125,7 +125,7 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 
 #### 跨框架的cell模块比对
 
-1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L0、task配置为tensor或statistics并指定需要dump的cell模块名。
+1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L0、task配置为tensor或statistics。
 
 2. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》和《[PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)》完成不同环境下cell模块精度数据的采集，得到两个框架的cell模块dump数据。
 
@@ -400,11 +400,28 @@ pt_outputs:
 
 文件名格式：\*.yaml，*为文件名，可自定义。
 
-文件内容格式：
+可**通过cell模块的名称映射**和**通过cell模块名称中的字符串映射**两种格式定义映射文件的内容。<br>
+两种格式可以在同一文件中配置，若同时配置了下面两种格式，且配置的是同一个cell模块，则使用cell模块的名称映射。
+
+**通过cell模块的名称映射**
+
+截取cell模块名称中的{cell_name}.{class_name}进行映射，如下格式：
 
 ```yaml
 {cell_name}.{class_name}: {module_name}.{class_name}
 ```
+
+冒号左侧为MindSpore框架cell模块的{cell_name}.{class_name}，冒号右侧为PyTorch框架module模块的{module_name}.{class_name}。
+
+- {cell_name}.{class_name}从dump cell模块级.npy文件名获取，命名格式为：<br>
+Cell.{cell_name}.{class_name}.{forward/backward}.{index}.{input/output}.{参数序号/参数名}<br>
+或<br>
+Cell.{cell_name}.{class_name}.parameters_grad.{parameter_name}
+
+- {module_name}.{class_name}从dump module模块级.npy文件名获取，命名格式为：<br>
+Module.{module_name}.{class_name}.{forward/backward}.{index}.{input/output}.{参数序号/参数名}<br>
+或<br>
+Module.{module_name}.{class_name}.parameters_grad.{parameter_name}
 
 文件内容示例：
 
@@ -413,19 +430,23 @@ fc2.Dense: fc2.Linear
 conv1.Conv2d: conv3.Conv2d
 ```
 
-冒号左侧为MindSpore框架cell模块的{cell_name}.{class_name}，冒号右侧为PyTorch框架module模块的{module_name}.{class_name}。
+**通过cell模块名称中的字符串映射**
+
+截取cell模块名称中的{cell_name}.{class_name}任意字符串进行映射，如下格式：
 
 ```yaml
-{cell_name}.{class_name}从dump cell模块级.npy文件名获取，命名格式为：
-{Cell}.{cell_name}.{class_name}.{forward/backward}.{index}.{input/output}.{参数序号/参数名}
-或
-{Cell}.{cell_name}.{class_name}.parameters_grad.{parameter_name}
-
-{module_name}.{class_name}从dump module模块级.npy文件名获取，命名格式为：
-{Module}.{module_name}.{class_name}.{forward/backward}.{index}.{input/output}.{参数序号/参数名}
-或
-{Module}.{module_name}.{class_name}.parameters_grad.{parameter_name}
+{target_str1}: {golden_str1}
+{target_str2}: {golden_str2}
 ```
+
+文件内容示例：
+
+```yaml
+MindSpeedTELayerNormColumnParallelLinear: TELayerNormColumnParallelLinear
+RowParallelLinear: TERowParallelLinear
+```
+
+仅对{cell_name}.{class_name}中第一次出现的字符串进行映射匹配。
 
 ### 自定义映射文件（data_mapping）
 

@@ -34,6 +34,6 @@ def pt_compare(input_param, output_path, **kwargs):
         'compared_file_type': config.compared_file_type
     }
     mode_config = ModeConfig(**config_dict)
-    mapping_config = MappingConfig(data_mapping=config.data_mapping)
+    mapping_config = MappingConfig(cell_mapping=config.cell_mapping, data_mapping=config.data_mapping)
     pt_comparator = Comparator(read_real_data, mode_config, mapping_config)
     pt_comparator.compare_core(input_param, output_path, suffix=config.suffix)
