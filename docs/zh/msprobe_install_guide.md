@@ -50,7 +50,7 @@ Successfully install mindstudio-probe-{version}
    Successfully install mindstudio-probe-{version}
    ```
 
-## 安装
+## 编译安装
 
 执行如下命令安装：
 

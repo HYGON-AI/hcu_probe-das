@@ -13,14 +13,15 @@
 
  ```sh
   msprobe install_deps -m offline [--no_check]
-  ```
+ ```
 
 需要注意的是，--no_check参数，会跳过检查目标网站的证书信息，有一定的安全风险，用户需要谨慎使用并自行承担后果。
 
 **约束**
 
-仅支持ONNX、OM模型数据采集。<br>
-OM模型dump依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/ascend-toolkit/latest。
+仅支持ONNX、OM模型数据采集。
+
+OM模型dump依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修改CANN路径，默认路径为/usr/local/Ascend/cann。
 
 **安全风险提示**
 
@@ -40,7 +41,7 @@ OM模型dump依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修
 
  ```sh
   msprobe offline_dump --model_path /model_path/model.onnx(.om) -o /dump_output_path
-  ```
+ ```
 
 ### 参数说明
 

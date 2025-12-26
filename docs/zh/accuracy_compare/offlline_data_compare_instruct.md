@@ -9,7 +9,7 @@
 **环境准备**
 
 - 安装msProbe工具，详情请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
-- 安装配套版本的CANN Toolkit开发套件包并配置CANN环境变量，具体请参见《CANN软件安装指南》中“[选择安装场景](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler&Software=cannToolKit)”章节的“训练&推理&开发调试”场景。
+- 安装配套版本的CANN Toolkit开发套件包和ops算子包并配置CANN环境变量，具体请参见《CANN软件安装指南》。
 
 **约束**
 
