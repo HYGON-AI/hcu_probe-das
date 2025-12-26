@@ -103,11 +103,24 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
 
-   data_mapping.yaml文件配置请参见[自定义映射文件](#自定义映射文件)。
+   data_mapping.yaml文件配置请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
    该场景不支持-fm模糊匹配。
 
 4. 查看比对结果，请参见 [精度比对结果分析](#精度比对结果分析)。
+
+#### 不同平台、不同配置下的模块比对
+
+1. 配置[config.json](../../../python/msprobe/config.json)文件level配置为L0、task配置为tensor或statistics。
+
+2. 参见《[PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)》完成 CPU 或 GPU 与 NPU 的精度数据 dump。
+
+3. 执行如下示例命令进行比对：
+
+   ```shell
+   msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -cm cell_mapping.yaml
+   ```
+   cell_mapping.yaml文件配置请参见[自定义映射文件（cell_mapping）](#自定义映射文件cell_mapping)。
 
 #### 首差异算子节点识别场景
 
@@ -140,6 +153,8 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 
     - `compare_result_rank{rank_id}_{timestamp}.json`：包含该rank比对结果，包括API或模块名、比对状态、比对指标等。
     - `diff_analyze_{timestamp}.json`：包含首差异算子节点识别结果，包括算子节点名、算子类型、算子位置等。
+
+
 
 ### 输出说明
 比对完成则打印提示信息：msprobe compare ends successfully. 
@@ -363,7 +378,7 @@ msprobe merge_result -i ./input_dir -o ./output_dir -config ./config.yaml
 
 ## 附录
 
-### 自定义映射文件
+### 自定义映射文件（data_mapping）
 
 文件名格式：*.yaml，*为文件名，可自定义。
 
@@ -491,3 +506,50 @@ Functional.max_pool2d.0.forward.input.ceil_mode
 Functional.max_pool2d.0.forward.input.return_indices
 Functional.max_pool2d.0.forward.output.0
 ```
+
+### 自定义映射文件（cell_mapping）
+
+文件名格式：\*.yaml，*为文件名，可自定义。
+
+可**通过模块的名称映射**和**通过模块名称中的字符串映射**两种格式定义映射文件的内容。<br>
+两种格式可以在同一文件中配置，若同时配置了下面两种格式，且配置的是同一个模块，则使用模块的名称映射。
+
+**通过模块的名称映射**
+
+截取模块名称中的{module_name}.{class_name}进行映射，如下格式：
+
+```yaml
+{module_name}.{class_name}: {module_name}.{class_name}
+```
+
+冒号左侧为NPU环境下模块的{module_name}.{class_name}，冒号右侧为CPU、GPU或NPU环境下模块的{module_name}.{class_name}。
+
+- {module_name}.{class_name}从dump module模块级.npy文件名获取，命名格式为：<br>
+Module.{module_name}.{class_name}.{forward/backward}.{index}.{input/output}.{参数序号/参数名}<br>
+或<br>
+Module.{module_name}.{class_name}.parameters_grad.{parameter_name}
+
+文件内容示例：
+
+```yaml
+fc2.Dense: fc2.Linear
+conv1.Conv2d: conv3.Conv2d
+```
+
+**通过cell模块名称中的字符串映射**
+
+截取模块名称中的{module_name}.{class_name}任意字符串进行映射，如下格式：
+
+```yaml
+{target_str1}: {golden_str1}
+{target_str2}: {golden_str2}
+```
+
+文件内容示例：
+
+```yaml
+MindSpeedTELayerNormColumnParallelLinear: TELayerNormColumnParallelLinear
+RowParallelLinear: TERowParallelLinear
+```
+
+仅对{module_name}.{class_name}中第一次出现的字符串进行映射匹配。

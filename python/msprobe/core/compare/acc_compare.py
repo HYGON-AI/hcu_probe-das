@@ -409,9 +409,22 @@ class ProcessDf:
         if self.mapping_dict.cell_mapping_dict:
             # get cell name & class name from op_name
             # Cell.fc1.Dense.forward.0.input.0
+            # npu_op_name.split(Const.SEP, 1)[-1] 表示Module或Cell字段后面的部分
             cell_name = re.split(r'\.(?:forward|backward|parameters_grad)\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
+
+            # 1. 精确整段匹配（保持原行为）
             if cell_name in self.mapping_dict.cell_mapping_dict:
-                npu_op_name = npu_op_name.replace(cell_name, self.mapping_dict.cell_mapping_dict[cell_name], 1)
+                new_cell_name = self.mapping_dict.cell_mapping_dict[cell_name]
+            # 2. 兜底：简单字符串替换（不做任何限制）
+            else:
+                new_cell_name = cell_name
+                for target_name, golden_name in self.mapping_dict.cell_mapping_dict.items():
+                    if target_name in new_cell_name:
+                        new_cell_name = new_cell_name.replace(target_name, golden_name, 1)
+            # 3. 应用替换
+            if new_cell_name != cell_name:
+                npu_op_name = npu_op_name.replace(cell_name, new_cell_name, 1)
+
         return npu_op_name
 
     def process_data_mapping(self, npu_op_name):

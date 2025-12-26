@@ -45,37 +45,34 @@ class TestCompareAutoMode(unittest.TestCase):
             compare_auto_mode(args, depth=3)
         self.assertEqual(cm.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
+    @patch("msprobe.pytorch.compare.pt_compare.pt_compare")
     @patch("msprobe.core.compare.auto_compare.check_file_or_directory_path")
     @patch("msprobe.core.compare.auto_compare.check_file_type")
     @patch("msprobe.core.compare.auto_compare.get_compare_framework")
     def test_compare_auto_mode_file_pt_without_mapping_then_call_pt_compare(
-        self, mock_get_framework, mock_check_type, mock_check_path
+        self, mock_get_framework, mock_check_type, mock_check_path, mock_pt_compare
     ):
-        import importlib
-        from unittest.mock import patch as inner_patch
 
         args = _build_args()
         mock_check_type.return_value = FileCheckConst.FILE
         mock_get_framework.return_value = Const.PT_FRAMEWORK
 
-        pt_module = importlib.import_module("msprobe.pytorch.compare.pt_compare")
-        with inner_patch.object(pt_module, "pt_compare") as mock_pt_compare:
-            compare_auto_mode(args)
+        compare_auto_mode(args)
 
-            mock_check_type.assert_any_call(args.target_path)
-            mock_check_type.assert_any_call(args.golden_path)
-            mock_check_path.assert_any_call(args.target_path)
-            mock_check_path.assert_any_call(args.golden_path)
-            mock_get_framework.assert_called_once()
-            mock_pt_compare.assert_called_once()
-            call_args, call_kwargs = mock_pt_compare.call_args
-            input_param_arg, output_path_arg = call_args
-            self.assertEqual(input_param_arg["npu_path"], args.target_path)
-            self.assertEqual(input_param_arg["bench_path"], args.golden_path)
-            self.assertEqual(output_path_arg, args.output_path)
-            self.assertIn("fuzzy_match", call_kwargs)
-            self.assertIn("data_mapping", call_kwargs)
-            self.assertIn("diff_analyze", call_kwargs)
+        mock_check_type.assert_any_call(args.target_path)
+        mock_check_type.assert_any_call(args.golden_path)
+        mock_check_path.assert_any_call(args.target_path)
+        mock_check_path.assert_any_call(args.golden_path)
+        mock_get_framework.assert_called_once()
+        mock_pt_compare.assert_called_once()
+        call_args, call_kwargs = mock_pt_compare.call_args
+        input_param_arg, output_path_arg = call_args
+        self.assertEqual(input_param_arg["npu_path"], args.target_path)
+        self.assertEqual(input_param_arg["bench_path"], args.golden_path)
+        self.assertEqual(output_path_arg, args.output_path)
+        self.assertIn("fuzzy_match", call_kwargs)
+        self.assertIn("data_mapping", call_kwargs)
+        self.assertIn("diff_analyze", call_kwargs)
 
     @patch("msprobe.core.compare.auto_compare.logger")
     @patch("msprobe.core.compare.auto_compare.check_file_or_directory_path")
@@ -88,23 +85,17 @@ class TestCompareAutoMode(unittest.TestCase):
         mock_check_path,
         mock_logger,
     ):
-        import importlib
-        from unittest.mock import patch as inner_patch
 
-        args = _build_args(cell_mapping={"a": "b"})
+        args = _build_args(api_mapping={"a": "b"})
         mock_check_type.return_value = FileCheckConst.FILE
         mock_get_framework.return_value = Const.PT_FRAMEWORK
 
-        pt_module = importlib.import_module("msprobe.pytorch.compare.pt_compare")
-        with inner_patch.object(pt_module, "pt_compare") as mock_pt_compare:
-            with self.assertRaises(Exception) as cm:
-                compare_auto_mode(args)
+        with self.assertRaises(CompareException) as cm:
+            compare_auto_mode(args)
 
-            self.assertIn("Argument -cm or -am is not supported in PyTorch framework", str(cm.exception))
-            mock_logger.error.assert_called_once()
-            mock_pt_compare.assert_not_called()
-            mock_check_path.assert_any_call(args.target_path)
-            mock_check_path.assert_any_call(args.golden_path)
+        mock_logger.error.assert_called_once()
+        mock_check_path.assert_any_call(args.target_path)
+        mock_check_path.assert_any_call(args.golden_path)
 
     @patch("msprobe.core.compare.auto_compare.check_file_or_directory_path")
     @patch("msprobe.core.compare.auto_compare.check_file_type")
