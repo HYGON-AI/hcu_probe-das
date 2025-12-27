@@ -2,7 +2,7 @@
 
 ## 安装说明
 
-本文主要介绍msProbe工具的安装方式。包括**PyPI安装**、**whl包安装**和**编译安装**三种方式。
+本文主要介绍msProbe工具的安装。当前仅支持**编译安装**方式。
 
 推荐使用[miniconda](https://docs.anaconda.com/miniconda/)管理环境依赖。
 
@@ -10,45 +10,6 @@
 conda create -n msprobe python
 conda activate msprobe
 ```
-
-## PyPI安装
-```shell
-pip install mindstudio-probe
-```
-
-打印如下信息时，表示msProbe安装成功。
-
-```
-Successfully install mindstudio-probe-{version}
-```
-
-## whl包安装
-
-下载msProbe的whl软件包，软件包下载请参见《[版本说明](./release_notes.md)》中的“版本配套说明”章节。
-
-获取到whl软件包后执行如下命令进行安装。
-
-1. 验证whl包，若校验码一致，则whl包在下载中没有受损。
-
-
-   ```bash
-   sha256sum {name}.whl
-   ```
-
-2. 安装whl包
-
-   ```bash
-   pip install ./mindstudio_probe-{version}-py3-none-any.whl
-   ```
-   若覆盖安装，请在命令行末尾添加`--force-reinstall`参数。
-
-   上面提供的whl包链接不包含adump功能，如果需要使用adump功能，请参考[编译安装](#编译安装)下载源码编译whl包。
-   
-   打印如下信息时，表示msProbe安装成功。
-   
-   ```
-   Successfully install mindstudio-probe-{version}
-   ```
 
 ## 编译安装
 
