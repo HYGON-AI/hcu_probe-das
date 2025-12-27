@@ -100,7 +100,7 @@ class TestTrainerMon(unittest.TestCase):
         self.assertEqual(TrainerMon.get_linear_hook_target(module_no_valid_weight), '')
 
     def test_monitor_gnorm_with_ad(self):
-        # 初始化监控器实例（Mock核心依赖）
+        # 初始化监测器实例（Mock核心依赖）
         self.mon.set_monitor = MagicMock()  # Mock set_monitor避免执行真实逻辑
         self.mon.logger = MagicMock()  # Mock logger避免日志输出
 

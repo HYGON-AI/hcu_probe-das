@@ -398,7 +398,7 @@ POST_DB_PROCESS = 0
 
 class ProgressInfo:
     """
-    前端监控此类属性获取进度信息
+    前端监测此类属性获取进度信息
     """
     current_progress = 0
     process_running = True
@@ -447,7 +447,7 @@ def get_log_msg_wrapper(fn):
 
 
 def monitor_progress(pbar_info, pbar, all_task_ids):
-    """监控所有任务进度（包括等待中的），取平均值更新总进度"""
+    """监测所有任务进度（包括等待中的），取平均值更新总进度"""
     ProgressInfo.total_stage = pbar_info.stage_total
     task_progress = pbar_info.progress_dict
     for task_id in all_task_ids:
