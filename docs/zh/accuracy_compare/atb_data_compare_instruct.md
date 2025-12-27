@@ -71,14 +71,14 @@ msprobe compare -m atb -gp <goldenDataPath> -tp <goldenDataPath> [-o <outputPath
 
 1. 准备标杆精度数据与待比对精度数据。
 
-ATB模型的精度数据采集方式请参见[ATB场景精度数据采集](../dump/atb_data_dump_instruct.md)。假设采集到的精度数据分别保存在golden_data/atb_dump_data、target_data/atb_dump_data目录下。
+    ATB模型的精度数据采集方式请参见[ATB场景精度数据采集](../dump/atb_data_dump_instruct.md)。假设采集到的精度数据分别保存在golden_data/atb_dump_data、target_data/atb_dump_data目录下。
 
 2. 执行比对命令。比对命令如下：
 
-```bash
-# 请传入实际精度数据路径
-msprobe compare -m atb -gp golden_data/atb_dump_data/data/0_39943/0/ -tp target_data/atb_dump_data/data/0_276107/0/
-```
+    ```bash
+    # 请传入实际精度数据路径
+    msprobe compare -m atb -gp golden_data/atb_dump_data/data/0_39943/0/ -tp target_data/atb_dump_data/data/0_276107/0/
+    ```
 
 ### 输出说明
 
