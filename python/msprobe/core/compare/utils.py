@@ -829,12 +829,29 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
 
     npu_ranks, bench_ranks = get_sorted_ranks(npu_dump_dir, bench_dump_dir)
 
-    # 预检查
-    # 统计量、md5比对
-    pre_check_dump_path = os.path.join(npu_dump_dir, npu_ranks[0], 'dump.json') if npu_ranks else ''
+    # ------------------预载rank0的json用于判断是什么类型dump数据------------------
+    # 判断是否存在dump.json或debug.json
+    if npu_ranks:
+        dir_path = os.path.join(npu_dump_dir, npu_ranks[0])
+        dump_file = os.path.join(dir_path, 'dump.json')
+        debug_file = os.path.join(dir_path, 'debug.json')
+
+        # 确定pre_check_dump_path
+        if os.path.exists(dump_file):
+            pre_check_dump_path = dump_file
+        elif os.path.exists(debug_file):
+            pre_check_dump_path = debug_file
+        else:
+            pre_check_dump_path = ''
+    else:
+        pre_check_dump_path = ''
+
+    # 如果pre_check_dump_path为空，直接返回
     if not pre_check_dump_path:
         return
+
     dump_data = load_json(pre_check_dump_path)
+
     compare_framework = dump_data.get("framework", None)
     if compare_framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import pt_compare
@@ -846,18 +863,20 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
         logger.error(f"Unrecognized framework, now is {compare_framework}, please check dump.json.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
 
+    # ------------------统计量、md5比对------------------
     if dump_data.get('task') == Const.STATISTICS:
         # dump数据为统计量或md5时，多进程加速比对
         input_param_nr_list = []
         for nr, br in zip(npu_ranks, bench_ranks):
-            input_param, skip = extract_compare_param(Const.DUMP_JSON_FILE)
-            if not skip:
-                input_param_nr_list.append((input_param, nr))
+            for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
+                input_param, skip = extract_compare_param(file_type)
+                if not skip:
+                    input_param_nr_list.append((input_param, nr))
         func_args = (compare_func, input_param_nr_list, output_path, kwargs)
         multi_statistics_compare(multi_ranks_compare, func_args)
         return
 
-    # 真实数据比对
+    # ------------------真实数据比对------------------
     for nr, br in zip(npu_ranks, bench_ranks):
         for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
             input_param, skip = extract_compare_param(file_type)
