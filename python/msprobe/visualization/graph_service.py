@@ -29,9 +29,9 @@ from msprobe.core.common.utils import CompareException, get_dump_mode
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst, check_directory_content, SerializableArgs, load_parallel_param, \
     sort_rank_number_strings, validate_parallel_param, get_step_or_rank_int, \
-    monitor_progress, ProgressInfo, calculate_list
+    monitor_progress, ProgressInfo, calculate_list, get_log_msg_wrapper
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig, GraphInfo, BuildGraphTaskInfo
-from msprobe.core.common.log import logger
+from msprobe.core.common.log import logger, BaseLogger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
@@ -495,41 +495,52 @@ def _graph_service_parser(parser):
 
 
 def _graph_service_command(args):
-    npu_path = args.target_path
-    bench_path = args.golden_path
-    ProgressInfo.print_progress_log = args.is_print_progress_log
-    args.parallel_merge = True if args.rank_size else False
-    args.parallel_params = load_parallel_param(args) if args.parallel_merge else None
-    check_file_or_directory_path(npu_path, isdir=True)
-    if bench_path:
-        check_file_or_directory_path(bench_path, isdir=True)
-    if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
-        content = check_directory_content(npu_path)
-        if content == GraphConst.RANKS:
-            _build_graph_ranks_with_pbar(args)
-        elif content == GraphConst.STEPS:
-            _build_graph_steps_with_pbar(args)
+    try:
+        if args.is_print_progress_log:
+            # 往ProgressInfo中记录error日志，用于前端展示
+            BaseLogger.error = get_log_msg_wrapper(BaseLogger.error)
+        npu_path = args.target_path
+        bench_path = args.golden_path
+        ProgressInfo.print_progress_log = args.is_print_progress_log
+        args.parallel_merge = True if args.rank_size else False
+        args.parallel_params = load_parallel_param(args) if args.parallel_merge else None
+        check_file_or_directory_path(npu_path, isdir=True)
+        if bench_path:
+            check_file_or_directory_path(bench_path, isdir=True)
+        if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
+            content = check_directory_content(npu_path)
+            if content == GraphConst.RANKS:
+                _build_graph_ranks_with_pbar(args)
+            elif content == GraphConst.STEPS:
+                _build_graph_steps_with_pbar(args)
+            else:
+                _build_graph_with_pbar(npu_path, args)
+        elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
+            content_n = check_directory_content(npu_path)
+            content_b = check_directory_content(bench_path)
+            if content_n != content_b:
+                raise ValueError('The directory structures of npu_path and bench_path are inconsistent.')
+            input_param = {
+                'npu_path': args.target_path,
+                'bench_path': args.golden_path,
+                'is_print_compare_log': args.is_print_compare_log
+            }
+            if content_n == GraphConst.RANKS:
+                _compare_graph_ranks_with_pbar(input_param, args)
+            elif content_n == GraphConst.STEPS:
+                _compare_graph_steps_with_pbar(input_param, args)
+            else:
+                _compare_graph_with_pbar(input_param, args)
         else:
-            _build_graph_with_pbar(npu_path, args)
-    elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        content_n = check_directory_content(npu_path)
-        content_b = check_directory_content(bench_path)
-        if content_n != content_b:
-            raise ValueError('The directory structures of npu_path and bench_path are inconsistent.')
-        input_param = {
-            'npu_path': args.target_path,
-            'bench_path': args.golden_path,
-            'is_print_compare_log': args.is_print_compare_log
-        }
-        if content_n == GraphConst.RANKS:
-            _compare_graph_ranks_with_pbar(input_param, args)
-        elif content_n == GraphConst.STEPS:
-            _compare_graph_steps_with_pbar(input_param, args)
-        else:
-            _compare_graph_with_pbar(input_param, args)
-    else:
-        logger.error("The npu_path or bench_path should be a folder.")
-        raise CompareException(CompareException.INVALID_COMPARE_MODE)
+            logger.error("The npu_path or bench_path should be a folder.")
+            raise CompareException(CompareException.INVALID_COMPARE_MODE)
+    except KeyboardInterrupt:
+        logger.warning("Interrupted by user, terminating processes and cleaning up...")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+        raise e
+    finally:
+        ProgressInfo.update_process_running(False)
 
 
 @dataclass
