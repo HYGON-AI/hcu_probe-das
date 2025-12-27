@@ -744,7 +744,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_mp_logger_init(self, mock_logger):
         """验证 logger 的 info/warning/error 都被正确 wrap 并添加前缀"""
 
-        # 1. 创建可监控的 fake logger 方法
+        # 1. 创建可监测的 fake logger 方法
         mock_logger.info = MagicMock()
         mock_logger.warning = MagicMock()
         mock_logger.error = MagicMock()

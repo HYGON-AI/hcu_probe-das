@@ -202,7 +202,7 @@ class TrainerMon:
         self.process_group = process_group
         self.params_have_main_grad = params_have_main_grad
         self.is_mindtorch = is_mindtorch()
-        self.config_timestamp = 0  # 后面有校验时间戳, 首次监控无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
+        self.config_timestamp = 0  # 后面有校验时间戳, 首次监测无需为了更新config文件时间戳而去改, 可通过dynamic_on开关直接打开
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
@@ -236,7 +236,7 @@ class TrainerMon:
         self.micro_batch_number = 1
         self.optimizer_mon = None
 
-        # TYPE3: 会随着训练中途config配置更新或监控状态改变而重置的变量
+        # TYPE3: 会随着训练中途config配置更新或监测状态改变而重置的变量
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.feature_hook_context_by_module = defaultdict(FeatureHookContext)

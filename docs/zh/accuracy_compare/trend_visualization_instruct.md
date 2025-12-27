@@ -12,7 +12,7 @@
 
 - msProbe：全称MindStudio Probe，是精度调试工具包，可以定位模型训练或推理中的精度问题。
 - dump：MindStudio Probe下数据采集功能，采集的数据称为dump数据。
-- monitor：MindStudio Probe下训练状态监控功能，采集的数据称为monitor数据。
+- monitor：MindStudio Probe下训练状态监测功能，采集的数据称为monitor数据。
 
 **使用流程**
 
@@ -43,7 +43,7 @@
   - PyTorch框架详细采集方式请参见《[PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)》。
   - MindSpore框架详细采集方式请参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》。
 - monitor数据场景（输出格式`format`指定为`csv`）
-  - 详细采集方式请参见《[Monitor训练状态轻量化监控工具](../monitor_instruct.md)》。
+  - 详细采集方式请参见《[Monitor训练状态轻量化监测工具](../monitor_instruct.md)》。
   
 
 **约束**

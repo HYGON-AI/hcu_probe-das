@@ -4,7 +4,7 @@
 
 MindStudio Probe（msProbe，MindStudio精度调试工具）是针对昇腾提供的全场景精度工具链，专为模型开发的精度调试环节设计，可显著提升用户定位模型精度问题的效率。
 
-msProbe主要包括精度数据采集（dump）、精度预检、训练状态监控和精度比对等功能，这些功能侧重不同的训练或推理场景，可以帮助定位模型训练或推理中的精度问题。
+msProbe主要包括精度数据采集（dump）、精度预检、训练状态监测和精度比对等功能，这些功能侧重不同的训练或推理场景，可以帮助定位模型训练或推理中的精度问题。
 
 ## 环境部署
 
@@ -21,7 +21,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 
 ## 快速入门
 
-msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监控及精度比对功能，帮助用户快速上手。详细快速入门可参见《训练场景工具快速入门》中的“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0023.html?framework=pytorch)（PyTorch场景）”或“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0006.html?framework=mindspore)（MindSpore场景）。
+msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监测及精度比对功能，帮助用户快速上手。详细快速入门可参见《训练场景工具快速入门》中的“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0023.html?framework=pytorch)（PyTorch场景）”或“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0006.html?framework=mindspore)（MindSpore场景）。
 
 ## 工具限制与注意事项
 
@@ -99,7 +99,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
 
-6. [训练状态监控](docs/zh/monitor_instruct.md)
+6. [训练状态监测](docs/zh/monitor_instruct.md)
 
    收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况。
 
@@ -113,7 +113,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 9. [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
 
-   将msProbe工具数据采集或训练状态监控的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
+   将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
 
 
 ### MindSpore训练场景
@@ -140,7 +140,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
 
-6. [训练状态监控](docs/zh/monitor_instruct.md)
+6. [训练状态监测](docs/zh/monitor_instruct.md)
 
    收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况。
 
@@ -156,7 +156,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 9. [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
 
-   将msProbe工具数据采集或训练状态监控的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
+   将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
 
 
 ### MSAdapter场景
@@ -180,7 +180,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 - [MindSpore场景的精度数据采集基线报告](docs/zh/baseline/mindspore_data_dump_perf_baseline.md)
 
-- [训练状态监控工具标准性能基线报告](docs/zh/baseline/monitor_perf_baseline.md)
+- [训练状态监测工具标准性能基线报告](docs/zh/baseline/monitor_perf_baseline.md)
 
 
 ## FAQ

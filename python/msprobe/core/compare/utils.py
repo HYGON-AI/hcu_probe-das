@@ -693,11 +693,11 @@ def _compare_parser(parser):
                         help="<Optional> The close fusion rule file path.", required=False)
     # rank：ms静态图比对、推理离线模型一键式比对
     parser.add_argument("--rank", dest="rank", type=str, required=False,
-                        help="<optional> Ranks to compare when compare kernel of Mindspore for <compare auto>. "
+                        help="<optional> Ranks to compare when compare kernel of MindSpore for <compare auto>. "
                              "Ranks to compare for <torchair dumps>. "
                              "Input rank ID [0, 255] for <compare offline_model>.")
     parser.add_argument("--step", dest="step", type=str, required=False,
-                        help="<optional> Steps to compare when compare kernel of Mindspore.")
+                        help="<optional> Steps to compare when compare kernel of MindSpore.")
     parser.add_argument('--input_data', dest="input_data", default='',
                         help='The input data path of the model. Separate multiple inputs with commas(,).'
                              ' E.g: input_0.bin,input_1.bin')

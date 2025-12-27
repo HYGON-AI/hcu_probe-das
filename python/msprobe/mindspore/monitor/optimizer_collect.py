@@ -129,7 +129,7 @@ class OptimizerMon(object):
 
 class MixPrecisionOptimizerMon(OptimizerMon):
     """
-    混合精度优化器监控类。在混合精度训练中监控和管理优化器。
+    混合精度优化器监测类。在混合精度训练中监测和管理优化器。
     混合精度训练通过适当降低某些计算的精度来加速训练过程并减少内存消耗。
     """
 

@@ -669,7 +669,7 @@ PrecisionDebugger.start(model=None, token_range=None)
 
 * **model**：可选参数，指定需要采集数据的实例化模型，支持传入torch.nn.Module、list[torch.nn.Module]或Tuple[torch.nn.Module]类型，默认未配置。模块级别（"L0" level）dump与"mix" level dump时，必须传入model才可以采集model内的所有Module对象数据，且若存在会进行图编译的Module对象（例如被`mindspore.jit`装饰的Module），则必须在第一个step训练开始前调用`start`接口。API级别（"L1" level）dump时，传入model可以采集model内包含primitive op对象在内的所有API数据，若不传入model参数，则只采集非primitive op的API数据。token_range不为None时，必须传入model参数。
 
-  对于复杂模型，如果仅需要监控一部分(如model.A，model.A extends torch.nn.Module)，传入需要监控的部分(如model.A)即可。
+  对于复杂模型，如果仅需要监测一部分(如model.A，model.A extends torch.nn.Module)，传入需要监测的部分(如model.A)即可。
 
   注意：传入的当前层不会被dump，工具只会dump传入层的子层级。如传入了model.A，A本身不会被dump，而是会dump A.x, A.x.xx等。
 

@@ -101,7 +101,7 @@ class TestDumpSql(unittest.TestCase):
             "step INTEGER NOT NULL CHECK(step BETWEEN 0", result)
 
     def test_create_monitoring_targets_table(self):
-        """测试监控目标表创建SQL"""
+        """测试监测目标表创建SQL"""
         result = DumpSql.create_monitoring_targets_table()
         self.assertIn("CREATE TABLE IF NOT EXISTS monitoring_targets", result)
         self.assertIn("target_id INTEGER PRIMARY KEY AUTOINCREMENT", result)

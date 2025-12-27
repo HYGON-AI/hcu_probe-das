@@ -78,7 +78,7 @@ class DumpSql:
 
     @staticmethod
     def create_monitoring_targets_table():
-        """监控目标表"""
+        """监测目标表"""
         return """
         CREATE TABLE IF NOT EXISTS monitoring_targets (
             target_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,7 +90,7 @@ class DumpSql:
 
     @staticmethod
     def create_monitoring_metrics_table():
-        """监控指标表"""
+        """监测指标表"""
         return """
         CREATE TABLE IF NOT EXISTS monitoring_metrics (
             metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
