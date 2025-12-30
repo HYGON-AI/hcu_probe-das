@@ -195,7 +195,7 @@ class MindsporeHookManager(BaseHookManager):
             if self.config.level != Const.LEVEL_L2:
                 return
             tid = threading.get_ident()
-            if not self._should_execute_hook(tid):
+            if not self._should_execute_hook(hook_type, tid):
                 return
 
             with ThreadSafe():

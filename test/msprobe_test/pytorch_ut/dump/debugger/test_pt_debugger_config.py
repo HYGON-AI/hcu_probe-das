@@ -28,7 +28,7 @@ class TestDebuggerConfig(unittest.TestCase):
         self.common_config.task = "invalid_task"
         with self.assertRaises(MsprobeException) as context:
             DebuggerConfig(self.common_config, self.task_config, None, None, None)
-        self.assertIn(f"The task <invalid_task> is not in the {Const.TASK_LIST}", str(context.exception))
+        self.assertIn(f"The task <invalid_task> is not in the {Const.TORCH_TASK_LIST}", str(context.exception))
 
     def test_check_kwargs_with_invalid_level(self):
         self.common_config.level = "invalid_level"

@@ -108,6 +108,8 @@ TaskDict = {
 
 
 def parse_task_config(task, json_config):
+    if task not in Const.TORCH_TASK_LIST:
+        raise Exception(f"task <{task}> is invalid, it is not in the {Const.TORCH_TASK_LIST}.")
     task_map = json_config.get(task, dict())
     return TaskDict.get(task)(task_map)
 
@@ -123,6 +125,3 @@ def parse_json_config(json_file_path, task):
     else:
         task_config = parse_task_config(common_config.task, json_config)
     return common_config, task_config
-
-
-
