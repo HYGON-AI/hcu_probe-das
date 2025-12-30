@@ -46,12 +46,12 @@ class TestMonitorSql(unittest.TestCase):
         """测试获取所有表定义"""
         result = MonitorSql.get_table_definition()
         self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 4)
+        self.assertEqual(len(result), 2)
         self.assertTrue(all("CREATE TABLE" in sql for sql in result))
 
     def test_get_table_definition_single_table(self):
         """测试获取单个表定义"""
-        for table in ["monitoring_targets", "monitoring_metrics", "metric_stats", "global_stats"]:
+        for table in ["monitoring_targets", "monitoring_metrics"]:
             result = MonitorSql.get_table_definition(table)
             result = normalize_spaces(result)
             self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", result)
@@ -61,23 +61,11 @@ class TestMonitorSql(unittest.TestCase):
         with self.assertRaises(ValueError):
             MonitorSql.get_table_definition("invalid_table")
 
-    def test_get_metric_table_definition_with_partition(self):
-        """测试带分区的指标表定义"""
-        stats = ["norm", "max"]
-        result = MonitorSql.get_metric_table_definition(
-            "test_metric", stats, [100, 200])
-        result = normalize_spaces(result)
-        self.assertIn("norm REAL DEFAULT NULL", result)
-        self.assertIn("max REAL DEFAULT NULL", result)
-        self.assertIn(
-            "step INTEGER NOT NULL CHECK(step BETWEEN 100 AND 200)", result)
-
     def test_get_metric_mapping_sql(self):
         """测试获取指标映射SQL"""
         result = MonitorSql.get_metric_mapping_sql()
         result = normalize_spaces(result)
-        self.assertIn("SELECT m.metric_id, m.metric_name", result)
-        self.assertIn("GROUP_CONCAT(ms.stat_name)", result)
+        self.assertIn("SELECT metric_id, metric_name", result)
 
 
 class TestMonitorDB(unittest.TestCase):
@@ -85,7 +73,7 @@ class TestMonitorDB(unittest.TestCase):
         # 创建临时数据库文件
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
         self.db_path = self.temp_db.name
-        self.monitor_db = MonitorDB(self.db_path, step_partition_size=100)
+        self.monitor_db = MonitorDB(self.db_path)
 
         # 初始化数据库schema
         self.monitor_db.init_schema()
@@ -99,30 +87,8 @@ class TestMonitorDB(unittest.TestCase):
     def test_init_schema(self):
         """测试初始化数据库schema"""
         # 验证表是否创建成功
-        for table in ["monitoring_targets", "monitoring_metrics", "metric_stats", "global_stats"]:
+        for table in ["monitoring_targets", "monitoring_metrics"]:
             self.assertTrue(self.monitor_db.db_manager.table_exists(table))
-
-        # 验证全局统计初始值
-        results = self.monitor_db.db_manager.select_data(
-            "global_stats", columns=["stat_name", "stat_value"])
-        self.assertEqual(len(results), 4)
-        self.assertEqual(results[0]['stat_value'], 0)  # max_rank
-
-    def test_get_metric_table_name(self):
-        """测试生成指标表名"""
-        # 测试分区边界
-        self.assertEqual(
-            self.monitor_db.get_metric_table_name(1, 50),
-            ("metric_1_step_0_99", 0, 99)
-        )
-        self.assertEqual(
-            self.monitor_db.get_metric_table_name(1, 100),
-            ("metric_1_step_100_199", 100, 199)
-        )
-        self.assertEqual(
-            self.monitor_db.get_metric_table_name(1, 199),
-            ("metric_1_step_100_199", 100, 199)
-        )
 
     def test_insert_dimensions(self):
         """测试插入维度数据"""
@@ -138,10 +104,7 @@ class TestMonitorDB(unittest.TestCase):
 
         self.monitor_db.insert_dimensions(
             targets=targets,
-            metrics=metrics,
-            metric_stats=metric_stats,
-            min_step=0,
-            max_step=200
+            metrics=metrics
         )
 
         # 验证目标插入
@@ -153,48 +116,6 @@ class TestMonitorDB(unittest.TestCase):
         metric_results = self.monitor_db.db_manager.select_data(
             "monitoring_metrics", columns=["metric_id"])
         self.assertEqual(len(metric_results), 2)
-
-        # 验证指标统计关系插入
-        stat_results = self.monitor_db.db_manager.select_data(
-            "metric_stats", columns=["metric_id"])
-        self.assertEqual(len(stat_results), 4)  # 2 metrics * 2 stats each
-
-        # 验证指标表创建
-        self.assertTrue(
-            self.monitor_db.db_manager.table_exists("metric_1_step_0_99"))
-        self.assertTrue(self.monitor_db.db_manager.table_exists(
-            "metric_1_step_100_199"))
-        self.assertTrue(
-            self.monitor_db.db_manager.table_exists("metric_2_step_0_99"))
-        self.assertTrue(self.monitor_db.db_manager.table_exists(
-            "metric_2_step_100_199"))
-
-    def test_create_metric_table(self):
-        """测试创建指标表"""
-        table_name = self.monitor_db.create_metric_table(
-            metric_id=1,
-            step=50,
-            stats=["norm", "max"]
-        )
-
-        self.assertEqual(table_name, "metric_1_step_0_99")
-        self.assertTrue(self.monitor_db.db_manager.table_exists(table_name))
-
-    def test_update_global_stats(self):
-        """测试更新全局统计"""
-        self.monitor_db.update_global_stats(
-            max_rank=8,
-            min_step=10,
-            max_step=1000
-        )
-
-        # 验证更新结果
-        results = self.monitor_db.db_manager.select_data(
-            "global_stats", columns=["stat_name", "stat_value"])
-        stats = {row['stat_name']: row['stat_value'] for row in results}
-        self.assertEqual(stats['max_rank'], 8)
-        self.assertEqual(stats['min_step'], 10)
-        self.assertEqual(stats['max_step'], 1000)
 
     def test_get_metric_mapping(self):
         """测试获取指标映射"""
@@ -210,10 +131,13 @@ class TestMonitorDB(unittest.TestCase):
         metric2_id = self.monitor_db._get_metric_id("metric2")
 
         # 插入统计关系
-        self.monitor_db.db_manager.insert_data(
-            "metric_stats",
-            [(metric1_id, "norm"), (metric1_id, "max"), (metric2_id, "min")],
-            ["metric_id", "stat_name"]
+        self.monitor_db.init_global_stats_data({
+            "metric1": {"norm"},
+            "metric2": {"max", "min"},
+            "max_step": 3,
+            "min_step": 0,
+            "max_rank": 3,
+        }
         )
 
         # 测试获取映射
@@ -221,8 +145,8 @@ class TestMonitorDB(unittest.TestCase):
 
         self.assertEqual(len(mapping), 2)
         self.assertEqual(mapping["metric1"][0], metric1_id)
-        self.assertEqual(sorted(mapping["metric1"][1]), ["max", "norm"])
-        self.assertEqual(mapping["metric2"][1], ["min"])
+        self.assertEqual(mapping["metric1"][1], ["norm"])
+        self.assertEqual(sorted(mapping["metric2"][1]), ["max", "min"])
 
     def test_get_target_mapping(self):
         """测试获取目标映射"""
@@ -244,12 +168,11 @@ class TestMonitorDB(unittest.TestCase):
         """测试插入行数据"""
         # 先创建测试表
         self.monitor_db.db_manager.execute_sql(
-            "CREATE TABLE test_table (id INTEGER PRIMARY KEY, name TEXT)"
+            "CREATE TABLE trend_data (id INTEGER PRIMARY KEY, name TEXT)"
         )
 
         # 测试插入
         inserted = self.monitor_db.insert_rows(
-            "test_table",
             [(1, "item1"), (2, "item2")]
         )
 
@@ -257,13 +180,5 @@ class TestMonitorDB(unittest.TestCase):
 
         # 验证数据
         results = self.monitor_db.db_manager.select_data(
-            "test_table", columns=["id", "name"])
+            "trend_data", columns=["id", "name"])
         self.assertEqual(len(results), 2)
-
-    def test_insert_rows_table_not_exists(self):
-        """测试插入行数据到不存在的表"""
-        with self.assertRaises(RuntimeError):
-            self.monitor_db.insert_rows(
-                "non_existent_table",
-                [(1, "item1")]
-            )

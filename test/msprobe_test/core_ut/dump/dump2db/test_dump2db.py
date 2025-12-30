@@ -3,7 +3,6 @@ import os
 import tempfile
 import shutil
 import json
-from collections import defaultdict
 from unittest.mock import Mock, patch
 import sys
 
@@ -11,7 +10,6 @@ from msprobe.core.dump.dump2db.dump2db import (
     DumpRecordBuilder,
     TensorProcessingParams,
     validate_micro_step,
-    validate_step_partition,
     load_mapping,
 )
 from msprobe.core.dump.dump2db.db_utils import DumpDB
@@ -43,25 +41,6 @@ class TestValidationFunctions(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             validate_micro_step(10001)  # 大于最大值
-
-    def test_validate_step_partition_valid(self):
-        """测试有效的step_partition值"""
-        validate_step_partition(10)
-        validate_step_partition(500)
-        validate_step_partition(100000)
-
-    def test_validate_step_partition_invalid_type(self):
-        """测试无效的step_partition类型"""
-        with self.assertRaises(TypeError, msg="step_partition must be integer"):
-            validate_step_partition("invalid")
-
-    def test_validate_step_partition_out_of_range(self):
-        """测试超出范围的step_partition值"""
-        with self.assertRaises(ValueError):
-            validate_step_partition(0)  # 小于最小值
-
-        with self.assertRaises(ValueError):
-            validate_step_partition(1010_000_01)  # 大于最大值
 
     def test_load_mapping_none_path(self):
         """测试加载映射文件 - 空路径"""
@@ -147,7 +126,6 @@ class TestDetermineMetricType(unittest.TestCase):
     def setUp(self):
         """设置测试环境"""
         self.mock_db = Mock(spec=DumpDB)
-        self.mock_db.step_partition = 50
         self.mock_db.get_metric_id.return_value = 1
         self.mock_db.cache_targets.return_value = {"id": 123}
 
@@ -209,7 +187,6 @@ class TestTensorDataProcessing(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.mock_db = Mock(spec=DumpDB)
-        self.mock_db.step_partition = 50
         self.mock_db.get_metric_id.return_value = 1
         self.mock_db.cache_targets.return_value = {"id": 123}
 
@@ -244,7 +221,6 @@ class TestTensorDataProcessing(unittest.TestCase):
             "target_prefix": "model.layer1",
             "vpp_stage": 0,
             "micro_step": 0,
-            "table_name": "table_1",
             "step": 100,
             "rank": 0,
             "metric_id": 1
@@ -262,7 +238,7 @@ class TestTensorDataProcessing(unittest.TestCase):
         """Test adding tensor data"""
         target_name = "model.layer1.input.0"
         tensor_params = self._create_tensor_params({}, Data2DBConst.FORWARD)
-        batch_data = defaultdict(list)
+        batch_data = []
 
         self.builder._add_tensor_data(
             self.valid_tensor, target_name, tensor_params, batch_data)
@@ -272,11 +248,12 @@ class TestTensorDataProcessing(unittest.TestCase):
             (target_name, 0, 0), 1)
 
         # Verify batch data was correctly added
-        self.assertEqual(len(batch_data["table_1"]), 1)
-        row_data = batch_data["table_1"][0]
+        self.assertEqual(len(batch_data), 1)
+        row_data = batch_data[0]
         self.assertEqual(row_data[0], 0)  # rank
         self.assertEqual(row_data[1], 100)  # step
         self.assertEqual(row_data[2], {"id": 123})  # target cache
+        self.assertEqual(row_data[3], 1)  # metric_id
 
     def test_process_forward_data_normal(self):
         """Test processing forward data with normal tensors"""
@@ -291,12 +268,12 @@ class TestTensorDataProcessing(unittest.TestCase):
 
         tensor_params = self._create_tensor_params(
             tensor_data, Data2DBConst.FORWARD)
-        batch_data = defaultdict(list)
+        batch_data = []
 
         self.builder._process_forward_data(tensor_params, batch_data)
 
         # 4个tensor加入batch (input_args and output, params)
-        self.assertEqual(len(batch_data["table_1"]), 4)
+        self.assertEqual(len(batch_data), 4)
 
     def test_process_backward_data_normal(self):
         """Test processing backward data with normal tensors"""
@@ -307,12 +284,12 @@ class TestTensorDataProcessing(unittest.TestCase):
 
         tensor_params = self._create_tensor_params(
             tensor_data, Data2DBConst.BACKWARD)
-        batch_data = defaultdict(list)
+        batch_data = []
 
         self.builder._process_backward_data(tensor_params, batch_data)
 
         # Should add two tensors (input and output)
-        self.assertEqual(len(batch_data["table_1"]), 2)
+        self.assertEqual(len(batch_data), 2)
 
     def test_process_parameters_data_normal(self):
         """Test processing parameters data with normal parameters"""
@@ -323,12 +300,12 @@ class TestTensorDataProcessing(unittest.TestCase):
 
         tensor_params = self._create_tensor_params(
             tensor_data, Data2DBConst.PARAMETERS_GRAD)
-        batch_data = defaultdict(list)
+        batch_data = []
 
         self.builder._process_parameters_data(tensor_params, batch_data)
 
         # 两个权重加入batch
-        self.assertEqual(len(batch_data["table_1"]), 2)
+        self.assertEqual(len(batch_data), 2)
 
     def test_process_recompute_data(self):
         """Test processing recompute data"""
@@ -339,11 +316,11 @@ class TestTensorDataProcessing(unittest.TestCase):
 
         tensor_params = self._create_tensor_params(
             tensor_data, Data2DBConst.RECOMPUTE)
-        batch_data = defaultdict(list)
+        batch_data = []
 
         self.builder._process_forward_data(tensor_params, batch_data)
         # 两个张量信息
-        self.assertEqual(len(batch_data["table_1"]), 2)
+        self.assertEqual(len(batch_data), 2)
 
     def test_process_unsupported_data_with_different_metric_types(self):
         """Test adding tensor data with different metric types"""
@@ -370,59 +347,9 @@ class TestTensorDataProcessing(unittest.TestCase):
             with self.subTest(description=description):
                 tensor_params = self._create_tensor_params(
                     tensor_data, "test_metric_type")
-                batch_data = defaultdict(list)
+                batch_data = []
                 process_func(tensor_params, batch_data)
-                self.assertEqual(len(batch_data["table_1"]), in_batch_num)
-
-
-class TestGetStepTableNameCache(unittest.TestCase):
-    """测试_get_step_table_name_cache方法"""
-
-    def setUp(self):
-        """设置测试环境"""
-        self.mock_db = Mock(spec=DumpDB)
-        self.mock_db.step_partition = 50
-
-        # 模拟DumpDB.get_metric_table_name方法
-        self.mock_db.get_metric_table_name = Mock(side_effect=lambda metric_id, start, end:
-                                                  f"metric_{metric_id}_step_{start}_{end}")
-
-    def test_get_step_table_name_cache_with_micro_step(self):
-        """测试有micro_step的情况"""
-        micro_step = 5
-        builder = DumpRecordBuilder(
-            db=self.mock_db,
-            data_dir="/test/data",
-            mapping={},
-            micro_step=micro_step
-        )
-
-        step = 10
-        table_name_cache = builder._get_step_table_name_cache(step)
-
-        # 验证缓存结构
-        self.assertIsInstance(table_name_cache, defaultdict)
-        # 验证每个metric类型都创建了对应的表名缓存
-        for metric_name in Data2DBConst.METRICS:
-            metric_id = hash(metric_name) % 10 + 1  # 模拟metric_id
-            builder.db.get_metric_id.return_value = metric_id
-            # 重新获取以使用mock
-            table_name_cache = builder._get_step_table_name_cache(step)
-
-            self.assertIn(metric_id, table_name_cache)
-            self.assertIsInstance(table_name_cache[metric_id], dict)
-
-            # 验证有micro_step个条目
-            self.assertEqual(len(table_name_cache[metric_id]), micro_step)
-
-            # 验证每个micro_step的表名正确生成
-            for ms in range(micro_step):
-                current_mstep = step * micro_step + ms
-                partition_start = (current_mstep // 50) * 50
-                expected_table_name = \
-                    f"metric_{metric_id}_step_{partition_start}_{partition_start + 49}"
-                self.assertEqual(
-                    table_name_cache[metric_id][current_mstep], expected_table_name)
+                self.assertEqual(len(batch_data), in_batch_num)
 
 
 class TestIntegration(unittest.TestCase):
@@ -431,7 +358,6 @@ class TestIntegration(unittest.TestCase):
     def setUp(self):
         """测试前置设置"""
         self.mock_db = Mock(spec=DumpDB)
-        self.mock_db.step_partition = 50
         self.data_dir = tempfile.mkdtemp()
         self.mapping = {}
         self.micro_step = None
@@ -446,8 +372,7 @@ class TestIntegration(unittest.TestCase):
         self.mock_db.cache_targets.return_value = {"id": 1}
         self.mock_db.batch_insert_targets.return_value = None
         self.mock_db.batch_insert_data.return_value = None
-        self.mock_db.update_global_stats.return_value = None
-        self.mock_db.create_all_metric_tables.return_value = None
+        self.mock_db.init_global_stats_data.return_value = None
         self.mock_db.extract_tags_from_processed_targets.return_value = None
 
     def tearDown(self):
@@ -499,12 +424,6 @@ class TestIntegration(unittest.TestCase):
         with open(dump_file_path, 'w') as f:
             json.dump(test_data, f)
 
-        # 准备table_name_cache
-        table_name_cache = {
-            1: {0: 'metric_1_0_49'},  # forward metric
-            2: {0: 'metric_2_0_49'}   # backward metric
-        }
-
         # 模拟get_metric_id根据不同类型返回不同ID
         def mock_get_metric_id(metric_type):
             metric_map = {
@@ -519,16 +438,15 @@ class TestIntegration(unittest.TestCase):
 
         # 执行测试
         self.builder._process_dump_file(
-            dump_file_path, table_name_cache, step=0, rank=0)
+            dump_file_path, step=0, rank=0)
 
         self.mock_db.batch_insert_data.assert_called()
         self.mock_db.batch_insert_targets.assert_called()
 
         # 验证插入的数据结构
         batch_data_call = self.mock_db.batch_insert_data.call_args[0][0]
-        self.assertIsInstance(batch_data_call, dict)
-        self.assertEqual(len(batch_data_call.get("metric_1_0_49")), 2)
-        self.assertEqual(len(batch_data_call.get("metric_2_0_49")), 1)
+        self.assertIsInstance(batch_data_call, list)
+        self.assertEqual(len(batch_data_call), 3)
 
     def test_import_data_full_integration(self):
         """测试import_data方法完整流程"""
@@ -560,21 +478,14 @@ class TestIntegration(unittest.TestCase):
             self.mock_db.get_metric_id.return_value = 1
             # 模拟table_name_cache
 
-            def mock_get_step_table_name_cache(step):
-                return {1: {step: f'metric_table_{step}_{step+49}'}}
-
-            with patch.object(self.builder, '_get_step_table_name_cache',
-                              side_effect=mock_get_step_table_name_cache):
-                with patch.object(self.builder, '_process_dump_file') as mock_process_dump:
-                    # 执行测试
-                    self.builder.import_data()
-                    # 验证全局统计更新被调用
-                    self.mock_db.update_global_stats.assert_called_once()
-                    # 验证表创建被调用
-                    self.mock_db.create_all_metric_tables.assert_called_once()
-                    # 验证处理了正确数量的step
-                    self.assertEqual(mock_process_dump.call_count,
-                                     len(step_dirs) * len(rank_dirs))
+            with patch.object(self.builder, '_process_dump_file') as mock_process_dump:
+                # 执行测试
+                self.builder.import_data()
+                # 验证全局统计更新被调用
+                self.mock_db.init_global_stats_data.assert_called_once()
+                # 验证处理了正确数量的step
+                self.assertEqual(mock_process_dump.call_count,
+                                 len(step_dirs) * len(rank_dirs))
 
 
 if __name__ == '__main__':

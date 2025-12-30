@@ -16,7 +16,7 @@
 from collections import defaultdict
 
 from msprobe.core.common.const import Data2DBConst
-from msprobe.core.common.db_manager import DBManager, check_identifier_safety
+from msprobe.core.common.db_manager import DBManager
 from msprobe.core.common.log import logger
 
 
@@ -98,23 +98,21 @@ class DumpSql:
         )"""
 
     @staticmethod
-    def create_metric_stats_table():
-        """指标统计表"""
-        return """
-        CREATE TABLE IF NOT EXISTS metric_stats (
-            metric_id INTEGER NOT NULL,
-            stat_name TEXT NOT NULL,
-            PRIMARY KEY (metric_id, stat_name),
-            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
-        ) WITHOUT ROWID"""
-
-    @staticmethod
-    def create_global_stat_table():
-        return """
+    def create_global_stats_table(columns_config):
+        """根据字典配置创建全局统计表"""
+        # 根据字典的键值类型动态创建列
+        column_definitions = []
+        for column_name, column_value in columns_config.items():
+            if isinstance(column_value, (list, set)):
+                column_definitions.append(f"{column_name} TEXT DEFAULT NULL")
+            elif isinstance(column_value, (int, float)):
+                column_definitions.append(f"{column_name} INTEGER DEFAULT 0")
+        
+        create_sql = f"""
         CREATE TABLE IF NOT EXISTS global_stats (
-            stat_name TEXT PRIMARY KEY,
-            stat_value INTEGER NOT NULL
-        ) WITHOUT ROWID"""
+            {', '.join(column_definitions)}
+        )"""
+        return create_sql
 
     @staticmethod
     def create_tags_table():
@@ -140,6 +138,22 @@ class DumpSql:
             FOREIGN KEY (target_id) REFERENCES monitoring_target(target_id)
         )"""
 
+    @staticmethod
+    def create_trend_table(stats):
+        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS trend_data (
+            rank INTEGER NOT NULL,
+            step INTEGER NOT NULL,
+            target_id INTEGER NOT NULL,
+            metric_id INTEGER NOT NULL,
+            {', '.join(stat_columns)},
+            PRIMARY KEY (rank, step, target_id, metric_id),
+            FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id),
+            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
+        ) WITHOUT ROWID"""
+        return create_sql
+    
     @classmethod
     def get_table_definition(cls, table_name=""):
         """
@@ -151,10 +165,8 @@ class DumpSql:
         table_creators = {
             "monitoring_targets": cls.create_monitoring_targets_table,
             "monitoring_metrics": cls.create_monitoring_metrics_table,
-            "metric_stats": cls.create_metric_stats_table,
-            "global_stats": cls.create_global_stat_table,
             "monitoring_tags": cls.create_tags_table,
-            "tag_target_mapping": cls.create_tag_mapping_table
+            "tag_target_mapping": cls.create_tag_mapping_table,
         }
         if not table_name:
             return [table_creators.get(table, lambda x: "")() for table in table_creators]
@@ -162,30 +174,10 @@ class DumpSql:
             raise ValueError(f"Unsupported table name: {table_name}")
         return table_creators[table_name]()
 
-    @classmethod
-    def get_metric_table_definition(cls, table_name, stats, start_step, end_step):
-        check_identifier_safety(table_name)
-
-        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
-        step_column = f"""step INTEGER NOT NULL CHECK(step BETWEEN {start_step} 
-                AND {end_step}),"""
-        create_sql = f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                rank INTEGER NOT NULL,
-                {step_column}
-                target_id INTEGER NOT NULL,
-                {', '.join(stat_columns)},
-                PRIMARY KEY (rank, step, target_id),
-                FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id)
-            ) WITHOUT ROWID
-            """
-        return create_sql
-
 
 class DumpDB:
-    def __init__(self, db_path, step_partition):
+    def __init__(self, db_path):
         self.db_path = db_path
-        self.step_partition = step_partition
         self.db_manager = DBManager(db_path)
 
         # 缓存
@@ -194,26 +186,21 @@ class DumpDB:
         self._processed_targets = defaultdict(dict)  # 记录所有metric_id下的targets
         self._new_targets = defaultdict(list)  # 记录新增targets
         self._init_schema()
-
-    @staticmethod
-    def get_metric_table_name(metric_id, step_start, step_end):
-        return f"metric_{metric_id}_step_{step_start}_{step_end}"
-
-    def update_global_stats(self, max_rank=None, min_step=None, max_step=None) -> None:
-        """Update global statistics"""
-        updates = [
-            ("max_rank", max_rank),
-            ("min_step", min_step),
-            ("max_step", max_step)
-        ]
-        for stat_name, value in updates:
-            if not value:
-                continue
-            self.db_manager.update_data(
-                table_name="global_stats",
-                updates={"stat_value": value},
-                where={"stat_name": stat_name}
-            )
+    
+    def init_global_stats_data(self, config):
+        """初始化全局统计表数据"""
+        # 准备插入数据
+        self.db_manager.execute_sql(
+            DumpSql.create_global_stats_table(config)
+        )
+        
+        column_values = []
+        for _, column_value in config.items():
+            if isinstance(column_value, (list, set)):
+                column_values.append(",".join(column_value))
+            elif isinstance(column_value, (int, float)):
+                column_values.append(column_value)
+        self.db_manager.insert_data("global_stats", [column_values,])
 
     def get_metric_id(self, metric_name: str):
         """Get metric ID by name"""
@@ -227,25 +214,6 @@ class DumpDB:
         metric_id = result[0]["metric_id"] if result else None
         self._metric_id_cache[metric_name] = metric_id
         return metric_id
-
-    def create_all_metric_tables(self, min_step, max_step):
-        # 预先创建所有需要的分区表
-        for metric_name in Data2DBConst.METRICS:
-            metric_id = self.get_metric_id(metric_name)
-            stats = Data2DBConst.ORDERED_STAT
-
-            # 为每个step分区创建表
-            for step in range(min_step, max_step + 1, self.step_partition):
-                partition_start = (
-                    step // self.step_partition) * self.step_partition
-                table_name = DumpDB.get_metric_table_name(
-                    metric_id,
-                    partition_start,
-                    partition_start + self.step_partition - 1
-                )
-                create_sql = DumpSql.get_metric_table_definition(
-                    table_name, stats, partition_start, partition_start + self.step_partition - 1)
-                self.db_manager.execute_sql(create_sql)
 
     def cache_targets(self, target, metric_id):
         if target not in self._processed_targets[metric_id]:
@@ -276,20 +244,15 @@ class DumpDB:
 
     def batch_insert_data(self, batch_data):
         """批量插入数据"""
-        for table_name, rows in batch_data.items():
-            if not rows:
-                continue
-            if not self.db_manager.table_exists(table_name):
-                raise RuntimeError(
-                    f"{table_name} not existed in {self.db_path}")
-            # 刷新target id
-            for row in rows:
-                if len(row) < 3 or not isinstance(row[2], dict):
-                    continue
-                row[2] = row[2]["id"]
+        if not batch_data:
+            return
+        # 刷新target id
+        for row in batch_data:
+            if len(row) < 3 or not isinstance(row[2], dict):
+                return
+            row[2] = row[2]["id"]
 
-            self.db_manager.insert_data(table_name, rows)
-        return
+        self.db_manager.insert_data("trend_data", batch_data)
 
     def extract_tags_from_processed_targets(self):
         """从已处理的targets中提取标签并建立映射关系"""
@@ -344,25 +307,10 @@ class DumpDB:
                     key_list=["target_id", "tag_id"]
                 )
 
-    def _init_metrics_stats(self) -> None:
-        for metric_name in Data2DBConst.METRICS:
-            self.db_manager.insert_data("monitoring_metrics", [
-                                        (metric_name,)], ["metric_name"])
-            metric_id = self.get_metric_id(metric_name)
-            for stat in Data2DBConst.ORDERED_STAT:
-                self.db_manager.insert_data("metric_stats", [(metric_id, stat)], [
-                                            "metric_id", "stat_name"])
-
     def _init_schema(self) -> None:
         """Initialize database schema"""
         self.db_manager.execute_multi_sql(DumpSql.get_table_definition())
-
-        # Insert initial global stats
-        global_stats = [
-            ('max_rank', 0),
-            ('min_step', 0),
-            ('max_step', 0),
-            ('step_partition_size', self.step_partition)
-        ]
-        self.db_manager.insert_data("global_stats", global_stats)
-        self._init_metrics_stats()
+        self.db_manager.execute_sql(DumpSql.create_trend_table(Data2DBConst.ORDERED_STAT))
+        for metric_name in Data2DBConst.METRICS:
+            self.db_manager.insert_data("monitoring_metrics", [
+                                        (metric_name,)], ["metric_name"])

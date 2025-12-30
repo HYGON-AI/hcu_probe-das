@@ -61,31 +61,53 @@ class MonitorSql:
     
     @staticmethod
     def get_metric_mapping_sql():
+        """从monitoring_metrics表获取所有metric名称和ID"""
         return """
-        SELECT m.metric_id, m.metric_name, GROUP_CONCAT(ms.stat_name) as stats 
-        FROM monitoring_metrics m 
-        LEFT JOIN metric_stats ms ON m.metric_id = ms.metric_id
-        GROUP BY m.metric_id
+        SELECT metric_id, metric_name
+        FROM monitoring_metrics
         """
 
     @staticmethod
-    def create_metric_stats_table():
-        """指标统计表"""
+    def get_global_stats_sql():
+        """从global_stats表获取最新的统计配置"""
         return """
-        CREATE TABLE IF NOT EXISTS metric_stats (
-            metric_id INTEGER NOT NULL,
-            stat_name TEXT NOT NULL,
-            PRIMARY KEY (metric_id, stat_name),
-            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
-        ) WITHOUT ROWID"""
+        SELECT * FROM global_stats 
+        ORDER BY ROWID DESC 
+        LIMIT 1
+        """
 
     @staticmethod
-    def create_global_stat_table():
-        return """
+    def create_global_stats_table(columns_config):
+        """根据字典配置创建全局统计表"""
+        # 根据字典的键值类型动态创建列
+        column_definitions = []
+        for column_name, column_value in columns_config.items():
+            if isinstance(column_value, (list, set)):
+                column_definitions.append(f"{column_name} TEXT DEFAULT NULL")
+            elif isinstance(column_value, (int, float)):
+                column_definitions.append(f"{column_name} INTEGER DEFAULT 0")
+        
+        create_sql = f"""
         CREATE TABLE IF NOT EXISTS global_stats (
-            stat_name TEXT PRIMARY KEY,
-            stat_value INTEGER NOT NULL
+            {', '.join(column_definitions)}
+        )"""
+        return create_sql
+
+    @staticmethod
+    def create_trend_table(stats):
+        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS trend_data (
+            rank INTEGER NOT NULL,
+            step INTEGER NOT NULL,
+            target_id INTEGER NOT NULL,
+            metric_id INTEGER NOT NULL,
+            {', '.join(stat_columns)},
+            PRIMARY KEY (rank, step, target_id, metric_id),
+            FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id),
+            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
         ) WITHOUT ROWID"""
+        return create_sql
 
     @classmethod
     def get_table_definition(cls, table_name=""):
@@ -98,8 +120,6 @@ class MonitorSql:
         table_creators = {
             "monitoring_targets": cls.create_monitoring_targets_table,
             "monitoring_metrics": cls.create_monitoring_metrics_table,
-            "metric_stats": cls.create_metric_stats_table,
-            "global_stats": cls.create_global_stat_table,
         }
         if not table_name:
             return [table_creators.get(table, lambda x: "")() for table in table_creators]
@@ -107,63 +127,22 @@ class MonitorSql:
             raise ValueError(f"Unsupported table name: {table_name}")
         return table_creators[table_name]()
 
-    @classmethod
-    def get_metric_table_definition(cls, table_name, stats, patition=None):
-        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
-        if patition and len(patition) == 2:
-            partition_start_step, partition_end_step = patition
-            step_column = f"""step INTEGER NOT NULL CHECK(step BETWEEN {partition_start_step} 
-                    AND {partition_end_step}),"""
-        else:
-            step_column = "step INTEGER NOT NULL"
-        create_sql = f"""
-            CREATE TABLE {table_name} (
-                rank INTEGER NOT NULL,
-                {step_column}
-                target_id INTEGER NOT NULL,
-                {', '.join(stat_columns)},
-                PRIMARY KEY (rank, step, target_id),
-                FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id)
-            ) WITHOUT ROWID
-            """
-        return create_sql
-
 
 class MonitorDB:
     """Main class for monitoring database operations"""
 
-    def __init__(self, db_path: str, step_partition_size: int = 500):
+    def __init__(self, db_path: str):
         self.db_path = db_path
         self.db_manager = DBManager(db_path)
-        self.step_partition_size = step_partition_size
-
-    def get_metric_table_name(self, metric_id: int, step: int) -> str:
-        """Generate metric table name"""
-        step_start = (
-            step // self.step_partition_size) * self.step_partition_size
-        step_end = step_start + self.step_partition_size - 1
-        return f"metric_{metric_id}_step_{step_start}_{step_end}", step_start, step_end
 
     def init_schema(self) -> None:
         """Initialize database schema"""
         self.db_manager.execute_multi_sql(MonitorSql.get_table_definition())
 
-        # Insert initial global stats
-        global_stats = [
-            ('max_rank', 0),
-            ('min_step', 0),
-            ('max_step', 0),
-            ('step_partition_size', self.step_partition_size)
-        ]
-        self.db_manager.insert_data("global_stats", global_stats)
-
     def insert_dimensions(
         self,
         targets: OrderedDict,
-        metrics: Set[str],
-        metric_stats: Dict[str, Set[str]],
-        min_step: Optional[int] = None,
-        max_step: int = None,
+        metrics: Set[str]
     ) -> None:
         """Insert dimension data into database"""
         # Insert targets
@@ -181,79 +160,53 @@ class MonitorDB:
             key_list=["metric_name"]
         )
 
-        # Insert metric-stat relationships
-        for metric, stats in metric_stats.items():
-            metric_id = self._get_metric_id(metric)
-            ordered_stats = get_ordered_stats(stats)
-
-            self.db_manager.insert_data(
-                "metric_stats",
-                [(metric_id, stat) for stat in ordered_stats],
-                key_list=["metric_id", "stat_name"]
-            )
-
-            # Create metric tables for each partition
-            if min_step is not None and max_step is not None:
-                first_partition = min_step // self.step_partition_size
-                last_partition = max_step // self.step_partition_size
-
-                for partition in range(first_partition, last_partition + 1):
-                    step_start = partition * self.step_partition_size
-                    self.create_metric_table(
-                        metric_id, step_start, ordered_stats)
-
-    def insert_rows(self, table_name, rows):
-        if not self.db_manager.table_exists(table_name):
-            raise RuntimeError(f"{table_name} not existed in {self.db_path}")
+    def insert_rows(self, rows):
+        table_name = "trend_data"
         inserted = self.db_manager.insert_data(table_name, rows)
         inserted = 0 if inserted is None else inserted
         return inserted
 
-    def create_metric_table(self, metric_id: int, step: int, stats: List[str]) -> str:
-        """Create metric table for a specific partition"""
-        table_name, partition_start_step, partition_end_step = self.get_metric_table_name(
-            metric_id,
-            step
+    def init_global_stats_data(self, config: Dict):
+        """初始化全局统计表数据"""
+        # 准备插入数据
+        self.db_manager.execute_sql(
+            MonitorSql.create_global_stats_table(config)
         )
-        if self.db_manager.table_exists(table_name):
-            return table_name
-
-        create_sql = MonitorSql.get_metric_table_definition(
-            table_name, stats, patition=(
-                partition_start_step, partition_end_step)
-        )
-        self.db_manager.execute_sql(create_sql)
-        return table_name
-
-    def update_global_stats(self, max_rank: int = None, min_step: Optional[int] = None, max_step: int = None) -> None:
-        """Update global statistics"""
-        updates = [
-            ("max_rank", max_rank),
-            ("min_step", min_step),
-            ("max_step", max_step)
-        ]
-        for stat_name, value in updates:
-            if not value:
-                continue
-            self.db_manager.update_data(
-                table_name="global_stats",
-                updates={"stat_value": value},
-                where={"stat_name": stat_name}
-            )
+        
+        column_values = []
+        for _, column_value in config.items():
+            if isinstance(column_value, (list, set)):
+                column_values.append(",".join(column_value))
+            elif isinstance(column_value, (int, float)):
+                column_values.append(column_value)
+        self.db_manager.insert_data("global_stats", [column_values,])
 
     def get_metric_mapping(self) -> Dict[str, Tuple[int, List[str]]]:
-        """Get metric name to ID mapping with statistics"""
-        results = self.db_manager.execute_sql(
+        """获取metric名称到ID的映射及对应的统计信息"""
+        metric_results = self.db_manager.execute_sql(
             MonitorSql.get_metric_mapping_sql()
+        )        
+        global_stats_result = self.db_manager.execute_sql(
+            MonitorSql.get_global_stats_sql()
         )
-
-        return {
-            row["metric_name"]: (
-                row["metric_id"],
-                get_ordered_stats(row["stats"].split(",")
-                                  ) if row["stats"] else []
-            ) for row in results
-        }
+        if not global_stats_result:
+            return {}
+        
+        global_stats_config = global_stats_result[0]
+        # 构建映射字典
+        metric_mapping = {}
+        for row in metric_results:
+            metric_name = row["metric_name"]
+            metric_id = row["metric_id"]
+            
+            # 从global_stats中获取该metric对应的统计信息
+            stats_value = global_stats_config.get(metric_name)
+            ordered_stats = []
+            if stats_value:
+                stats_list = stats_value.split(",") if isinstance(stats_value, str) else []
+                ordered_stats = get_ordered_stats(stats_list)                
+            metric_mapping[metric_name] = (metric_id, ordered_stats)
+        return metric_mapping
 
     def get_target_mapping(self) -> Dict[Tuple[str, int, int], int]:
         """Get target mapping dictionary"""
@@ -267,6 +220,9 @@ class MonitorDB:
             (row["target_name"], row["vpp_stage"], row["micro_step"]): row["target_id"]
             for row in results
         }
+
+    def create_trend_data(self, stats):
+        self.db_manager.execute_sql(MonitorSql.create_trend_table(stats))
 
     def _get_metric_id(self, metric_name: str) -> Optional[int]:
         """Get metric ID by name"""

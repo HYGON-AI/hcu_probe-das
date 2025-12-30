@@ -44,16 +44,6 @@ def validate_micro_step(micro_step):
                              f"{Data2DBConst.MIN_MICRO_STEP} and {Data2DBConst.MAX_MICRO_STEP}")
 
 
-def validate_step_partition(step_partition: int) -> None:
-    if type(step_partition) is not int:
-        raise TypeError("step_partition must be integer")
-    if not Data2DBConst.MIN_PARTITION <= step_partition <= Data2DBConst.MAX_PARTITION:
-        raise ValueError(
-            f"step_partition must be between {Data2DBConst.MIN_PARTITION} ",
-            f"and {Data2DBConst.MAX_PARTITION}, got {step_partition}"
-        )
-
-
 def load_mapping(mapping_path):
     if mapping_path and isinstance(mapping_path, str):
         return load_json(mapping_path)
@@ -68,7 +58,6 @@ class TensorProcessingParams:
     target_prefix: str
     vpp_stage: int
     micro_step: int
-    table_name: str
     step: int
     rank: int
     metric_id: int
@@ -78,7 +67,6 @@ class TensorProcessingParams:
 class DumpRecordBuilder:
     def __init__(self, db: DumpDB, data_dir, mapping, micro_step):
         self.db = db
-        self.step_partition = db.step_partition
         self.data_dir = data_dir
         self.mapping = mapping
         self.micro_step = micro_step if micro_step else None
@@ -179,39 +167,28 @@ class DumpRecordBuilder:
             return
 
         # 更新全局统计信息
-        self.db.update_global_stats(
-            max_rank=max_rank, min_step=min_step, max_step=max_step)
-        # 创建所有需要的分区表
-        self.db.create_all_metric_tables(min_step, max_step)
+        global_stats = {
+            "max_rank": max_rank,
+            "min_step": min_step,
+            "max_step": max_step
+        }
+        for metric_name in Data2DBConst.METRICS:
+            global_stats[metric_name] = Data2DBConst.ORDERED_STAT
+        self.db.init_global_stats_data(global_stats)
 
         for step in tqdm(sorted(valid_ranks.keys()), desc="Processing steps"):
             step_dir = f"step{step}"
             step_path = os.path.join(self.data_dir, step_dir)
 
             check_file_or_directory_path(step_path, isdir=True)
-            table_name_cache = self._get_step_table_name_cache(step)
 
             # 为当前step的所有有效rank创建进度条
             if not valid_ranks[step]:
                 continue
             for rank, json_path in tqdm(valid_ranks[step], desc=f"Step {step} ranks", leave=False):
                 self._process_dump_file(
-                    json_path, table_name_cache, step, rank)
+                    json_path, step, rank)
         self.db.extract_tags_from_processed_targets()
-
-    def _get_step_table_name_cache(self, step):
-        table_name_cache = defaultdict(dict)
-        for metric_name in Data2DBConst.METRICS:
-            metric_id = self.db.get_metric_id(metric_name)
-            micro_step_part = self.micro_step if self.micro_step else 1
-            for ms in range(micro_step_part):
-                current_mstep = step * micro_step_part + ms
-                partition_start = (
-                    current_mstep // self.step_partition) * self.step_partition
-                table_name = DumpDB.get_metric_table_name(metric_id, partition_start,
-                                                          partition_start + self.step_partition - 1)
-                table_name_cache[metric_id][current_mstep] = table_name
-        return table_name_cache
 
     def _determine_metric_type(self, full_key, tensor_data):
         for key, value in self.mapping.items():
@@ -258,11 +235,11 @@ class DumpRecordBuilder:
             cache_key, tensor_params.metric_id)
 
         # 准备数据行, 这里id还是个临时id, 需要更新后读取, 第三个实际为{"id": 0}
-        row_data = [tensor_params.rank, tensor_params.step, cache_id_dict]
+        row_data = [tensor_params.rank, tensor_params.step, cache_id_dict, tensor_params.metric_id]
         for stat in Data2DBConst.ORDERED_STAT:
             value = tensor.get(stat.capitalize(), None)
             row_data.append(DumpRecordBuilder.process_tensor_value(value))
-        batch_data[tensor_params.table_name].append((row_data))
+        batch_data.append((row_data))
 
     def _process_forward_data(self, tensor_params: TensorProcessingParams, batch_data):
         """处理forward/recompute数据"""
@@ -342,13 +319,13 @@ class DumpRecordBuilder:
                     self._add_tensor_data(
                         tensor, target_name, tensor_params, batch_data)
 
-    def _process_dump_file(self, json_path, table_name_cache, step, rank):
+    def _process_dump_file(self, json_path, step, rank):
         """处理单个dump.json文件"""
         data = load_json(json_path)
         if 'data' not in data or not isinstance(data['data'], dict):
             return
 
-        batch_data = defaultdict(list)
+        batch_data = []
         # 预先计算所有metric_type的table_name
 
         for i, (ori_key, tensor_data) in enumerate(data['data'].items()):
@@ -368,19 +345,12 @@ class DumpRecordBuilder:
                 mstep = 0
             else:
                 current_mstep = step
-            # table_name_cache 是 defaultdict(dict) 实例
-            table_name = table_name_cache[metric_id].get(current_mstep)
-            if not table_name:
-                logger.warning(
-                    f"Key '{ori_key}': index exceeds micro_step range {self.micro_step}, record skipped.")
-                continue
 
             tensor_params = TensorProcessingParams(
                 tensor_data=tensor_data,
                 target_prefix=target_prefix,
                 vpp_stage=vpp_stage,
                 micro_step=mstep,
-                table_name=table_name,
                 step=current_mstep,
                 rank=rank,
                 metric_id=metric_id,
@@ -395,10 +365,10 @@ class DumpRecordBuilder:
             elif metric_type == Data2DBConst.BACKWARD:
                 self._process_backward_data(tensor_params, batch_data)
 
-            if i % Data2DBConst.BATCH_SIZE == 0 and i > 0:
+            if len(batch_data) % Data2DBConst.BATCH_SIZE == 0 and len(batch_data) > 0:
                 self.db.batch_insert_targets()
                 self.db.batch_insert_data(batch_data)
-                batch_data = defaultdict(list)
+                batch_data = []
 
         self.db.batch_insert_targets()
         self.db.batch_insert_data(batch_data)
@@ -414,9 +384,6 @@ def _data2db_service_parser(parser):
     parser.add_argument('--micro_step', type=int, default=None,
                         help='Specific micro step value to split data in one step (must be between 1 and 10000)')
 
-    parser.add_argument('--step_partition', type=int, default=50,
-                        help='Partition size by step (default: 50)')
-
 
 def _data2db_command(args):
     data_path = args.data
@@ -430,11 +397,9 @@ def _data2db_command(args):
         remove_path(db_path)
 
     micro_step = args.micro_step
-    step_partition = args.step_partition
     validate_micro_step(micro_step)
-    validate_step_partition(step_partition)
     mapping = load_mapping(args.mapping)
-    db = DumpDB(db_path, step_partition)
+    db = DumpDB(db_path)
     builder = DumpRecordBuilder(
         db, data_path, mapping=mapping, micro_step=micro_step)
     builder.import_data()
