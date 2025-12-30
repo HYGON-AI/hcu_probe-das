@@ -27,7 +27,7 @@ from msprobe.core.common.file_utils import (create_directory, read_csv,
                                             recursive_chmod, remove_path)
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
-from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict
+from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict, get_ordered_stats
 from msprobe.core.monitor.utils import get_target_output_dir
 from tqdm import tqdm
 
@@ -36,7 +36,6 @@ all_data_type_list = [
     "actv", "actv_grad", "exp_avg", "exp_avg_sq",
     "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
 ]
-
 
 
 @dataclass
@@ -48,7 +47,6 @@ class CSV2DBConfig:
     process_num: int = 1
     data_type_list: Optional[List[str]] = None
     output_dirpath: Optional[str] = None
-    step_partition: int = 500
 
 
 def validate_process_num(process_num: int) -> None:
@@ -57,16 +55,6 @@ def validate_process_num(process_num: int) -> None:
         raise ValueError("process_num must be a positive integer")
     if process_num > MonitorConst.MAX_PROCESS_NUM:
         raise ValueError(f"Maximum supported process_num is {MonitorConst.MAX_PROCESS_NUM}")
-
-
-def validate_step_partition(step_partition: int) -> None:
-    if not isinstance(step_partition, int):
-        raise TypeError("step_partition must be integer")
-    if not MonitorConst.MIN_PARTITION <= step_partition <= MonitorConst.MAX_PARTITION:
-        raise ValueError(
-            f"step_partition must be between {MonitorConst.MIN_PARTITION} ",
-            f"and {MonitorConst.MAX_PARTITION}, got {step_partition}"
-        )
 
 
 def validate_data_type_list(data_type_list: Optional[List[str]]) -> None:
@@ -178,29 +166,35 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
     # Aggregate results
     targets = OrderedDict()
     metrics = set()
-    min_step = None
-    max_step = 0
-    max_rank = 0
-    metric_stats = defaultdict(set)
-
+    all_stats = set()
+    global_stats = {
+        "min_step": None,
+        "max_step": 0,
+        "max_rank": 0
+    }
     for rank_result in results:
-        max_rank = max(max_rank, rank_result['max_rank'])
+        global_stats["max_rank"] = max(global_stats["max_rank"], rank_result['max_rank'])
         metrics.update(rank_result['metrics'])
-        min_step = min(
-            min_step if min_step is not None else rank_result['min_step'],
-            rank_result['min_step']
-        )
-        max_step = max(max_step, rank_result['max_step'])
+        if global_stats["min_step"] is None:
+            global_stats["min_step"] = rank_result['min_step']
+        else:
+            global_stats["min_step"] = min(
+                global_stats["min_step"],
+                rank_result['min_step']
+            )
+        global_stats["max_step"] = max(global_stats["max_step"], rank_result['max_step'])
 
         for metric, stats in rank_result['metric_stats'].items():
-            metric_stats[metric].update(stats)
+            if metric not in global_stats:
+                global_stats[metric] = set()
+            global_stats[metric].update(stats)
+            all_stats.update(stats)
 
         targets = update_ordered_dict(targets, rank_result['targets'])
 
-    monitor_db.insert_dimensions(
-        targets, metrics, metric_stats, min_step=min_step, max_step=max_step)
-    monitor_db.update_global_stats(
-        max_rank=max_rank, min_step=min_step, max_step=max_step)
+    monitor_db.insert_dimensions(targets, metrics)
+    monitor_db.init_global_stats_data(global_stats)
+    monitor_db.create_trend_data(get_ordered_stats(all_stats))
     return rank_files
 
 
@@ -208,15 +202,14 @@ def process_single_rank(
     task: Tuple[int, List[str]],
     metric_id_dict: Dict[str, Tuple[int, List[str]]],
     target_dict: Dict[Tuple[str, int, int], int],
-    step_partition_size: int,
     db_path: str
 ) -> int:
     """Process data import for a single rank"""
     rank, files = task
-    db = MonitorDB(db_path, step_partition_size=step_partition_size)
+    db = MonitorDB(db_path)
     total_inserted = 0
-    table_batches = defaultdict(list)
-
+    batch_data = []
+    all_stats = get_ordered_stats(set().union(*[stats for _, stats in metric_id_dict.values()]))
     for file in files:
         filename = os.path.basename(file)
         metric_name, _, _ = get_info_from_filename(filename)
@@ -225,8 +218,7 @@ def process_single_rank(
         metric_info = metric_id_dict.get(metric_name)
         if not metric_info:
             continue
-
-        metric_id, stats = metric_info
+        metric_id, _ = metric_info
 
         for row_id, row in read_csv(file).iterrows():
             try:
@@ -239,33 +231,30 @@ def process_single_rank(
                     continue
 
                 step = int(row['step'])
-                table_name, _, _ = db.get_metric_table_name(metric_id, step)
                 # Prepare row data
-                row_data = [rank, step, target_id]
+                row_data = [rank, step, target_id, metric_id]
                 row_data.extend(
                     float(row[stat]) if stat in row else None
-                    for stat in stats
+                    for stat in all_stats
                 )
             except (ValueError, KeyError) as e:
                 logger.error(
                     f"CSV conversion failed | file={file}:{row_id+2} | error={str(e)}")
                 continue
 
-            table_batches[table_name].append(tuple(row_data))
+            batch_data.append(tuple(row_data))
             # Batch insert when threshold reached
-            if len(table_batches[table_name]) >= MonitorConst.BATCH_SIZE:
-                inserted = db.insert_rows(
-                    table_name, table_batches[table_name])
+            if len(batch_data) >= MonitorConst.BATCH_SIZE:
+                inserted = db.insert_rows(batch_data)
                 if inserted is not None:
                     total_inserted += inserted
-                table_batches[table_name] = []
+                batch_data = []
 
     # Insert remaining data
-    for table_name, batch in table_batches.items():
-        if batch:
-            inserted = db.insert_rows(table_name, batch)
-            if inserted is not None:
-                total_inserted += inserted
+    if batch_data:
+        inserted = db.insert_rows(batch_data)
+        if inserted is not None:
+            total_inserted += inserted
 
     logger.info(f"Rank {rank} inserted {total_inserted} rows")
     return total_inserted
@@ -301,7 +290,6 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
                 (rank, files),
                 metric_id_dict,
                 target_dict,
-                monitor_db.step_partition_size,
                 monitor_db.db_path): rank
             for rank, files in rank_tasks.items()
         }
@@ -323,7 +311,6 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
 def csv2db(config: CSV2DBConfig) -> None:
     """Main function to convert CSV files to database"""
     validate_process_num(config.process_num)
-    validate_step_partition(config.step_partition)
     validate_data_type_list(config.data_type_list)
 
     target_output_dirs = get_target_output_dir(
@@ -342,7 +329,7 @@ def csv2db(config: CSV2DBConfig) -> None:
         remove_path(db_path)
         logger.warning(f"Existing path {db_path} will be recovered")
 
-    db = MonitorDB(db_path, step_partition_size=config.step_partition)
+    db = MonitorDB(db_path)
 
     result = import_data(
         db,

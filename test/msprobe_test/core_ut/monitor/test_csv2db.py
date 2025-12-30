@@ -8,7 +8,6 @@ import pandas as pd
 from msprobe.core.monitor.csv2db import (
     CSV2DBConfig,
     validate_process_num,
-    validate_step_partition,
     validate_data_type_list,
     _pre_scan_single_rank,
     _pre_scan,
@@ -34,20 +33,6 @@ class TestCSV2DBValidations(unittest.TestCase):
             validate_process_num(-1)
         with self.assertRaises(ValueError):
             validate_process_num(MonitorConst.MAX_PROCESS_NUM + 1)
-
-    def test_validate_step_partition_valid(self):
-        """测试有效的step分区"""
-        validate_step_partition(MonitorConst.MIN_PARTITION)
-        validate_step_partition(MonitorConst.MAX_PARTITION)
-
-    def test_validate_step_partition_invalid(self):
-        """测试无效的step分区"""
-        with self.assertRaises(ValueError):
-            validate_step_partition(MonitorConst.MAX_PARTITION + 1)
-        with self.assertRaises(ValueError):
-            validate_step_partition(MonitorConst.MIN_PARTITION - 1)
-        with self.assertRaises(TypeError):
-            validate_step_partition(500.0)
 
     def test_validate_data_type_list_valid(self):
         """测试有效的数据类型列表"""
@@ -127,9 +112,20 @@ class TestPreScanFunctions(unittest.TestCase):
         self.assertEqual(sorted(list(result.keys())), [0, 2])
 
         mock_db.insert_dimensions.assert_called_once()
-        mock_db.update_global_stats.assert_called_with(
-            max_rank=2, min_step=0, max_step=200
-        )
+        mock_db.init_global_stats_data.assert_called_once()
+        mock_db.create_trend_data.assert_called_once()
+        call_args = mock_db.init_global_stats_data.call_args.args[0]
+        expected = {
+            "min_step": 0,
+            "max_step": 200,
+            "max_rank": 2,
+            "actv": {"max", "min"},
+            "grad_reduced": {"max", "min"}
+        }
+
+        self.assertEqual(set(call_args.keys()), set(expected.keys()))
+        for key in expected:
+            self.assertEqual(call_args[key], expected[key])
 
 
 class TestProcessSingleRank(unittest.TestCase):
@@ -159,15 +155,14 @@ class TestProcessSingleRank(unittest.TestCase):
         task = (0, ["actv_10-20.csv"])
         metric_id_dict = {"actv": (1, ["norm", "max"])}
         target_dict = {("layer1", 0, 0): 1, ("layer2", 0, 1): 2}
-        step_partition_size = 100
         db_path = "dummy.db"
 
         result = process_single_rank(
-            task, metric_id_dict, target_dict, step_partition_size, db_path)
+            task, metric_id_dict, target_dict, db_path)
 
         self.assertEqual(result, 2)
         mock_db.insert_rows.assert_called_with(
-            "metric_1_step_0_99", [(0, 10, 1, 0.1, 1.0), (0, 20, 2, 0.2, 2.0)]
+            [(0, 10, 1, 1, 0.1, 1.0), (0, 20, 2, 1, 0.2, 2.0)]
         )
 
 
@@ -219,8 +214,7 @@ class TestCSV2DBMain(unittest.TestCase):
         config = CSV2DBConfig(
             monitor_path="test_path",
             data_type_list=["actv"],
-            process_num=4,
-            step_partition=500
+            process_num=4
         )
 
         # 模拟依赖函数
