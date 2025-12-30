@@ -43,9 +43,9 @@ class DebuggerConfig:
             self._check_and_adjust_config_with_l2()
 
     def check(self):
-        if self.task and self.task not in Const.TASK_LIST:
+        if self.task and self.task not in Const.TORCH_TASK_LIST:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                   f"The task <{self.task}> is not in the {Const.TASK_LIST}.")
+                                   f"The task <{self.task}> is not in the {Const.TORCH_TASK_LIST}.")
         if self.level and self.level not in Const.LEVEL_LIST:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"The level <{self.level}> is not in the {Const.LEVEL_LIST}.")

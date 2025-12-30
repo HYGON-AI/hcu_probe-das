@@ -55,7 +55,8 @@ _api_types = {
         Const.PT_API_TYPE_TENSOR: ((torch.Tensor,), (torch.Tensor,)),
         Const.PT_API_TYPE_TORCH: ((torch,), (torch,)),
         Const.PT_API_TYPE_VF: ((torch._C._VariableFunctionsClass,), (torch._VF,)),
-        Const.PT_API_TYPE_DIST: ((dist,), (dist, dist.distributed_c10d))
+        Const.PT_API_TYPE_DIST: ((dist,), (dist,)),
+        Const.PT_API_TYPE_DIST_C10D: ((dist.distributed_c10d,), (dist.distributed_c10d,))
     }
 }
 if not is_gpu:

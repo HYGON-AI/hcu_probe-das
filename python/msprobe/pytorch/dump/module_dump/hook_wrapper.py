@@ -30,9 +30,9 @@ torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 def wrap_setup_backward_hook(func):
     def requires_clone(tensor, need_check_leaf=False):
-        need_clone = isinstance(tensor, torch.Tensor) and tensor.requires_grad and torch.is_grad_enabled()
-        if need_clone:
-            need_clone &= not is_float8_tensor(tensor)
+        if not isinstance(tensor, torch.Tensor):
+            return False
+        need_clone = torch.is_grad_enabled() and tensor.requires_grad and not is_float8_tensor(tensor)
         if need_check_leaf:
             need_clone &= tensor.grad_fn is not None
         return need_clone
