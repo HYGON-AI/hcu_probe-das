@@ -642,6 +642,7 @@ class TestTrainerMon(unittest.TestCase):
         )
         self.assertEqual(result, "")
 
+
 def clean_output(path):
     if os.path.exists(path):
         shutil.rmtree(path)
@@ -649,6 +650,15 @@ def clean_output(path):
 
 class TestModuleHook(unittest.TestCase):
     monitor_output = "./monitor_output"
+    ori_dist_is_initialized = dist.is_initialized
+    ori_dist_get_rank = dist.get_rank
+    ori_dist_get_process_group_ranks = dist.get_process_group_ranks
+
+    @classmethod
+    def tearDownClass(cls):
+        dist.is_initialized = cls.ori_dist_is_initialized
+        dist.get_rank = cls.ori_dist_get_rank
+        dist.get_process_group_ranks = cls.ori_dist_get_process_group_ranks
 
     @staticmethod
     def get_dist_mock(initialized=False):

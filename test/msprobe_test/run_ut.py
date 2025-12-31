@@ -21,31 +21,29 @@ def run_ut():
         shutil.rmtree(report_dir)
     os.makedirs(report_dir)
 
+    head_ut_directories = [os.path.join(cur_dir, "common_set_up")]
+    tail_ut_directories = [os.path.join(cur_dir, "mindspore_ut")]
+
     all_ut_dirs = []
     for item in os.listdir(cur_dir):
         item_path = os.path.join(cur_dir, item)
         if os.path.isdir(item_path) and not item.startswith("."):
             all_ut_dirs.append(item_path)
+    all_ut_dirs.sort()
+    for dir in head_ut_directories:
+        if dir in all_ut_dirs:
+            all_ut_dirs.remove(dir)
+            all_ut_dirs.insert(0, dir)
+    for dir in tail_ut_directories:
+        if dir in all_ut_dirs:
+            all_ut_dirs.remove(dir)
+            all_ut_dirs.append(dir)
 
-    mindspore_ut_path = os.path.join(cur_dir, "mindspore_ut")
-    other_ut_paths = []
-    mindspore_exists = False
-
-    for dir_path in all_ut_dirs:
-        if dir_path == mindspore_ut_path:
-            mindspore_exists = True
-        else:
-            other_ut_paths.append(dir_path)
-
-    # mindspore_ut在最后跑
-    ut_paths = other_ut_paths
-    if mindspore_exists:
-        ut_paths.append(mindspore_ut_path)
-    logger.info(f"UT execution order: {ut_paths}")
+    logger.info(f"UT execution order: {all_ut_dirs}")
 
     pytest_cmd = [
                      "python3", "-m", "pytest",
-                     *ut_paths,
+                     *all_ut_dirs,
                      f"--junitxml={final_xml_path}",
                      f"--cov-config={cov_config_path}",
                      f"--cov={cov_dir}",
