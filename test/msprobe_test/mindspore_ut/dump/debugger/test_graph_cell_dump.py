@@ -529,8 +529,13 @@ class TestMergeFile(unittest.TestCase):
     @patch('msprobe.mindspore.dump.dump_processor.cell_dump_process.write_df_to_csv')
     def test_merge_file(self, mock_write, mock_rename, mock_read, mock_remove):
         """测试文件合并"""
+        if (ms.__version__ > "2.7.0"):
+            KEY_DUMP_TENSOR_DATA = "dump_tensor_data/"
+        else:
+            KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
+        op_name = f"{KEY_DUMP_TENSOR_DATA}Cell-test-forward-input-0|123"
         mock_read.return_value = pd.DataFrame({
-            CoreConst.OP_NAME: ["dump_tensor_data/Cell-test-forward-input-0|123"],
+            CoreConst.OP_NAME: [op_name],
             "Timestamp": [1],
             "Slot": [1]
         })
