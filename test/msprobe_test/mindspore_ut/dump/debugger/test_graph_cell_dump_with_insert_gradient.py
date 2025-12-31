@@ -190,8 +190,13 @@ class TestMergeFile(unittest.TestCase):
     @patch('msprobe.mindspore.dump.dump_processor.cell_dump_with_insert_gradient.rename_filename')
     def test_merge_file(self, mock_rename, mock_read):
         """测试文件合并"""
+        if (ms.__version__ > "2.7.0"):
+            KEY_DUMP_TENSOR_DATA = "dump_tensor_data/"
+        else:
+            KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
+        op_name = f"{KEY_DUMP_TENSOR_DATA}Cell-test-forward-input-0|123"
         mock_read.return_value = pd.DataFrame({
-            CoreConst.OP_NAME: ["dump_tensor_data/Cell-test-forward-input-0|123"],
+            CoreConst.OP_NAME: [op_name],
             "Timestamp": [1],
             "Slot": [1]
         })
@@ -199,7 +204,7 @@ class TestMergeFile(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_dict = {"0": [os.path.join(tmpdir, "statistic.csv")]}
             merge_file(tmpdir, "rank_0", file_dict)
-            mock_rename.assert_not_called()
+            mock_rename.assert_called()
 
 
 class TestGenerateConstruct(unittest.TestCase):

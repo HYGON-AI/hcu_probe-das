@@ -44,7 +44,10 @@ KEY_FORWARD = CoreConst.FORWARD
 KEY_BACKWARD = CoreConst.BACKWARD
 KEY_INPUT = CoreConst.INPUT
 KEY_OUTPUT = CoreConst.OUTPUT
-KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
+if (ms.__version__ > "2.7.0"):
+    KEY_DUMP_TENSOR_DATA = "dump_tensor_data/"
+else:
+    KEY_DUMP_TENSOR_DATA = "dump_tensor_data_"
 KEY_STATISTIC_CSV = "statistic.csv"
 KEY_TD_FLAG = "td_flag"
 td = ops.TensorDump()
