@@ -13,7 +13,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 使用msProbe工具前，要求已存在可执行的用户AI应用，其中要求昇腾环境：
 
 - 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
-- 已安装配套版本的CANN Toolkit开发套件包和ops算子包并配置环境变量，详情请参见《CANN 软件安装指南》。
+- 已安装配套版本的CANN Toolkit开发套件包或算子包并配置环境变量，详情请参见《CANN 软件安装指南》中”[选择安装场景](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler&Software=cannToolKit)“章节的”训练&推理&开发调试“场景。
 
 ### 工具安装
 

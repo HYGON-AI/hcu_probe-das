@@ -84,17 +84,17 @@ Required-by:
 
 ## 安装CANN包
 
-1. 根据CPU架构和NPU型号选择Toolkitk开发套件包和ops算子包，可参见《CANN 软件安装指南》和[昇腾社区](https://www.hiascend.cn/developer/download/community/result?module=cann)。
+1. 根据CPU架构和NPU型号选择Toolkit或Kernel，可参见[昇腾社区](https://www.hiascend.cn/developer/download/community/result?module=cann)下的《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_quick.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)》。
 
    运行示例：
    ```bash
    Ascend-cann-toolkit_{version}_linux-{arch}.run --full --install-path={cann_path}
-   Ascend-cann-{chip_type}-ops_{version}_linux-{arch}.run --install --install-path={cann_path}
+   Ascend-cann-kernels_{version}_linux-{arch}.run --install --install-path={cann_path}
    ```
 
 2. 配置环境变量
    ```bash
-   source {cann_path}/Ascend/cann/set_env.sh
+   source {cann_path}/Ascend/ascend-toolkit/set_env.sh
    ```
 
 ## 安装PyTorch_NPU
