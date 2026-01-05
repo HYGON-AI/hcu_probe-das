@@ -36,7 +36,7 @@ from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
 from msprobe.core.common.utils import detect_framework_by_dump_json
-from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
+from msprobe.visualization.graph.distributed_analyzer import distributed_analyse
 from msprobe.visualization.builder.graph_merger import GraphMerger
 from msprobe.visualization.db_utils import post_process_db
 
@@ -152,6 +152,15 @@ def _run_build_graph_single(dump_ranks_path, rank, step, args, pbar_info=None):
     return result
 
 
+def _run_build_graph_and_export(dump_ranks_path, rank, step, args, pbar_info=None):
+    result = _run_build_graph_single(dump_ranks_path, rank, step, args, pbar_info)
+    if step is not None:
+        result.step = get_step_or_rank_int(step)
+    create_directory(args.output_path)
+
+    return _export_build_graph_result(args, result, pbar_info)
+
+
 def _run_graph_compare(graph_task_info, input_param, args, pbar_info=None):
     logger.info(f'Start comparing data for {graph_task_info.npu_rank}...')
     graph_n = graph_task_info.graph_info_n
@@ -209,86 +218,83 @@ def _mp_compare(input_param, serializable_args, nr, br, pbar_info=None):
     return _run_graph_compare(graph_task_info, input_param, serializable_args, pbar_info=pbar_info)
 
 
+def _mp_compare_and_export(input_param, args, rank, step, pbar_info=None):
+    graph_result = _mp_compare(input_param, args, rank, rank, pbar_info=pbar_info)
+    if step is not None:
+        graph_result.step = get_step_or_rank_int(step)
+    create_directory(args.output_path)
+
+    return _export_compare_graph_result(args, graph_result, pbar_info=pbar_info)
+
+
 def _compare_graph_ranks(input_param, args, step=None, pbar_info=None):
+    dump_rank_n = input_param.get('npu_path')
+    dump_rank_b = input_param.get('bench_path')
+    npu_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_n, Const.RANK))
+    bench_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_b, Const.RANK))
+    if npu_ranks != bench_ranks:
+        intersection_ranks = sort_rank_number_strings(list(set(npu_ranks) & set(bench_ranks)))
+        if not intersection_ranks:
+            logger.error('The ranks in the two runs are completely different. Unable to match the ranks.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        npu_ranks = intersection_ranks
+        bench_ranks = intersection_ranks
+    args.rank_list = [get_step_or_rank_int(rank, True) for rank in npu_ranks]
+    serializable_args = SerializableArgs(args)
+
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
             logger.error(f'Error occurred while comparing graph ranks: {err}')
-            try:
-                pool.close()
-            except OSError as e:
-                logger.error(f'Error occurred while terminating the pool: {e}')
 
-        serializable_args = SerializableArgs(args)
-        # 暂存所有rank的graph，用于匹配rank间的分布式节点
-        compare_graph_results = _get_compare_graph_results(input_param, serializable_args, step, (pool, err_call),
-                                                           pbar_info)
+        if is_real_data_compare(input_param, npu_ranks, bench_ranks):
+            # 真实数据模式，考虑到tensor比对过程会使用进程池启用多进程，为了避免嵌套进程池，graph比对使用串行
+            compare_graph_results = []
+            mp_task_dict = {}
+            for nr, br in zip(npu_ranks, bench_ranks):
+                input_param['npu_path'] = os.path.join(dump_rank_n, nr)
+                input_param['bench_path'] = os.path.join(dump_rank_b, br)
+                build_key = f'{step}_{nr}' if step else f'{nr}'
+                input_param_copy = deepcopy(input_param)
+                pbar_info_copy = PbarInfo.update_task_id(pbar_info, nr)
+                mp_task_dict[build_key] = pool.apply_async(_run_build_graph_compare,
+                                                           args=(input_param_copy, serializable_args, nr, br,
+                                                                 pbar_info_copy),
+                                                           error_callback=err_call)
+            mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
+            for build_key, mp_res in mp_res_dict.items():
+                if pbar_info:
+                    if Const.REPLACEMENT_CHARACTER in build_key:
+                        build_key = build_key.split(Const.REPLACEMENT_CHARACTER)[-1]
+                    pbar_info.task_id = build_key
+                compare_graph_results.append(_run_graph_compare(mp_res, input_param, serializable_args, pbar_info))
+            if step is not None:
+                for result in compare_graph_results:
+                    result.step = get_step_or_rank_int(step)
 
-        serializable_args.rank_list = [result.rank for result in compare_graph_results]
-
-        # 匹配rank间的分布式节点
-        if len(compare_graph_results) > 1:
-            DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
-                                args.overflow_check).distributed_match()
-            DistributedAnalyzer({obj.rank: obj.graph_b for obj in compare_graph_results},
-                                args.overflow_check).distributed_match()
-
-        export_res_task_list = []
-        create_directory(args.output_path)
-        for result in compare_graph_results:
-            pbar_info_copy = PbarInfo.update_task_id(pbar_info, f'{Const.RANK}{result.rank}')
-            export_res_task_list.append(pool.apply_async(_export_compare_graph_result,
-                                                         args=(serializable_args, result, pbar_info_copy),
-                                                         error_callback=err_call))
-        export_res_list = [res.get() for res in export_res_task_list]
+            export_res_task_list = []
+            create_directory(args.output_path)
+            for result in compare_graph_results:
+                export_res_task_list.append(pool.apply_async(_export_compare_graph_result,
+                                                             args=(serializable_args, result),
+                                                             error_callback=err_call))
+            export_res_list = [res.get() for res in export_res_task_list]
+        else:
+            compare_graph_tasks = []
+            for nr, br in zip(npu_ranks, bench_ranks):
+                input_param['npu_path'] = os.path.join(dump_rank_n, nr)
+                input_param['bench_path'] = os.path.join(dump_rank_b, br)
+                input_param_copy = deepcopy(input_param)
+                pbar_info_copy = PbarInfo.update_task_id(pbar_info, nr)
+                compare_graph_tasks.append(pool.apply_async(_mp_compare_and_export,
+                                                            args=(input_param_copy, serializable_args, nr, step,
+                                                                  pbar_info_copy),
+                                                            error_callback=err_call))
+            export_res_list = [res.get() for res in compare_graph_tasks]
         if any(export_res_list):
             failed_names = list(filter(lambda x: x, export_res_list))
             logger.error(f'Unable to export compare graph results: {", ".join(failed_names)}.')
         else:
             logger.info('Successfully exported compare graph results.')
-
-
-def _get_compare_graph_results(input_param, serializable_args, step, pool_info, pbar_info=None):
-    pool, err_call = pool_info
-    dump_rank_n = input_param.get('npu_path')
-    dump_rank_b = input_param.get('bench_path')
-    npu_ranks = calculate_list(dump_rank_n, dump_rank_b)
-    bench_ranks = npu_ranks
-    compare_graph_results = []
-    if is_real_data_compare(input_param, npu_ranks, bench_ranks):
-        mp_task_dict = {}
-        for nr, br in zip(npu_ranks, bench_ranks):
-            input_param['npu_path'] = os.path.join(dump_rank_n, nr)
-            input_param['bench_path'] = os.path.join(dump_rank_b, br)
-            build_key = f'{step}_{nr}' if step else f'{nr}'
-            input_param_copy = deepcopy(input_param)
-            pbar_info_copy = PbarInfo.update_task_id(pbar_info, nr)
-            mp_task_dict[build_key] = pool.apply_async(_run_build_graph_compare,
-                                                       args=(input_param_copy, serializable_args, nr, br,
-                                                             pbar_info_copy),
-                                                       error_callback=err_call)
-
-        mp_res_dict = {k: v.get() for k, v in mp_task_dict.items()}
-        for build_key, mp_res in mp_res_dict.items():
-            if pbar_info:
-                if Const.REPLACEMENT_CHARACTER in build_key:
-                    build_key = build_key.split(Const.REPLACEMENT_CHARACTER)[-1]
-                pbar_info.task_id = build_key
-            compare_graph_results.append(_run_graph_compare(mp_res, input_param, serializable_args, pbar_info))
-    else:
-        compare_graph_tasks = []
-        for nr, br in zip(npu_ranks, bench_ranks):
-            input_param['npu_path'] = os.path.join(dump_rank_n, nr)
-            input_param['bench_path'] = os.path.join(dump_rank_b, br)
-            input_param_copy = deepcopy(input_param)
-            pbar_info_copy = PbarInfo.update_task_id(pbar_info, nr)
-            compare_graph_tasks.append(pool.apply_async(_mp_compare,
-                                                        args=(input_param_copy, serializable_args, nr, br,
-                                                              pbar_info_copy), error_callback=err_call))
-        compare_graph_results = [task.get() for task in compare_graph_tasks]
-    if step is not None:
-        for result in compare_graph_results:
-            result.step = get_step_or_rank_int(step)
-    return compare_graph_results
 
 
 def _compare_graph_steps(input_param, args, pbar_info=None):
@@ -311,7 +317,7 @@ def _compare_graph_steps(input_param, args, pbar_info=None):
             else _compare_graph_ranks_parallel(input_param, args, step=folder_step, pbar_info=pbar_info)
 
 
-def _build_graph_ranks(args, step=None, pbar_info=None):
+def _build_graph_ranks_parallel(args, step=None, pbar_info=None):
     dump_ranks_path = os.path.join(args.target_path, step) if step is not None else args.target_path
     ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     serializable_args = SerializableArgs(args)
@@ -345,10 +351,6 @@ def _build_graph_ranks(args, step=None, pbar_info=None):
                 PbarInfo.del_progress_dict_item(pbar_info, ranks,
                                                 [f'{Const.RANK}{result.rank}' for result in build_graph_results])
 
-        if len(build_graph_results) > 1 and not args.parallel_merge:
-            DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results},
-                                args.overflow_check).distributed_match()
-
         create_directory(args.output_path)
         export_build_graph_tasks = []
         serializable_args.rank_list = [result.rank for result in build_graph_results]
@@ -365,6 +367,29 @@ def _build_graph_ranks(args, step=None, pbar_info=None):
             logger.info(f'Successfully exported build graph results.')
 
 
+def _build_graph_ranks(args, step=None, pbar_info=None):
+    dump_ranks_path = os.path.join(args.target_path, step) if step is not None else args.target_path
+    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
+    args.rank_list = [get_step_or_rank_int(rank, True) for rank in ranks]
+    serializable_args = SerializableArgs(args)
+    with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
+        def err_call(err):
+            logger.error(f'Error occurred while comparing graph ranks: {err}')
+
+        tasks = []
+        for rank in ranks:
+            pbar_info_copy = PbarInfo.update_task_id(pbar_info, rank)
+            tasks.append(pool.apply_async(_run_build_graph_and_export,
+                                          args=(dump_ranks_path, rank, step, serializable_args, pbar_info_copy),
+                                          error_callback=err_call))
+        results = [task.get() for task in tasks]
+        if any(results):
+            failed_names = list(filter(lambda x: x, results))
+            logger.error(f'Unable to export build graph results: {failed_names}.')
+        else:
+            logger.info(f'Successfully exported build graph results.')
+
+
 def _build_graph_steps(args, pbar_info=None):
     steps = sorted(check_and_return_dir_contents(args.target_path, Const.STEP))
     args.step_list = sorted([get_step_or_rank_int(step) for step in steps])
@@ -373,7 +398,8 @@ def _build_graph_steps(args, pbar_info=None):
         logger.info(f'Start processing data for {step}...')
         if pbar_info:
             pbar_info.step = i
-        _build_graph_ranks(args, step, pbar_info=pbar_info)
+        _build_graph_ranks(args, step, pbar_info=pbar_info) if not args.parallel_merge \
+            else _build_graph_ranks_parallel(args, step, pbar_info=pbar_info)
 
 
 def _compare_and_export_graph(graph_task_info, input_param, args, step=None, pbar_info=None):
@@ -578,7 +604,8 @@ def _run_with_progress(param, args, config: ProgressConfig):
         with tqdm(**tqdm_args) as pbar:
             # 单进程场景直接更新pbar，多进程场景需要通过monitor thread从共享dict中获取进度更新pbar
             if config.use_monitor_thread:
-                monitor_thread = threading.Thread(target=monitor_progress, args=(pbar_info, pbar, ranks))
+                monitor_thread = threading.Thread(target=monitor_progress,
+                                                  args=(pbar_info, pbar, ranks, args.parallel_merge))
                 monitor_thread.start()
             else:
                 pbar_info.pbar = pbar
@@ -588,7 +615,11 @@ def _run_with_progress(param, args, config: ProgressConfig):
             else:
                 config.core_func(args, pbar_info=pbar_info)
 
-            post_process_db(os.path.join(args.output_path, config.db_name), pbar_info=pbar_info)
+            db_path = os.path.join(args.output_path, config.db_name)
+            post_process_db(db_path, pbar_info=pbar_info, is_parallel_merge=args.parallel_merge)
+
+            if not args.parallel_merge and config.use_monitor_thread:
+                distributed_analyse(db_path, args.overflow_check, pbar_info=pbar_info)
 
             if config.use_monitor_thread and monitor_thread:
                 monitor_thread.join(timeout=5)
@@ -605,6 +636,12 @@ def _run_with_progress(param, args, config: ProgressConfig):
 
 
 def _build_graph_ranks_with_pbar(args):
+    def core_func(args, pbar_info):
+        if args.parallel_merge:
+            _build_graph_ranks_parallel(args, pbar_info=pbar_info)
+        else:
+            _build_graph_ranks(args, pbar_info=pbar_info)
+
     def get_ranks(args):
         return check_and_return_dir_contents(args.target_path, Const.RANK)
 
@@ -614,7 +651,7 @@ def _build_graph_ranks_with_pbar(args):
         param=None,
         args=args,
         config=ProgressConfig(
-            core_func=_build_graph_ranks,
+            core_func=core_func,
             get_ranks=get_ranks,
             pbar_info_kwargs={"stage_total": stage_total},
             db_name=build_output_db_name,

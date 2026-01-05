@@ -26,7 +26,7 @@ from msprobe.core.compare.indicator_analysis.calculator import calculate_result
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
     # NodeOp.module
-    r'^(Module.|Cell.|optimizer|clip_grad)',
+    r'^(Module.|Cell.|optimizer|clip_grad|DefaultModel)',
     # NodeOp.function_api
     r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.|MindSpeed.)'
 ]

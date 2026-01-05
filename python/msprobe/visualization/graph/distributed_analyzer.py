@@ -12,10 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import json
 from enum import Enum
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, post_process_db_pbar
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
+from msprobe.visualization.db_utils import DBActuator
+from msprobe.visualization.graph.base_node import BaseNode
+from msprobe.visualization.graph.node_op import NodeOp
 
 
 class CommunicationType(Enum):
@@ -40,8 +45,7 @@ CANNOT_MATCH = 'cannot match distributed node in rank'
 
 class DistributedAnalyzer:
 
-    def __init__(self, graphs: dict, overflow_check: bool):
-        self.graphs = graphs
+    def __init__(self, distributed_info: dict, overflow_check: bool):
         self.overflow_check = overflow_check
         self.config = {
             # 当前通信api名称: 匹配目标通信api名称, 获取rank信息的位置参数或关键字参数, 通信类型, 分布式类型
@@ -55,6 +59,7 @@ class DistributedAnalyzer:
             'reduce': ['reduce', '1', CommunicationType.RECEIVE.value, DistributedType.COLLECTIVE]
         }
         self.group_node_mapping = {}
+        self.distributed_info = distributed_info
         self._make_group_node_mapping()
 
     @staticmethod
@@ -101,18 +106,30 @@ class DistributedAnalyzer:
         if not group_ranks:
             logger.debug(f'The group_ranks of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
+        group_ranks = DistributedAnalyzer._check_and_convert_group_ranks(group_ranks)
+        if not group_ranks:
+            return None, None
         group_id = group.get('group_id')
         if not group_id:
             logger.debug(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
         return group_ranks, group_id
 
+    @staticmethod
+    def _check_and_convert_group_ranks(group_ranks):
+        if not isinstance(group_ranks, list):
+            try:
+                group_ranks = json.loads(group_ranks)
+            except json.decoder.JSONDecodeError as e:
+                logger.debug(f'Error occurred, group_rank cannot be converted to list: {e}')
+                return []
+        return group_ranks
+
     def distributed_match(self):
-        for rank, graph in self.graphs.items():
-            nodes = graph.node_map
-            for node_id, node in nodes.items():
-                # 不是通信节点或者已经匹配过了
-                if not node_id.startswith(Const.DISTRIBUTED) or node.matched_distributed:
+        for rank, nodes_dict in self.distributed_info.items():
+            for node_id, node in nodes_dict.items():
+                # 已经匹配过了
+                if node.matched_distributed:
                     continue
                 api_name, distributed_type = self._get_distributed_name_and_type(node_id)
                 if api_name == GraphConst.BATCH_P2P:
@@ -137,14 +154,11 @@ class DistributedAnalyzer:
             "2": {}
         }
         """
-        for rank, graph in self.graphs.items():
+        for rank, nodes_dict in self.distributed_info.items():
             group_count = {}
             group_info = {}
             batch_p2p_count = {}
-            nodes = graph.node_map
-            for node_id, node in nodes.items():
-                if not node_id.startswith(Const.DISTRIBUTED):
-                    continue
+            for node_id, node in nodes_dict.items():
                 api_name, distributed_type = self._get_distributed_name_and_type(node_id)
                 if api_name == GraphConst.BATCH_P2P:
                     self._make_batch_p2p_mapping(node, rank, batch_p2p_count)
@@ -213,18 +227,18 @@ class DistributedAnalyzer:
         :param target_api_name: 与当前节点产生通信的节点api名称, 仅p2p通信需要配置
         :return: 目标节点
         """
-        target_graph = self.graphs.get(target_rank)
-        if not target_graph:
-            logger.debug(f'Graph data does not exist, {CANNOT_MATCH}{target_rank}')
+        target_nodes_dict = self.distributed_info.get(str(target_rank))
+        if not target_nodes_dict:
+            logger.debug(f'Node data does not exist, {CANNOT_MATCH}{target_rank}')
             return None
-        target_group_mapping = self.group_node_mapping.get(target_rank)
+        target_group_mapping = self.group_node_mapping.get(str(target_rank))
         # p2p通信，想要获取目标节点，需要替换unique_group_id中的rank和api name,
         # 例如isend发送到rank1，对应的irecv接收自rank0, isend_rank1与irecv_rank0对应
         target_unique_group_id = (unique_group_id
                                   .replace(Const.RANK + str(target_rank), Const.RANK + str(rank))
                                   .replace(api_name, target_api_name)) if target_api_name else unique_group_id
         target_node_id = target_group_mapping.get(target_unique_group_id, '')
-        target_node = target_graph.node_map.get(target_node_id)
+        target_node = target_nodes_dict.get(target_node_id)
         if not target_node:
             logger.debug(f'Node {target_node_id} does not exist, {CANNOT_MATCH}{target_rank}')
             return None
@@ -244,6 +258,7 @@ class DistributedAnalyzer:
             else communications_type
         index = target_node.data.get(GraphConst.OVERFLOW_LEVEL, CompareConst.NAN) if self.overflow_check \
             else target_node.data.get(GraphConst.JSON_INDEX_KEY, CompareConst.NAN)
+        index = CompareConst.NAN if index is None else index
         matched_distributed = {
             'communications_type': communications_type,
             'nodes_info': {target_rank: [str(index), target_node.id]}
@@ -264,11 +279,10 @@ class DistributedAnalyzer:
         """
         config_info = self.config.get(api_name)
         target_api_name = config_info[0]
-        #
         target_rank = self._get_target_rank(node, rank, config_info[1])
         if target_rank is None:
             return
-        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
+        unique_group_id = self.group_node_mapping.get(str(rank), {}).get(node.id, '')
         target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
         if not target_node:
             return
@@ -286,13 +300,6 @@ class DistributedAnalyzer:
                 f'{node.id} of rank{rank} is expected to communicate with {target_node.id} of rank{target_rank}, '
                 f'but the data shows that {target_node.id} communicates with rank{source_rank}.'
                 f'The rank is inconsistent, cannot match distributed node')
-            return
-
-        # 点对点通信，两个匹配节点的输出数据要一致
-        if not DistributedAnalyzer._node_output_all_equal(node.output_data.get(node.id + '.output.0'),
-                                                          target_node.output_data.get(target_node.id + '.output.0')):
-            logger.debug(f'{node.id} output of rank{rank} is different from the {target_node.id} '
-                           f'output of rank{target_rank}, cannot match distributed node')
             return
 
         self._add_node_matched_distributed(node, target_node, api_name, target_rank)
@@ -319,7 +326,10 @@ class DistributedAnalyzer:
         group_ranks, group_id = self._get_group_info(node, rank)
         if not group_ranks or not group_id:
             return
-        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
+        group_ranks = DistributedAnalyzer._check_and_convert_group_ranks(group_ranks)
+        if not group_ranks:
+            return
+        unique_group_id = self.group_node_mapping.get(str(rank), {}).get(node.id, '')
         matched_distributed = {'communications_type': communications_type}
         nodes_info = {}
         for target_rank in group_ranks:
@@ -340,6 +350,7 @@ class DistributedAnalyzer:
             # 给当前通信节点添加matched_distributed字段信息
             index = target_node.data.get(GraphConst.OVERFLOW_LEVEL, CompareConst.NAN) if self.overflow_check \
                 else target_node.data.get(GraphConst.JSON_INDEX_KEY, CompareConst.NAN)
+            index = CompareConst.NAN if index is None else index
             nodes_info[target_rank] = [str(index), target_node.id]
             if config_info:
                 # 给匹配上的目标节点也添加matched_distributed字段信息
@@ -357,7 +368,7 @@ class DistributedAnalyzer:
         :param rank: 当前节点所属rank
         :return:
         """
-        unique_group_ids = self.group_node_mapping.get(rank, {}).get(node.id)
+        unique_group_ids = self.group_node_mapping.get(str(rank), {}).get(node.id)
         if not unique_group_ids:
             return
         matched_distributed = [] if len(unique_group_ids) > 1 else {}
@@ -376,6 +387,7 @@ class DistributedAnalyzer:
             communications_type = self.config.get(api_name)[2]
             index = target_node.data.get(GraphConst.OVERFLOW_LEVEL, CompareConst.NAN) if self.overflow_check \
                 else target_node.data.get(GraphConst.JSON_INDEX_KEY, CompareConst.NAN)
+            index = CompareConst.NAN if index is None else index
             matched_info = {
                 'communications_type': communications_type,
                 'nodes_info': {target_rank: [str(index), target_node.id]}
@@ -384,3 +396,47 @@ class DistributedAnalyzer:
                 else matched_distributed.update(matched_info)
         if matched_distributed:
             node.matched_distributed = matched_distributed
+
+
+def distributed_analyse(db_path: str, overflow_check: bool, pbar_info=None):
+    distributed_info_data_source = {}
+    db_actuator = DBActuator(db_path)
+    rows = db_actuator.query_distributed_nodes_info()
+    if not rows:
+        if pbar_info:
+            post_process_db_pbar(pbar_info, True)
+        return
+    logger.info('Start analyzing distributed nodes...')
+    for row in rows:
+        if len(row) < 7:
+            continue
+        node_id = row[0]
+        input_data = row[1]
+        rank = row[2]
+        step = row[3]
+        data_source = row[4]
+        precision_index = row[5]
+        overflow_level = row[6]
+        node = BaseNode(NodeOp.function_api, node_id)
+        node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+        node.data[GraphConst.OVERFLOW_LEVEL] = overflow_level
+        try:
+            node.input_data = json.loads(input_data)
+        except json.JSONDecodeError as e:
+            logger.debug(f"JSON parsing of input data for node {node_id} failed: {e}, data: {input_data}")
+            continue
+
+        # data_source -> step -> rank -> {node_id: node} 分类
+        distributed_info_data_source.setdefault(data_source, {}) \
+            .setdefault(step, {}) \
+            .setdefault(str(rank), {})[node_id] = node
+
+    for data_source, distributed_info_steps in distributed_info_data_source.items():
+        for step, distributed_info in distributed_info_steps.items():
+            analyzer = DistributedAnalyzer(distributed_info, overflow_check)
+            analyzer.distributed_match()
+            db_actuator.update_matched_distributed(analyzer.distributed_info, step, data_source)
+
+    if pbar_info:
+        post_process_db_pbar(pbar_info, True)
+    logger.info('Successfully analyzed distributed nodes.')
