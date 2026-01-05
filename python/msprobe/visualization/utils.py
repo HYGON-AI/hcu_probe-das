@@ -446,15 +446,16 @@ def get_log_msg_wrapper(fn):
     return decorated
 
 
-def monitor_progress(pbar_info, pbar, all_task_ids):
+def monitor_progress(pbar_info, pbar, all_task_ids, is_parallel_merge=False):
     """监测所有任务进度（包括等待中的），取平均值更新总进度"""
     ProgressInfo.total_stage = pbar_info.stage_total
     task_progress = pbar_info.progress_dict
     for task_id in all_task_ids:
         task_progress[task_id] = 0
-    # 总进度卡99%，剩余的1%给db后处理函数
+    # 图合并模式，总进度卡99%，剩余的1%给db后处理函数; 否则总进度卡98%，剩余的1%给db后处理函数，1%给分布式节点分析关联
     global POST_DB_PROCESS
-    POST_DB_PROCESS = pbar_info.total - 1
+    POST_DB_PROCESS = pbar_info.total - pbar_info.step_total if is_parallel_merge \
+        else pbar_info.total - 2 * pbar_info.step_total
     all_complete = False
 
     while not all_complete:
@@ -516,10 +517,10 @@ def update_pbar_info(pbar_info, current_data, total_data, step_ratio=0.01, updat
             pbar_info.progress_dict[pbar_info.task_id] = progress
 
 
-def post_process_db_pbar(pbar_info):
+def post_process_db_pbar(pbar_info, is_parallel_merge=False):
     if pbar_info.progress_dict is not None:
         global POST_DB_PROCESS
-        POST_DB_PROCESS = pbar_info.total
+        POST_DB_PROCESS = pbar_info.total if is_parallel_merge else pbar_info.total - 1
     elif pbar_info.pbar is not None:
         pbar_info.pbar.n = pbar_info.total
         pbar_info.pbar.refresh()

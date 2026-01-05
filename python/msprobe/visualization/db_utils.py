@@ -18,9 +18,10 @@ import sqlite3
 import json
 import re
 import time
+from typing import Dict
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import change_mode, check_path_before_create, FileChecker
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.visualization.utils import GraphConst, update_shared_dict, update_pbar_info, post_process_db_pbar
 from msprobe.visualization.builder.msprobe_adapter import format_node_data
 
@@ -52,7 +53,8 @@ node_columns = {
     'data_source': TEXT,
     'dump_data_dir': TEXT,
     'step': INTEGER_NOT_NULL,
-    'rank': INTEGER_NOT_NULL
+    'rank': INTEGER_NOT_NULL,
+    'is_distributed': INTEGER
 }
 
 config_columns = {
@@ -78,7 +80,8 @@ indexes = {
     "index3": ["step", "rank", "data_source", "node_order"],
     "index4": ["step", "rank", "node_order"],
     "index5": ["step", "rank", "micro_step_id", "node_order"],
-    "index6": ["step", "rank", "modified", "matched_node_link"]
+    "index6": ["step", "rank", "modified", "matched_node_link"],
+    "index7": ["is_distributed"]
 }
 
 SAFE_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_]+$')
@@ -227,12 +230,12 @@ def add_table_index(db_path):
         conn.close()
 
 
-def post_process_db(db_path, pbar_info=None):
+def post_process_db(db_path, pbar_info=None, is_parallel_merge=False):
     logger.info('Start adding index to db file, please wait...')
     add_table_index(db_path)
     change_mode(db_path, FileCheckConst.DATA_FILE_AUTHORITY)
     if pbar_info:
-        post_process_db_pbar(pbar_info)
+        post_process_db_pbar(pbar_info, is_parallel_merge)
     logger.info('Adding index to db file completed.')
 
 
@@ -255,7 +258,8 @@ def node_to_db(graph, db_name, pbar_info=None):
                      json.dumps(node.matched_distributed), 0,
                      json.dumps(format_node_data(node.input_data, node.id, graph.compare_mode)),
                      json.dumps(format_node_data(node.output_data, node.id, graph.compare_mode)),
-                     graph.data_source, graph.data_path, graph.step, graph.rank))
+                     graph.data_source, graph.data_path, graph.step, graph.rank,
+                     1 if node.id.startswith(Const.DISTRIBUTED) else 0))
     to_db(db_name, create_table_sql, insert_sql, data, pbar_info=pbar_info)
     stack_to_db(stack_dict, db_name)
 
@@ -288,3 +292,95 @@ def get_node_unique_id(graph, node):
 
 def get_stack_unique_id(graph, stack_dict):
     return f'{get_graph_unique_id(graph)}_{len(stack_dict)}'
+
+
+class DBActuator:
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self._init_connection()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.conn:
+            try:
+                self.conn.close()
+                logger.info(f"Database connection to {self.db_path} closed successfully")
+            except sqlite3.Error as e:
+                logger.error(f"Failed to close database connection: {e}")
+        return False
+
+    def query_distributed_nodes_info(self):
+        query = """
+ 	         SELECT
+ 	             node_name,
+ 	             input_data,
+ 	             rank,
+ 	             step,
+ 	             data_source,
+ 	             precision_index,
+ 	             overflow_level
+ 	         FROM
+ 	             tb_nodes
+ 	         WHERE
+ 	             is_distributed = 1
+ 	         """
+        if not self.conn:
+            logger.warning("Database connection is not initialized.")
+            return []
+        try:
+            with self.conn as conn:
+                cursor = conn.execute(query)
+                rows = cursor.fetchall()
+                cursor.close()
+
+            return rows
+        except Exception as e:
+            logger.error(f'Failed to query distributed nodes: {e}')
+            return []
+
+    def update_matched_distributed(self, distributed_info: Dict[int, dict], step=0,
+                                   data_source=GraphConst.JSON_NPU_KEY, batch_size=1000):
+        update_data_list = []
+        update_sql = """
+     	         UPDATE tb_nodes 
+     	         SET matched_distributed = ? 
+     	         WHERE step = ? AND rank = ? AND data_source = ? AND node_name = ?;
+
+     	         """
+        if not self.conn:
+            logger.warning("Database connection is not initialized.")
+            return
+        for rank, nodes_dict in distributed_info.items():
+            for node in nodes_dict.values():
+                if not node.matched_distributed:
+                    continue
+                try:
+
+                    matched_distributed = json.dumps(node.matched_distributed)
+                except Exception as e:
+                    logger.warning(f"Failed to serialize matched_distributed for node {node.id}: {e}")
+                    continue
+                update_data_list.append((matched_distributed, step, rank, data_source, node.id))
+
+        try:
+            with self.conn as conn:
+                cursor = conn.cursor()
+                for i in range(0, len(update_data_list), batch_size):
+                    batch_data = update_data_list[i:i + batch_size]
+                    cursor.executemany(update_sql, batch_data)
+                cursor.close()
+
+        except Exception as e:
+            logger.error(f"Failed to update matched_distributed: {e}")
+            raise
+
+    def _init_connection(self):
+        FileChecker(self.db_path, FileCheckConst.FILE, FileCheckConst.READ_WRITE_ABLE,
+                    FileCheckConst.DB_SUFFIX).common_check()
+        try:
+            self.conn = sqlite3.connect(self.db_path)
+        except sqlite3.Error as e:
+            logger.error(f"Failed to connect to database: {e}")
+            raise e

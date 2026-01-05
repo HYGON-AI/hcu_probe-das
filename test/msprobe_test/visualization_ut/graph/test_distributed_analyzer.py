@@ -53,13 +53,13 @@ class TestDistributedAnalyzer(unittest.TestCase):
         self.graph_factory = lambda rank, nodes=None: self._create_graph(rank, nodes)
 
         # ------------------------ 构建测试用图 ------------------------
-        self.test_graphs = self._build_test_graphs()
+        self.distributed_info = self._build_test_distributed_info()
 
         # ------------------------ 创建分析器实例 ------------------------
-        self.analyzer = DistributedAnalyzer(self.test_graphs, overflow_check=False)
-        self.analyzer_overflow = DistributedAnalyzer(self.test_graphs, overflow_check=True)
+        self.analyzer = DistributedAnalyzer(self.distributed_info, overflow_check=False)
+        self.analyzer_overflow = DistributedAnalyzer(self.distributed_info, overflow_check=True)
 
-    def _build_test_graphs(self):
+    def _build_test_distributed_info(self):
         """构建多rank的测试图字典"""
         # ------------------------ Rank 0 节点 ------------------------
         # 1. P2P节点：isend
@@ -147,28 +147,20 @@ class TestDistributedAnalyzer(unittest.TestCase):
             }
         }
 
-        # ------------------------ 构建图 ------------------------
-        graph_0 = self.graph_factory(
-            rank=0,
-            nodes={
+        return {
+            "0": {
                 isend_node.id: isend_node,
                 recv_node.id: recv_node,
                 broadcast_node.id: broadcast_node,
                 batch_p2p_node.id: batch_p2p_node,
                 normal_node.id: normal_node
-            }
-        )
-
-        graph_1 = self.graph_factory(
-            rank=1,
-            nodes={
+            },
+            "1": {
                 irecv_node.id: irecv_node,
                 send_node.id: send_node,
                 broadcast_node_1.id: broadcast_node_1
             }
-        )
-
-        return {0: graph_0, 1: graph_1}
+        }
 
     # ------------------------ 测试枚举类 ------------------------
     def test_enum_values(self):
@@ -273,7 +265,6 @@ class TestDistributedAnalyzer(unittest.TestCase):
     def test_init(self):
         """测试初始化逻辑"""
         # 基础初始化
-        self.assertEqual(self.analyzer.graphs, self.test_graphs)
         self.assertEqual(self.analyzer.overflow_check, False)
         self.assertIn("send", self.analyzer.config)
         self.assertIn("broadcast", self.analyzer.config)
@@ -289,7 +280,7 @@ class TestDistributedAnalyzer(unittest.TestCase):
         self.analyzer._make_group_node_mapping()
 
         # 验证rank0的映射
-        rank0_mapping = self.analyzer.group_node_mapping.get(0)
+        rank0_mapping = self.analyzer.group_node_mapping.get("0")
         self.assertIsNotNone(rank0_mapping)
 
         # 验证P2P节点映射（isend_rank1_1）
@@ -307,7 +298,7 @@ class TestDistributedAnalyzer(unittest.TestCase):
 
     def test_make_batch_p2p_mapping(self):
         """测试批量P2P映射构建"""
-        batch_p2p_node = self.test_graphs[0].node_map["Distributed.batch_p2p.0.forward"]
+        batch_p2p_node = self.distributed_info["0"]["Distributed.batch_p2p.0.forward"]
         batch_p2p_count = {}
         self.analyzer.group_node_mapping = {0: {}}
 
@@ -360,7 +351,7 @@ class TestDistributedAnalyzer(unittest.TestCase):
     def test_get_target_node(self):
         """测试获取目标节点"""
         # 正常获取P2P目标节点（isend -> irecv）
-        rank0_isend_unique_id = self.analyzer.group_node_mapping[0]["Distributed.isend.0.forward"]
+        rank0_isend_unique_id = self.analyzer.group_node_mapping["0"]["Distributed.isend.0.forward"]
         target_node = self.analyzer._get_target_node(
             rank=0,
             unique_group_id=rank0_isend_unique_id,
@@ -381,7 +372,7 @@ class TestDistributedAnalyzer(unittest.TestCase):
                 target_api_name="irecv"
             )
             self.assertIsNone(target_node)
-            mock_log.assert_called_with(f'Graph data does not exist, {CANNOT_MATCH}999')
+            mock_log.assert_called_with(f'Node data does not exist, {CANNOT_MATCH}999')
 
         # 目标节点不存在
         with patch.object(logger, "debug") as mock_log:
@@ -415,12 +406,12 @@ class TestDistributedAnalyzer(unittest.TestCase):
 
     def test_p2p_match(self):
         """测试P2P节点匹配"""
-        isend_node = self.test_graphs[0].node_map["Distributed.isend.0.forward"]
+        isend_node = self.distributed_info["0"]["Distributed.isend.0.forward"]
 
         # 正常匹配场景
         self.analyzer._p2p_match(isend_node, 0, "isend")
         self.assertIsNotNone(isend_node.matched_distributed)
-        self.assertIsNotNone(self.test_graphs[1].node_map["Distributed.irecv.0.forward"].matched_distributed)
+        self.assertIsNotNone(self.distributed_info["1"]["Distributed.irecv.0.forward"].matched_distributed)
 
         # 目标rank不存在
         isend_node.matched_distributed = {}
@@ -430,7 +421,7 @@ class TestDistributedAnalyzer(unittest.TestCase):
 
         # 源rank不匹配
         isend_node.input_data[f"{isend_node.id}{GraphConst.INPUT}dst"]["value"] = 1
-        irecv_node = self.test_graphs[1].node_map["Distributed.irecv.0.forward"]
+        irecv_node = self.distributed_info["1"]["Distributed.irecv.0.forward"]
         irecv_node.input_data[f"{irecv_node.id}{GraphConst.INPUT}src"]["value"] = 2
         with patch.object(logger, "debug") as mock_log:
             self.analyzer._p2p_match(isend_node, 0, "isend")
@@ -438,12 +429,12 @@ class TestDistributedAnalyzer(unittest.TestCase):
 
     def test_collective_match(self):
         """测试集体通信节点匹配"""
-        broadcast_node = self.test_graphs[0].node_map["Distributed.broadcast.0.forward"]
+        broadcast_node = self.distributed_info["0"]["Distributed.broadcast.0.forward"]
 
         # 正常匹配场景
         self.analyzer._collective_match(broadcast_node, 0, "broadcast")
         self.assertIsNotNone(broadcast_node.matched_distributed)
-        self.assertIsNotNone(self.test_graphs[1].node_map["Distributed.broadcast.0.forward"].matched_distributed)
+        self.assertIsNotNone(self.distributed_info["1"]["Distributed.broadcast.0.forward"].matched_distributed)
 
         # source_rank不匹配
         broadcast_node.matched_distributed = {}
@@ -482,17 +473,14 @@ class TestDistributedAnalyzer(unittest.TestCase):
                 "group_id": "g1"
             }
         }
-        single_rank_graph = self.graph_factory(0, {single_rank_node.id: single_rank_node})
-        analyzer = DistributedAnalyzer({0: single_rank_graph}, overflow_check=True)
+        analyzer = DistributedAnalyzer({0: {single_rank_node.id: single_rank_node}}, overflow_check=True)
         analyzer.distributed_match()  # 无异常
 
         # 空node_map
-        empty_node_graph = self.graph_factory(0)
-        analyzer = DistributedAnalyzer({0: empty_node_graph}, overflow_check=False)
+        analyzer = DistributedAnalyzer({0: {}}, overflow_check=False)
         analyzer.distributed_match()  # 无异常
 
         # 配置中不存在的API
         unknown_node = self.base_node_factory("Distributed.unknown_api.0.forward")
-        unknown_graph = self.graph_factory(0, {unknown_node.id: unknown_node})
-        analyzer = DistributedAnalyzer({0: unknown_graph}, overflow_check=False)
+        analyzer = DistributedAnalyzer({0: {unknown_node.id: unknown_node}}, overflow_check=False)
         analyzer.distributed_match()  # 无异常
