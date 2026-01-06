@@ -311,7 +311,6 @@ class BaseService(ABC):
 
     def _create_l2_dirs(self, cur_rank):
         create_directory(self.dump_iter_dir)
-        create_directory(self.bench_dump_iter_dir)
         kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
         self.config.kernel_config_path = kernel_config_path
 
