@@ -578,7 +578,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                         ]
                         result.append(result_item)
                         continue
-                    if dump_mode == Const.TENSOR:
+                    if dump_mode == Const.ALL:
                         result_item = [
                             n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
                             n_requires_grad, CompareConst.NAN,
