@@ -1323,6 +1323,8 @@ class TestGetAccuracyNLenGtBLen(unittest.TestCase):
         # mock 行为
         # -------------------------------
         def fake_safe_get_value(d, idx, name, key=None):
+            if not isinstance(d, dict):
+                return d
             if isinstance(d.get(key), list):
                 return d[key][idx]
             return d[key]
@@ -1361,7 +1363,7 @@ class TestGetAccuracyNLenGtBLen(unittest.TestCase):
         }
 
         result = []
-        get_accuracy(result, n_dict, b_dict, Const.TENSOR)
+        get_accuracy(result, n_dict, b_dict, Const.ALL)
 
         # -------------------------------
         # 断言：应有两行（第 2 行来自 n_len > b_len）
