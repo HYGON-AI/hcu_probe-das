@@ -50,6 +50,7 @@ class BaseHookManager(ABC):
     def __init__(self, data_collector, config):
         self.data_collector = data_collector
         self.config = config
+        self.current_pid = self._pid
 
     @property
     def _pid(self):
@@ -86,7 +87,7 @@ class BaseHookManager(ABC):
             if BaseHookManager.grad_hook_call.get(ori_name)[1] == param_name:
                 BaseHookManager.grad_hook_call[ori_name][0] += 1
         return BaseHookManager.grad_hook_call.get(ori_name)[0]
-    
+
     @staticmethod
     @abstractmethod
     def _no_grad_context():
@@ -135,8 +136,13 @@ class BaseHookManager(ABC):
     def _register_param_hook(self, name, module, params_dict):
         pass
 
+    def is_child_process(self):
+        return self.current_pid != self._pid
+
     def _should_execute_hook(self, hook_type, tid, is_forward=True):
         is_api_hook = hook_type == Const.API
+        if self.is_child_process():
+            return False
         if BaseHookManager.inner_switch[tid]:
             return False
         if not is_api_hook and not Runtime.is_running:
