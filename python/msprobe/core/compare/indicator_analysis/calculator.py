@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import json
 from typing import List
 
@@ -20,16 +21,19 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.compare.indicator_analysis.utils import CompareMode, ResultLevel, divide_result_df, IgnoreInfo
 from msprobe.core.compare.indicator_analysis.algorithm import BaseAlgorithm, TENSOR_CHECKERS, STATISTICS_CHECKERS, \
-    MD5_CHECKERS
+    MD5_CHECKERS, STATISTICS_CHECKERS_PARALLEL_MERGE
 from msprobe.core.compare.indicator_analysis.api_data import ApiData
 
 
 class ApiIndicatorCalculator:
-    def __init__(self, mode):
+    RANK_SUFFIX_PATTERN = re.compile(r'_rank\d+$')
+
+    def __init__(self, mode, parallel_merge=False):
         self.mode = mode
-        self.all_ignore_list = ['empty', 'empty_like', 'numpy', 'to', '__setitem__', 'empty_with_format',
-                                'new_empty_strided', 'new_empty', 'empty_strided']
-        self.input_ignore_list = ['_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv']
+        self.parallel_merge = parallel_merge
+        self.all_ignore_set = {'empty', 'empty_like', 'numpy', 'to', '__setitem__', 'empty_with_format',
+                               'new_empty_strided', 'new_empty', 'empty_strided'}
+        self.input_ignore_set = {'_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv'}
         self.algorithms: List[BaseAlgorithm] = []
         self._add_algorithm()
 
@@ -68,9 +72,10 @@ class ApiIndicatorCalculator:
         name_split = npu_param_name.split(Const.SEP)
         if len(name_split) < 2:
             return IgnoreInfo.NO_IGNORE
-        if name_split[1] in self.all_ignore_list:
+        api_name = self.RANK_SUFFIX_PATTERN.sub('', name_split[1]) if self.parallel_merge else name_split[1]
+        if api_name in self.all_ignore_set:
             return IgnoreInfo.ALL_IGNORE
-        elif name_split[1] in self.input_ignore_list:
+        elif api_name in self.input_ignore_set:
             return IgnoreInfo.INPUT_IGNORE
 
         return IgnoreInfo.NO_IGNORE
@@ -105,7 +110,8 @@ class ApiIndicatorCalculator:
 
     def _add_algorithm(self):
         if self.mode == CompareMode.STATISTICS.value:
-            for checker in STATISTICS_CHECKERS:
+            checkers = STATISTICS_CHECKERS_PARALLEL_MERGE if self.parallel_merge else STATISTICS_CHECKERS
+            for checker in checkers:
                 self.add_algorithm(checker())
         elif self.mode == CompareMode.TENSOR.value:
             for checker in TENSOR_CHECKERS:
@@ -141,16 +147,17 @@ def calculate_excel_result_df(result_df, mode):
     result_df[:] = result
 
 
-def calculate_result(result, mode):
+def calculate_result(result, mode, parallel_merge=False):
     """
     得到一个api或模块的指标和异常信息
 
     Args:
         result: List[List]数据结构，每个list元素代表api或模块参数的具体信息
         mode: 比对模式，分为 tensor 模式、统计量模式和 md5 模式
+        parallel_merge: 是否为不同切分策略图合并比对场景，默认False
 
     Return:
         精度比对指标（pass/warning/error）
     """
-    calculator = ApiIndicatorCalculator(mode)
+    calculator = ApiIndicatorCalculator(mode, parallel_merge)
     return calculator.calculate(result)

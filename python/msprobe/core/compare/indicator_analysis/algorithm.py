@@ -358,3 +358,5 @@ TENSOR_CHECKERS = [InfNanErrChecker, OneThousandthErrChecker, RequiresGradErrChe
 STATISTICS_CHECKERS = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChecker, ParametersErrChecker,
                        DTypeErrChecker, ShapeErrChecker, RelativeWarnChecker]
 MD5_CHECKERS = [CRC32ErrChecker]
+STATISTICS_CHECKERS_PARALLEL_MERGE = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChecker,
+                                      ParametersErrChecker, DTypeErrChecker, RelativeWarnChecker]

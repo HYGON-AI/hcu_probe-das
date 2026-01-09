@@ -129,12 +129,12 @@ def compare_node(node_n, node_b, compare_mode):
     return result
 
 
-def get_api_indicator_info(compare_mode, result):
+def get_api_indicator_info(compare_mode, result, parallel_merge=False):
     """
     得到一个api或模块的指标和异常信息
     """
     dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
-    return calculate_result(result, dump_mode)
+    return calculate_result(result, dump_mode, parallel_merge)
 
 
 def get_real_api_data_list(node, compare_data_dict: dict):
