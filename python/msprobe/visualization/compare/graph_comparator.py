@@ -31,14 +31,14 @@ class GraphComparator:
         self.graph_b = graphs[1]
         self.dump_path_param = dump_path_param
         self.output_path = args.output_path
-        self.ma = ModeAdapter(get_compare_mode(self.dump_path_param))
+        self.parallel_merge = args.parallel_merge if hasattr(args, 'parallel_merge') else False
+        self.ma = ModeAdapter(get_compare_mode(self.dump_path_param), self.parallel_merge)
         self.framework = get_compare_framework(dump_path_param.get("npu_path"), dump_path_param.get("bench_path"))
         self.layer_mapping = args.layer_mapping
         self.mapping_dict = mapping_dict
         self.fuzzy_match = args.fuzzy_match
         self.pattern = re.compile(r'\.\d+\.')
         self.is_cross_framework = is_cross_framework
-        self.parallel_merge = args.parallel_merge if hasattr(args, 'parallel_merge') else False
         self.rank_pattern = re.compile(r"_rank\d+")
         self.pbar_info = pbar_info
 
@@ -62,7 +62,7 @@ class GraphComparator:
         # 真实数据比对，先暂存节点，在多进程对比得到精度指标后，再将指标添加到节点中
         if self.ma.prepare_real_data(node):
             return
-        api_indicator = get_api_indicator_info(self.ma.compare_mode, compare_result_list)
+        api_indicator = get_api_indicator_info(self.ma.compare_mode, compare_result_list, self.ma.parallel_merge)
         compare_result_dict = {}
         # input和output对比数据分开
         for item in compare_result_list:

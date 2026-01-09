@@ -20,10 +20,11 @@ from msprobe.visualization.utils import ToolTip, GraphConst, str2float
 
 
 class ModeAdapter:
-    def __init__(self, compare_mode):
+    def __init__(self, compare_mode, parallel_merge=False):
         self.compare_mode = compare_mode
         self.csv_data = []
         self.compare_nodes = []
+        self.parallel_merge = parallel_merge
 
     @staticmethod
     def _is_invalid(value):
