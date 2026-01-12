@@ -121,13 +121,14 @@ class ApiIndicatorCalculator:
                 self.add_algorithm(checker())
 
 
-def calculate_excel_result_df(result_df, mode):
+def calculate_excel_result_df(result_df, mode, chunk_size=1000):
     """
     仅适用于excel比对场景，得到表格每行数据的精度比对指标（pass/warning/error）
 
     Args:
         result_df: DataFrame数据结构，即转换成excel前的表单结构
         mode: 比对模式，分为 tensor 模式、统计量模式和 md5 模式
+        chunk_size: 分块赋值参数，默认1000，把 result 分成小块，逐块赋值给 result_df，这样每次只占用小块内存，避免内存峰值过高
     """
     result_dict = divide_result_df(result_df)
     calculator = ApiIndicatorCalculator(mode)
@@ -136,15 +137,31 @@ def calculate_excel_result_df(result_df, mode):
         calculator.calculate(data_lists)
         calculated_result_lists.extend(data_lists)
 
-    # 将列表中的列表元素转换为str，避免list转换为ndarray报错
-    # 可以使用一行列表推导式实现，但会被codecheck拦截（推导式和生成器表达式仅用于简单的逻辑表达）
-    result = []
-    for sublist in calculated_result_lists:
-        processed_sublist = []
-        for item in sublist:
-            processed_sublist.append(json.dumps(item)) if isinstance(item, list) else processed_sublist.append(item)
-        result.append(processed_sublist)
-    result_df[:] = result
+    head = CompareConst.HEAD_OF_COMPARE_MODE.get(mode)
+    if not head:
+        logger.error(f'Unable to obtain header based on compare mode: {mode}')
+        raise RuntimeError()
+    # 配置列映射关系：[(result_df的目标列名, result子列表的列索引)]
+    try:
+        cols_mapping = [
+            (CompareConst.RESULT, head.index(CompareConst.RESULT)),
+            (CompareConst.ERROR_MESSAGE, head.index(CompareConst.ERROR_MESSAGE))
+        ]
+    except ValueError as e:
+        logger.error(f'The {CompareConst.RESULT} or {CompareConst.ERROR_MESSAGE} does not exist in the header: {e}')
+        raise e
+
+    total_rows = len(calculated_result_lists)
+
+    # 分块逐批赋值，降低内存瞬时峰值
+    for i in range(0, total_rows, chunk_size):
+        end_idx = min(i + chunk_size, total_rows)
+        current_result_chunk = calculated_result_lists[i:end_idx]
+
+        for df_col_name, result_col_idx in cols_mapping:
+            col_data = [sublist[result_col_idx] for sublist in current_result_chunk]
+            df_col_idx = result_df.columns.get_loc(df_col_name)
+            result_df.iloc[i:end_idx, df_col_idx] = col_data
 
 
 def calculate_result(result, mode, parallel_merge=False):
