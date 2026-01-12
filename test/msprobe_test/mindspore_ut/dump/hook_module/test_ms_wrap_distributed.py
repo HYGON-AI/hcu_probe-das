@@ -1,27 +1,12 @@
-# Copyright (c) 2025-2025, Huawei Technologies Co., Ltd.
-# All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0  (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import unittest
 from unittest.mock import Mock, patch
-
 import numpy as np
-from mindspore import Tensor
+import mindspore
+from mindspore import Tensor, ops
 
-from msprobe.core.common.const import MonitorConst
 from msprobe.mindspore.monitor.distributed.wrap_distributed import (
     catch_data,
+    CatchDataParams,
     DistributedOPTemplate,
     ApiRegistry,
     get_distributed_ops,
@@ -29,7 +14,7 @@ from msprobe.mindspore.monitor.distributed.wrap_distributed import (
     op_aggregate,
     update_data
 )
-
+from msprobe.core.common.const import MonitorConst
 
 class TestWrapDistributed(unittest.TestCase):
     def setUp(self):
@@ -53,12 +38,12 @@ class TestWrapDistributed(unittest.TestCase):
         args = [Tensor(np.array([1.0, 2.0, 3.0]))]
         
         # 测试输入数据捕获
-        catch_data(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_PRE)
-        self.assertTrue('all_reduce/pre_0' in cc_context.data)
+        catch_data(CatchDataParams(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_PRE))
+        self.assertTrue('all_reduce/pre_0_0' in cc_context.data)
         
         # 测试输出数据捕获
-        catch_data(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_POST)
-        self.assertTrue('all_reduce/post_0' in cc_context.data)
+        catch_data(CatchDataParams(cc_context, cc_name, self.mock_ops, args, MonitorConst.PREFIX_POST))
+        self.assertTrue('all_reduce/post_0_0' in cc_context.data)
 
     def test_distributed_op_template(self):
         # 测试分布式算子模板
