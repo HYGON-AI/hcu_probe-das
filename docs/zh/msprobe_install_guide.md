@@ -21,19 +21,17 @@ cd MindStudio-Probe
 
 pip install setuptools wheel
 
-python setup.py build_tb_graph_ascend # 可选，安装模型分级可视化插件
+python setup.py bdist_wheel --include-mod=tb_graph_ascend --no-check # 可选，安装模型分级可视化插件
 python setup.py bdist_wheel --include-mod=adump --no-check
 cd ./dist
 pip install ./mindstudio_probe*.whl
 ```
 
-通过执行`build_tb_graph_ascend`构建指令来安装模型分级可视化功能。关于模型分级可视化插件的详细功能及使用说明请参见[tb_graph_ascend](./accuracy_compare/tb_graph_ascend.md)。
-
 
 |参数|可选/必选|说明|
 |--|:--:|--|
-|--include-mod|可选|指定可选模块，可取值`adump`，表示在编whl包时加入adump模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本，要求CANN的安装包中包含`libadump_server.a`文件。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。|
-|--no-check|可选|指定可选模块`adump`后，会下载所依赖的第三方库包，下载过程会进行证书校验。--no-check可以跳过证书校验。|
+|--include-mod|可选|指定可选模块，可取值`adump`, `tb_graph_ascend`，表示在编whl包时加入指定模块。默认未配置该参数，表示编译基础包。<br>&#8226; adump模块用于MindSpore静态图场景L2级别的dump。<br>&#8226; 仅MindSpore 2.5.0及以上版本支持adump模块。<br>&#8226; 若使用源码安装，编译环境需支持GCC 7.5或以上版本，和CMake 3.14或以上版本，要求CANN的安装包中包含`libadump_server.a`文件。<br>&#8226; 生成的whl包仅限编译时使用的python版本和处理器架构可用。<br>&#8226; 模型分级可视化构建推荐版本为 node v20.19.3, npm v10.8.2。<br>&#8226; 具体详细依赖版本要求，以及模型分级可视化插件的详细功能及使用说明请参见[tb_graph_ascend](./accuracy_compare/tb_graph_ascend.md)。|
+|--no-check|可选|指定可选模块`adump`, `tb_graph_ascend`后，会下载所依赖的第三方库包，下载过程会进行证书校验。--no-check可以跳过证书校验。|
 
 打印如下信息时，表示msProbe安装成功。
 
