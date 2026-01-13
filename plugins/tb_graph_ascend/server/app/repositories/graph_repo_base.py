@@ -1,4 +1,3 @@
-
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
 # Copyright (c) 2025 Huawei Technologies Co.,Ltd.

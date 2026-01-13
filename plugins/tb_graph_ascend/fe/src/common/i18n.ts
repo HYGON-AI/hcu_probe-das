@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 import i18next from 'i18next';
 
 i18next

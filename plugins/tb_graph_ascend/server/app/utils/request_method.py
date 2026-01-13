@@ -12,7 +12,9 @@
 # EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
-# -------------------------------------------------------------------------import json
+# -------------------------------------------------------------------------
+
+import json
 from werkzeug.wrappers.request import Request
 from werkzeug import Response
 from ..utils.graph_utils import GraphUtils
