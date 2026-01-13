@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 import { test as baseTest, Locator, Page } from '@playwright/test';
 
 interface BoundingBox {

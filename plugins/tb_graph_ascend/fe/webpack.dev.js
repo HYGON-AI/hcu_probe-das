@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 

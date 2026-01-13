@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 import * as d3 from 'd3';
 import { maybeTruncateString, darkenColor, safeJSONParse } from '../../../utils/index';
 import request from '../../../utils/request';

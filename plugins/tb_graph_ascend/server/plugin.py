@@ -15,6 +15,7 @@
 # Copyright (c) 2025, Huawei Technologies.
 # Adapt to the model hierarchical visualization data collected by the msprobe tool
 # ==============================================================================
+
 """The TensorBoard Graphs plugin."""
 
 import os

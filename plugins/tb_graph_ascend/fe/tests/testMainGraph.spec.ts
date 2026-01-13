@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 import { expect, Page } from '@playwright/test';
 import { test } from './mainPage';
 

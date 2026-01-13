@@ -15,6 +15,7 @@
  * See the Mulan PSL v2 for more details.
  * -------------------------------------------------------------------------
  */
+
 import '@vaadin/tabs';
 import '@vaadin/tabsheet';
 import { Notification } from '@vaadin/notification';
