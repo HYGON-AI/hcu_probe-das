@@ -1,0 +1,46 @@
+# coding=utf-8
+# -------------------------------------------------------------------------
+#  This file is part of the MindStudio project.
+# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PSL v2 for more details.
+# -------------------------------------------------------------------------
+
+"""
+Function:
+MaxRelativeError algorithm. This file mainly involves the compare function.
+"""
+
+import numpy as np
+
+from msprobe.msaccucmp.algorithm_manager.algorithm_parameter import AlgorithmParameter
+from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from msprobe.msaccucmp.cmp_utils import utils
+
+
+def compare(my_output_dump_data: any, ground_truth_dump_data: any, args: AlgorithmParameter) -> (str, str):
+    """
+    compare my output dump data and the ground truth dump data
+    by max absolute error
+    formula is MaxRE = max|(x[i]-y[i]) / y[i]|
+    :param my_output_dump_data: my output dump data to compare
+    :param ground_truth_dump_data: the ground truth dump data to compare
+    :param args: the algorithm parameter
+    :return: the result of max Relative error value and error message (the default is "")
+    """
+    _ = args  # Bypassing parameter is not used
+    result = np.where(
+        np.abs(ground_truth_dump_data) > ConstManager.FLOAT_EPSILON,
+        np.abs(my_output_dump_data / ground_truth_dump_data - 1),  # abs(aa - bb) / abs(bb) -> abs(aa / bb - 1)
+        0,
+    ).max()
+    return utils.format_value(result), ""

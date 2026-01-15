@@ -22,7 +22,7 @@ def run_ut():
     os.makedirs(report_dir)
 
     head_ut_directories = [os.path.join(cur_dir, "common_set_up")]
-    tail_ut_directories = [os.path.join(cur_dir, "mindspore_ut")]
+    tail_ut_directories = [os.path.join(cur_dir, "msaccucmp_ut"), os.path.join(cur_dir, "pytorch_ut"), os.path.join(cur_dir, "mindspore_ut")]
 
     all_ut_dirs = []
     for item in os.listdir(cur_dir):
