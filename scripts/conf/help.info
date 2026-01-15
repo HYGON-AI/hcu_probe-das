@@ -1,0 +1,6 @@
+
+  --full                            Install full mode
+  --install                         Install run mode
+  --run                             Install run mode
+  --install-path=<path>             Install product to specific dir path
+  --install-for-all                 Install for all user
