@@ -420,6 +420,13 @@ class Const:
     TORCHAIR_FX_DATA_DIRECTORY = 'msprobe_fx_dump'
     TORCHAIR_GE_DATA_DIRECTORY = 'msprobe_ge_dump'
 
+    FULL_OP_NAME = "full_op_name"
+    DIRECTION = "direction"
+    CALL_DIRECTION = "call_direction"
+    OP_NO_NUMBER = "op_no_number"
+    BACKWARD_CALL_ORDER = "backward_call_order"
+    SUFFIX = "suffix"
+
 
 class Data2DBConst:
     BATCH_SIZE = 5000
@@ -498,6 +505,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    OP_NAME_UPDATE = "op_name_update"
     STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"

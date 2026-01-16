@@ -109,8 +109,11 @@ class Comparator:
         stack_json = input_param.get("stack_path")
         parse_data = ParseData(self.mode_config, rank)  # load and parse json data
         npu_df, bench_df = parse_data.parse([npu_json, bench_json, stack_json])
+
+        logger.info("Matching APIs/Modules in progress...")
         result_df = self.compare_statistics(npu_df, bench_df)
-        if not result_df.values.tolist():
+        logger.info("APIs/Modules match done.")
+        if result_df.empty:
             logger.warning("Can`t match any op. No compare result file generated.")
             return
 
@@ -129,13 +132,20 @@ class Comparator:
 
         # compare real data
         if self.mode_config.dump_mode == Const.ALL:
+            logger.info("Compare real data in progress...")
             compare_real_data = CompareRealData(self.file_reader, self.mode_config, self.cross_frame)
             result_df = compare_real_data.do_multi_process(input_param, result_df)
+            logger.info("Compare real data done.")
 
-        # save result excel file
-        logger.info(f'Saving result excel file in progress. The file path is: {file_path}.')
+        # calculate Indicators
+        logger.info("Calculating comparison indicators in progress...")
         calculate_excel_result_df(result_df, self.mode_config.dump_mode)
         result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
+        logger.info("Comparison indicators calculation done.")
+
+        # save result excel file
+        logger.info("Saving result excel file in progress...")
+        logger.info(f"The result excel file path is: {file_path}.")
         save_excel(file_path, result_df)
 
         print_compare_ends_info()
@@ -147,6 +157,10 @@ class Comparator:
         # create new columns for compare op_name and shape
         # process npu_df's COMPARE_KEY whether same or different framework
         process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
+        # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
+        if not self.mode_config.fuzzy_match:
+            npu_df = process_df.update_backward_call(npu_df)
+            bench_df = process_df.update_backward_call(bench_df)
         npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df, bench_df)
 
         # match npu and bench, match_result contains both npu_info and bench_info
@@ -173,6 +187,33 @@ class ParseData:
         self.mode_config = mode_config
         self.rank = rank
 
+    @staticmethod
+    def get_direction_and_call_direction(data_name):
+        parts = data_name.split(Const.SEP)
+        if len(parts) < 2:
+            return None, None
+
+        last = parts[-1]
+        second_last = parts[-2]
+
+        # direction 判断
+        if Const.BACKWARD in (last, second_last):
+            direction = Const.BACKWARD
+        elif Const.FORWARD in (last, second_last):
+            direction = Const.FORWARD
+        else:
+            return None, None
+
+        # call_direction 永远取最后两个
+        call_direction = Const.SEP.join((second_last, last))
+
+        return direction, call_direction
+
+    @staticmethod
+    def get_op_no_number(data_name):
+        parts = data_name.split(Const.SEP)
+        return Const.SEP.join(parts[:-2]) if len(parts) > 2 else ''
+
     def parse(self, file_list):
         npu_json_path, bench_json_path, stack_json_path = file_list
         npu_json_data = load_json(npu_json_path)
@@ -185,7 +226,7 @@ class ParseData:
 
         return npu_df, bench_df
 
-    def gen_data_df(self, data_json, stack_json_data, device: str):
+    def init_result(self):
         result = {
             CompareConst.OP_NAME: [],
             Const.DTYPE: [],
@@ -194,57 +235,90 @@ class ParseData:
             Const.STACK_INFO: [],
             Const.STATE: [],
             Const.API_ORIGIN_NAME: [],
-            Const.REQ_GRAD: []
+            Const.REQ_GRAD: [],
+            Const.DIRECTION: [],  # 目前三种选择：'forward', 'backward', None
+            Const.CALL_DIRECTION: [],
+            Const.OP_NO_NUMBER: [],  # 删除调用序号
+            Const.BACKWARD_CALL_ORDER: [],  # 计算op反向调用顺序，初始化为0
+            Const.SUFFIX: []
         }
         if self.mode_config.dump_mode == Const.ALL:
             result[Const.DATA_NAME] = []
         elif self.mode_config.dump_mode == Const.MD5:
             result[Const.MD5] = []
+        return result
+
+    def create_progress_bar(self, api_nums: int, device: str):
+        desc = f'{device} API/Module Read Progress'
+        if self.rank:
+            desc = f'[{self.rank}]' + desc
+        return tqdm(total=api_nums, desc=desc, unit="api/module", ncols=100)
+
+    def gen_data_df(self, data_json, stack_json_data, device: str):
+        result = self.init_result()
+        op_backward_count = defaultdict(int)  # 记录backward调用次数，用于后续调用序更新
 
         apis_data = data_json.get('data', None)
         if not apis_data:
             logger.warning('No APIs found in dump.json.')
             return pd.DataFrame(result)
 
-        api_nums = len(apis_data)
-        default_bar_desc = f'{device} API/Module Read Progress'
-        bar_desc_add_rank = f'[{self.rank}]' + default_bar_desc if self.rank else default_bar_desc
-        progress_bar = tqdm(total=api_nums, desc=bar_desc_add_rank, unit="api/module", ncols=100)
+        progress_bar = self.create_progress_bar(len(apis_data), device)
 
         # 从json中循环解析API数据，遍历所有API
         for data_name in apis_data:
             check_op_str_pattern_valid(data_name)
+
             op_parsed_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not op_parsed_list:
+                progress_bar.update(1)
                 continue
+
+            op_no_number = self.get_op_no_number(data_name)
+            if op_no_number == '':
+                progress_bar.update(1)
+                continue
+
+            direction, call_direction = self.get_direction_and_call_direction(data_name)
+            backward_call_order = op_backward_count.get(op_no_number, 0)
+            if direction == Const.BACKWARD:
+                op_backward_count[op_no_number] += 1
+
             reordered_index_list = reorder_index(op_parsed_list)
+
+            stack_info = op_parsed_list[-1].get('full_info') if self.mode_config.stack_mode else None
+
             for i, index in enumerate(reordered_index_list):
                 op_item = op_parsed_list[index]
+                summary_data = [
+                    str(op_item.get(key)) if op_item.get(key) is None else op_item.get(key)
+                    for key in Const.SUMMARY_METRICS_LIST
+                ]
+                full_op_name = op_item.get(Const.FULL_OP_NAME)
+                suffix = full_op_name.replace(data_name, '')
 
                 # common key
-                result[CompareConst.OP_NAME].append(op_item.get('full_op_name'))
+                result[CompareConst.OP_NAME].append(full_op_name)
                 result[Const.DTYPE].append(op_item.get(Const.DTYPE))
                 result[Const.SHAPE].append(op_item.get(Const.SHAPE))
                 result[Const.STATE].append(op_item.get(Const.STATE))
                 result[Const.REQ_GRAD].append(op_item.get(Const.REQ_GRAD))
                 result[Const.API_ORIGIN_NAME].append(data_name)
-                summary_data = [
-                    str(op_item.get(key)) if op_item.get(key) is None else op_item.get(key)
-                    for key in Const.SUMMARY_METRICS_LIST
-                ]
                 result[Const.SUMMARY].append(summary_data)
+                result[Const.DIRECTION].append(direction)
+                result[Const.CALL_DIRECTION].append(call_direction)
+                result[Const.OP_NO_NUMBER].append(op_no_number)
+                result[Const.BACKWARD_CALL_ORDER].append(backward_call_order)
+                result[Const.SUFFIX].append(suffix)
 
                 # dump_mode differ key
                 if self.mode_config.dump_mode == Const.MD5:
-                    result[Const.MD5].append(op_parsed_list[index].get(Const.MD5))
+                    result[Const.MD5].append(op_item.get(Const.MD5))
                 if self.mode_config.dump_mode == Const.ALL:
                     result[Const.DATA_NAME].append(op_item.get(Const.DATA_NAME))
 
                 # mode_config stack_mode addition key
-                if i == 0 and self.mode_config.stack_mode:
-                    result[Const.STACK_INFO].append(op_parsed_list[-1].get('full_info'))
-                else:
-                    result[Const.STACK_INFO].append(None)
+                result[Const.STACK_INFO].append(stack_info if i == 0 else None)
 
                 # mode_config first_diff_analyze addition key
                 if self.mode_config.first_diff_analyze:
@@ -290,10 +364,64 @@ class ProcessDf:
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         return api_name
 
+    @staticmethod
+    def update_backward_call(cmp_df):
+        # ===============================
+        # Step 1: 拆 call_direction 的两部分
+        # ===============================
+        cd_parts = cmp_df[Const.CALL_DIRECTION].str.rsplit(Const.SEP, n=1, expand=True)
+        cd_parts.columns = ["cd_head", "cd_tail"]
+
+        head_is_digit = cd_parts["cd_head"].str.isdigit()
+        tail_is_digit = cd_parts["cd_tail"].str.isdigit()
+        is_backward = cmp_df[Const.DIRECTION] == Const.BACKWARD
+
+        # ===============================
+        # Step 2: 矢量化替换 backward_call_order
+        # ===============================
+        mask_head = is_backward & head_is_digit
+        mask_tail = is_backward & tail_is_digit
+        update_mask = mask_head | mask_tail
+
+        cd_parts.loc[mask_head, "cd_head"] = (
+            cmp_df.loc[mask_head, Const.BACKWARD_CALL_ORDER].astype(str)
+        )
+        cd_parts.loc[mask_tail, "cd_tail"] = (
+            cmp_df.loc[mask_tail, Const.BACKWARD_CALL_ORDER].astype(str)
+        )
+
+        # 只更新需要更新的 call_direction
+        cmp_df.loc[update_mask, Const.CALL_DIRECTION] = (
+                cd_parts.loc[update_mask, "cd_head"]
+                + Const.SEP
+                + cd_parts.loc[update_mask, "cd_tail"]
+        )
+
+        # ===============================
+        # Step 3: 初始化 + 局部更新 OP_NAME_UPDATE
+        # ===============================
+        # 默认保持原值
+        cmp_df[CompareConst.OP_NAME_UPDATE] = cmp_df[CompareConst.OP_NAME]
+
+        # 只更新命中的行
+        cmp_df.loc[update_mask, CompareConst.OP_NAME_UPDATE] = (
+                cmp_df.loc[update_mask, Const.OP_NO_NUMBER]
+                + Const.SEP
+                + cmp_df.loc[update_mask, Const.CALL_DIRECTION]
+                + cmp_df.loc[update_mask, Const.SUFFIX]
+        )
+
+        return cmp_df
+
     def process_compare_key_and_shape(self, npu_df, bench_df):
         npu_df = self.assign_npu_df_compare_key(npu_df, bench_df)
         npu_df[CompareConst.CMP_SHAPE] = npu_df[Const.SHAPE]
-        bench_df[CompareConst.CMP_KEY] = bench_df[CompareConst.OP_NAME]
+        bench_cmp_key = (
+            bench_df[CompareConst.OP_NAME_UPDATE]
+            if not self.mode_config.fuzzy_match
+            else bench_df[CompareConst.OP_NAME]
+        )
+        bench_df[CompareConst.CMP_KEY] = bench_cmp_key
         bench_df[CompareConst.CMP_SHAPE] = bench_df[Const.SHAPE]
         return npu_df, bench_df
 
@@ -319,7 +447,12 @@ class ProcessDf:
         elif self.mapping_config.data_mapping:
             npu_df[CompareConst.CMP_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_data_mapping)
         else:
-            npu_df[CompareConst.CMP_KEY] = npu_df[CompareConst.OP_NAME]
+            cmp_key = (
+                npu_df[CompareConst.OP_NAME_UPDATE]
+                if not self.mode_config.fuzzy_match
+                else npu_df[CompareConst.OP_NAME]
+            )
+            npu_df[CompareConst.CMP_KEY] = cmp_key
         return npu_df
 
     def process_internal_api_mapping(self, npu_op_name):
@@ -505,6 +638,10 @@ class Match:
             match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY],
                                     how='outer')
         else:
+            drop_list = [Const.DIRECTION, Const.CALL_DIRECTION, Const.OP_NO_NUMBER, Const.BACKWARD_CALL_ORDER,
+                         Const.SUFFIX]
+            npu_df.drop(columns=drop_list, inplace=True)
+            bench_df.drop(columns=drop_list, inplace=True)
             match_result = self.process_fuzzy_match(npu_df, bench_df)
         return match_result
 
