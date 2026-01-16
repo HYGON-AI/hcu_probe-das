@@ -432,6 +432,9 @@ class TestParseData(unittest.TestCase):
 
         self.lock = threading.Lock()
 
+        mode_config = ModeConfig(stack_mode=True)
+        self.parser = ParseData(mode_config, "rank0")
+
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
@@ -446,9 +449,16 @@ class TestParseData(unittest.TestCase):
         npu_df, bench_df = parse_data.parse(file_list)
 
         target_df = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False']],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad']
+            [
+                ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
+                 'Functional.linear.0.forward', 'False',
+                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',]
+            ],
+            columns=[
+                'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
+                'api_origin_name', 'requires_grad',
+                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix'
+            ]
         )
         self.assertTrue(npu_df.equals(target_df))
         self.assertTrue(bench_df.equals(target_df))
@@ -465,9 +475,16 @@ class TestParseData(unittest.TestCase):
         npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32',
-              [2, 2], [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False']],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad']
+            [
+                ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
+                 'Functional.linear.0.forward', 'False',
+                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',]
+            ],
+            columns=[
+                'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
+                'api_origin_name', 'requires_grad',
+                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix'
+            ]
         )
         self.assertTrue(npu_df.equals(target_df))
 
@@ -483,9 +500,18 @@ class TestParseData(unittest.TestCase):
         npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False', 'Functional.linear.0.forward.input.0.pt']],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad', 'data_name']
+            [
+                ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
+                 'Functional.linear.0.forward', 'False',
+                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',
+                 'Functional.linear.0.forward.input.0.pt']
+            ],
+            columns=[
+                'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
+                'api_origin_name', 'requires_grad',
+                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix',
+                'data_name'
+            ]
         )
         self.assertTrue(npu_df.equals(target_df))
 
@@ -501,9 +527,18 @@ class TestParseData(unittest.TestCase):
         npu_df = parse_data.gen_data_df(npu_json_data, stack_json_data, 'NPU')
 
         target_df = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2],
-              [2, 0, 1, 1], ['File'], 'input', 'Functional.linear.0.forward', 'False', 123456]],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state', 'api_origin_name', 'requires_grad', 'md5']
+            [
+                ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
+                 'Functional.linear.0.forward', 'False',
+                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',
+                 123456]
+            ],
+            columns=[
+                'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
+                'api_origin_name', 'requires_grad',
+                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix',
+                'md5'
+            ]
         )
         self.assertTrue(npu_df.equals(target_df))
 
@@ -540,8 +575,80 @@ class TestParseData(unittest.TestCase):
         ]
         self.assertEqual(merge_list, target_merge_list)
 
+    def test_get_direction_and_call_direction_backward_at_last(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "conv.1.backward"
+        )
+        self.assertEqual(direction, Const.BACKWARD)
+        self.assertEqual(call_direction, "1.backward")
+
+    def test_get_direction_and_call_direction_backward_at_second_last(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "conv.backward.1"
+        )
+        self.assertEqual(direction, Const.BACKWARD)
+        self.assertEqual(call_direction, "backward.1")
+
+    def test_get_direction_and_call_direction_forward_at_last(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "matmul.2.forward"
+        )
+        self.assertEqual(direction, Const.FORWARD)
+        self.assertEqual(call_direction, "2.forward")
+
+    def test_get_direction_and_call_direction_forward_at_second_last(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "matmul.forward.2"
+        )
+        self.assertEqual(direction, Const.FORWARD)
+        self.assertEqual(call_direction, "forward.2")
+
+    def test_get_direction_and_call_direction_less_than_two_parts(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "backward"
+        )
+        self.assertEqual((direction, call_direction), (None, None))
+
+    def test_get_direction_and_call_direction_no_direction_keyword(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "conv.1.2"
+        )
+        self.assertEqual((direction, call_direction), (None, None))
+
+    def test_get_direction_and_call_direction_direction_not_in_last_two(self):
+        direction, call_direction = self.parser.get_direction_and_call_direction(
+            "backward.conv.1"
+        )
+        self.assertEqual((direction, call_direction), (None, None))
+
+    def test_get_op_no_number__three_parts(self):
+        result = self.parser.get_op_no_number("conv.1.forward")
+        self.assertEqual(result, "conv")
+
+    def test_get_op_no_number__more_than_three_parts(self):
+        result = self.parser.get_op_no_number("conv.bn.relu.1.forward")
+        self.assertEqual(result, "conv.bn.relu")
+
+    def test_get_op_no_number__exact_two_parts(self):
+        result = self.parser.get_op_no_number("conv.1")
+        self.assertEqual(result, "")
+
+    def test_get_op_no_number__single_part(self):
+        result = self.parser.get_op_no_number("conv")
+        self.assertEqual(result, "")
+
+    def test_get_op_no_number__empty_string(self):
+        result = self.parser.get_op_no_number("")
+        self.assertEqual(result, "")
+
 
 class TestProcessDf(unittest.TestCase):
+
+    def setUp(self):
+        mode_config = ModeConfig()
+        mapping_config = MappingConfig()
+        mapping_dict = MappingDict(mapping_config)
+        self.process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
 
     def test_get_api_name_success(self):
         api_list = ['Functional', 'linear', '0', 'forward', 'input', '0']
@@ -569,8 +676,8 @@ class TestProcessDf(unittest.TestCase):
 
     def test_process_compare_key_and_shape(self):
         npu_df_o = bench_df_o = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File']]],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info']
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'Functional.linear.0.forward.input.0']],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'op_name_update']
         )
 
         mode_config = ModeConfig()
@@ -580,8 +687,8 @@ class TestProcessDf(unittest.TestCase):
         npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df_o, bench_df_o)
 
         target_df = pd.DataFrame(
-            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'Functional.linear.0.forward.input.0', [2, 2]]],
-            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'compare_key', 'compare_shape']
+            [['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0', [2, 2]]],
+            columns=['op_name', 'dtype', 'shape', 'summary', 'stack_info', 'op_name_update', 'compare_key', 'compare_shape']
         )
         self.assertTrue(npu_df.equals(target_df))
         self.assertTrue(bench_df.equals(target_df))
@@ -696,6 +803,60 @@ class TestProcessDf(unittest.TestCase):
         mapping_dict.data_mapping_dict = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0'}
         name = process_df.process_data_mapping(npu_op_name)
         self.assertEqual(name, 'NPU.npu_fusion_attention.4.forward.input.0')
+
+    def test_update_backward_call_digit_at_head(self):
+        cmp_df = pd.DataFrame({
+            CompareConst.OP_NAME: ["conv.1.backward.fp32"],
+            Const.CALL_DIRECTION: ["1.backward"],
+            Const.DIRECTION: [Const.BACKWARD],
+            Const.BACKWARD_CALL_ORDER: [3],
+            Const.OP_NO_NUMBER: ["conv"],
+            Const.SUFFIX: [".fp32"],
+        })
+
+        result = self.process_df.update_backward_call(cmp_df)
+
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "3.backward")
+        self.assertEqual(
+            result.loc[0, CompareConst.OP_NAME_UPDATE],
+            "conv.3.backward.fp32"
+        )
+
+    def test_update_backward_call_digit_at_tail(self):
+        cmp_df = pd.DataFrame({
+            CompareConst.OP_NAME: ["matmul.backward.2.fp16"],
+            Const.CALL_DIRECTION: ["backward.2"],
+            Const.DIRECTION: [Const.BACKWARD],
+            Const.BACKWARD_CALL_ORDER: [5],
+            Const.OP_NO_NUMBER: ["matmul"],
+            Const.SUFFIX: [".fp16"],
+        })
+
+        result = self.process_df.update_backward_call(cmp_df)
+
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "backward.5")
+        self.assertEqual(
+            result.loc[0, CompareConst.OP_NAME_UPDATE],
+            "matmul.backward.5.fp16"
+        )
+
+    def test_update_backward_call_non_backward_should_not_change(self):
+        cmp_df = pd.DataFrame({
+            CompareConst.OP_NAME: ["add.1.forward.fp32"],
+            Const.CALL_DIRECTION: ["1.forward"],
+            Const.DIRECTION: [Const.FORWARD],
+            Const.BACKWARD_CALL_ORDER: [7],
+            Const.OP_NO_NUMBER: ["add"],
+            Const.SUFFIX: [".fp32"],
+        })
+
+        result = self.process_df.update_backward_call(cmp_df)
+
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "1.forward")
+        self.assertEqual(
+            result.loc[0, CompareConst.OP_NAME_UPDATE],
+            "add.1.forward.fp32"
+        )
 
 
 class TestMatch(unittest.TestCase):
