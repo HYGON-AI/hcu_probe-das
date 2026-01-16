@@ -864,25 +864,26 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
         logger.error(f"Unrecognized framework, now is {compare_framework}, please check dump.json.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
 
+    compare_json_file_type = Const.DUMP_JSON_FILE
+    if dump_data.get('level') == Const.LEVEL_DEBUG:
+        compare_json_file_type = Const.DEBUG_JSON_FILE
     # ------------------统计量、md5比对------------------
     if dump_data.get('task') == Const.STATISTICS:
         # dump数据为统计量或md5时，多进程加速比对
         input_param_nr_list = []
         for nr, br in zip(npu_ranks, bench_ranks):
-            for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
-                input_param, skip = extract_compare_param(file_type)
-                if not skip:
-                    input_param_nr_list.append((input_param, nr))
+            input_param, skip = extract_compare_param(compare_json_file_type)
+            if not skip:
+                input_param_nr_list.append((input_param, nr))
         func_args = (compare_func, input_param_nr_list, output_path, kwargs)
         multi_statistics_compare(multi_ranks_compare, func_args)
         return
 
     # ------------------真实数据比对------------------
     for nr, br in zip(npu_ranks, bench_ranks):
-        for file_type in [Const.DUMP_JSON_FILE, Const.DEBUG_JSON_FILE]:
-            input_param, skip = extract_compare_param(file_type)
-            if not skip:
-                compare_entry(compare_func, input_param, output_path, nr, kwargs)
+        input_param, skip = extract_compare_param(compare_json_file_type)
+        if not skip:
+            compare_entry(compare_func, input_param, output_path, nr, kwargs)
 
 
 def check_input_param_path(input_param):
