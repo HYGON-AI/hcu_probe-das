@@ -20,6 +20,8 @@ import sys
 import numpy as np
 
 from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import change_mode
+from msprobe.core.common.const import FileCheckConst
 from msprobe.infer.offline.compare.msquickcmp.common.utils import execute_command
 from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 
@@ -65,6 +67,7 @@ def convert_npy_to_bin(npy_input_path):
             if os.path.exists(bin_path):
                 os.remove(bin_path)
             npy_data.tofile(bin_path)
+            change_mode(bin_path, FileCheckConst.DATA_FILE_AUTHORITY)
             outputs.append(bin_item)
         else:
             outputs.append(input_item)
