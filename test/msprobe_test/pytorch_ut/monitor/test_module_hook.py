@@ -514,14 +514,15 @@ class TestTrainerMon(unittest.TestCase):
         from msprobe.core.common.const import MonitorConst as MC
 
         class DummyFlatParam:
-            def __init__(self):
+            def __init__(self, param):
                 self._fqns = ["param"]
                 self._shapes = [(2, 2)]
                 self.grad = torch.arange(4.0)
+                self._params = [param]
 
         class DummyHandle:
-            def __init__(self):
-                self.flat_param = DummyFlatParam()
+            def __init__(self, param):
+                self.flat_param = DummyFlatParam(param)
 
             def _get_flat_param_offsets(self):
                 return [(0, 3)]
@@ -529,6 +530,8 @@ class TestTrainerMon(unittest.TestCase):
         flat_prefix = "0:"
         full_name = f"{flat_prefix}{MC.FSDP_FLAT_SEP}param"
         self.mon.origin2squash = {full_name: "sq_param"}
+        param = [torch.nn.Parameter(torch.tensor(1.0))]
+        self.mon.fsdp_param_name_map = {id(param): full_name}
         self.mon.name2tag = {"sq_param": {MC.PRE_GRAD: "pre_grad_tag"}}
         self.mon.flat_prefix_reverse_iter = iter([flat_prefix])
         self.mon.ops = []
@@ -538,7 +541,7 @@ class TestTrainerMon(unittest.TestCase):
 
         from torch.distributed.fsdp import _runtime_utils
         wrapped = _runtime_utils._post_backward_hook
-        handle = DummyHandle()
+        handle = DummyHandle(param)
         wrapped(None, handle)
 
         mock_post_hook.assert_called_once()
@@ -570,11 +573,13 @@ class TestTrainerMon(unittest.TestCase):
             "torch.distributed.fsdp._fully_shard._fsdp_collectives": fake_collectives,
             "torch.distributed.fsdp._fully_shard._fsdp_param_group": fake_param_group,
         }):
+            import torch.distributed.fsdp as real_fsdp
+            real_fsdp._fully_shard = fake_fully_shard
             self.mon.origin2squash = {"param_fqn": "sq_param"}
             self.mon.name2tag = {"sq_param": {MC.PRE_GRAD: "pre_grad_tag"}}
             self.mon.ops = []
             self.mon.eps = 1e-8
-
+            self.mon.monitor_mbs_grad = True
             self.mon._patch_fsdp2_foreach_reduce()
 
             # patch 后的 foreach_reduce

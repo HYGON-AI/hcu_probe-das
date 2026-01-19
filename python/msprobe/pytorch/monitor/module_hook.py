@@ -150,15 +150,11 @@ class GradContext:
     def __init__(self) -> None:
         self.pre = {}
         self.post = {}
-        self.acc_metric = {}
-        self.acc = {}
         self.actv = {}
 
     def reset(self):
         self.pre.clear()
         self.post.clear()
-        self.acc_metric.clear()
-        self.acc.clear()
         self.actv.clear()
 
 
@@ -231,8 +227,7 @@ class TrainerMon:
         self.duplicate_param = {}
         self.name2tag = {}
         self.param_name_call_id = {}
-        self.flat_prefix_names = []
-        self.flat_prefix_reverse_iter = None
+        self.fsdp_param_name_map = {}
         self.call_id = 0
         self.module_struct = defaultdict(dict)
         self.grad_accs = []
@@ -510,18 +505,8 @@ class TrainerMon:
         if not self.wg_distribution:
             return {}, {}
 
-        if self.weight_hooked:
-            get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
-
         get_metrics(self.ops, post_grad_dict, self.eps, self.grad_context.post)
-        reduced_grad = self.grad_context.post
-
-        if self.weight_hooked:
-            unreduced_grad = self.grad_context.acc_metric
-        else:
-            unreduced_grad = self.grad_context.pre
-
-        return reduced_grad, unreduced_grad
+        return self.grad_context.post, self.grad_context.pre
 
     def generate_xy_metrics(self):
         actv = {}
@@ -529,7 +514,6 @@ class TrainerMon:
             actv.update(fwd_context.actv)
 
         actv_grad = self.grad_context.actv
-
         return actv, actv_grad
 
     def reload_xy(self, xy_distribution=False):
@@ -607,11 +591,8 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
-        if self.weight_hooked:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.acc_metric, step, 'grad_unreduced',
-                                              use_micro_step=self.monitor_mbs_grad)
-        else:
-            self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced')
+        self.summary_writer.write_metrics(self.ops, self.grad_context.pre, step, 'grad_unreduced',
+                                          use_micro_step=self.monitor_mbs_grad)
         self.summary_writer.write_metrics(self.ops, self.grad_context.post, step, 'grad_reduced')
 
     def hook_optimizer(self, optimizer):
@@ -864,6 +845,7 @@ class TrainerMon:
             bwd_context.reset()
         self.grad_context.reset()  # 权重梯度和激活值梯度都在这
 
+        # 还原梯度patch
         self.optimizer_mon.restore_grad_sync(self)
         if self.fsdp_post_backward_hook:  # fsdp
             torch.distributed.fsdp._runtime_utils._post_backward_hook = self.fsdp_post_backward_hook
@@ -959,10 +941,8 @@ class TrainerMon:
                 continue
             if not self.fsdp2_wrapped_module and param.__class__.__name__ == "DTensor":
                 self.fsdp2_wrapped_module = True
-            if self.fsdp_wrapped_module:  # FSDP1需要记录完整的不被target限制的flat权重前缀名，以供后续对flat解包
-                flat_prefix_name, _ = param_name.rsplit(MonitorConst.FSDP_FLAT_SEP, 1)
-                if flat_prefix_name not in self.flat_prefix_names:
-                    self.flat_prefix_names.append(flat_prefix_name)
+            if self.fsdp_wrapped_module:  # FSDP1需要记录完整的不被target限制的flat权重名，以供后续对flat解包
+                self.fsdp_param_name_map[id(param)] = param_name
 
             if self._is_target_param(param_name, param, prefix):
                 name = prefix + squash_param_name(param_name, self.squash_name)
@@ -987,8 +967,6 @@ class TrainerMon:
                     k: get_summary_writer_tag_name(name, k, self.rank)
                     for k in keywords
                 }
-        if self.fsdp_wrapped_module:
-            self.flat_prefix_reverse_iter = cycle(reversed(self.flat_prefix_names))  # post_backward_hook调用顺序是反向的
 
     def _register_param_name(self):
         for vpp_stage, model_chunk in enumerate(self.model):
@@ -1209,6 +1187,7 @@ class TrainerMon:
     def _patch_grad_sync(self):
         if not self.wg_distribution:
             return
+
         if self.fsdp_wrapped_module:
             # patch fsdp _runtime_utils._post_backward_hook
             self._patch_fsdp_post_backward_hook()
@@ -1241,24 +1220,26 @@ class TrainerMon:
 
         def patch_post_backward_hook(_post_backward_hook):
             def wrapper(state, handle, *unused):
-                grad_dict = {}
-                local_names = handle.flat_param._fqns
-                offsets = handle._get_flat_param_offsets()
-                shapes = handle.flat_param._shapes
-                flat_prefix = next(self.flat_prefix_reverse_iter)
-                for local_name, (start, end), local_shape in zip(local_names, offsets, shapes):
-                    grad_clip = handle.flat_param.grad[start:end + 1]
-                    grad = grad_clip.reshape(local_shape)
-                    total_name = f"{flat_prefix}{MonitorConst.FSDP_FLAT_SEP}{local_name}"
-                    if total_name not in self.origin2squash:
-                        logger.warning(f"{total_name} not in model.named_parameters(), skip.")
-                        continue
-                    tag = self.name2tag.get(self.origin2squash[total_name], {}).get(MonitorConst.PRE_GRAD)
-                    if tag is None:
-                        continue
-                    grad_dict[tag] = grad
-                    self.register_param_call_id("_post_backward_hook", tag)
-                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                if not hasattr(handle.flat_param, 'micro_step'):
+                    setattr(handle.flat_param, 'micro_step', 0)
+
+                if self.monitor_mbs_grad or (handle.flat_param.micro_step + 1 == self.micro_batch_number):
+                    grad_dict = {}
+                    offsets = handle._get_flat_param_offsets()
+                    shapes = handle.flat_param._shapes
+                    params = handle.flat_param._params
+                    for param, (start, end), local_shape in zip(params, offsets, shapes):
+                        param_name = self.fsdp_param_name_map.get(id(param), "")
+                        tag = self.name2tag.get(self.origin2squash.get(param_name, ""), {}).get(MonitorConst.PRE_GRAD)
+                        if tag is None:
+                            continue
+                        grad = handle.flat_param.grad[start:end + 1].reshape(local_shape)
+                        if self.monitor_mbs_grad:
+                            tag = tag.replace('/', f'{MonitorConst.NAME_SEP}{handle.flat_param.micro_step}/', 1)
+                        grad_dict[tag] = grad
+                        self.register_param_call_id("_post_backward_hook", tag)
+                    get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                handle.flat_param.micro_step = (handle.flat_param.micro_step + 1) % self.micro_batch_number
                 out = _post_backward_hook(state, handle, *unused)
                 return out
 
@@ -1272,14 +1253,21 @@ class TrainerMon:
     def _patch_fsdp2_foreach_reduce(self):
         def patch_foreach_reduce(foreach_reduce):
             def wrapper(fsdp_params, unsharded_grads, *unused):
-                grad_dict = {}
-                for param, grad in zip(fsdp_params, unsharded_grads):
-                    tag = self.name2tag.get(self.origin2squash[param._param_fqn], {}).get(MonitorConst.PRE_GRAD)
-                    if tag is None:
-                        continue
-                    grad_dict[tag] = grad
-                    self.register_param_call_id("foreach_reduce", tag)
-                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                if not hasattr(fsdp_params[0], 'micro_step'):
+                    setattr(fsdp_params[0], 'micro_step', 0)
+
+                if self.monitor_mbs_grad or (fsdp_params[0].micro_step + 1 == self.micro_batch_number):
+                    grad_dict = {}
+                    for param, grad in zip(fsdp_params, unsharded_grads):
+                        tag = self.name2tag.get(self.origin2squash.get(param._param_fqn, ""), {}).get(MonitorConst.PRE_GRAD)
+                        if tag is None:
+                            continue
+                        if self.monitor_mbs_grad:
+                            tag = tag.replace('/', f'{MonitorConst.NAME_SEP}{fsdp_params[0].micro_step}/', 1)
+                        grad_dict[tag] = grad
+                        self.register_param_call_id("foreach_reduce", tag)
+                    get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                fsdp_params[0].micro_step = (fsdp_params[0].micro_step + 1) % self.micro_batch_number
                 out = foreach_reduce(fsdp_params, unsharded_grads, *unused)
                 return out
 
@@ -1296,36 +1284,30 @@ class TrainerMon:
         """
         遍历参数的梯度生成函数（grad_acc），并挂载hook，以便在该参数所有梯度计算后，采集通信聚合前梯度数据。
         """
-        context = self.grad_context
 
         @torch.no_grad
-        def param_hook(*args, context_dict, param, name):
+        def param_hook(*args, param, name):
             key = name
             if self.monitor_mbs_grad:
                 key += f'{MonitorConst.NAME_SEP}{param.micro_step}'
 
             key = get_summary_writer_tag_name(key, 'acc_grad', self.rank)
             self.register_param_call_id("param_hook", key)
-            param.micro_step += 1
-
-            if self.monitor_mbs_grad or (param.micro_step == self.micro_batch_number):
+            if self.monitor_mbs_grad or (param.micro_step + 1 == self.micro_batch_number):
                 if self.params_have_main_grad:
                     grad = param.main_grad
                 else:
                     grad = param.grad
-                context_dict[key] = grad.clone()
+                get_metrics(self.ops, {key: grad.clone()}, self.eps, self.grad_context.pre)
+            param.micro_step = (param.micro_step + 1) % self.micro_batch_number
 
-            if param.micro_step == self.micro_batch_number:
-                param.micro_step = 0
-
-        logger.info("hooking weights.")
+        logger.info("hooking weight grads.")
         for param, name in self.param2name.items():
             setattr(param, 'micro_step', 0)
             param_tmp = param.expand_as(param)
             grad_acc = param_tmp.grad_fn.next_functions[0][0]
             handle = grad_acc.register_hook(
-                partial(param_hook, context_dict=context.acc, param=param, name=name))
+                partial(param_hook, param=param, name=name))
             self.grad_accs.append(grad_acc)
             self.handles['wgrads'].append(handle)
-
         self.weight_hooked = True
