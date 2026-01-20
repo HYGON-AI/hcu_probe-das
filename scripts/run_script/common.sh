@@ -8,9 +8,6 @@ USERNAME=$(id -un)
 USERGROUP=$(id -gn)
 SHELL_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-ARCH=$(cat $SHELL_DIR/../scene.info | grep arch | cut -d"=" -f2)
-OS=$(cat $SHELL_DIR/../scene.info | grep os | cut -d"=" -f2)
-
 MINDSTUDIO_ARRAY=(${MODULE_NAME})
 LINK_ARRAY=("bin" "lib64")
 
@@ -517,6 +514,9 @@ function uninstall_tool() {
 }
 
 function uninstall() {
+    ARCH=$(cat $SHELL_DIR/../scene.info | grep arch | cut -d"=" -f2)
+    OS=$(cat $SHELL_DIR/../scene.info | grep os | cut -d"=" -f2)
+    
     uninstall_tool
     if [ $? -ne 0 ]; then
         log_and_print ${LEVEL_ERROR} "${MODULE_NAME} uninstall failed."

@@ -60,15 +60,32 @@ function convert_install_path() {
         _install_path="/"
     fi
     # covert relative path to absolute path
-    local _prefix=`echo "${_install_path}" | cut -d"/" -f1`
-    if [ ! -z "${_prefix}" ] && [ "~" != "${_prefix}" ]; then
-        _install_path="${run_path}/${_install_path}"
+    # 处理以 "./" 或 "." 开头的路径
+    if [[ "${_install_path}" =~ ^\./.* ]] || [[ "${_install_path}" =~ ^\.$ ]]; then
+        # 移除开头的 "./" 或 "."
+        _install_path=`echo "${_install_path}" | sed -r "s|^\./||" | sed -r "s|^\.$||"`
+        if [ -z "${_install_path}" ]; then
+            _install_path="${run_path}"
+        else
+            _install_path="${run_path}/${_install_path}"
+        fi
+    else
+        local _prefix=`echo "${_install_path}" | cut -d"/" -f1`
+        if [ ! -z "${_prefix}" ] && [ "~" != "${_prefix}" ]; then
+            _install_path="${run_path}/${_install_path}"
+        fi
     fi
     # covert '~' to home path
     local _suffix_path=`echo "${_install_path}" | cut -d"~" -f2`
     if [ "${_suffix_path}" != "${_install_path}" ]; then
         local _home_path=`eval echo "~" | sed "s/\/*$//g"`
         _install_path="${_home_path}${_suffix_path}"
+    fi
+    # 规范化路径：移除双斜杠，处理相对路径组件
+    _install_path=`echo "${_install_path}" | sed -r "s|//+|/|g"`
+    # 转换为绝对路径（如果可能）
+    if command -v realpath >/dev/null 2>&1; then
+        _install_path=$(realpath -m "${_install_path}" 2>/dev/null || echo "${_install_path}")
     fi
     echo "${_install_path}"
 }
@@ -112,8 +129,8 @@ function get_install_path() {
     else
         _install_path="${input_install_path}/ascend-toolkit/latest/tools/operator_cmp/compare"
     fi
-    echo $_install_path
     install_path=$(convert_install_path "${_install_path}")
+    echo "${install_path}"
 }
 
 # 主函数
@@ -150,6 +167,10 @@ else
     if [ ! -d "${run_path}" ]; then
         log_and_print $LEVEL_ERROR "Run package path is invalid: $run_path"
         exit 1
+    fi
+    # 确保 run_path 是绝对路径
+    if [[ ! "${run_path}" =~ ^/ ]]; then
+        run_path="$(cd "${run_path}" && pwd)"
     fi
 fi
 
