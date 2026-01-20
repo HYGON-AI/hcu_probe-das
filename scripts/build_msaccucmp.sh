@@ -170,6 +170,11 @@ function main() {
 	check_file_exist ${CMP_TEMP_DIR}
 	create_run_package ${CMP_RUN_NAME} ${CMP_TEMP_DIR} ${main_script}
 	check_package ${OUTPUT_DIR}/$(get_package_name) ${PKG_LIMIT_SIZE}
+	# 清理makeself创建的临时文件
+	if [ -f "${OUTPUT_DIR}/temp" ]; then
+		rm -f "${OUTPUT_DIR}/temp"
+	fi
 }
 
 main
+

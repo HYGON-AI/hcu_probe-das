@@ -74,6 +74,9 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    提供一键式离线模型比对功能，仅需输入模型即可完成比对，无需提前采集数据，快速输出结果。
 
+3. [离线模型数据精度比对](docs/zh/accuracy_compare/offlline_data_compare_instruct.md)
+   提供离线模型数据比对功能，输入离线模型的dump数据进行精度比对。
+
 
 ### PyTorch训练场景
 
