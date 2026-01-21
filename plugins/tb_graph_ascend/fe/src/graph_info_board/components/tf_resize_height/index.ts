@@ -48,10 +48,14 @@ class ResizableTabsheet extends PolymerElement {
       .resize-handle:hover {
         background-color: hsl(214, 100%, 43%);
         height: 4px;
+     
+      .resize-handle.hidden {
+        display: none;
+        cursor: default;
       }
     </style>
 
-    <div class="resize-handle" id="resizeHandle"></div>
+    <div class$="[[_getResizeHandleClass(showHandle)]]" id="resizeHandle"></div>
     <div class="tabsheet" id="tabsheet">
       <slot></slot>
     </div>
@@ -63,12 +67,25 @@ class ResizableTabsheet extends PolymerElement {
   })
   height: number = 300;
 
+  @property({ type: Boolean })
+  showHandle: boolean = true;
+
   _resize: (event: MouseEvent) => void = () => {};
   _stopResize: (this: Document, ev: MouseEvent) => any = () => {};
 
-  @observe('height')
-  _updateHeight(newHeight): void {
-    this.updateStyles({ '--tabsheet-height': `${newHeight}px` });
+@observe('height')
+_updateHeight(newHeight): void {
+  // 从字符串中提取数字部分
+  const heightMatch = String(newHeight).match(/\d+/);
+  const heightValue = heightMatch ? heightMatch[0] : '300'; // 默认300px
+  
+  this.updateStyles({ '--tabsheet-height': `${heightValue}px` });
+}
+
+  @observe('showHandle')
+  _handleShowHandleChange(): void {
+    // 当 showHandle 变化时，重新初始化事件监听
+    this._initResizeHandle();
   }
 
   override ready(): void {
@@ -77,6 +94,9 @@ class ResizableTabsheet extends PolymerElement {
   }
 
   _initResizeHandle(): void {
+    if (!this.showHandle) {
+      return;
+    }
     const tabsheet = this.$.tabsheet as HTMLElement;
     const resizeHandle = this.$.resizeHandle as HTMLElement;
 
@@ -86,6 +106,7 @@ class ResizableTabsheet extends PolymerElement {
 
     // 开始拖拽
     resizeHandle.addEventListener('mousedown', (event: MouseEvent) => {
+      if (!this.showHandle) return;
       isResizing = true;
       startY = event.clientY;
       startHeight = tabsheet.offsetHeight;
@@ -96,11 +117,11 @@ class ResizableTabsheet extends PolymerElement {
 
     // 拖拽过程
     this._resize = (event): void => {
-      if (!isResizing) {
+      if (!isResizing || !this.showHandle) {
         return;
       }
       const deltaY = startY - event.clientY; // 向上拖拽为正
-      this.set('height', Math.max(10, startHeight + deltaY)); // 更新高度
+      this.set('height', Math.max(0, startHeight + deltaY)); // 更新高度
     };
 
     // 停止拖拽
@@ -110,5 +131,9 @@ class ResizableTabsheet extends PolymerElement {
       document.removeEventListener('mousemove', this._resize);
       document.removeEventListener('mouseup', this._stopResize);
     };
+  }
+
+  _getResizeHandleClass(showHandle) {
+    return showHandle ? 'resize-handle' : 'resize-handle hidden';
   }
 }

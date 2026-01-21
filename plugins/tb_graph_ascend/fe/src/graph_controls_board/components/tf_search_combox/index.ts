@@ -33,7 +33,7 @@ class Legend extends PolymerElement {
     <style>
       .search-arrow {
         font-size: 10px;
-        margin-top: 27px;
+        margin-top: 31px;
         cursor: pointer;
         color: rgb(87, 86, 86);
         background: rgb(238, 238, 238);
@@ -52,6 +52,7 @@ class Legend extends PolymerElement {
       }
       vaadin-combo-box {
         width: 100%;
+        padding-bottom: 0;
       }
       vaadin-combo-box::part(input-field) {
         height: 30px;
@@ -75,6 +76,7 @@ class Legend extends PolymerElement {
         items="[[items]]"
         value="{{selectedValue}}"
         on-change="_onChange"
+        renderer="[[_comboBoxRenderer]]"
       ></vaadin-combo-box>
       <vaadin-icon
         title="[[t('search_previous')]]"
@@ -104,6 +106,33 @@ class Legend extends PolymerElement {
 
   @property({ type: Boolean })
   isCompareGraph: boolean = true;
+
+  _comboBoxRenderer(root, owner, model) {
+    const item = model.item;
+    const text = item.name || item.label || item; // 根据你的数据结构调整
+    
+    // 创建内容
+    if (!root.firstElementChild) {
+      const content = document.createElement('vaadin-item');
+      content.setAttribute('title', text); // 添加 tooltip
+      root.appendChild(content);
+      
+      const span = document.createElement('span');
+      span.textContent = text;
+      span.style.cssText = `
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      `;
+      content.appendChild(span);
+    } else {
+      const content = root.firstElementChild;
+      content.setAttribute('title', text);
+      const span = content.firstElementChild;
+      span.textContent = text;
+    }
+  }
 
   _onChange(): void {
     this.onSelectChange();

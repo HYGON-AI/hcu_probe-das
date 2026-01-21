@@ -118,73 +118,75 @@ class TfGraphNodeInfo extends PolymerElement {
         background-color: white;
       }
     </style>
-    <vaadin-tabsheet>
-      <vaadin-tabs slot="tabs" class="vaadin-tabs">
-        <vaadin-tab id="io-tab" class="vaadin-tab">
-          <template is="dom-if" if="[[!isSingleGraph]]"> [[t('comparison_details')]] </template>
-          <template is="dom-if" if="[[isSingleGraph]]"> [[t('node_details')]] </template>
-        </vaadin-tab>
-        <vaadin-tab id="stack-info-tab" class="vaadin-tab">[[t('node_information')]]</vaadin-tab>
-      </vaadin-tabs>
+    <tf-resize-height height="{{height}}">
+      <vaadin-tabsheet>
+        <vaadin-tabs slot="tabs" class="vaadin-tabs">
+          <vaadin-tab id="io-tab" class="vaadin-tab">
+            <template is="dom-if" if="[[!isSingleGraph]]"> [[t('comparison_details')]] </template>
+            <template is="dom-if" if="[[isSingleGraph]]"> [[t('node_details')]] </template>
+          </vaadin-tab>
+          <vaadin-tab id="stack-info-tab" class="vaadin-tab">[[t('node_information')]]</vaadin-tab>
+        </vaadin-tabs>
 
-      <div tab="io-tab" class="vaadin-tab-content">
-        <tf-resize-height height="{{height}}">
-          <div class="table-wrapper">
-            <div class="node-info-wrapper">
-              <div class="node-info">
-                <template is="dom-if" if="[[npuNodeName]]">
-                  <p class="node-info-item selected-node">
-                    <span class="legend-selected"></span>
-                    [[t('debug_node')]]：[[npuNodeName]]
-                  </p>
-                </template>
-                <template is="dom-if" if="[[benchNodeName]]">
-                  <p class="node-info-item match-node">
-                    <span class="legend-matched"></span>
-                    [[t('bench_node')]]：[[benchNodeName]]
-                  </p>
+        <div tab="io-tab" class="vaadin-tab-content">
+          <tf-resize-height height="{{height}} show-handle="false">
+            <div class="table-wrapper">
+              <div class="node-info-wrapper">
+                <div class="node-info">
+                  <template is="dom-if" if="[[npuNodeName]]">
+                    <p class="node-info-item selected-node">
+                      <span class="legend-selected"></span>
+                      [[t('debug_node')]]：[[npuNodeName]]
+                    </p>
+                  </template>
+                  <template is="dom-if" if="[[benchNodeName]]">
+                    <p class="node-info-item match-node">
+                      <span class="legend-matched"></span>
+                      [[t('bench_node')]]：[[benchNodeName]]
+                    </p>
+                  </template>
+                </div>
+                <template is="dom-if" if="[[!isSingleGraph]]">
+                  <div class="node-info">
+                    <p class="node-info-item ">
+                      <span class="matched-yes"></span>
+                      [[t('matched')]]
+                    </p>
+                    <p class="node-info-item match-node">
+                      <span class="matched-no"></span>
+                      [[t('unMatched')]]
+                    </p>
+                  </div>
                 </template>
               </div>
-              <template is="dom-if" if="[[!isSingleGraph]]">
-                <div class="node-info">
-                  <p class="node-info-item ">
-                    <span class="matched-yes"></span>
-                    [[t('matched')]]
-                  </p>
-                  <p class="node-info-item match-node">
-                    <span class="matched-no"></span>
-                    [[t('unMatched')]]
-                  </p>
-                </div>
-              </template>
-            </div>
 
-            <tf-vaadin-table
-              id="main-table"
-              class="io-vaadin-table"
-              io-dataset="[[ioDataset]]"
-              tooltips="[[tooltips]]"
-              handle-cell-click="[[handleGridCellClick]]"
-              is-single-graph-node="[[isSingleGraph]]"
-            >
-            </tf-vaadin-table>
-          </div>
-        </tf-resize-height>
-      </div>
-      <div tab="stack-info-tab" class="vaadin-tab-content">
-        <tf-resize-height height="{{height}}">
-          <div class="table-wrapper">
-            <tf-vaadin-text-table
-              id="main-table"
-              class="io-vaadin-table"
-              dataset="[[detailData]]"
-              handle-cell-click="[[handleGridCellClick]]"
-            >
-            </tf-vaadin-text-table>
-          </div>
-        </tf-resize-height>
-      </div>
-    </vaadin-tabsheet>
+              <tf-vaadin-table
+                id="main-table"
+                class="io-vaadin-table"
+                io-dataset="[[ioDataset]]"
+                tooltips="[[tooltips]]"
+                handle-cell-click="[[handleGridCellClick]]"
+                is-single-graph-node="[[isSingleGraph]]"
+              >
+              </tf-vaadin-table>
+            </div>
+          </tf-resize-height>
+        </div>
+        <div tab="stack-info-tab" class="vaadin-tab-content">
+          <tf-resize-height height="{{height}} show-handle="false">
+            <div class="table-wrapper">
+              <tf-vaadin-text-table
+                id="main-table"
+                class="io-vaadin-table"
+                dataset="[[detailData]]"
+                handle-cell-click="[[handleGridCellClick]]"
+              >
+              </tf-vaadin-text-table>
+            </div>
+          </tf-resize-height>
+        </div>
+      </vaadin-tabsheet>
+    </tf-resize-height>
   `;
   @property({ type: Object })
   get t() {

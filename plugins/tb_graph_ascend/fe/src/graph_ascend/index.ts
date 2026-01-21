@@ -127,6 +127,9 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 height: 100%;
                 display: flex;
                 flex-direction: column;
+                -ms-overflow-style: none;  /* IE and Edge */
+                scrollbar-width: none;  /* Firefox */
+                overflow-y: hidden;
             }
 
             vaadin-progress-bar::part(value) {
@@ -146,7 +149,7 @@ class TfGraphDashboard extends LegacyElementMixin(PolymerElement) {
                 position: absolute;
             }
             .graph-board-wrapper {
-                height: 80%;
+                height: -webkit-fill-available;
                 position: relative;
             }
             vaadin-progress-bar {
