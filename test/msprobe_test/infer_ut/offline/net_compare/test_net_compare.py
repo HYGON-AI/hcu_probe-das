@@ -15,16 +15,15 @@
 # -------------------------------------------------------------------------
 
 import unittest
-import os, csv, subprocess, io
-from unittest.mock import patch, MagicMock, mock_open, call
+import subprocess, io
+from unittest.mock import patch, MagicMock, mock_open
 from msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare import NetCompare
 
 
 class TestNetCompare_init(unittest.TestCase):
     @patch("msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.check_file_size_valid", return_value=None)
-    @patch.object(NetCompare, "_check_msaccucmp_file", return_value="/fake/path/msaccucmp.py")
     @patch("msprobe.infer.offline.compare.msquickcmp.common.utils.check_file_size_valid")
-    def test_init_basic(self, mock_check_size, mock_check_file, mock_check_file_size_valid):
+    def test_init_basic(self, mock_check_size, mock_check_file_size_valid):
         class Args:
             cann_path = "/fake/cann"
             quant_fusion_rule_file = None
@@ -33,7 +32,6 @@ class TestNetCompare_init(unittest.TestCase):
 
         args = Args()
         obj = NetCompare("/npu/path", "/cpu/path", "/output/json", args, "/golden/json")
-        self.assertEqual(obj.msaccucmp_command_file_path, "/fake/path/msaccucmp.py")
         # check python_version取值正常
         self.assertIn("python", obj.python_version.lower())
 
@@ -50,38 +48,6 @@ class TestNetCompare_execute_command_line(unittest.TestCase):
         mock_logger.info.assert_called_once()
         mock_popen.assert_called_once_with(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.assertEqual(proc, proc_mock)
-
-
-class TestNetCompare_check_msaccucmp_file(unittest.TestCase):
-    @patch("os.path.exists")
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_check_msaccucmp_file_found(self, mock_logger, mock_exists):
-        mock_exists.side_effect = lambda x: "msaccucmp.py" in x
-        path = "/some/path"
-        file_path = NetCompare._check_msaccucmp_file(path)
-        self.assertIn("msaccucmp.py", file_path)
-        mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_not_called()
-
-    @patch("os.path.exists", return_value=False)
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_check_msaccucmp_file_not_found(self, mock_logger, mock_exists):
-        with self.assertRaises(Exception):  # AccuracyCompareException
-            NetCompare._check_msaccucmp_file("/some/path")
-        self.assertTrue(mock_logger.error.called)
-
-
-class TestNetCompare_check_pyc_to_python_version(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_check_pyc_to_python_version_correct(self, mock_logger):
-        # should not raise
-        NetCompare._check_pyc_to_python_version("file.py", "3.7.5")
-
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_check_pyc_to_python_version_incorrect(self, mock_logger):
-        with self.assertRaises(Exception):  # AccuracyCompareException
-            NetCompare._check_pyc_to_python_version("file.pyc", "3.8.0")
-        mock_logger.error.assert_called_once()
 
 
 class TestNetCompare_catch_compare_result(unittest.TestCase):
@@ -112,11 +78,9 @@ class TestNetCompare_catch_compare_result(unittest.TestCase):
 
 
 class TestNetCompare_accuracy_network_compare(unittest.TestCase):
-    @patch.object(NetCompare, "_check_msaccucmp_file", return_value="/fake/path/msaccucmp.py")
     @patch.object(NetCompare, "execute_msaccucmp_command", return_value=(0, [], []))
-    @patch.object(NetCompare, "_check_pyc_to_python_version")
     @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_accuracy_network_compare_success(self, mock_logger, mock_check_py_ver, mock_exec, mock_check_file):
+    def test_accuracy_network_compare_success(self, mock_logger, mock_exec):
         class Args:
             cann_path = "/fake/cann"
             quant_fusion_rule_file = None
@@ -129,10 +93,8 @@ class TestNetCompare_accuracy_network_compare(unittest.TestCase):
         mock_logger.info.assert_any_call("Finish compare the files in directory /npu/path with those in directory /cpu/path.")
 
     @patch.object(NetCompare, "execute_msaccucmp_command", return_value=(1, [], []))
-    @patch.object(NetCompare, "_check_pyc_to_python_version")
     @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    @patch.object(NetCompare, "_check_msaccucmp_file", return_value="/fake/path/msaccucmp.py")
-    def test_accuracy_network_compare_fail(self, mock_check_file, mock_logger, mock_check_py_ver, mock_exec):
+    def test_accuracy_network_compare_fail(self,  mock_logger, mock_exec):
         class Args:
             cann_path = "/fake/cann"
             quant_fusion_rule_file = None
@@ -142,20 +104,6 @@ class TestNetCompare_accuracy_network_compare(unittest.TestCase):
         obj = NetCompare("/npu/path", "/cpu/path", "/output/json", args)
         with self.assertRaises(Exception):  # AccuracyCompareException
             obj.accuracy_network_compare()
-
-
-class TestCheckPycToPythonVersion(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_valid_python_version_with_pyc(self, mock_logger):
-        # 不应抛异常
-        NetCompare._check_pyc_to_python_version("file.py", "3.7.5")
-        NetCompare._check_pyc_to_python_version("file.pyc", "3.7.5")
-
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    def test_invalid_python_version_with_pyc(self, mock_logger):
-        with self.assertRaises(Exception):
-            NetCompare._check_pyc_to_python_version("file.pyc", "3.8.0")
-        mock_logger.error.assert_called_once()
 
 
 class TestCatchCompareResult(unittest.TestCase):
@@ -208,8 +156,7 @@ class TestExecuteCommandLine(unittest.TestCase):
 class TestExecuteMsaccucmpCommand(unittest.TestCase):
     @patch.object(NetCompare, "execute_command_line")
     @patch.object(NetCompare, "_catch_compare_result")
-    @patch.object(NetCompare, "_check_msaccucmp_file", return_value="/fake/path/msaccucmp.py")
-    def test_execute_msaccucmp_command(self, mock_check_file, mock_catch, mock_exec_cmd):
+    def test_execute_msaccucmp_command(self, mock_catch, mock_exec_cmd):
         mock_process = MagicMock()
         mock_process.poll.side_effect = [None, None, 0]
         mock_process.stdout.readline.side_effect = [b"[INFO]1.23 4.56\n", b"[INFO]Cosine\n", b""]

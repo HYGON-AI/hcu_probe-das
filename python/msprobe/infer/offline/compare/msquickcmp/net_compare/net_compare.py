@@ -30,17 +30,14 @@ import numpy as np
 
 from msprobe.core.common.log import logger
 from msprobe.infer.offline.compare.msquickcmp.common.utils import check_file_size_valid, AccuracyCompareException, \
-    ACCURACY_COMPARISON_INVALID_PATH_ERROR, ACCURACY_COMPARISON_PYTHON_VERSION_ERROR, \
     ACCURACY_COMPARISON_NET_OUTPUT_ERROR, ACCURACY_COMPARISON_INVALID_DATA_ERROR, MAX_READ_FILE_SIZE_4G
 from msprobe.infer.utils.file_open_check import sanitize_csv_value
 from msprobe.infer.utils.file_open_check import ms_open
 from msprobe.infer.utils.check.rule import Rule
 from msprobe.infer.utils.util import load_file_to_read_common_check, filter_cmd
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
+from msprobe.msaccucmp import msaccucmp
 
-MSACCUCMP_DIR_PATH = "toolkit/tools/operator_cmp/compare"
-MSACCUCMP_FILE_NAME = ["msaccucmp.py", "msaccucmp.pyc"]
-PYC_FILE_TO_PYTHON_VERSION = "3.7.5"
 INFO_FLAG = "[INFO]"
 WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -62,8 +59,6 @@ class NetCompare(object):
         self.output_json_path = output_json_path
         self.golden_json_path = golden_json_path
         self.arguments = arguments
-        self.msaccucmp_command_dir_path = os.path.join(self.arguments.cann_path, MSACCUCMP_DIR_PATH)
-        self.msaccucmp_command_file_path = self._check_msaccucmp_file(self.msaccucmp_command_dir_path)
         self.python_version = sys.executable.split('/')[-1]
 
         if self.golden_json_path:
@@ -74,24 +69,6 @@ class NetCompare(object):
         logger.info(f"Execute command:{' '.join(cmd)}")
         process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         return process
-
-    @staticmethod
-    def _check_msaccucmp_file(msaccucmp_command_dir_path):
-        for file_name in MSACCUCMP_FILE_NAME:
-            msaccucmp_command_file_path = os.path.join(msaccucmp_command_dir_path, file_name)
-            if os.path.exists(msaccucmp_command_file_path):
-                return msaccucmp_command_file_path
-            else:
-                logger.warning(f"The path {msaccucmp_command_file_path} is not exist.Please check the file")
-        logger.error(f"Does not exist in {msaccucmp_command_dir_path} directory msaccucmp.py and msaccucmp.pyc file")
-        raise AccuracyCompareException(ACCURACY_COMPARISON_INVALID_PATH_ERROR)
-
-    @staticmethod
-    def _check_pyc_to_python_version(msaccucmp_command_file_path, python_version):
-        if msaccucmp_command_file_path.endswith(".pyc"):
-            if python_version != PYC_FILE_TO_PYTHON_VERSION:
-                logger.error(f"The python version for executing {msaccucmp_command_file_path} must be 3.7.5")
-                raise AccuracyCompareException(ACCURACY_COMPARISON_PYTHON_VERSION_ERROR)
 
     @staticmethod
     def _catch_compare_result(log_line, catch):
@@ -177,11 +154,10 @@ class NetCompare(object):
         Function Description:
             invoke the interface for network-wide comparison
         Exception Description:
-            when invalid  msaccucmp command throw exception
+            when invalid msaccucmp command throw exception
         """
-        self._check_pyc_to_python_version(self.msaccucmp_command_file_path, self.python_version)
         msaccucmp_cmd = [
-            self.python_version, self.msaccucmp_command_file_path, "compare", "-m",
+            self.python_version, msaccucmp.__file__, "compare", "-m",
             self.npu_dump_data_path, "-g",
             self.cpu_dump_data_path, "-f", self.output_json_path, "-out", self.arguments.output_path
         ]
