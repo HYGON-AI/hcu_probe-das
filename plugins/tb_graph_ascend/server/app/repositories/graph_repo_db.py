@@ -55,7 +55,7 @@ class GraphRepoDB(GraphRepo):
             config_info = {
                 "microSteps": record.get('micro_steps', 1) or 1,
                 "tooltips": GraphUtils.safe_json_loads(record.get('tool_tip')),
-                "overflowCheck": bool(record.get('overflow_check', 1) or 1),
+                "overflowCheck": bool(record.get('overflow_check', 1)),
                 "isSingleGraph": not record.get('graph_type') == 'compare',
                 "colors": GraphUtils.safe_json_loads(record.get('node_colors')),
                 "matchedConfigFiles": [],

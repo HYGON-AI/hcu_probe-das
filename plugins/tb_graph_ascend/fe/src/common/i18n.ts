@@ -43,11 +43,7 @@ i18next
                     match_accuracy_error: "Match Accuracy Error Node",
                     overflow_filter_node: "Overflow Filter Node",
                     no_matching_nodes: "No matching nodes",
-                    precision_desc: {
-                        summary: "The relative error between the statistical output of the debug side and the benchmark side of the node, the larger the value, the greater the precision gap, the darker the color mark, the relative error indicator (RelativeErr): | (debug value - benchmark value) / benchmark value |",
-                        all: "The difference between the minimum double thousand indicator of all inputs and the minimum double thousandth indicator of all outputs of the node, reflecting the decline of the double thousand indicator, the larger the value, the greater the precision gap, the darker the color mark, the double thousandth precision indicator (One Thousandth Err Ratio): The relative error of each element in the tensor is compared with the corresponding benchmark data, the proportion of relative error less than one thousandth of the total number of elements, the closer the proportion is to 1, the better",
-                        md5: "If the md5 value of any input or output of the node is different, it will be marked red"
-                    },
+                    precision_desc: "For color meanings and grading visualization, please refer to the 'Color Explanation' section under 'Graph Comparison Instructions' in the 'PyTorch Scene Grading Visualization and Graph Comparison' document in the MindStudio-Probe code repository",
                     node_match: "Node Match",
                     select_match_config_file: "Select Match Config File",
                     select_match_config_file_desc: "Select the corresponding configuration file, read the matching node information, and match the corresponding node.",
@@ -133,7 +129,14 @@ i18next
                     configuration_items_missing: "Configuration failed. Please add configuration items.",
                     unconfigured_items_exist: "Configuration failed, unconfigured items exist.",
                     close: "close",
-                    info: "Info"
+                    info: "Info",
+                    shortcut_help: "Shortcut Help",
+                    zoom_in_out: "Zoom In Out",
+                    pan_left_right: "Pan Left Right",
+                    scroll: "Scroll",
+                    drag: "Drag",
+                    mouse_scroll: "Mouse Scroll",
+                    mouse_drag: "Mouse Drag"
                 }
             },
             'zh-CN': {
@@ -157,11 +160,7 @@ i18next
                     match_accuracy_error: "符合精度误差节点",
                     overflow_filter_node: "符合溢出筛选节点",
                     no_matching_nodes: "无匹配节点",
-                    precision_desc: {
-                        "summary": "节点中调试侧和标杆侧输出的统计量相对误差，值越大精度差距越大，颜色标记越深,相对误差指标（RelativeErr）：| (调试值 - 标杆值) / 标杆值 |",
-                        "all": "节点中所有输入的最小双千指标和所有输出的最小双千分之一指标的差值，反映了双千指标的下降情况，值越大精度差距越大，颜色标记越深，双千分之一精度指标（One Thousandth Err Ratio）：Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好",
-                        "md5": "节点中任意输入输出的md5值不同则标记为红色"
-                    },
+                    precision_desc: "关于颜色含义和分级可视化，请参考 MindStudio-Probe 代码仓库中《PyTorch场景分级可视化构图比对》文档的'图比对说明'章节中的'颜色说明'部分",
                     node_match: "节点匹配",
                     select_match_config_file: "选择匹配配置文件",
                     select_match_config_file_desc: "选择对应配置文件，会读取匹配节点信息，并将对应节点进行匹配。",
@@ -247,7 +246,14 @@ i18next
                     configuration_items_missing: "配置失败，请添加配置项",
                     unconfigured_items_exist: "配置失败，存在未配置项",
                     close: "关闭",
-                    info: "提示"
+                    info: "提示",
+                    shortcut_help: "快捷键说明",
+                    zoom_in_out: "放大/缩小",
+                    pan_left_right: "左移/右移",
+                    scroll: "滚动",
+                    drag: "拖动",
+                    mouse_scroll: "鼠标滚轮",
+                    mouse_drag: "鼠标拖动"
                 }
             }
         },

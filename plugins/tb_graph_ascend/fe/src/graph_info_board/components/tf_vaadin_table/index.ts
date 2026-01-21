@@ -93,6 +93,7 @@ class TfVaadinTable extends PolymerElement {
             header="[[header]]"
             resizable
             renderer="[[renderDefaultValue]]"
+            title="[[header]]"
           ></vaadin-grid-column>
         </template>
       </vaadin-grid>

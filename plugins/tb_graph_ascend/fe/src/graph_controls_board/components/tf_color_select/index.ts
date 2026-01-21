@@ -18,6 +18,7 @@
 
 import '@vaadin/combo-box';
 import '@vaadin/text-field';
+import '@vaadin/checkbox';
 import * as _ from 'lodash';
 import { PolymerElement, html } from '@polymer/polymer';
 import { Notification } from '@vaadin/notification';
@@ -54,8 +55,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         .toolbar {
           appearance: none;
           background-color: inherit;
-          padding: 10px 0;
-          border-bottom: 1px solid var(--border-color);
+          padding: 10px 0 8px 0;
           border-right: none;
           border-left: none;
           color: var(--tb-graph-controls-legend-text-color);
@@ -152,20 +152,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
           left: 2px;
         }
 
-        .search-number{
-          display: inline-block;
-          width: 80px;
-          height: 14px;
-          background-color: #fff;
-          font-size: 14px;
-          color: red;
-          font-weight: bold;
-          position: relative;
-          top: 30px;
-          left: 114px;
-          z-index: 10;
-        }
-
         /* Vaadin 组合框样式 */
         vaadin-combo-box {
           flex: 1;
@@ -225,10 +211,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                 </div>
               </template>
               <template is="dom-if" if="[[!isOverflowFilter]]">
-                <div class="run-dropdown" style="margin-top: 8px; display: flex; flex-direction: column;">
+                <div class="run-dropdown" display: flex; flex-direction: column;">
                   <template is="dom-repeat" items="[[colorSetChanged]]">
                     <div class="color-option" style="display: flex; align-items: center;">
-                      <paper-checkbox id="checkbox-[[index]]" on-click="_toggleCheckbox"></paper-checkbox>
+                      <vaadin-checkbox id="checkbox-[[index]]" on-click="_toggleCheckbox"></vaadin-checkbox>
                       <div
                         style="width: 12px; height: 12px; background-color: [[item.0]]; margin-right: 8px; border: 1px solid gray;"
                       ></div>
@@ -236,7 +222,6 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                     </div>
                   </template>
                 </div>
-                <span class="search-number">([[precisionmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
                     label="[[t('match_accuracy_error')]]([[precisionmenu.length]])"
@@ -249,20 +234,19 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
               <template is="dom-if" if="[[isOverflowFilter]]">
                 <template is="dom-if" if="{{overFlowSet.length}}">
                   <div class="container" style="display: flex; flex-direction: column;">
-                    <div class="run-dropdown" style="margin-top: 8px; display: flex; flex-direction: column;">
+                    <div class="run-dropdown" display: flex; flex-direction: column;">
                       <template is="dom-repeat" items="[[overFlowSet]]">
                         <div class="color-option" style="display: flex; align-items: center;">
-                          <paper-checkbox id="overflowCheckbox-[[index]]" on-click="_toggleCheckbox"></paper-checkbox>
+                          <vaadin-checkbox id="overflowCheckbox-[[index]]" on-click="_toggleCheckbox"></vaadin-checkbox>
                           <div
                             style="width: 12px; height: 12px; background-color: [[item.0]]; margin-right: 8px; border: 1px solid gray;"
                           ></div>
-                          [[item.1]]
+                          [[item.1.accuracy_level]]
                         </div>
                       </template>
                     </div>
                   </div>
                 </template>
-                <span class="search-number">([[overflowmenu.length]])</span>
                 <div class="container-search">
                   <tf-search-combox
                     label="[[t('overflow_filter_node')]]([[overflowmenu.length]])"
@@ -367,15 +351,13 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   @observe('t')
   _observeT(): void {
     if (this.t) {
-      const newSelectColor = this.colorSetChanged?.map((item) => {
-        if (item[1].value === this.unMatchedNodeName) {
-          return [item[0], { value: this.t('no_matching_nodes'), description: item[1].description }];
-        }
-        return item;
+    const allCheckboxes = this.shadowRoot?.querySelectorAll('vaadin-checkbox');
+    if (allCheckboxes) {
+      allCheckboxes.forEach((checkbox) => {
+        checkbox.checked = false; // 清空每个 checkbox 的选中状态
       });
-      this.set('colorSetChanged', newSelectColor);
-      this.set('unMatchedNodeName', this.t('no_matching_nodes'));
-      this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
+    }
+      this.set('precisionDesc', this.t('precision_desc'));
       this.updateStyles({
         '--color-config-left': i18next.language === 'zh-CN' ? '16px' : '36px',
         '--color-config-right': i18next.language === 'zh-CN' ? '56px' : '93px',
@@ -409,14 +391,14 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
   }
   @observe('task')
   _observeTask(): void {
-    this.set('precisionDesc', this.t(`precision_desc.${this.task}`));
+    this.set('precisionDesc', this.t('precision_desc'));
   }
 
   // 写一个如果切换数据清除所有checkbox和所有this.selectColor
   @observe('selection')
   _clearAllToggleCheckboxAndInputField(): void {
     this.set('selectedSide', '0');
-    const allCheckboxes = this.shadowRoot?.querySelectorAll('paper-checkbox');
+    const allCheckboxes = this.shadowRoot?.querySelectorAll('vaadin-checkbox');
     if (allCheckboxes) {
       allCheckboxes.forEach((checkbox) => {
         checkbox.checked = false; // 清空每个 checkbox 的选中状态
@@ -499,7 +481,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     }
     // 更新 selectColor 数组
     if (checkbox) {
-      if (checkbox.checked) {
+      if (!checkbox.checked) {
         this.selectColor.push(item[1].value); // 添加选中的颜色
       } else {
         const index = this.selectColor.findIndex(

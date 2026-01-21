@@ -74,14 +74,16 @@ class Legend extends PolymerElement {
       }
 
       .vaadin-details-title {
-        font-size: 14px;
+        font-size: 13px;
         color: #333333;
         font-weight: 600;
+        margin-top: 8px;
         margin-bottom: 0;
       }
 
       .vaadin-details vaadin-details-summary {
-        font-size: 15px;
+        padding: 0;
+        font-size: 14px;
         color: #333333;
         font-weight: 600;
       }
@@ -108,7 +110,6 @@ class Legend extends PolymerElement {
       }
       .button-wrapper {
         position: relative;
-        margin-top: 30px;
       }
       .button-wrapper vaadin-button {
         width: 100%;

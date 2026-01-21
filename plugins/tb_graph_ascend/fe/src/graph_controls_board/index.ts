@@ -20,6 +20,7 @@ import '@vaadin/icon';
 import '@vaadin/icons';
 import '@vaadin/select';
 import '@vaadin/button';
+import '@vaadin/checkbox';
 
 
 import * as _ from 'lodash';
@@ -77,14 +78,30 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         border-top: 1px #bfbfbf dashed;
       }
       .minimap-control {
-        font-size: var(--tb-graph-controls-title-font-size);
-        height: 42px;
         display: flex;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 4px; /* 设置行间距为4px */
+      }
+
+      .first-row {
+        display: flex;
+        margin-left: -4px;
+        align-items: center;
+        gap: 4px; /* 设置同一行内两个checkbox之间的间距 */
+        flex-wrap: wrap; /* 如果空间不足，自动换行 */
+      }
+
+      .sync-expand-checkbox {
+        margin: 0; /* 重置默认margin，让gap统一控制间距 */
       }
 
       .left-checkbox {
+        font-size: 14px;
         margin-right: 12px;
+      }
+
+      .right-checkbox {
+        font-size: 14px;
       }
 
       .icon-button {
@@ -175,20 +192,26 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         margin-left: -4px;
       }
 
+      .vaadin-details {
+        margin: 4px 0 0 0;
+      }
+
       .vaadin-details-selected {
         display: flex;
         padding-top: 0;
       }
       
       .vaadin-details-title {
-        font-size: 14px;
+        font-size: 13px;
         color: #333333;
         font-weight: 600;
+        margin-top: 8px;
         margin-bottom: 0;
       }
 
       .vaadin-details vaadin-details-summary {
-        font-size: 15px;
+        padding: var(--lumo-space-s) 0 0 0;
+        font-size: 14px;
         color: #333333;
         font-weight: 600;
       }
@@ -225,12 +248,28 @@ class TfGraphControls extends LegacyElementMixin(DarkModeMixin(PolymerElement)) 
         <vaadin-button class='language-button' theme="tertiary-inline" on-click="changeLanguage">中|en</vaadin-button>
       </div>
       <div class="minimap-control">
-        <paper-checkbox class="left-checkbox" checked on-change="_toggleNpuMinimap">[[t('show_debug_minimap')]]</paper-checkbox>
-        <template is="dom-if" if="[[!isSingleGraph]]">
-          <paper-checkbox  checked on-click="_toggleBenchMinimap">[[t('show_bench_minimap')]]</paper-checkbox>
-        </template>
+        <div class="first-row">
+          <vaadin-checkbox 
+            class="left-checkbox" 
+            checked 
+            on-change="_toggleNpuMinimap" 
+            label="[[t('show_debug_minimap')]]">
+          </vaadin-checkbox>
+          <template is="dom-if" if="[[!isSingleGraph]]">
+            <vaadin-checkbox 
+              class="right-checkbox" 
+              checked 
+              on-click="_toggleBenchMinimap" 
+              label="[[t('show_bench_minimap')]]">
+            </vaadin-checkbox>
+          </template>
+        </div>
+        <vaadin-checkbox 
+          class="sync-expand-checkbox" 
+          label="[[t('shouldExpandNodesSync')]]" 
+          checked={{isSyncExpand}}>
+        </vaadin-checkbox>
       </div>
-      <vaadin-checkbox class="sync-expand-checkbox" label="[[t('shouldExpandNodesSync')]]" checked={{isSyncExpand}}></vaadin-checkbox>
       <div class="container-wrapper">
         <tf-main-controler
           t="[[t]]"

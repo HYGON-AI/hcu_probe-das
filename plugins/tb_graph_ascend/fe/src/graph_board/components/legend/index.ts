@@ -31,9 +31,10 @@ class Legend extends PolymerElement {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-top: 10px;
           background: #fff;
           height: 40px;
+          border-bottom: 1px solid #e0e0e0;
+          position: relative;
         }
         .legend-item {
           margin-right: 10px;
@@ -63,6 +64,101 @@ class Legend extends PolymerElement {
 
         .custom-tooltip {
           font-size: 14px;
+        }
+
+        /* 小键盘图标按钮样式 */
+        .keyboard-button {
+          position: absolute;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          cursor: pointer;
+          background: transparent;
+          border: none;
+          width: 24px;
+          height: 24px;
+          padding: 4px;
+          border-radius: 4px;
+          transition: background-color 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .keyboard-button:hover {
+          background-color: rgba(38, 98, 54, 0.1);
+        }
+        
+        .keyboard-icon {
+          width: 18px;
+          height: 18px;
+          background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHZpZXdCb3g9IjAgMCAxOCAxOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIuMjUgMy4zNzVIMTUuNzVWMTRIMi4yNVYzLjM3NVpNMi4yNSAyLjA2MjVDMS44NjI1IDIuMDYyNSAxLjUgMi4zMjUgMS41IDIuNjg3NVYxNC42ODc1QzEuNSAxNS4wNTEzIDEuODYyNSAxNS4zMTI1IDIuMjUgMTUuMzEyNUgxNS43NUMxNi4xMzc1IDE1LjMxMjUgMTYuNSAxNS4wNTEzIDE2LjUgMTQuNjg3NVYyLjY4NzVDMTYuNSAyLjMyNSAxNi4xMzc1IDIuMDYyNSAxNS43NSAyLjA2MjVIMi4yNVoiIGZpbGw9IiM3OTc5NzkiLz4KPHBhdGggZD0iTTUgNS42ODc1SDYuMzc1VjcuMDYyNUg1VjUuNjg3NVoiIGZpbGw9IiM3OTc5NzkiLz4KPHBhdGggZD0iTTcuMDYyNSA1LjY4NzVIOC40Mzc1VjcuMDYyNUg3LjA2MjVWNS42ODc1WiIgZmlsbD0iIzc5Nzk3OSIvPgo8cGF0aCBkPSJNOS4xMjUgNS42ODc1SDEwLjVWNy4wNjI1SDkuMTI1VjUuNjg3NVoiIGZpbGw9IiM3OTc5NzkiLz4KPHBhdGggZD0iTTExLjE4NzUgNS42ODc1SDEyLjU2MjVWNy4wNjI1SDExLjE4NzVWNS42ODc1WiIgZmlsbD0iIzc5Nzk3OSIvPgo8cGF0aCBkPSJNNSA4LjA2MjVINi4zNzVWOS40Mzc1SDVWOC4wNjI1WiIgZmlsbD0iIzc5Nzk3OSIvPgo8cGF0aCBkPSJNNy4wNjI1IDguMDYyNUg4LjQzNzVWOS40Mzc1SDcuMDYyNVY4LjA2MjVaIiBmaWxsPSIjNzk3OTc5Ii8+CjxwYXRoIGQ9Ik05LjEyNSA4LjA2MjVIMTAuNVY5LjQzNzVIOS4xMjVWOC4wNjI1WiIgZmlsbD0iIzc5Nzk3OSIvPgo8cGF0aCBkPSJNMTEuMTg3NSA4LjA2MjVIMTIuNTYyNVY5LjQzNzVIMTEuMTg3NVY4LjA2MjVaIiBmaWxsPSIjNzk3OTc5Ii8+CjxwYXRoIGQ9Ik01IDEwLjQzNzVINi4zNzVWMTEuODEyNUg1VjEwLjQzNzVaIiBmaWxsPSIjNzk3OTc5Ii8+CjxwYXRoIGQ9Ik03LjA2MjUgMTAuNDM3NUg4LjQzNzVWMTEuODEyNUg3LjA2MjVWMTAuNDM3NVoiIGZpbGw9IiM3OTc5NzkiLz4KPHBhdGggZD0iTTkuMTI1IDEwLjQzNzVIMTAuNVYxMS44MTI1SDkuMTI1VjEwLjQzNzVaIiBmaWxsPSIjNzk3OTc5Ii8+CjxwYXRoIGQ9Ik0xMS4xODc1IDEwLjQzNzVIMTIuNTYyNVYxMS44MTI1SDExLjE4NzVWMTAuNDM3NVoiIGZpbGw9IiM3OTc5NzkiLz4KPHBhdGggZD0iTTEzLjUgNS42ODc1SDE1LjA2MjVWNy4wNjI1SDEzLjVWNS42ODc1WiIgZmlsbD0iIzc5Nzk3OSIvPgo8cGF0aCBkPSJNMTMuNSAxMC40Mzc1SDE1LjA2MjVWMTEuODEyNUgxMy41VjEwLjQzNzVaIiBmaWxsPSIjNzk3OTc5Ii8+Cjwvc3ZnPgo=');
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+        }
+        
+        /* 快捷键弹框样式 */
+        .shortcut-panel {
+          position: absolute;
+          right: 20px;
+          top: 45px;
+          background: white;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 1000;
+          min-width: 200px;
+          padding: 16px;
+          display: none;
+        }
+        
+        .shortcut-panel.show {
+          display: block;
+        }
+        
+        .shortcut-panel::before {
+          content: '';
+          position: absolute;
+          top: -6px;
+          right: 20px;
+          width: 12px;
+          height: 12px;
+          background: white;
+          transform: rotate(45deg);
+          border-left: 1px solid #e0e0e0;
+          border-top: 1px solid #e0e0e0;
+        }
+        
+        .shortcut-header {
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #eee;
+          font-size: 14px;
+        }
+        
+        .shortcut-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin: 8px 0;
+          font-size: 13px;
+        }
+        
+        /* 修改描述文字为黑色 */
+        .shortcut-action {
+          color: #000000; /* 改为黑色 */
+        }
+        
+        /* 修改按键文字为浅灰色 */
+        .shortcut-key {
+          color: #999999; /* 改为浅灰色 */
+          font-weight: bold;
+          font-family: 'Courier New', monospace;
+          min-width: 60px;
+          text-align: center;
         }
 
         .module-rect {
@@ -141,14 +237,48 @@ class Legend extends PolymerElement {
             </paper-tooltip>
           </div>
         </div>
+        
+        <!-- 小键盘图标按钮 -->
+        <button class="keyboard-button" on-click="toggleShortcutPanel">
+          <div class="keyboard-icon"></div>
+          <paper-tooltip animation-delay="300" position="top" offset="0">
+            [[t('shortcut_help')]]
+          </paper-tooltip>
+        </button>
+        
+        <!-- 快捷键弹框 -->
+        <div class$="shortcut-panel [[_getPanelClass(showShortcutPanel)]]">
+          <div class="shortcut-header">[[t('shortcut_help')]]</div>
+          <div class="shortcut-item">
+            <span class="shortcut-action">[[t('zoom_in_out')]]</span>
+            <span class="shortcut-key">W / S</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-action">[[t('pan_left_right')]]</span>
+            <span class="shortcut-key">A / D</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-action">[[t('scroll')]]</span>
+            <span class="shortcut-key">[[t('mouse_scroll')]]</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-action">[[t('drag')]]</span>
+            <span class="shortcut-key">[[t('mouse_drag')]]</span>
+          </div>
+        </div>
       </div>
     `;
+    
     @property({ type: Object })
     t: Function = (key) => i18next.t(key);
+    
+    @property({ type: Boolean })
+    showShortcutPanel = false;
 
     constructor() {
       super();
       this.setupLanguageListener();
+      this.setupDocumentClickListener();
     }
 
     setupLanguageListener() {
@@ -159,5 +289,22 @@ class Legend extends PolymerElement {
         this.set('t', t);
       });
     }
+    
+    setupDocumentClickListener() {
+      // 点击页面其他地方时关闭弹框
+      document.addEventListener('click', (e) => {
+        if (this.showShortcutPanel && !e.composedPath().includes(this.shadowRoot.host)) {
+          this.showShortcutPanel = false;
+        }
+      });
+    }
+    
+    toggleShortcutPanel(e) {
+      e.stopPropagation();
+      this.showShortcutPanel = !this.showShortcutPanel;
+    }
+    
+    _getPanelClass(show) {
+      return show ? 'show' : '';
+    }
 }
-
