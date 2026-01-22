@@ -225,7 +225,7 @@ def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
     else:
         compare_column.api_name = full_api_name_with_direction_status
         dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
-        input_data = PrecisionCompareInput(row_npu, row_gpu, dtype, compare_column)
+        input_data = PrecisionCompareInput(row_npu, row_gpu, dtype, compare_column, api_name=api_name)
         in_dtype = get_in_dtype(row_npu)
         comparison_func = registry.get_comparison_function(api_name, dtype, in_dtype)
         new_status = comparison_func(input_data)

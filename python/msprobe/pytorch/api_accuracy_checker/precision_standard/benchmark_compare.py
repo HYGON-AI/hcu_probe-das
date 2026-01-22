@@ -137,6 +137,7 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
     def __init__(self, input_data):
         super().__init__(input_data)
         self.compare_algorithm = CompareConst.BENCHMARK_COMPARE_ALGORITHM_NAME
+        self.api_name = getattr(input_data, "api_name", None)
 
     @staticmethod
     def get_final_status(status_list):
@@ -185,8 +186,7 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
                                           eb_inf_nan_consistency)
 
     def _get_threshold(self, metric):
-        error_threshold = StandardConfig.get_benchmark_threshold(metric)
-        return error_threshold
+        return StandardConfig.get_benchmark_ratio_threshold(metric, api_name=self.api_name)
 
     def _get_single_metric_status(self, ratio, metric):
         if is_inf_or_nan(ratio):
