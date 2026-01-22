@@ -39,7 +39,7 @@
 
 3. 代码测试
 
-   参见[代码测试](#代码测试)。
+   请参见[代码测试](#代码测试)。
 
 4. 编译测试
 
@@ -51,7 +51,7 @@
 
 6. 提交Pull Request
 
-   参见[提交Pull Request流程](#提交Pull Request流程)。
+   请参见[提交Pull Request流程](#提交Pull-Request流程)。
 
 ### 代码规范
 
