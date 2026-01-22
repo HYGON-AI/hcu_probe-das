@@ -16,6 +16,7 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import torch
 from typing import Callable
 from msprobe.pytorch.api_accuracy_checker.common.utils import is_dtype_fp8_or_hif8
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import absolute_standard_api, binary_standard_api, \
@@ -103,6 +104,9 @@ class StandardRegistry:
             return CompareConst.ULP_COMPARE
         if is_dtype_fp8_or_hif8(in_dtype):
             return CompareConst.ABSOLUTE_THRESHOLD
+        if out_dtype in ("torch.float16", "torch.bfloat16", "torch.float32", "torch.float64",
+        torch.float16, torch.bfloat16, torch.float32, torch.float64):
+            return CompareConst.BENCHMARK  
         if str(out_dtype) not in BINARY_COMPARE_UNSUPPORT_LIST:
             return CompareConst.BINARY_CONSISTENCY
         for name, category in self.api_standard_function_map.items():

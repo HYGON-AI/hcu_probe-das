@@ -45,8 +45,9 @@ class CompareInput:
 
 
 class PrecisionCompareInput:
-    def __init__(self, row_npu, row_gpu, dtype, compare_column):
+    def __init__(self, row_npu, row_gpu, dtype, compare_column, api_name=None):
         self.row_npu = row_npu
         self.row_gpu = row_gpu
         self.dtype = dtype
         self.compare_column = compare_column
+        self.api_name = api_name

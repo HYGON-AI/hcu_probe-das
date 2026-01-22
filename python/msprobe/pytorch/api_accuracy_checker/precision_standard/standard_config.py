@@ -53,6 +53,13 @@ class StandardConfig:
     See Also:
         torch.dtype: PyTorch data types.
     """
+    # 维护三份列表（示例）
+    L1_API_LIST = { 
+        # "aten::xxx", "torch.xxx", ...
+    }
+    L2_API_LIST = {
+        # ...
+    }
     _small_value = {
         torch.float16: 2**-10,
         torch.bfloat16: 2**-10,
@@ -127,6 +134,44 @@ class StandardConfig:
     _fp16_ulp_err_proportion = 0.001
     _special_samll_value = 1
     
+    @classmethod
+    def get_api_level(cls, api_name: str) -> str:
+        if api_name in cls.L2_API_LIST:
+            return "L2"
+        if api_name in cls.L1_API_LIST:
+            return "L1"
+        return "L0"
+
+    @classmethod
+    def get_benchmark_ratio_threshold(cls, metric, api_name: str = None, level: str = None):
+        # 三档阈值
+        thresholds = {
+            "L0": {
+                CompareConst.MAX_REL_ERR: 10.0,
+                CompareConst.MEAN_REL_ERR: 2.0,
+                CompareConst.RMSE: 2.0,
+            },
+            "L1": {
+                CompareConst.MAX_REL_ERR: 5.0,
+                CompareConst.MEAN_REL_ERR: 1.5,
+                CompareConst.RMSE: 1.5,
+            },
+            "L2": {
+                CompareConst.MAX_REL_ERR: 2.0,
+                CompareConst.MEAN_REL_ERR: 1.2,
+                CompareConst.RMSE: 1.2,
+            }
+        }
+
+        if level is None:
+            level = cls.get_api_level(api_name) if api_name else "L0"
+
+        # 其他指标不参与判定：inf
+        if metric in (CompareConst.MAX_REL_ERR ,CompareConst.MEAN_REL_ERR ,CompareConst.RMSE):
+            return thresholds.get(level, thresholds["L0"]).get(metric, float("inf"))
+        else:
+            return StandardConfig.get_benchmark_threshold(metric)
+
     @classmethod
     def get_small_value(cls, dtype, standard):
         if standard == CompareConst.ACCUMULATIVE_ERROR_COMPARE:
