@@ -99,7 +99,7 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 **注意事项**
 
-在使用MindSpeed-LLM进行数据采集时，需要注意动态数据采集中的[apply_patches](#动态数据采集)函数需要在MindSpeed-LLM
+在使用MindSpeed-LLM进行数据采集时，需要注意动态数据采集中的**apply_patches**函数需要在MindSpeed-LLM
 框架pretrain_gpt.py的megatron_adaptor函数导入之后执行。
 
 **使用示例**
@@ -141,7 +141,7 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 **功能说明**
 
-将[数据采集](数据采集)在两个训练环境下分别采集的zip包作为输入，执行数据比对操作。
+将[数据采集](#数据采集)在两个训练环境下分别采集的zip包作为输入，执行数据比对操作。
 
 **注意事项**
 
@@ -170,7 +170,7 @@ msprobe config_check -c bench_zip_path cmp_zip_path
 
 **输出说明**
 
-比对命令执行完成后生成比对结果文件，详细介绍请参见[输出结果文件说明](输出结果文件说明)。
+比对命令执行完成后生成比对结果文件，详细介绍请参见[输出结果文件说明](#输出结果文件说明)。
 
 ## 输出结果文件说明
 
