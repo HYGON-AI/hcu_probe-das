@@ -636,7 +636,7 @@ debugger = PrecisionDebugger(config_path=None, task=None, dump_path=None, level=
 **函数原型**
 
 ```Python
-debugger.start(model=None, token_range=None)
+debugger.start(model=None, token_range=None, rank_id=None)
 ```
 
 **参数说明**
@@ -647,6 +647,15 @@ debugger.start(model=None, token_range=None)
   传入需要监测的部分(如model.A)即可。注意：传入的当前层不会被dump，工具只会dump传入层的子层级。如传入了model.A，A本身不会被dump，而是会dump
   A.x, A.x.xx等。
 - token_range：指定推理模型采集时的token循环始末范围，支持传入[int, int]类型，代表[start, end]，范围包含边界，默认未配置。
+- rank_id: 指定自定义的rank ID，支持传入大于等于0的整数。默认未配置，则工具基于torch.distributed.get_rank接口获取rank ID；
+  配置此参数后，dump的结果中，rank文件夹名称中的{ID}将使用该参数所配置的值。
+
+  注意：通常情况下，用户无需手动配置rank_id参数，工具默认通过torch.distributed.get_rank接口（下面简称get_rank接口）可自动获取多卡多进程的唯一rank ID；
+  然而，在某些特殊场景下，get_rank接口可能无法正确获取唯一的rank ID。例如，在推理框架sglang的DP推理场景中，各DP worker之间是独立的分布式集群，导致get_rank接口返回重复的rank ID，进而引发dump结果中rank文件夹同名覆盖的问题，造成dump数据丢失。
+  
+  针对此类特殊场景，可通过配置rank_id参数为rank文件夹命名，但需要保证rank_id在各个进程中唯一。该值通常可在模型脚本或训练推理框架中获取，例如推理框架sglang中的self.gpu_id，其在每个进程中均保持唯一性。
+  
+  配置示例：`debugger.start(rank_id=self.gpu_id)`
 
 **返回值说明**
 

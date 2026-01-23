@@ -21,7 +21,7 @@ from mindspore.ops.operations import _inner_ops as inner
 from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
-from msprobe.core.common.utils import check_token_range, ThreadSafe
+from msprobe.core.common.utils import check_token_range, ThreadSafe, check_rank_id
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.dump.debugger.precision_debugger import BasePrecisionDebugger
 from msprobe.mindspore.dump.cell_processor import CellProcessor
@@ -138,10 +138,11 @@ class PrecisionDebugger(BasePrecisionDebugger):
             GraphModeCellDump.step(dump_path, instance.config.step, instance.config.task)
 
     @classmethod
-    def start(cls, model=None, token_range=None):
+    def start(cls, model=None, token_range=None, rank_id=None):
         instance = cls._get_instance()
         if instance is None:
             return
+        check_rank_id(rank_id)
         if cls._is_kernel_dump():
             cls._start_kernel_dump()
         else:
@@ -152,7 +153,7 @@ class PrecisionDebugger(BasePrecisionDebugger):
                     if not instance.service:
                         instance.service = MindsporeService(instance.config)
                     instance.config.check_model(model, token_range)
-                    instance.service.start(model, token_range)
+                    instance.service.start(model, token_range, rank_id)
             else:
                 if not instance.first_start:
                     get_api_register().restore_all_api()

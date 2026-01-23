@@ -77,7 +77,7 @@ class TestPrecisionDebugger(unittest.TestCase):
                 debugger.start()
                 service = mock_Service.return_value
                 mock_Service.assert_called_with(debugger.config)
-                service.start.assert_called_with(None, None)
+                service.start.assert_called_with(None, None, None)
 
         PrecisionDebugger._instance = None
         with self.assertRaises(Exception) as context:
