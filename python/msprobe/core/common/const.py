@@ -871,6 +871,10 @@ class MonitorConst:
         "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
         "proxy", "token_similarity"
     ]
+    METRICS_TRENDVIS_SUPPORTED = [
+        "actv", "actv_grad", "exp_avg", "exp_avg_sq",
+        "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
+    ]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"

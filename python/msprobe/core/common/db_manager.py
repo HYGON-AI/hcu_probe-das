@@ -256,3 +256,122 @@ class DBManager:
         except sqlite3.Error as err:
             logger.error(f"Failed to release database connection: {err}")
         change_mode(self.db_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+class TrendSql:
+    """趋势可视化数据库表参数类"""
+
+    @staticmethod
+    def create_monitoring_targets_table():
+        """监测目标表"""
+        return """
+        CREATE TABLE IF NOT EXISTS monitoring_targets (
+            target_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            target_name TEXT NOT NULL,
+            vpp_stage INTEGER NOT NULL,
+            micro_step INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(target_name, vpp_stage, micro_step) 
+        )"""
+
+    @staticmethod
+    def create_monitoring_metrics_table():
+        """监测指标表"""
+        return """
+        CREATE TABLE IF NOT EXISTS monitoring_metrics (
+            metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            metric_name TEXT UNIQUE NOT NULL
+        )"""
+
+    @staticmethod
+    def get_metric_mapping_sql():
+        """从monitoring_metrics表获取所有metric名称和ID"""
+        return """
+        SELECT metric_id, metric_name
+        FROM monitoring_metrics
+        """
+
+    @staticmethod
+    def get_global_stats_sql():
+        """从global_stats表获取最新的统计配置"""
+        return """
+        SELECT * FROM global_stats 
+        ORDER BY ROWID DESC 
+        LIMIT 1
+        """
+
+    @staticmethod
+    def create_global_stats_table(columns_config):
+        """根据字典配置创建全局统计表"""
+        # 根据字典的键值类型动态创建列
+        column_definitions = []
+        for column_name, column_value in columns_config.items():
+            if isinstance(column_value, (list, set)):
+                column_definitions.append(f"{column_name} TEXT DEFAULT NULL")
+            elif isinstance(column_value, (int, float)):
+                column_definitions.append(f"{column_name} INTEGER DEFAULT 0")
+        
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS global_stats (
+            {', '.join(column_definitions)}
+        )"""
+        return create_sql
+
+    @staticmethod
+    def create_tags_table():
+        # 新增：标签表
+        return """
+        CREATE TABLE IF NOT EXISTS monitoring_tags (
+            tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tag_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            metric_id INTEGER NOT NULL,
+            UNIQUE(tag_name, category, metric_id),
+            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
+        )"""
+
+    @staticmethod
+    def create_tag_mapping_table():
+        return """
+        CREATE TABLE IF NOT EXISTS tag_target_mapping (
+            tag_id INTEGER NOT NULL,
+            target_id INTEGER NOT NULL,
+            PRIMARY KEY (tag_id, target_id),
+            FOREIGN KEY (tag_id) REFERENCES monitoring_tags(tag_id),
+            FOREIGN KEY (target_id) REFERENCES monitoring_target(target_id)
+        )"""
+
+    @staticmethod
+    def create_trend_table(stats):
+        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
+        create_sql = f"""
+        CREATE TABLE IF NOT EXISTS trend_data (
+            rank INTEGER NOT NULL,
+            step INTEGER NOT NULL,
+            target_id INTEGER NOT NULL,
+            metric_id INTEGER NOT NULL,
+            {', '.join(stat_columns)},
+            PRIMARY KEY (rank, step, target_id, metric_id),
+            FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id),
+            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
+        ) WITHOUT ROWID"""
+        return create_sql
+    
+    @classmethod
+    def get_table_definition(cls, table_name=""):
+        """
+        获取表定义SQL
+        :param table_name: 表名
+        :return: 建表SQL语句
+        :raises ValueError: 当表名不存在时
+        """
+        table_creators = {
+            "monitoring_targets": cls.create_monitoring_targets_table,
+            "monitoring_metrics": cls.create_monitoring_metrics_table,
+            "monitoring_tags": cls.create_tags_table,
+            "tag_target_mapping": cls.create_tag_mapping_table,
+        }
+        if not table_name:
+            return [table_creators.get(table, lambda x: "")() for table in table_creators]
+        if table_name not in table_creators:
+            raise ValueError(f"Unsupported table name: {table_name}")
+        return table_creators[table_name]()

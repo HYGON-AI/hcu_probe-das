@@ -18,8 +18,8 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Dict, List, Optional, Set, Tuple
 
-from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.db_manager import DBManager
+from msprobe.core.common.const import MonitorConst, Const, Data2DBConst
+from msprobe.core.common.db_manager import DBManager, TrendSql
 
 
 def update_ordered_dict(main_dict: OrderedDict, new_list: List) -> OrderedDict:
@@ -30,105 +30,31 @@ def update_ordered_dict(main_dict: OrderedDict, new_list: List) -> OrderedDict:
     return main_dict
 
 
-def get_ordered_stats(stats: Iterable) -> List[str]:
-    """Get statistics in predefined order"""
-    if not isinstance(stats, Iterable):
+def get_ordered_list(data: Iterable, order: Iterable) -> List[str]:
+    if not isinstance(data, Iterable) or not isinstance(order, Iterable):
         return []
-    return [stat for stat in MonitorConst.OP_MONVIS_SUPPORTED if stat in stats]
+    return [value for value in order if value in data]
 
-
-class MonitorSql:
-    """数据库表参数类"""
-
-    @staticmethod
-    def create_monitoring_targets_table():
-        """监测目标表"""
-        return """
-        CREATE TABLE IF NOT EXISTS monitoring_targets (
-            target_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            target_name TEXT NOT NULL,
-            vpp_stage INTEGER NOT NULL,
-            micro_step INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(target_name, vpp_stage, micro_step) 
-        )"""
-
-    @staticmethod
-    def create_monitoring_metrics_table():
-        """监测指标表"""
-        return """
-        CREATE TABLE IF NOT EXISTS monitoring_metrics (
-            metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            metric_name TEXT UNIQUE NOT NULL
-        )"""
+def get_tags_from_target(target_name):
+    """
+    full target name to tags
     
-    @staticmethod
-    def get_metric_mapping_sql():
-        """从monitoring_metrics表获取所有metric名称和ID"""
-        return """
-        SELECT metric_id, metric_name
-        FROM monitoring_metrics
-        """
-
-    @staticmethod
-    def get_global_stats_sql():
-        """从global_stats表获取最新的统计配置"""
-        return """
-        SELECT * FROM global_stats 
-        ORDER BY ROWID DESC 
-        LIMIT 1
-        """
-
-    @staticmethod
-    def create_global_stats_table(columns_config):
-        """根据字典配置创建全局统计表"""
-        # 根据字典的键值类型动态创建列
-        column_definitions = []
-        for column_name, column_value in columns_config.items():
-            if isinstance(column_value, (list, set)):
-                column_definitions.append(f"{column_name} TEXT DEFAULT NULL")
-            elif isinstance(column_value, (int, float)):
-                column_definitions.append(f"{column_name} INTEGER DEFAULT 0")
-        
-        create_sql = f"""
-        CREATE TABLE IF NOT EXISTS global_stats (
-            {', '.join(column_definitions)}
-        )"""
-        return create_sql
-
-    @staticmethod
-    def create_trend_table(stats):
-        stat_columns = [f"{stat} REAL DEFAULT NULL" for stat in stats]
-        create_sql = f"""
-        CREATE TABLE IF NOT EXISTS trend_data (
-            rank INTEGER NOT NULL,
-            step INTEGER NOT NULL,
-            target_id INTEGER NOT NULL,
-            metric_id INTEGER NOT NULL,
-            {', '.join(stat_columns)},
-            PRIMARY KEY (rank, step, target_id, metric_id),
-            FOREIGN KEY (target_id) REFERENCES monitoring_targets(target_id),
-            FOREIGN KEY (metric_id) REFERENCES monitoring_metrics(metric_id)
-        ) WITHOUT ROWID"""
-        return create_sql
-
-    @classmethod
-    def get_table_definition(cls, table_name=""):
-        """
-        获取表定义SQL
-        :param table_name: 表名
-        :return: 建表SQL语句
-        :raises ValueError: 当表名不存在时
-        """
-        table_creators = {
-            "monitoring_targets": cls.create_monitoring_targets_table,
-            "monitoring_metrics": cls.create_monitoring_metrics_table,
-        }
-        if not table_name:
-            return [table_creators.get(table, lambda x: "")() for table in table_creators]
-        if table_name not in table_creators:
-            raise ValueError(f"Unsupported table name: {table_name}")
-        return table_creators[table_name]()
-
+    :param target_name: e.g. layers.22.self_attention.linear_qkv.layer_norm_weight
+    :return tags: set of tags
+    """
+    tags = set()
+    parts = target_name.split(Const.SEP)[::-1]
+    max_idx = len(parts) - 1
+    for i, part in enumerate(parts):
+        if not part.isdigit():
+            tags.add((part, Data2DBConst.TAG_MODULE))
+            continue
+        if i == max_idx or parts[i+1].isdigit():  # 确保数字前面有非数字部分, 组成layer标签
+            continue
+        layer_tag = (f"{parts[i+1]}.{parts[i]}", Data2DBConst.TAG_LAYER)
+        tags.add(layer_tag)
+    return tags
+    
 
 class MonitorDB:
     """Main class for monitoring database operations"""
@@ -139,21 +65,22 @@ class MonitorDB:
 
     def init_schema(self) -> None:
         """Initialize database schema"""
-        self.db_manager.execute_multi_sql(MonitorSql.get_table_definition())
+        self.db_manager.execute_multi_sql(TrendSql.get_table_definition())
 
     def insert_dimensions(
         self,
-        targets: OrderedDict,
-        metrics: Set[str]
+        targets: Dict[str,OrderedDict],
     ) -> None:
         """Insert dimension data into database"""
         # Insert targets
-        self.db_manager.insert_data(
-            "monitoring_targets",
-            [(name, vpp_stage, micro_step)
-             for (name, vpp_stage, micro_step) in targets],
-            key_list=["target_name", "vpp_stage", "micro_step"]
-        )
+        metrics = get_ordered_list(set(targets.keys()), MonitorConst.METRICS_TRENDVIS_SUPPORTED)
+        for metric_name in metrics:
+            self.db_manager.insert_data(
+                "monitoring_targets",
+                [(name, vpp_stage, micro_step)
+                for (name, vpp_stage, micro_step) in targets[metric_name]],
+                key_list=["target_name", "vpp_stage", "micro_step"]
+            )
 
         # Insert metrics
         self.db_manager.insert_data(
@@ -172,7 +99,7 @@ class MonitorDB:
         """初始化全局统计表数据"""
         # 准备插入数据
         self.db_manager.execute_sql(
-            MonitorSql.create_global_stats_table(config)
+            TrendSql.create_global_stats_table(config)
         )
         
         column_values = []
@@ -186,10 +113,10 @@ class MonitorDB:
     def get_metric_mapping(self) -> Dict[str, Tuple[int, List[str]]]:
         """获取metric名称到ID的映射及对应的统计信息"""
         metric_results = self.db_manager.execute_sql(
-            MonitorSql.get_metric_mapping_sql()
+            TrendSql.get_metric_mapping_sql()
         )        
         global_stats_result = self.db_manager.execute_sql(
-            MonitorSql.get_global_stats_sql()
+            TrendSql.get_global_stats_sql()
         )
         if not global_stats_result:
             return {}
@@ -206,7 +133,7 @@ class MonitorDB:
             ordered_stats = []
             if stats_value:
                 stats_list = stats_value.split(",") if isinstance(stats_value, str) else []
-                ordered_stats = get_ordered_stats(stats_list)                
+                ordered_stats = get_ordered_list(stats_list, MonitorConst.OP_MONVIS_SUPPORTED)                
             metric_mapping[metric_name] = (metric_id, ordered_stats)
         return metric_mapping
 
@@ -224,7 +151,7 @@ class MonitorDB:
         }
 
     def create_trend_data(self, stats):
-        self.db_manager.execute_sql(MonitorSql.create_trend_table(stats))
+        self.db_manager.execute_sql(TrendSql.create_trend_table(stats))
 
     def _get_metric_id(self, metric_name: str) -> Optional[int]:
         """Get metric ID by name"""
@@ -234,3 +161,53 @@ class MonitorDB:
             where={"metric_name": metric_name}
         )
         return result[0]["metric_id"] if result else None
+
+    def extract_tags_from_processed_targets(self, targets:dict , metric_id_dict: dict, target_dict: dict):
+        """从已处理的targets中提取标签并建立映射关系"""
+
+        for metric_name in targets:
+            tag_info_to_id = {}
+            mapping_data = []
+            new_tags_data = set()
+            target_to_tags = {}
+            metric_id = metric_id_dict.get(metric_name, [None,])[0]
+            for target in targets[metric_name]:
+                target_id = target_dict[target]
+                name, _, _ = target
+                tags = get_tags_from_target(name)
+                new_tags_data = new_tags_data.union(tags)
+                target_to_tags[target_id] = tags
+
+            # 插入新标签
+            if not new_tags_data:
+                continue
+            self.db_manager.insert_data(
+                "monitoring_tags",
+                [(tag_name, category, metric_id)
+                    for tag_name, category in new_tags_data],
+                key_list=["tag_name", "category", "metric_id"]
+            )
+
+            # 重新获取tag_id用于映射
+            tag_records = self.db_manager.select_data(
+                "monitoring_tags",
+                columns=["tag_id", "tag_name", "category", "metric_id"]
+            )
+            for row in tag_records:
+                tag_info_to_id[(row["tag_name"], row["category"],
+                                row["metric_id"])] = row["tag_id"]
+
+            for target_id, tags_list in target_to_tags.items():
+                for tag_name, category in tags_list:
+                    tag_id = tag_info_to_id.get(
+                        (tag_name, category, metric_id))
+                    if tag_id:
+                        mapping_data.append((target_id, tag_id))
+
+            # 插入映射关系
+            if mapping_data:
+                self.db_manager.insert_data(
+                    "tag_target_mapping",
+                    mapping_data,
+                    key_list=["target_id", "tag_id"]
+                )

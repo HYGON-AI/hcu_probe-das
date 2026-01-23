@@ -1,13 +1,16 @@
 import unittest
 import sqlite3
 import os
+import re
 import tempfile
 from typing import Dict, List
 from unittest.mock import patch, MagicMock
 
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.db_manager import DBManager
+from msprobe.core.common.db_manager import DBManager, TrendSql
 
+def normalize_spaces(text):
+    return re.sub(r'\s+', ' ', text)
 
 class TestDBManager(unittest.TestCase):
     def setUp(self):
@@ -244,3 +247,47 @@ class TestDBManager(unittest.TestCase):
             self.assertIsNone(result)  # 装饰器会捕获异常并返回None
             mock_logger.assert_called_with(
                 "Database operation failed: Test error")
+
+
+class TestTrendSql(unittest.TestCase):
+    """测试TrendSql类"""
+
+    def test_get_table_definition_all_tables(self):
+        """测试获取所有表定义"""
+        result = TrendSql.get_table_definition()
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 4)
+        self.assertTrue(all("CREATE TABLE" in sql for sql in result))
+
+    def test_get_table_definition_single_table(self):
+        """测试获取单个表定义"""
+        tables = [
+            "monitoring_targets",
+            "monitoring_metrics",
+            "monitoring_tags",
+            "tag_target_mapping"
+        ]
+
+        for table_name in tables:
+            with self.subTest(table=table_name):
+                result = TrendSql.get_table_definition(table_name)
+                self.assertIn(f"CREATE TABLE", result)
+                self.assertIn(table_name, result)
+
+    def test_get_table_definition_invalid_table(self):
+        """测试获取不存在的表定义"""
+        with self.assertRaises(ValueError):
+            TrendSql.get_table_definition("invalid_table")
+
+    def test_create_monitoring_targets_table(self):
+        """测试监测目标表创建SQL"""
+        result = TrendSql.create_monitoring_targets_table()
+        self.assertIn("CREATE TABLE IF NOT EXISTS monitoring_targets", result)
+        self.assertIn("target_id INTEGER PRIMARY KEY AUTOINCREMENT", result)
+        self.assertIn("UNIQUE(target_name, vpp_stage, micro_step)", result)
+
+    def test_get_metric_mapping_sql(self):
+        """测试获取指标映射SQL"""
+        result = TrendSql.get_metric_mapping_sql()
+        result = normalize_spaces(result)
+        self.assertIn("SELECT metric_id, metric_name", result)

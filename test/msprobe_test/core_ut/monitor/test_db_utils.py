@@ -3,14 +3,8 @@ import os
 import re
 import tempfile
 from collections import OrderedDict
-from unittest.mock import patch
 
-from msprobe.core.common.const import MonitorConst
-from msprobe.core.monitor.db_utils import MonitorDB, MonitorSql, update_ordered_dict, get_ordered_stats
-
-
-def normalize_spaces(text):
-    return re.sub(r'\s+', ' ', text)
+from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict, get_ordered_list
 
 
 class TestDBUtils(unittest.TestCase):
@@ -30,42 +24,14 @@ class TestDBUtils(unittest.TestCase):
         test_stats = ['stat2', 'stat1', 'stat3']
         supported_stats = ['stat1', 'stat2', 'stat3', 'stat4']
 
-        with patch.object(MonitorConst, 'OP_MONVIS_SUPPORTED', supported_stats):
-            result = get_ordered_stats(test_stats)
+        result = get_ordered_list(test_stats, supported_stats)
 
         self.assertEqual(result, ['stat1', 'stat2', 'stat3'])
 
     def test_get_ordered_stats_with_non_iterable(self):
         """测试get_ordered_stats处理非可迭代对象"""
-        result = get_ordered_stats(123)
+        result = get_ordered_list(123, [123,])
         self.assertEqual(result, [])
-
-
-class TestMonitorSql(unittest.TestCase):
-    def test_get_table_definition_all_tables(self):
-        """测试获取所有表定义"""
-        result = MonitorSql.get_table_definition()
-        self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 2)
-        self.assertTrue(all("CREATE TABLE" in sql for sql in result))
-
-    def test_get_table_definition_single_table(self):
-        """测试获取单个表定义"""
-        for table in ["monitoring_targets", "monitoring_metrics"]:
-            result = MonitorSql.get_table_definition(table)
-            result = normalize_spaces(result)
-            self.assertIn(f"CREATE TABLE IF NOT EXISTS {table}", result)
-
-    def test_get_table_definition_invalid_table(self):
-        """测试获取不存在的表定义"""
-        with self.assertRaises(ValueError):
-            MonitorSql.get_table_definition("invalid_table")
-
-    def test_get_metric_mapping_sql(self):
-        """测试获取指标映射SQL"""
-        result = MonitorSql.get_metric_mapping_sql()
-        result = normalize_spaces(result)
-        self.assertIn("SELECT metric_id, metric_name", result)
 
 
 class TestMonitorDB(unittest.TestCase):
@@ -92,19 +58,16 @@ class TestMonitorDB(unittest.TestCase):
 
     def test_insert_dimensions(self):
         """测试插入维度数据"""
-        targets = OrderedDict()
-        targets[("layer1", 0, 0)] = None
-        targets[("layer2", 0, 1)] = None
-
-        metrics = {"metric1", "metric2"}
-        metric_stats = {
-            "metric1": {"norm", "max"},
-            "metric2": {"min", "max"}
+        targets_part = OrderedDict()
+        targets_part[("layer1", 0, 0)] = None
+        targets_part[("layer2", 0, 1)] = None
+        all_targets = {
+            "grad_reduced": targets_part,
+            "grad_unreduced": targets_part
         }
 
         self.monitor_db.insert_dimensions(
-            targets=targets,
-            metrics=metrics
+            targets=all_targets,
         )
 
         # 验证目标插入
