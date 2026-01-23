@@ -91,15 +91,15 @@ def is_frontend_built():
 def clean_frontend_build():
     """清除前端构建产物"""
     fe_path = os.path.join("build", "lib")
-    
+
     if not os.path.exists(fe_path):
         return True
-    
+
     # 需要清除的目录和文件
     clean_targets = [
         os.path.join(fe_path, "tb_graph_ascend"),
     ]
-    
+
     cleaned = False
     for target in clean_targets:
         if os.path.exists(target):
@@ -114,26 +114,27 @@ def clean_frontend_build():
                 continue
 
             cleaned = True
-    
+
     return cleaned
+
 
 class CustomBdistWheelCommand(bdist_wheel):
     """自定义wheel构建命令"""
-    
+
     # 类属性，用于存储是否包含tb_graph_ascend
     with_tb_graph_ascend = False
 
     def run(self):
         # 使用类属性来判断是否包含tb_graph_ascend
         include_tb_graph_ascend = CustomBdistWheelCommand.with_tb_graph_ascend
-        
+
         if include_tb_graph_ascend:
             # 包含所有包
             self.distribution.packages = packages
         else:
             # 只包含 msprobe 相关的包，排除 tb_graph_ascend
             self.distribution.packages = [pkg for pkg in packages if not pkg.startswith('tb_graph_ascend')]
-            
+
         super().run()
 
 
@@ -161,7 +162,7 @@ if platform.system() != "Linux":
     raise SystemError("MindStudio-Probe is only supported on Linux platforms.")
 
 # 扩展模块范围，包括adump和tb_graph_ascend
-mod_list_range = {"adump", "tb_graph_ascend"}
+mod_list_range = {"adump", "tb_graph_ascend", "atb_probe"}
 mod_list = []
 for i, arg in enumerate(sys.argv):
     if arg.startswith("--include-mod"):
@@ -200,15 +201,16 @@ if mod_list:
         # 可选：raise BuildError(f"清理失败: {e}")
         with_tb_graph_ascend = False
         CustomBdistWheelCommand.with_tb_graph_ascend = False
-        
+
     # 如果包含adump，则进行adump相关的构建
-    if "adump" in mod_list:
+    if "adump" in mod_list or "atb_probe" in mod_list:
         arch = platform.machine()
         sys.argv.append("--plat-name")
         sys.argv.append(f"linux_{arch}")
         sys.argv.append("--python-tag")
         sys.argv.append(f"cp{sys.version_info.major}{sys.version_info.minor}")
-        build_cmd = f"bash ./build.sh -j16 -a {arch} -v {sys.version_info.major}.{sys.version_info.minor}"
+        build_cmd = (f"bash ./build.sh -j16 -a {arch} -v {sys.version_info.major}.{sys.version_info.minor}"
+                     f" -m {str(mod_list).replace(' ', '')}")
         p = subprocess.run(build_cmd.split(), shell=False)
         if p.returncode != 0:
             raise RuntimeError(f"Failed to build source({p.returncode})")
@@ -267,7 +269,7 @@ if with_tb_graph_ascend:
         "tb_graph_ascend.server": "plugins/tb_graph_ascend/server",
         "tb_graph_ascend.fe": "plugins/tb_graph_ascend/fe",
     })
-    
+
     package_data_config["tb_graph_ascend.server"] = [
         "static/**",
         "static/**/*",
