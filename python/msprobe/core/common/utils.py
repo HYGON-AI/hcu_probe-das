@@ -714,3 +714,14 @@ def check_process_num(process_num):
 def is_module_available(module_name):
     spec = importlib.util.find_spec(module_name)
     return spec is not None
+
+
+def check_rank_id(rank_id):
+    if rank_id is None:
+        return
+    if not is_int(rank_id):
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f"{rank_id} must be an integer.")
+    if not rank_id >= 0:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f"{rank_id} must be greater than or equal to 0.")

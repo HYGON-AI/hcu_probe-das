@@ -110,7 +110,7 @@ class BaseService(ABC):
         """修改JitDump开关，mindspore子类重写"""
         pass
 
-    def start(self, model=None, token_range=None):
+    def start(self, model=None, token_range=None, rank_id=None):
         """通用start模板"""
         self._process_iteration()
         if self._is_debug_level:
@@ -125,10 +125,13 @@ class BaseService(ABC):
         Runtime.is_running = True
         self.cur_token_id = 0
         if self.first_start:
-            try:
-                self.current_rank = self._get_current_rank()
-            except DistributedNotInitializedError:
-                self.current_rank = None
+            if rank_id is not None:
+                self.current_rank = rank_id
+            else:
+                try:
+                    self.current_rank = self._get_current_rank()
+                except DistributedNotInitializedError:
+                    self.current_rank = None
             Runtime.current_rank = self.current_rank
             if self._is_no_dump_rank:
                 Runtime.is_running = False

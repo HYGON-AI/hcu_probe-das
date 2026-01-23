@@ -21,7 +21,7 @@ from msprobe.pytorch.dump.pytorch_service import PytorchService
 
 from msprobe.core.common.const import Const, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.utils import check_token_range, ThreadSafe
+from msprobe.core.common.utils import check_token_range, ThreadSafe, check_rank_id
 from msprobe.pytorch.common.utils import check_save_param, is_torch_nn_module
 from msprobe.pytorch.dump.module_dump.module_dump import ModuleDumper
 
@@ -56,14 +56,15 @@ class PrecisionDebugger(BasePrecisionDebugger):
 
     @classmethod
     @ThreadSafe.synchronized
-    def start(cls, model=None, token_range=None):
+    def start(cls, model=None, token_range=None, rank_id=None):
         instance = cls._get_instance()
         if instance is None:
             return
 
         check_token_range(token_range)
+        check_rank_id(rank_id)
         instance.config.check_model(model, token_range)
-        instance.service.start(model, token_range)
+        instance.service.start(model, token_range, rank_id)
 
     @classmethod
     @ThreadSafe.synchronized
