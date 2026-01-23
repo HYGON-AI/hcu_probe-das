@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22.2)
+cmake_minimum_required(VERSION 3.22)
 project(atb_probe)
 
 set(CMAKE_CXX_STANDARD 11)
