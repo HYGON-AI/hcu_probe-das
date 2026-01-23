@@ -12,6 +12,7 @@ if [ "$#" -ge 3 ]; then
     sha256_value=$3
 fi
 if [ "$#" -ge 4 ]; then
+    sha256_value=$3
     tag=$4
 fi
 
@@ -33,9 +34,9 @@ if [ ! -d "$path" ]; then
 fi
 cd ${path}
 
+fullname="${path}/$(basename "${url}")"
 extension=$(echo "${url}" | awk -F'[./]' '{print $NF}')
 if [[ "${extension}" == "gz" || "${extension}" == "zip" ]]; then
-    fullname="${path}/$(basename "${url}")"
     if [[ -e ${fullname} ]]; then
         echo "Source ${fullname} is exists, will not download again."
     else
@@ -66,16 +67,33 @@ if [[ "${extension}" == "gz" || "${extension}" == "zip" ]]; then
         unzip -n ${fullname} -d ./ > /dev/null
     fi
 elif [[ "${extension}" == "git" ]]; then
-    if [[ -z "${tag}" ]]; then
-        git clone ${url}
-    else
-        git clone ${url} -b "${tag}"
+    if [[ -d ${fullname%\.*} ]]; then
+        cd ${fullname%\.*}
+        is_clean=$(git status | grep 'nothing to commit, working tree clean' |wc -l)
+        if [ $? -eq 0 ]&&[ $is_clean -eq 1 ]; then
+            commit_id=$(git log -n 1 | awk 'NR==1 {print $2}')
+            if [ $? -eq 0 ]&&[[ "${commit_id}" == "${sha256_value}" ]]; then
+                echo "Source ${fullname} is exists, will not download again."
+                cd ${path}
+            else
+                rm -rf ${fullname%\.*}
+            fi
+        else
+            rm -rf ${fullname%\.*}
+        fi
     fi
-    if [ $? -eq 0 ]; then
-        echo "Download successful: ${url}"
-    else
-        echo "Download failed: ${url}"
-        exit 1
+    if [ ! -d ${fullname%\.*} ]; then
+        if [[ -z "${tag}" ]]; then
+            git clone ${url}
+        else
+            git clone ${url} -b "${tag}"
+        fi
+        if [ $? -eq 0 ]; then
+            echo "Download successful: ${url}"
+        else
+            echo "Download failed: ${url}"
+            exit 1
+        fi
     fi
 else
     echo "Unknow url ${url}"

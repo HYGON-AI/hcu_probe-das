@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.22.2)
 project(msprobe VERSION 1.0.0 LANGUAGES CXX C)
-cmake_minimum_required(VERSION 3.14)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,4 +67,5 @@ target_include_directories(_msprobe_c PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 file(GLOB_RECURSE SOURCES "*.cpp" "*.cc")
 target_sources(_msprobe_c PRIVATE ${SOURCES})
 
-install(TARGETS _msprobe_c LIBRARY DESTINATION lib)
+set(MSPROBE_C_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../python/msprobe/lib/)
+install(TARGETS _msprobe_c LIBRARY DESTINATION ${MSPROBE_C_LIB_DIR})
