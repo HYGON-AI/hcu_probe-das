@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.22.2)
 project(MindStudio-Probe)
-cmake_minimum_required(VERSION 3.14)
 
 execute_process(
     COMMAND uname -m
