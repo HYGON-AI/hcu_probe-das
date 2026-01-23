@@ -527,6 +527,10 @@ class TestTrainerMon(unittest.TestCase):
             def _get_flat_param_offsets(self):
                 return [(0, 3)]
 
+        class DummyModel:
+            def __init__(self, handle):
+                self._all_handles = [handle]
+
         flat_prefix = "0:"
         full_name = f"{flat_prefix}{MC.FSDP_FLAT_SEP}param"
         self.mon.origin2squash = {full_name: "sq_param"}
@@ -542,6 +546,7 @@ class TestTrainerMon(unittest.TestCase):
         from torch.distributed.fsdp import _runtime_utils
         wrapped = _runtime_utils._post_backward_hook
         handle = DummyHandle(param)
+        self.mon.model = [DummyModel(handle)]
         wrapped(None, handle)
 
         mock_post_hook.assert_called_once()
