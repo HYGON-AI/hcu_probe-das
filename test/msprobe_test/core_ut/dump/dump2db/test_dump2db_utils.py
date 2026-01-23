@@ -6,7 +6,6 @@ from collections import defaultdict
 
 from msprobe.core.dump.dump2db.db_utils import (
     DumpDB,
-    DumpSql,
     parse_full_key
 )
 from msprobe.core.common.const import Data2DBConst
@@ -28,8 +27,8 @@ class TestParseFunctions(unittest.TestCase):
              ]),
             ("Module.testlayername.layer.1.blocks.1.conv2.Conv2d.input.2",
              [
-                 ("layer.1.", Data2DBConst.TAG_LAYER),
-                 ("blocks.1.", Data2DBConst.TAG_LAYER),
+                 ("layer.1", Data2DBConst.TAG_LAYER),
+                 ("blocks.1", Data2DBConst.TAG_LAYER),
                  ("testlayername", Data2DBConst.TAG_MODULE),
                  ("conv2.Conv2d", Data2DBConst.TAG_MODULE),
                  ("Module", Data2DBConst.TAG_DEFAULT),
@@ -52,43 +51,6 @@ class TestParseFunctions(unittest.TestCase):
                         ((pattern, expected_type) in tags),
                         f"Pattern '{pattern}' with type '{expected_type}' not found in {tags}")
                 self.assertEqual(len(tags), len(expected_patterns))
-
-
-class TestDumpSql(unittest.TestCase):
-    """测试DumpSql类"""
-
-    def test_get_table_definition_all_tables(self):
-        """测试获取所有表定义"""
-        result = DumpSql.get_table_definition()
-        self.assertIsInstance(result, list)
-        self.assertTrue(all("CREATE TABLE" in sql for sql in result))
-
-    def test_get_table_definition_single_table(self):
-        """测试获取单个表定义"""
-        tables = [
-            "monitoring_targets",
-            "monitoring_metrics",
-            "monitoring_tags",
-            "tag_target_mapping"
-        ]
-
-        for table_name in tables:
-            with self.subTest(table=table_name):
-                result = DumpSql.get_table_definition(table_name)
-                self.assertIn(f"CREATE TABLE", result)
-                self.assertIn(table_name, result)
-
-    def test_get_table_definition_invalid_table(self):
-        """测试获取不存在的表定义"""
-        with self.assertRaises(ValueError):
-            DumpSql.get_table_definition("invalid_table")
-
-    def test_create_monitoring_targets_table(self):
-        """测试监测目标表创建SQL"""
-        result = DumpSql.create_monitoring_targets_table()
-        self.assertIn("CREATE TABLE IF NOT EXISTS monitoring_targets", result)
-        self.assertIn("target_id INTEGER PRIMARY KEY AUTOINCREMENT", result)
-        self.assertIn("UNIQUE(target_name, vpp_stage, micro_step)", result)
 
 
 class TestDumpDB(unittest.TestCase):

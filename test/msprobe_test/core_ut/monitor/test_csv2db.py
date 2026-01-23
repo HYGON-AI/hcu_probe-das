@@ -14,7 +14,6 @@ from msprobe.core.monitor.csv2db import (
     process_single_rank,
     import_data,
     csv2db,
-    all_data_type_list,
 )
 from msprobe.core.common.const import MonitorConst
 
@@ -37,7 +36,7 @@ class TestCSV2DBValidations(unittest.TestCase):
     def test_validate_data_type_list_valid(self):
         """测试有效的数据类型列表"""
         validate_data_type_list(["actv", "grad_reduced"])
-        validate_data_type_list(all_data_type_list[:2])
+        validate_data_type_list(MonitorConst.METRICS_TRENDVIS_SUPPORTED[:2])
 
     def test_validate_data_type_list_invalid(self):
         """测试无效的数据类型列表"""
@@ -92,11 +91,10 @@ class TestPreScanFunctions(unittest.TestCase):
         files = [self.test_csv_path_actv]
         result = _pre_scan_single_rank(rank, files)
         self.assertEqual(result["max_rank"], rank)
-        self.assertEqual(result["metrics"], {"actv"})
         self.assertEqual(result["min_step"], 0)
         self.assertEqual(result["max_step"], 100)
         self.assertEqual(result["metric_stats"], {"actv": {"min", "max"}})
-        self.assertEqual(len(result["targets"]), 2)
+        self.assertEqual(len(result["targets"]["actv"]), 2)
 
     def test_pre_scan(self):
         """测试完整预扫描流程"""
@@ -109,11 +107,12 @@ class TestPreScanFunctions(unittest.TestCase):
 
         result = _pre_scan(mock_db, data_dirs, data_type_list)
 
-        self.assertEqual(sorted(list(result.keys())), [0, 2])
+        self.assertEqual(sorted(list(result[0].keys())), [0, 2])
 
         mock_db.insert_dimensions.assert_called_once()
         mock_db.init_global_stats_data.assert_called_once()
         mock_db.create_trend_data.assert_called_once()
+        mock_db.extract_tags_from_processed_targets.assert_called_once()
         call_args = mock_db.init_global_stats_data.call_args.args[0]
         expected = {
             "min_step": 0,
@@ -171,13 +170,13 @@ class TestImportData(unittest.TestCase):
     def test_import_data_success(self, mock_pre_scan):
         """测试数据导入成功场景"""
         # 模拟预扫描结果
-        mock_pre_scan.return_value = {
-            0: ["actv_10-20.csv"], 1: ["actv_10-20.csv"]}
+        rank_files = {0: ["actv_10-20.csv"], 1: ["actv_10-20.csv"]}
+        metric_mapping = {"actv": (1, ["min", "max"])}
+        target_mapping = {("layer1", 0, 0): 1}
+        mock_pre_scan.return_value = rank_files, metric_mapping, target_mapping
 
         # 模拟数据库
         mock_db = MagicMock()
-        mock_db.get_metric_mapping.return_value = {"actv": (1, ["min", "max"])}
-        mock_db.get_target_mapping.return_value = {("layer1", 0, 0): 1}
 
         # 测试数据
         data_dirs = {0: "dir0", 1: "dir1"}
@@ -192,7 +191,7 @@ class TestImportData(unittest.TestCase):
     @patch("msprobe.core.monitor.csv2db._pre_scan")
     def test_import_data_no_files(self, mock_pre_scan):
         """测试没有找到数据文件的情况"""
-        mock_pre_scan.return_value = {}
+        mock_pre_scan.return_value = ({}, None, None)
 
         mock_db = MagicMock()
         data_dirs = {0: "dir0"}

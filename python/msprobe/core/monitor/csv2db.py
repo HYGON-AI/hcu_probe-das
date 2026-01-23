@@ -28,15 +28,9 @@ from msprobe.core.common.file_utils import (create_directory, read_csv,
                                             recursive_chmod, remove_path)
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
-from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict, get_ordered_stats
+from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict, get_ordered_list
 from msprobe.core.monitor.utils import get_target_output_dir
 from tqdm import tqdm
-
-# Constants
-all_data_type_list = [
-    "actv", "actv_grad", "exp_avg", "exp_avg_sq",
-    "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
-]
 
 
 @dataclass
@@ -61,13 +55,13 @@ def validate_process_num(process_num: int) -> None:
 def validate_data_type_list(data_type_list: Optional[List[str]]) -> None:
     """Validate data type list parameter"""
     if data_type_list is None or not data_type_list:
-        logger.info(f"Using default data types: {all_data_type_list}")
+        logger.info(f"Using default data types: {MonitorConst.METRICS_TRENDVIS_SUPPORTED}")
         return
 
     if not isinstance(data_type_list, list):
         raise ValueError("data_type_list must be a list")
 
-    invalid_types = [t for t in data_type_list if t not in all_data_type_list]
+    invalid_types = [t for t in data_type_list if t not in MonitorConst.METRICS_TRENDVIS_SUPPORTED]
     if invalid_types:
         raise ValueError(f"Unsupported data types: {invalid_types}")
 
@@ -89,7 +83,7 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
     min_step = None
     max_step = 0
     metric_stats = defaultdict(set)
-    targets = OrderedDict()
+    targets = defaultdict(OrderedDict)
 
     for file_path in files:
         file_name = os.path.basename(file_path)
@@ -117,16 +111,15 @@ def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
                     f"CSV conversion failed | file={file_path}:{row_id+2} | error={str(e)}")
                 continue
             target = (name, vpp_stage, micro_step)
-            if target not in targets:
-                targets[target] = None
+            if target not in targets[metric_name]:
+                targets[metric_name][target] = None
 
     return {
         'max_rank': int(rank),
-        'metrics': metrics,
         'min_step': min_step,
         'max_step': max_step,
         'metric_stats': metric_stats,
-        'targets': list(targets.keys())
+        'targets': {metric_name: list(target_dict.keys()) for metric_name, target_dict in targets.items()}
     }
 
 
@@ -165,8 +158,7 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
                 pbar.update(1)
 
     # Aggregate results
-    targets = OrderedDict()
-    metrics = set()
+    targets = defaultdict(OrderedDict)
     all_stats = set()
     global_stats = {
         "min_step": None,
@@ -175,7 +167,6 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
     }
     for rank_result in results:
         global_stats["max_rank"] = max(global_stats["max_rank"], rank_result['max_rank'])
-        metrics.update(rank_result['metrics'])
         if global_stats["min_step"] is None:
             global_stats["min_step"] = rank_result['min_step']
         else:
@@ -190,13 +181,19 @@ def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: 
                 global_stats[metric] = set()
             global_stats[metric].update(stats)
             all_stats.update(stats)
+        for metric_name in rank_result['targets']:
+            targets[metric_name] = update_ordered_dict(
+                targets[metric_name], rank_result['targets'][metric_name])
 
-        targets = update_ordered_dict(targets, rank_result['targets'])
-
-    monitor_db.insert_dimensions(targets, metrics)
+    monitor_db.insert_dimensions(targets)
     monitor_db.init_global_stats_data(global_stats)
-    monitor_db.create_trend_data(get_ordered_stats(all_stats))
-    return rank_files
+    monitor_db.create_trend_data(
+        get_ordered_list(all_stats, MonitorConst.OP_MONVIS_SUPPORTED))
+    metric_id_dict = monitor_db.get_metric_mapping()
+    target_dict = monitor_db.get_target_mapping()
+    monitor_db.extract_tags_from_processed_targets(
+        targets, metric_id_dict, target_dict)
+    return rank_files, metric_id_dict, target_dict
 
 
 def process_single_rank(
@@ -210,7 +207,10 @@ def process_single_rank(
     db = MonitorDB(db_path)
     total_inserted = 0
     batch_data = []
-    all_stats = get_ordered_stats(set().union(*[stats for _, stats in metric_id_dict.values()]))
+    all_stats = get_ordered_list(
+        set().union(*[stats for _, stats in metric_id_dict.values()]),
+        MonitorConst.OP_MONVIS_SUPPORTED
+    )
     for file in files:
         filename = os.path.basename(file)
         metric_name, _, _ = get_info_from_filename(filename)
@@ -265,20 +265,12 @@ def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list
     """Main method to import data into database"""
     # 1. Pre-scan to get rank tasks
     monitor_db.init_schema()
-    rank_tasks = _pre_scan(monitor_db, data_dirs, data_type_list, workers)
+    rank_tasks, metric_id_dict, target_dict = _pre_scan(monitor_db, data_dirs, data_type_list, workers)
     if not rank_tasks:
         logger.error("No valid data files found during pre-scan")
         return False
 
-    # 2. Get metric and target mappings
-    try:
-        metric_id_dict = monitor_db.get_metric_mapping()
-        target_dict = monitor_db.get_target_mapping()
-    except Exception as e:
-        logger.error(f"Failed to get database mappings: {str(e)}")
-        return False
-
-    # 3. Process data for each rank in parallel
+    # 2. Process data for each rank in parallel
     total_files = sum(len(files) for files in rank_tasks.values())
     logger.info(f"Starting data import for {len(rank_tasks)} ranks,"
                 f"{total_files} files..."
@@ -335,7 +327,7 @@ def csv2db(config: CSV2DBConfig) -> None:
     result = import_data(
         db,
         target_output_dirs,
-        config.data_type_list if config.data_type_list else all_data_type_list,
+        config.data_type_list if config.data_type_list else MonitorConst.METRICS_TRENDVIS_SUPPORTED,
         workers=config.process_num
     )
     recursive_chmod(config.output_dirpath)
