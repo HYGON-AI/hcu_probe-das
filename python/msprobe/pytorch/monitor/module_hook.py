@@ -1223,7 +1223,13 @@ class TrainerMon:
                 if not hasattr(handle.flat_param, 'micro_step'):
                     setattr(handle.flat_param, 'micro_step', 0)
 
-                if self.monitor_mbs_grad or (handle.flat_param.micro_step + 1 == self.micro_batch_number):
+                handle_not_in_any_model = all(
+                    model._all_handles is None or handle not in model._all_handles
+                    for model in self.model
+                )
+                if handle_not_in_any_model:
+                    logger.debug(f"Skip handle not along to the monitor model list, handle id: {id(handle)}.")
+                elif self.monitor_mbs_grad or (handle.flat_param.micro_step + 1 == self.micro_batch_number):
                     grad_dict = {}
                     offsets = handle._get_flat_param_offsets()
                     shapes = handle.flat_param._shapes
