@@ -126,6 +126,60 @@ dump数据解析命令执行成功后，在`/data/db_path`下生成`monitor_metr
 `csv2db`接口调用成功后，在配置的输出路径`output_dirpath`中，生成一个`monitor_metrics.db`文件，为db格式的SQLite数据库文件。
 
 
+## Megatron模型并行可视化
+
+**功能说明**
+
+Megatron框架中的模型并行会将模型切分在不同节点rank上。分析精度数据时，各个节点下采集的模型层数据可能仅包含整体模型的部分层，无法直观看出这些层处于整体模型中的位置。Megatron模型并行可视化功能提供多节点模型并行切分的可视化能力，帮助用户快速识别当前模型并行配置下，模型层在各个设备上的分布情况。
+
+**注意事项**
+
+仅支持Megatron场景下，张量并行、流水线并行、虚拟流水线并行和数据并行模式。
+仅支持节点rank数小于等于1024且模型层小于等于256层场景，即需`world_size ≤ 1024` 且 `num_layers ≤ 256`。
+
+**使用示例**
+
+1. 创建Python脚本，以创建的命名为`plot_model.py`的脚本为例，将以下代码拷贝到`plot_model.py`脚本中，并按实际情况修改`ParallelConfig`中配置。
+    ```python
+    from msprobe.core.common.megatron_utils import ParallelConfig, plot_model_parallelism
+
+    config = ParallelConfig(
+        world_size=32,
+        num_layers=48,
+        tensor_parallel_size=4,
+        pipeline_parallel_size=4,
+        num_layers_per_virtual_pipeline_stage=3,
+        order="tp-cp-ep-dp-pp",
+        standalone_embedding_stage=False,
+        output_path='./'
+    )
+    plot_model_parallelism(config)
+    ```
+    参数详细介绍请参见[plot_model_parallelism](#plot_model_parallelism)接口。
+    
+2. 执行如下命令开启转换。
+
+    ```shell
+    python plot_model.py
+    ```
+  
+**输出说明**
+
+`plot_model`接口调用成功后，在配置的输出路径`output_path`中，生成一个`png`文件, 格式为`ws{world_size}_ln{num_layers}_tp{tensor_parallel_size}_pp{pipeline_parallel_size}_vpp{virtual_pipeline_parallel_size}.png`。其中`virtual_pipeline_parallel_size`为根据`num_layers_per_virtual_pipeline_stage`等传入参数计算出来的虚拟流水线并行分组大小。
+
+浏览png文件，如下图所示：
+
+![ws32_ln48_tp4_pp4_vpp4.png](../figures/trend_analyzer/ws32_ln48_tp4_pp4_vpp4.png)
+
+图片内容介绍：
+| 字段         | 说明 | 
+| -------------- | --------- |
+| Model Parallelism Configuration | 用户设置或计算得来的并行配置信息，包括：</br> Total Layers：模型的总层数，即脚本中的`num_layers`； </br> DP：数据并行分组大小，通过传入并行参数计算得来；</br> TP：张量并行分组大小，即脚本中的`tensor_parallel_size`； </br> PP：流水线并行分组大小，即脚本中的`pipeline_parallel_size`；</br> VPP：虚拟流水线并行分组大小，即文件名中`virtual_pipeline_parallel_size`，通过传入并行参数计算得来。    |                 
+| TP Group | 纵坐标，张量并行分组，形如`Group{num}: Rank{start}-{end}`，其中`num`为分组编号，`start`和`end`分别表示分组内第一个rank的编号和最后一个rank的编号。例如，`Group0: Rank0-3`表示第0个分组，其中包含rank0到rank3共4个rank。     |                 
+| Virtual Pipeline Stage | 横坐标，流水线并行阶段或虚拟流水线并行阶段，形如`Stage {num}`，其中`num`表示阶段编号。      |                 
+| Model Copies | 模型副本图例。数据并行中，以不同颜色标记输入数据不同的模型副本。      |                 
+| `Embed`/ `L{start}-{end}`/ `Out`  | 图中颜色矩阵上的文字，标识一个张量并行分组下的一个阶段包含哪些模型层，其中：</br>  `Embed`：表示当前阶段为模型第一个阶段，通常包含嵌入层；</br> `L{start}-{end}`：表示当前阶段包含模型从start至end的模型层，例如`L1-3`说明当前阶段包含整个模型的第1、第2和第3模型层；</br> `Out`: 表示当前阶段为模型最后一个阶段，通常包含输出层。</br> 如果同时满足多个阶段定义，以"+"连接。    |                 
+
 ## 附录
 
 ### mapping配置文件说明
@@ -164,12 +218,40 @@ csv2db(config: CSV2DBConfig) -> None
 
 | 参数名         | 输入/输出 | 说明                                                         |
 | -------------- | --------- | ------------------------------------------------------------ |
-| monitor_path   | 输入      | 必选参数，待转换的csv存盘目录，str类                         |
+| monitor_path   | 输入      | 必选参数，待转换的csv存盘目录，str类型。                      |
 | time_start     | 输入      | 可选参数，起始时间，str类型，例如"Dec03_21-34-40"。搭配time_end一起使用，从而指定一个时间范围（闭区间），会对这个范围内的文件进行转换。默认为None不限制。 |
 | time_end       | 输入      | 可选参数，结束时间，str类型，例如"Dec03_21-34-41"。搭配time_start一起使用，从而指定一个时间范围（闭区间），会对这个范围内的文件进行转换。默认为None不限制。 |
 | process_num    | 输入      | 可选参数，配置启动的进程个数，int类型，默认为1，更多的进程个数可以加速转换。 |
 | data_type_list | 输入      | 可选参数，指定需要转换的数据类型，数据类型应来自输出文件前缀，数据类型包括：<br/> ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"]。<br/>默认未配置本参数，表示转换全部数据类型。list\[str\]类型。 |
 | output_dirpath | 输入      | 可选参数，指定转换后的输出路径，str类型，默认输出到"{curtime}_csv2db"文件夹，其中curtime为自动获取的当前时间戳。 |
+
+**返回值说明**
+
+无
+
+
+#### plot_model_parallelism
+
+**函数原型**
+
+```python
+plot_model_parallelism(config: ParallelConfig) -> None
+```
+
+**参数说明**
+
+配置参数实例（ParallelConfig类实例），在实例初始化时传入参数。
+
+| 参数名                                | 输入/输出 | 说明                                                                                                                                                                    |
+| ------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| world_size                            | 输入      | 必选参数，模型部署的总rank数，int类型，支持范围为[1, 1024]。                                                                                                                                 |
+| num_layers                            | 输入      | 必选参数，模型的总层数，int类型，支持范围为[1, 256]。                                                                                                                                       |
+| tensor_parallel_size                  | 输入      | 可选参数，张量并行分组大小，int类型，默认值为1。实际训练脚本中指定`--tensor-model-parallel-size T`，其中`T`为指定的张量并行分组大小。                                                                                                                            |
+| pipeline_parallel_size                | 输入      | 可选参数，流水线并行分组大小，int类型，默认值为1。实际训练脚本中指定`--pipeline-model-parallel-size P`，其中`P`为指定的流水线并行分组大小。                                                                                                                          |
+| num_layers_per_virtual_pipeline_stage | 输入      | 可选参数，每个虚拟流水线阶段包含的层数，int类型，默认值为None，表示未开启虚拟流水线并行。实际训练脚本中指定`--num-layers-per-virtual-pipeline-stage V`，其中`V`为指定的每个虚拟流水线阶段的层数。 |
+| order                                 | 输入      | 可选参数，模型并行维度的排序顺序，str类型。默认为Megatron默认设置，即`tp-cp-ep-dp-pp`。                                                                                                             |
+| standalone_embedding_stage            | 输入      | 可选参数，是否开启将嵌入层作为独立的流水线阶段的配置，bool类型，配置True表示开启，False表示关闭，默认值为False。                                                                                                   |
+| output_path                           | 输入      | 可选参数，可视化结果输出路径，str类型，默认值为'./'。                                                                                                                   |
 
 **返回值说明**
 
