@@ -480,7 +480,7 @@ def parse_input_shape_to_list(input_shape):
     _check_colon_exist(input_shape)
     tensor_list = input_shape.split(';')
     if len(tensor_list) > MAX_TENSOR_SHAPE_CONUT:
-        raise ValueError("The input of --input-shape parameter is unreasonable, " \
+        raise ValueError("The input of --input_shape parameter is unreasonable, " \
                          "because the number of tensor shape is much than 200.")
     for tensor in tensor_list:
         tensor_shape_list = tensor.rsplit(':', maxsplit=1)
@@ -490,17 +490,17 @@ def parse_input_shape_to_list(input_shape):
                 if dim.isdigit():
                     shape_list_int.append(int(dim))
                 else:
-                    raise ValueError("The input of --input-shape parameter is unreasonable, " \
+                    raise ValueError("The input of --input_shape parameter is unreasonable, " \
                                      "because the tensor shape is not digit.")
             for dim_int in shape_list_int:
                 if dim_int < 0:
-                    raise ValueError("The input of --input-shape parameter is unreasonable, " \
+                    raise ValueError("The input of --input_shape parameter is unreasonable, " \
                                      "possibly because the upper bound is smaller than 0.")
-                prompt = "The --input-shape %r is larger than expected. " \
+                prompt = "The --input_shape %r is larger than expected. " \
                          "Attempting to input such a shape could potentially impact system performance.\n" \
                          "Please confirm your awareness of the risks associated with this action ([y]/n): " % tensor
                 if dim_int > DYM_SHAPE_END_MAX and not dym_shape_range_interaction(prompt):
-                    raise ValueError("The dim of --input-shape %r is too large." % (str(dim_int)))
+                    raise ValueError("The dim of --input_shape %r is too large." % (str(dim_int)))
 
             input_shape_list.append(shape_list_int)
         else:
