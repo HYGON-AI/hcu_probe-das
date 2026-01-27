@@ -6,7 +6,7 @@ import tempfile
 from typing import Dict, List
 from unittest.mock import patch, MagicMock
 
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.log import logger
 from msprobe.core.common.db_manager import DBManager, TrendSql
 
 def normalize_spaces(text):
