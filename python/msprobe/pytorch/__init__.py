@@ -23,3 +23,8 @@ from .torchair_dump import set_fx_dump_config, set_ge_dump_config
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
     from msprobe.pytorch.monitor.module_hook import TrainerMon
+
+try:
+    from msprobe.pytorch.aclgraph_dump import acl_save  # noqa: F401
+except Exception:
+    acl_save = None

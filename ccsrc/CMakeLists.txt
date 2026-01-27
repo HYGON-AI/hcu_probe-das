@@ -8,3 +8,7 @@ endif()
 if ($ENV{MSPROBE_INCLUDE_MOD} STREQUAL "atb_probe")
     add_subdirectory(atb_probe)
 endif()
+
+if ($ENV{MSPROBE_INCLUDE_MOD} STREQUAL "aclgraph_dump")
+    add_subdirectory(aclgraph_dump)
+endif()
