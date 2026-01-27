@@ -162,7 +162,7 @@ if platform.system() != "Linux":
     raise SystemError("MindStudio-Probe is only supported on Linux platforms.")
 
 # 扩展模块范围，包括adump和tb_graph_ascend
-mod_list_range = {"adump", "tb_graph_ascend", "atb_probe"}
+mod_list_range = {"adump", "tb_graph_ascend", "atb_probe", "aclgraph_dump"}
 mod_list = []
 for i, arg in enumerate(sys.argv):
     if arg.startswith("--include-mod"):
@@ -202,8 +202,8 @@ if mod_list:
         with_tb_graph_ascend = False
         CustomBdistWheelCommand.with_tb_graph_ascend = False
 
-    # 如果包含adump，则进行adump相关的构建
-    if "adump" in mod_list or "atb_probe" in mod_list:
+    # 如果包含adump/atb_probe/aclgraph_dump，则进行C++相关的构建
+    if "adump" in mod_list or "atb_probe" in mod_list or "aclgraph_dump" in mod_list:
         arch = platform.machine()
         sys.argv.append("--plat-name")
         sys.argv.append(f"linux_{arch}")

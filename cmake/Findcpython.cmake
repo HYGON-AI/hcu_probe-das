@@ -2,7 +2,7 @@ set(PKG_NAME cpython)
 
 if (NOT ${PKG_NAME}_FOUND)
 
-find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Development)
+find_package(Python3 ${PYTHON_VERSION} EXACT COMPONENTS Interpreter Development)
 if (NOT Python3_FOUND)
     message(FATAL_ERROR "${Python3} is not found.")
 endif()

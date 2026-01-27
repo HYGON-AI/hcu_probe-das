@@ -18,6 +18,7 @@ PYTHON_VERSION=""
 INCLUDE_MOD=""
 ADUMP_MOD="'adump'"
 ATB_PROBE_MOD="'atb_probe'"
+ACLGRAPH_DUMP_MOD="'aclgraph_dump'"
 
 HELP_DOC=$(cat << EOF
 Usage: build.sh [OPTION]...\n
@@ -117,6 +118,21 @@ if [[ "${INCLUDE_MOD}" == *"${ATB_PROBE_MOD}"* ]]; then
     fi
 fi
 
+if [[ "${INCLUDE_MOD}" == *"${ACLGRAPH_DUMP_MOD}"* ]]; then
+    export MSPROBE_INCLUDE_MOD="aclgraph_dump"
+    cd ${BUILD_PATH}
+    cmake -B ${BUILD_OUTPUT_PATH} -S . -DARCH_TYPE=${ARCH_TYPE} -DBUILD_TYPE=${BUILD_TYPE} -DCANN_PATH=${CANN_PATH} \
+                                  -DUSE_LOCAL_FIRST=${USE_LOCAL_FIRST} -DBUILD_TEST_CASE=${BUILD_TEST_CASE} \
+                                  -DPYTHON_VERSION=${PYTHON_VERSION}
+    cd ${BUILD_OUTPUT_PATH}
+    make -j${CONCURRENT_JOBS}
+
+    if [[ ! -e ${BUILD_OUTPUT_PATH}/ccsrc/aclgraph_dump/aclgraph_dump_ext.so ]]; then
+        echo "Failed to build aclgraph_dump_ext.so."
+        exit 1
+    fi
+fi
+
 if [ ! -d ${BUILD_PATH}/python/msprobe/lib ]; then
     mkdir ${BUILD_PATH}/python/msprobe/lib
 fi
@@ -128,4 +144,8 @@ fi
 if [[ "${INCLUDE_MOD}" == *"${ATB_PROBE_MOD}"* ]]; then
     cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi0.so ${BUILD_PATH}/python/msprobe/lib/libatb_probe_abi0.so
     cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi1.so ${BUILD_PATH}/python/msprobe/lib/libatb_probe_abi1.so
+fi
+
+if [[ "${INCLUDE_MOD}" == *"${ACLGRAPH_DUMP_MOD}"* ]]; then
+    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/aclgraph_dump/aclgraph_dump_ext.so ${BUILD_PATH}/python/msprobe/lib/aclgraph_dump_ext.so
 fi
