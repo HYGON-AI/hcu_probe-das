@@ -92,7 +92,8 @@ else
         if [ -n "$cxx_abi" ]; then
             get_output_option "$@"
             get_config_option "$@"
-            export LD_PRELOAD=${ASCEND_HOME_PATH}/tools/ait_backend/dump/libatb_probe_abi${cxx_abi}.so:$LD_PRELOAD
+            lib_path=$(realpath $(dirname $(realpath "${BASH_SOURCE[0]}"))/../../lib)
+            export LD_PRELOAD=${lib_path}/libatb_probe_abi${cxx_abi}.so:$LD_PRELOAD
             export ATB_OUTPUT_DIR=$output_path
             export ATB_DUMP_CONFIG=$config_path
         fi

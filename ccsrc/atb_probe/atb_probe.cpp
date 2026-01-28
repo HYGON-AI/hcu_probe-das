@@ -1458,4 +1458,348 @@ bool atb::Probe::ReportOperationGraphEnable()
 {
     return true;
 }
+
+static void ModifyRootNodeTensors(ordered_json &graphNodeJsonToSave, std::vector<std::string> &tensorNameList,
+    const ordered_json &graphNodeJson)
+{
+    // 根节点根据自己的opName + id, 组成tensor name
+    uint32_t inTensorNum = graphNodeJson["inTensorNum"].get<uint32_t>();
+    uint32_t outTensorNum = graphNodeJson["outTensorNum"].get<uint32_t>();
+    uint32_t internalTensorNum = (graphNodeJson.find("internalTensorNum") == graphNodeJson.end()) ?
+                                        0 : graphNodeJson["internalTensorNum"].get<uint32_t>();
+    std::string opNameInJson = graphNodeJson["opName"].get<std::string>();
+
+    std::string tensorName;
+
+    for (size_t i = 0; i < inTensorNum; i++) {
+        tensorName = opNameInJson + "_input_" + std::to_string(i);
+        graphNodeJsonToSave["inTensors"].emplace_back(tensorName);
+        tensorNameList.emplace_back(tensorName);
+    }
+    for (size_t i = 0; i < outTensorNum; i++) {
+        tensorName = opNameInJson + "_output_" + std::to_string(i);
+        graphNodeJsonToSave["outTensors"].emplace_back(tensorName);
+        tensorNameList.emplace_back(tensorName);
+    }
+    for (size_t i = 0; i < internalTensorNum; i++) {
+        tensorName = opNameInJson + "_internal_" + std::to_string(i);
+        graphNodeJsonToSave["internalTensors"].emplace_back(tensorName);
+        tensorNameList.emplace_back(tensorName);
+    }
+
+    AIT_LOG_DEBUG("tensorName: " + tensorName);
+
+    return;
+}
+
+static bool CheckGraphInputInvalid(const std::string &opName, const ordered_json &graphNodeJson)
+{
+    if (graphNodeJson.find("opName") == graphNodeJson.end() ||
+        graphNodeJson.find("opType") == graphNodeJson.end() ||
+        graphNodeJson.find("inTensorNum") == graphNodeJson.end() ||
+        graphNodeJson.find("outTensorNum") == graphNodeJson.end()) {
+        AIT_LOG_ERROR("json parse error! opName: " + opName);
+        return true;
+    }
+
+    std::string opNameInJson = graphNodeJson["opName"].get<std::string>();
+    if (opNameInJson != opName) {
+        AIT_LOG_ERROR("json parse error! opName is not equal opName in json. opName: " + opName +
+            ", opNameInJson: " + opNameInJson);
+        return true;
+    }
+    return false;
+}
+
+void saveJsonField(const std::string& fieldName, const ordered_json& graphNodeJson, ordered_json& graphNodeJsonToSave)
+{
+    try {
+        if (graphNodeJson.contains(fieldName)) {
+            graphNodeJsonToSave[fieldName] = graphNodeJson[fieldName];
+        } else {
+            AIT_LOG_ERROR(fieldName + " not found in graph.");
+            return;
+        }
+    } catch (const std::exception& e) {
+        AIT_LOG_ERROR("An unexpected error occurred: " + std::string(e.what()));
+        return;
+    }
+}
+
+void atb::Probe::ReportOperationGraph(const std::string &opName, const std::string &graph)
+{
+    ordered_json graphNodeJson;
+    if (Utils::SafetyGuard::CheckNormalStr(opName) != SAFETY_RET::SAFE_ERR_NONE) {
+        AIT_LOG_WARNING("Check opName string failed!");
+        return;
+    }
+    try {
+        graphNodeJson = ordered_json::parse(graph);
+    } catch (const ordered_json::parse_error& ex) {
+        AIT_LOG_WARNING("json parse error! opName:" + opName);
+        AIT_LOG_WARNING("message: " + std::string(ex.what()) + '\n' + "exception id: " + std::to_string(ex.id) + '\n' +
+                        "byte position of error: " + std::to_string(ex.byte));
+        return;
+    }
+
+    // 检查必选项
+    if (CheckGraphInputInvalid(opName, graphNodeJson)) {
+        AIT_LOG_WARNING("CheckGraphInput failed: input is invalid.");
+        return;
+    }
+
+    // 保存原始json信息，用于和model拓扑合并成模型的拓扑信息
+    g_layerGraphMap.SaveLayerGraph(opName, graph);
+
+    ordered_json graphNodeJsonToSave;
+    saveJsonField("opName", graphNodeJson, graphNodeJsonToSave);
+    saveJsonField("opType", graphNodeJson, graphNodeJsonToSave);
+    saveJsonField("param", graphNodeJson, graphNodeJsonToSave);
+
+    // 根节点
+    std::vector<std::string> tensorNameList;
+    try {
+        ModifyRootNodeTensors(graphNodeJsonToSave, tensorNameList, graphNodeJson);
+    } catch (const std::exception& e) {
+        AIT_LOG_WARNING("An unexpected error occurred: "+ std::string(e.what()));
+        return;
+    }
+    // 递归调用获取子节点信息
+    if (graphNodeJson.find("nodes") != graphNodeJson.end()) {
+        for (auto childNodeInput : graphNodeJson["nodes"]) {
+            ordered_json childNodeToSave;
+            try {
+                DfsToModifyGraphTensors(childNodeToSave, tensorNameList, childNodeInput);
+            } catch (const std::exception& e) {
+                AIT_LOG_WARNING("An unexpected error occurred: "+ std::string(e.what()));
+                return;
+            }
+            graphNodeJsonToSave["nodes"].emplace_back(childNodeToSave);
+        }
+    }
+
+    FilterUnnecessaryData(graphNodeJsonToSave);
+
+    // 保存修改的Json
+    std::string layerArchFilePath = GetOutDir();
+    if (layerArchFilePath == "") {
+        return;
+    }
+
+    layerArchFilePath.append("info/layer/");
+    static std::string deviceId = std::to_string(GetCurrentDeviceId());
+    if (deviceId != "-1") {
+        layerArchFilePath.append(deviceId).append("_").append(std::to_string(GetCurrentProcessId()));
+    } else {
+        layerArchFilePath.append(std::to_string(GetCurrentProcessId()));
+    }
+    layerArchFilePath = GetRealPath(layerArchFilePath);
+    if (!Utils::CheckDirectory(layerArchFilePath)) {
+        AIT_LOG_WARNING("Create directory failed: " + layerArchFilePath);
+        return;
+    }
+
+    layerArchFilePath.append("/").append(opName).append(".json");
+    if (File::WriteTextToFile(layerArchFilePath, graphNodeJsonToSave.dump())) {
+        AIT_LOG_INFO("layer topo info written to file successfully! File name:" + layerArchFilePath);
+    }
+}
+
+bool atb::Probe::ReportOperationStatisticEnable()
+{
+    return false;
+}
+
+void atb::Probe::ReportOperationSetupStatistic(const uint64_t executeCount,
+    const std::string &opname, const std::string &st)
+{
+    (void)executeCount;
+    (void)opname;
+    (void)st;
+}
+
+void atb::Probe::ReportOperationExecuteStatistic(const uint64_t executeCount,
+    const std::string &opname, const std::string &st)
+{
+    (void)executeCount;
+    (void)opname;
+    (void)st;
+}
+
+static std::string MakeAbsolutePath(const std::string& path)
+{
+    // 如果传入的是绝对路径，则直接返回路径，如果传入的是相对路径，转化为当前程序运行所在的绝对路径
+    char cwd[PATH_MAX];
+    getcwd(cwd, sizeof(cwd));
+    std::string curAbsolutePath = std::string(cwd);
+    if (path.empty()) {
+        return curAbsolutePath + "/";
+    } else if (path[0] == '/') {
+        return path;
+    } else if (path[0] == '~') {
+        const char* curHomePath = std::getenv("HOME");
+        std::string expandedPath = curHomePath ? (curHomePath + path.substr(1)) : path;
+        return expandedPath;
+    } else if (path == "." || path == "./") {
+        return curAbsolutePath + "/";
+    } else if (path.size() > 1 && path[0] == '.' && path[1] == '/') {
+        return curAbsolutePath + path.substr(1);
+    }
+    return curAbsolutePath + "/" + path;
+}
+
+bool atb::Probe::ReportOperationIOTensorEnable()
+{
+    return false;
+}
+
+void atb::Probe::ReportOperationIOTensor(const size_t executeCount, const std::string &opName,
+    const std::string &opParam, const std::vector<atb::Probe::Tensor> &inTensors,
+    const std::vector<atb::Probe::Tensor> &outTensors)
+{
+    (void)executeCount;
+    (void)opName;
+    (void)opParam;
+    (void)inTensors;
+    (void)outTensors;
+}
+
+bool atb::Probe::ReportKernelIOTensorEnable()
+{
+    return false;
+}
+
+void atb::Probe::ReportKernelIOTensor(const size_t executeCount, const std::string &opName,
+    const std::string &opParam, const std::vector<atb::Probe::Tensor> &inTensors,
+    const std::vector<atb::Probe::Tensor> &outTensors)
+{
+    (void)executeCount;
+    (void)opName;
+    (void)opParam;
+    (void)inTensors;
+    (void)outTensors;
+}
+
+void atb::Probe::SaveParam(const std::string &param, const std::string &filePath)
+{
+    std::string fullFilePath = GetOutDir();
+    if (fullFilePath == "" || !IsDeviceIdValid(filePath)) {
+        return;
+    }
+    fullFilePath.append(TENSOR_AND_STATS_DATA_DIR).append(filePath);
+    size_t found = fullFilePath.rfind('/');
+    std::string fileName = fullFilePath.substr(found);
+    fullFilePath = GetRealPath(fullFilePath.substr(0, found));
+    if (!Utils::CheckDirectory(fullFilePath)) {
+        AIT_LOG_WARNING("Create directory failed: " + fullFilePath);
+        return;
+    }
+
+    File::WriteTextToFile(fullFilePath.append(fileName), param);
+}
+
+bool atb::Probe::IsSaveParam()
+{
+    return true;
+}
+
+/****************************************************************************************\
+                                    算子溢出检测 AIT 接口
+\****************************************************************************************/
+
+bool atb::Probe::IsOverflowCheck()
+{
+    return false;
+}
+
+bool atb::Probe::IsOverflowStop()
+{
+    return false;
+}
+
+void atb::Probe::ReportOverflowKernel(const std::string &kernelPath)
+{
+    (void)kernelPath;
+}
 } // end of namespace atb
+
+namespace atb_speed {
+struct ModelGraphMap {
+    std::map<std::string, std::string> modelGraphMap_;
+
+    bool IsInitModelGraph(const std::string &modelName)
+    {
+        auto it = modelGraphMap_.find(modelName);
+        return (it == modelGraphMap_.end()) ? true : false;
+    };
+
+    void SaveModelGraph(const std::string &modelName, const std::string &graph)
+    {
+        modelGraphMap_[modelName] = graph;
+    };
+};
+ModelGraphMap g_modelGraphMap;
+
+bool atb_speed::SpeedProbe::IsReportModelTopoInfo(const std::string &modelName)
+{
+    // 只保存一次
+    if (Utils::SafetyGuard::CheckNormalStr(modelName) != SAFETY_RET::SAFE_ERR_NONE)  {
+        AIT_LOG_ERROR("Check modelName string failed!");
+        return false;
+    }
+    return g_modelGraphMap.IsInitModelGraph(modelName);
+}
+
+void atb_speed::SpeedProbe::ReportModelTopoInfo(const std::string &modelName, const std::string &graph)
+{
+    ordered_json modelJson;
+    if (Utils::SafetyGuard::CheckNormalStr(modelName) != SAFETY_RET::SAFE_ERR_NONE) {
+        AIT_LOG_WARNING("Check modelName string failed!");
+        return;
+    }
+    g_modelGraphMap.SaveModelGraph(modelName, graph);
+
+    try {
+        modelJson = ordered_json::parse(graph);
+    } catch (ordered_json::parse_error &ex) {
+        AIT_LOG_WARNING("parse model topo info error! modelName: " + modelName);
+        AIT_LOG_WARNING("message: " + std::string(ex.what()) + "\nexception id: " + std::to_string(ex.id) +
+            "\nbyte position of error: " + std::to_string(ex.byte));
+        return;
+    }
+
+    // 和atb保存的layer拓扑信息进行合并
+    if (modelJson.find("nodes") != modelJson.end()) {
+        for (auto &layerJson : modelJson["nodes"]) {
+            try {
+                MergeLayerTopoInfo(layerJson);
+            } catch (const std::exception& e) {
+                AIT_LOG_WARNING("An unexpected error occurred: "+ std::string(e.what()));
+                return;
+            }
+        }
+    }
+
+    // 保存合并后的Json
+    std::string modelArchFilePath = GetOutDir();
+    if (modelArchFilePath == "") { return; }
+
+    modelArchFilePath.append("info/model/");
+    static std::string deviceId = std::to_string(GetCurrentDeviceId());
+    if (deviceId != "-1") {
+        modelArchFilePath.append(deviceId).append("_").append(std::to_string(GetCurrentProcessId()));
+    } else {
+        modelArchFilePath.append(std::to_string(GetCurrentProcessId()));
+    }
+    modelArchFilePath = GetRealPath(modelArchFilePath);
+    if (!Utils::CheckDirectory(modelArchFilePath)) {
+        AIT_LOG_WARNING("Create directory failed: " + modelArchFilePath);
+        return;
+    }
+
+    modelArchFilePath.append("/").append(modelName).append(".json");
+    if (File::WriteTextToFile(modelArchFilePath, modelJson.dump())) {
+        AIT_LOG_INFO("model topo info written to file successfully! File name: " + modelArchFilePath);
+    }
+}
+} // end of namespace atb_speed
