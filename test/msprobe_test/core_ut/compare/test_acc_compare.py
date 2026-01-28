@@ -17,6 +17,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.acc_compare import ModeConfig, MappingConfig, MappingDict, Comparator, ParseData, \
     ProcessDf, Match, CreateTable, CalcStatsDiff
+from msprobe.core.compare.stats_diff_calc import ValType, ALL_TYPES
 
 
 npu_op_item_data_fuzzy = {
@@ -413,7 +414,7 @@ class TestUtilsMethods(unittest.TestCase):
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 'False', 'False',
-             0, 0, 0, 0, '0.0%', 'N/A', '0.0%', '0.0%', 2, 0, 1, 1, 2, 0, 1, 1,
+             0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 1, 2, 0, 1, 1,
              True, '', '', ['File'], 'input', 'Functional.linear.0.forward'
              ]
         ]
@@ -1102,15 +1103,122 @@ class TestCreateTable(unittest.TestCase):
 
 class TestCalcStatsDiff(unittest.TestCase):
 
-    def test_type_check(self):
-        mode_config = ModeConfig()
-        calc_stats_diff = CalcStatsDiff(mode_config)
+    def setUp(self):
+        """
+        每个 test 都会创建一个新的实例
+        """
+        self.mode_config = ModeConfig()  # 如果构造需要参数，这里补
+        self.calc = CalcStatsDiff(self.mode_config)
 
-        series = pd.Series([float('nan'), 5, 'nan', 10, 'abc', None])
-        result = calc_stats_diff.type_check(series)
-        expected = pd.Series([True, True, True, True, False, False])
-        self.assertTrue(result.equals(expected))
+    # ===============================
+    # is_same_value
+    # ===============================
+    def test_is_same_value(self):
+        a = pd.Series(["1", "2", "nan", "INF"])
+        b = pd.Series(["1", "3", "NaN", "INF"])
 
+        result = self.calc.is_same_value(a, b)
+        expected = pd.Series([True, False, False, True])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_number
+    # ===============================
+    def test_is_number(self):
+        s = pd.Series(["1", "2.5", "abc", np.nan, "inf", True, False, 'false', 'True'])
+
+        result = self.calc.is_number(s)
+        expected = pd.Series([True, True, False, False, True, False, False, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_nan
+    # ===============================
+    def test_is_nan(self):
+        s = pd.Series(["nan", "NaN", np.nan, "1", "none"])
+
+        result = self.calc.is_nan(s)
+        expected = pd.Series([True, True, True, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_inf
+    # ===============================
+    def test_is_inf(self):
+        s = pd.Series(["inf", "INF", np.inf, "-inf", 1])
+
+        result = self.calc.is_inf(s)
+        expected = pd.Series([True, True, True, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_neg_inf
+    # ===============================
+    def test_is_neg_inf(self):
+        s = pd.Series(["-inf", "-INF", -np.inf, "inf", 1])
+
+        result = self.calc.is_neg_inf(s)
+        expected = pd.Series([True, True, True, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_device
+    # ===============================
+    def test_is_device(self):
+        s = pd.Series(["npu:0", "CPU", "cuda:1", "gpu", None])
+
+        result = self.calc.is_device(s)
+        expected = pd.Series([True, True, True, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # is_na
+    # ===============================
+    def test_is_na(self):
+        s = pd.Series([CompareConst.N_A, "N/A", "na", 1])
+
+        result = self.calc.is_na(s)
+        expected = pd.Series([True, True, False, False])
+
+        pd.testing.assert_series_equal(result, expected)
+
+    # ===============================
+    # rule_num_num
+    # ===============================
+    def test_rule_num_num(self):
+        npu = pd.Series([10.0, 5.0, 3.0])
+        bench = pd.Series([5.0, 0.0, 3.0])
+
+        diff, rel = self.calc.rule_num_num(npu, bench)
+
+        expected_diff = pd.Series([5.0, 5.0, 0.0])
+        expected_rel = pd.Series(["100.0%", CompareConst.INF, "0.0%"])
+
+        pd.testing.assert_series_equal(diff, expected_diff)
+        pd.testing.assert_series_equal(rel, expected_rel)
+
+    # ===============================
+    # static_diff / DEFAULT_RULE
+    # ===============================
+    def test_static_diff(self):
+        diff, rel = self.calc.static_diff("A", "B")
+        self.assertEqual(diff, "A")
+        self.assertEqual(rel, "B")
+
+    def test_default_rule(self):
+        diff, rel = self.calc.DEFAULT_RULE
+        self.assertEqual(diff, CompareConst.N_A)
+        self.assertEqual(rel, CompareConst.N_A)
+
+    # ===============================
+    # get_number
+    # ===============================
     def test_get_number(self):
         mode_config = ModeConfig()
         calc_stats_diff = CalcStatsDiff(mode_config)
@@ -1119,3 +1227,127 @@ class TestCalcStatsDiff(unittest.TestCase):
         result = calc_stats_diff.get_number(series)
         expected = pd.Series([1, 2, 3.5, float('nan'), float('nan')])
         self.assertTrue(result.equals(expected))
+
+
+class TestCalcStatsDiffBuildRules(unittest.TestCase):
+
+    def setUp(self):
+        self.calc = CalcStatsDiff(ModeConfig())
+
+    def test_rules_initialized(self):
+        self.assertIsInstance(self.calc.rules, dict)
+        self.assertTrue(len(self.calc.rules) > 0)
+
+    def test_num_num_rule(self):
+        rule = self.calc.rules.get((ValType.NUM, ValType.NUM))
+        self.assertTrue(callable(rule))
+        self.assertEqual(rule, self.calc.rule_num_num)
+
+    def test_nan_rules(self):
+        nan_rule = self.calc.static_diff(CompareConst.NAN)
+
+        for t in (ValType.NUM, ValType.INF, ValType.NEG_INF, ValType.NAN):
+            self.assertEqual(self.calc.rules[(ValType.NAN, t)], nan_rule)
+            self.assertEqual(self.calc.rules[(t, ValType.NAN)], nan_rule)
+
+    def test_inf_rules(self):
+        pos_inf = self.calc.static_diff(CompareConst.INF)
+        neg_inf = self.calc.static_diff(CompareConst.NEG_INF)
+
+        self.assertEqual(self.calc.rules[(ValType.INF, ValType.NUM)], pos_inf)
+        self.assertEqual(self.calc.rules[(ValType.NEG_INF, ValType.NUM)], neg_inf)
+        self.assertEqual(self.calc.rules[(ValType.NUM, ValType.INF)], neg_inf)
+        self.assertEqual(self.calc.rules[(ValType.NUM, ValType.NEG_INF)], pos_inf)
+
+    def test_device_device_rule(self):
+        rule = self.calc.rules[(ValType.DEVICE, ValType.DEVICE)]
+        self.assertEqual(rule, self.calc.static_diff(CompareConst.N_A))
+
+
+class TestCalcStatsDiffClassify(unittest.TestCase):
+
+    def setUp(self):
+        self.calc = CalcStatsDiff(ModeConfig())
+
+    def test_classify_all_types(self):
+        s = pd.Series([
+            "1.23",        # NUM
+            "nan",         # NAN
+            np.nan,        # NAN
+            "inf",         # INF
+            "-inf",        # NEG_INF
+            "npu:0",       # DEVICE
+            CompareConst.N_A,  # NA
+            "abc",         # OTHER
+            True,          # OTHER
+            False,         # OTHER
+            "false",       # OTHER
+            "True"         # OTHER
+        ])
+
+        result = self.calc.classify(s)
+
+        expected = pd.Series([
+            ValType.NUM,
+            ValType.NAN,
+            ValType.NAN,
+            ValType.INF,
+            ValType.NEG_INF,
+            ValType.DEVICE,
+            ValType.NA,
+            ValType.OTHER,
+            ValType.OTHER,
+            ValType.OTHER,
+            ValType.OTHER,
+            ValType.OTHER,
+        ])
+
+        pd.testing.assert_series_equal(result, expected)
+
+
+class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
+
+    def setUp(self):
+        self.calc = CalcStatsDiff(ModeConfig())
+
+    def test_calc_summary_diff_num_num(self):
+        df = pd.DataFrame({
+            "NPU mean":   [10.0, 5.0, 3.0],
+            "Bench mean": [5.0, 5.0, 3.0],
+        })
+
+        self.calc.calc_summary_diff(df, "mean")
+
+        self.assertIn("Mean diff", df.columns)
+        self.assertIn("MeanRelativeErr", df.columns)
+
+        # equal
+        self.assertEqual(df.loc[1, "Mean diff"], 0)
+        self.assertEqual(df.loc[2, "Mean diff"], 0)
+
+        # unequal num × num
+        self.assertEqual(df.loc[0, "Mean diff"], 5.0)
+        self.assertEqual(df.loc[0, "MeanRelativeErr"], "100.0%")
+
+    def test_calc_summary_diff_special_types(self):
+        df = pd.DataFrame({
+            "NPU mean":   ["nan", "inf", CompareConst.N_A],
+            "Bench mean": [1.0,   1.0,   2.0],
+        })
+
+        self.calc.calc_summary_diff(df, "mean")
+
+        self.assertEqual(df.loc[0, "Mean diff"], CompareConst.NAN)
+        self.assertEqual(df.loc[1, "Mean diff"], CompareConst.INF)
+        self.assertEqual(df.loc[2, "Mean diff"], CompareConst.N_A)
+
+    def test_calc_summary_diff_device(self):
+        df = pd.DataFrame({
+            "NPU mean":   ["npu:0", "abc"],
+            "Bench mean": ["cpu",   1.0],
+        })
+
+        self.calc.calc_summary_diff(df, "mean")
+
+        self.assertEqual(df.loc[0, "Mean diff"], CompareConst.N_A)
+        self.assertEqual(df.loc[1, "Mean diff"], CompareConst.DIFF_FLAG)
