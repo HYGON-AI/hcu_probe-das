@@ -45,13 +45,12 @@ class BaseLogger:
             return int(input_level)
 
     @filter_special_chars
-    @staticmethod
     def raw(self, msg, **kwargs):
         """
         直接输出原始内容，不添加日志前缀
         用于输出子进程的原始日志，避免双份前缀
         """
-        msg = msg.replace("_", "")
+        msg = msg.rstrip("_")
         print(msg)
         sys.stdout.flush()
 
