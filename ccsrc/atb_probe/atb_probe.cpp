@@ -712,4 +712,750 @@ static std::string GetFullOpNameFromDataPath(const std::vector<std::string> &dat
     }
     return fullOpName;
 }
+
+static std::string GenLineStrforStatsCsv(const BinFileInfo &fileInfo, const std::string &maxStr,
+                                         const std::string &minStr, const std::string &meanStr,
+                                         const std::string &normStr)
+{
+    std::string lineStr;
+    std::vector<std::string> splitPath = SplitDataPath(fileInfo.filePath);
+    if (splitPath.empty()) {return lineStr;}
+
+    std::string fileName = splitPath[splitPath.size() - 1];
+    std::string index;
+    size_t found = fileName.find('.');
+    std::string inputOrOutput;
+    if (fileName.find(INTENSOR_PREFIX) == 0) {
+        inputOrOutput = "input";
+        index = fileName.substr(INTENSOR_PREFIX.size(), found - INTENSOR_PREFIX.size());
+    } else if (fileName.find(OUTTENSOR_PREFIX) == 0) {
+        inputOrOutput = "output";
+        index = fileName.substr(OUTTENSOR_PREFIX.size(), found - OUTTENSOR_PREFIX.size());
+    } else {
+        return lineStr;
+    }
+    std::string opType = fileInfo.opName;
+    if (opType.rfind('/') != std::string::npos) {
+        opType = opType.substr(opType.rfind('/') + 1);
+    }
+
+    std::string fullFilePath = GetOutDir();
+    if (g_task != STATS_TASK) {
+        fullFilePath.append(TENSOR_AND_STATS_DATA_DIR).append(fileInfo.filePath);
+    } else {
+        fullFilePath = "N/A";
+    }
+
+    const std::vector<std::string> colContent = {
+        splitPath[0], splitPath[1], fileInfo.opName, opType, fileInfo.opId, inputOrOutput, index,
+        fileInfo.dtype, fileInfo.format, fileInfo.dims, maxStr, minStr, meanStr, normStr, fullFilePath
+    };
+
+    for (const std::string& value : colContent) {
+        bool ret = Utils::ValidateCsvString(value);
+        if (!ret) {
+            AIT_LOG_WARNING("Check input string failed! Cannot write into csv!");
+            return "";
+        }
+        lineStr += value + ",";
+    }
+    lineStr.pop_back();
+    AIT_LOG_DEBUG("Tensor info: " + lineStr);
+    return lineStr;
+}
+
+static void ReportTensorStats(std::string &statsFilePath, const std::string &statsInfo)
+{
+    statsFilePath = GetRealPath(statsFilePath);
+    ms::UmaskWrapper uw;
+
+    std::ifstream f(statsFilePath, std::ios::in);
+    if (!f.is_open()) {
+        std::ofstream statsFile(statsFilePath, std::ios::out);
+        if (!statsFile.is_open()) {
+            AIT_LOG_WARNING("Unable to open file: " + statsFilePath);
+            return;
+        }
+
+        const std::string csvHead = std::string("Device and PID,Execution Count,Op Name,Op Type,Op Id,") +
+                                    "Input/Output,Index,Dtype,Format,Shape,Max,Min,Mean,Norm,Tensor Path";
+        statsFile << csvHead << std::endl;
+        if (!statsFile.good()) {
+            AIT_LOG_WARNING("Failed to write the ATB statistics table header");
+            statsFile.close();
+            return;
+        }
+        statsFile.close();
+    }
+
+    std::ofstream statsFile(statsFilePath, std::ios::app);
+    if (!statsFile.is_open()) {
+        AIT_LOG_WARNING("Unable to open file: " + statsFilePath);
+        return;
+    }
+    statsFile << statsInfo << std::endl;
+    if (!statsFile.good()) {
+        AIT_LOG_WARNING("Failed to write the statistics of ATB operation tensor");
+    }
+    statsFile.close();
+}
+
+void CheckAndWriteFile(std::shared_ptr<FileSystem::BinFile> binFile, const std::string &binFilePath,
+                       const std::string &statsInfo, std::string &statsFilePath)
+{
+    if (binFile->HasAttr("format")) {
+        binFile->Write(binFilePath);
+        AIT_LOG_DEBUG("Direct write to " + binFilePath);
+        AIT_LOG_DEBUG("Saving tensor: success.");
+    }
+
+    if (!statsInfo.empty()) {
+        ReportTensorStats(statsFilePath, statsInfo);
+    }
+}
+
+bool CheckOpId(const std::string &ids)
+{
+    for (const auto &indice : g_splitOperationIds) {
+        if (indice.empty()) {
+            continue;
+        }
+        bool result = false;
+        if (g_saveChild) {
+            result = IsPrefix(ids, indice) &&
+                        (ids == indice ||
+                        ((ids.length() > indice.length()) &&
+                        (ids[indice.length()] == '_')));
+        } else {
+            result = (indice == ids);
+        }
+        if (result) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CheckOpName(const std::string &opName)
+{
+    std::string copyOpName = opName;
+    for (char &c : copyOpName) {
+        c = std::tolower(c);
+    }
+
+    for (const auto &indice : g_splitOperationNames) {
+        if (indice.empty()) {
+            continue;
+        }
+        bool result = false;
+        if (g_saveChild) {
+            result = (IsPrefix(copyOpName, indice) || copyOpName.find("/" + indice) != std::string::npos);
+        } else {
+            size_t index = copyOpName.rfind('/') != std::string::npos ? copyOpName.rfind('/') + 1 : 0;
+            result = (copyOpName.substr(index, indice.size()) == indice);
+        }
+        if (result) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool IsDiskSpaceValid(const std::string path, uint64_t dataSize)
+{
+    unsigned long long freeSpace = 0;
+    int retGetFreeSpace = GetFreeSpace(path, freeSpace);
+    if (retGetFreeSpace == 1) {
+        AIT_LOG_ERROR("Failed to get disk space for path: " + path);
+        return false;
+    }
+    if (retGetFreeSpace == 0) {
+        if (freeSpace <= g_minDiskSpaceFreeSize || freeSpace <= dataSize * FREE_SIZE_MULTIPLE_OF_DATA_SIZE) {
+            AIT_LOG_ERROR(
+                "Disk space is not enough, it's must more than 2G and twice size of data, free size(MB) is: " +
+                std::to_string(freeSpace >> 20));
+            return false;
+        }
+    }
+    return true;
+}
+
+void SetTaskValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<std::string>(config, "task", g_task) || g_task.empty()) {
+        g_task = TENSOR_TASK;
+        AIT_LOG_WARNING(std::string("\"task\" in ATB dump configuration file is empty or of wrong type, ") +
+                        "which should be a string. As a result, it would be set to \"tensor\"");
+    }
+    if (std::find(VALID_TASKS.begin(), VALID_TASKS.end(), g_task) == VALID_TASKS.end()) {
+        AIT_LOG_WARNING(std::string("Invalid task in ATB dump configuration file, should be one of: ") +
+                        "\"tensor\", \"statistics\", \"all\". As a result, it would be set to \"tensor\"");
+    }
+}
+
+void SetDumpEnableValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<bool>(config, "dump_enable", g_dumpEnable)) {
+        g_dumpEnable = false;
+        AIT_LOG_WARNING(std::string("\"dump_enable\" in ATB dump configuration file does not exist ") +
+                        "or has a wrong type, which should be boolean. As a result, it would be set to false");
+    }
+}
+
+void SetExecutionCountRangeValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<std::string>(config, "exec_range", g_executionCountRange) ||
+        g_executionCountRange.empty()) {
+        g_executionCountRange = "0,0";
+        AIT_LOG_WARNING(std::string("\"exec_range\" in ATB dump configuration file is empty or of wrong type, ") +
+                        "which should be a string. As a result, it would be set to \"0,0\"");
+    }
+}
+
+void SetOperationIdValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<std::string>(config, "ids", g_operationId)) {
+        g_operationId = "";
+        AIT_LOG_WARNING(std::string("\"ids\" in ATB dump configuration file does not exist or has a wrong type, ") +
+                        "which should be a string. As a result, it would be set to empty");
+    }
+    g_splitOperationIds = SplitString(g_operationId.c_str(), ',');
+}
+
+void SetOperationNameValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<std::string>(config, "op_name", g_operationName)) {
+        g_operationName = "";
+        AIT_LOG_WARNING(std::string("\"op_name\" in ATB dump configuration file does not exist or has a wrong type, ") +
+                        "which should be a string. As a result, it would be set to empty");
+    }
+    for (char &c : g_operationName) {
+        c = std::tolower(c);
+    }
+    g_splitOperationNames = SplitString(g_operationName.c_str(), ',');
+}
+
+void SetSaveChildValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<bool>(config, "save_child", g_saveChild)) {
+        g_saveChild = false;
+        AIT_LOG_WARNING(std::string("\"save_child\" in ATB dump configuration file does not exist ") +
+                        "or has a wrong type, which should be boolean. As a result, it would be set to false");
+    }
+}
+
+void SetDeviceValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<std::string>(config, "device", g_device)) {
+        g_device = "";
+        AIT_LOG_WARNING(std::string("\"device\" in ATB dump configuration file does not exist ") +
+                        "or has a wrong type, which should be a string. As a result, it would be set to empty");
+    }
+    g_splitDeviceIds = SplitString(g_device.c_str(), ',');
+}
+
+void SetFilterLevelValue(const nlohmann::json &config)
+{
+    if (!ParseJsonBaseObj2Var<int>(config, "filter_level", g_filterLevel)) {
+        g_filterLevel = FILTER_OPERATION_DATA;
+        AIT_LOG_WARNING(std::string("\"filter_level\" in ATB dump configuration file does not exist ") +
+                        "or has a wrong type, which should be a integer. As a result, it would be set to 1");
+    }
+    if (g_filterLevel < NO_FILTER_FOR_DATA || g_filterLevel > FILTER_KERNEL_DATA) {
+        g_filterLevel = FILTER_OPERATION_DATA;
+        AIT_LOG_WARNING(std::string("Invalid filter level in ATB dump configuration file, should be one of: ") +
+                        "0, 1, 2. As a result, it would be set to 1");
+    }
+}
+
+void SetConfigParameters(const nlohmann::json &config)
+{
+    SetTaskValue(config);
+    SetDumpEnableValue(config);
+    SetExecutionCountRangeValue(config);
+    SetOperationIdValue(config);
+    SetOperationNameValue(config);
+    SetSaveChildValue(config);
+    SetDeviceValue(config);
+    SetFilterLevelValue(config);
+
+    if (g_dumpEnable && !g_isDebugMode) {
+        g_isDebugMode = true;
+        AIT_LOG_WARNING("Ready to dump ATB data, the running speed of the model will be affected");
+        std::string dataDir = GetOutDir();
+        if (!dataDir.empty()) {
+            dataDir.append(TENSOR_AND_STATS_DATA_DIR);
+            bool ret = Utils::CheckDirectory(dataDir);
+            if (!ret) {
+                AIT_LOG_ERROR("Create directory failed: " + dataDir);
+                return;
+            }
+        }
+    }
+}
+
+bool atb::Probe::IsTensorNeedSave(const std::vector<int64_t> &ids, const std::string &opType)
+{
+    if (!g_isAtbRunning) {
+        g_isAtbRunning = true;
+        IsDiskSpaceValid(GetOutDir(), g_minDiskSpaceFreeSize / FREE_SIZE_MULTIPLE_OF_DATA_SIZE);
+        const char *configPath = std::getenv("ATB_DUMP_CONFIG");
+        g_configPath = configPath == nullptr ? "" : File::GetAbsPath(std::string(configPath));
+    }
+    return !g_configPath.empty();
+}
+
+bool atb::Probe::IsSaveChild()
+{
+    return false;
+}
+
+bool atb::Probe::IsSaveTensorData()
+{
+    return true;
+}
+
+bool atb::Probe::IsSaveTensorDesc()
+{
+    return true;
+}
+
+bool atb::Probe::IsExecuteCountInRange(const uint64_t executeCount)
+{
+    if (!g_dumpEnable || g_executionCountRange.empty() || g_executionCountRange == "none") {
+        return false;
+    }
+    if (g_executionCountRange == "all") { return true;}
+
+    std::vector<std::string> saveTensorRan = SplitString(g_executionCountRange.c_str(), ',');
+    for (size_t i = 1U; i < saveTensorRan.size(); i += RANGE_COUNT) {
+        uint64_t left = static_cast<uint64_t>(SafetyStoi(saveTensorRan[i - 1].c_str(), 0));
+        uint64_t right = static_cast<uint64_t>(SafetyStoi(saveTensorRan[i].c_str(), 0));
+        if ((executeCount <= right) && (executeCount >= left)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void atb::Probe::UpdateConfig()
+{
+    if (g_configUpdateTimes != 0 && g_configUpdateTimes != CONFIG_UPDATE_PERIOD && !g_isDebugMode) {
+        g_configUpdateTimes++;
+        return;
+    }
+    g_configUpdateTimes = 1;
+
+    if (g_configPath.empty()) {return;}
+    if (!File::CheckConfigFile(g_configPath)) {
+        g_dumpEnable = false;
+        return;
+    }
+
+    const double configFreshPeriod = 5;
+    static auto lastReadTime = std::chrono::system_clock::now();
+    auto nowTime = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = nowTime - lastReadTime;
+
+    if (g_task.empty() || elapsed_seconds.count() >= configFreshPeriod) {
+        lastReadTime = std::chrono::system_clock::now();
+        nlohmann::json config;
+        try {
+            std::ifstream ifs(g_configPath, std::ios::in);
+            ifs >> config;
+        } catch (const std::exception& e) {
+            AIT_LOG_ERROR("Json parse error! json path:" + g_configPath);
+            return;
+        }
+        SetConfigParameters(config);
+    }
+}
+
+bool atb::Probe::IsSaveTensorInSpecificDir(const std::string &tensorDir)
+{
+    if (!g_dumpEnable) {return false;}
+
+    std::vector<std::string> splitPath = SplitDataPath(tensorDir);
+    if (splitPath.empty()) {return false;}
+
+    if (g_operationId.empty() && g_operationName.empty()) {
+        if (!g_saveChild && splitPath.size() > LAYER_PATH_DEPTH) {return false;}
+        return true;
+    }
+
+    if (!g_operationId.empty()) {
+        std::string currentIds = GetOpIdFromDataPath(splitPath, 0);
+        if (currentIds.empty()) { return false; }
+        if (CheckOpId(currentIds)) { return true; }
+    }
+
+    if (g_operationName.empty()) {return false;}
+    std::string fullOpName = GetFullOpNameFromDataPath(splitPath, 0);
+    if (fullOpName.empty()) { return false; }
+    return CheckOpName(fullOpName);
+}
+
+bool atb::Probe::IsSaveTensorBefore()
+{
+    return true;
+}
+
+bool atb::Probe::IsSaveTensorAfter()
+{
+    return true;
+}
+
+static bool IsDeviceIdValid(const std::string &filePath)
+{
+    if (!g_device.empty()) {
+        size_t found = filePath.find("_");  // filePath like {device_id}_{pid}/xxx/xxx
+        std::string curDeviceId = filePath.substr(0, found);
+        for (const auto &indice : g_splitDeviceIds) {
+            if (indice == curDeviceId) {
+                return true;
+            }
+        }
+        return false;
+    }
+    return true;
+}
+
+static bool IsSubString(const std::string& inputString, const std::vector<std::string>& subStrings)
+{
+    if (subStrings.empty()) {
+        return false;
+    }
+    for (const auto& subStr : subStrings) {
+        if (inputString.find(subStr) == std::string::npos) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool IsTensorFileHeadVaild(const std::string &head, const uint64_t maxHead = 50)
+{
+    if (head.size() > maxHead) {
+        AIT_LOG_ERROR("The head of binfile is too long.");
+        return false;
+    }
+    return true;
+}
+
+// helper Functions for Calculating the needed Statistics
+template<typename T>
+static void CalculateStatistics(const void* binData,
+    std::pair<size_t, size_t> rangeThread, LLM::Statistics<T> &stats,
+    Mki::TensorDType tensorDType = Mki::TensorDType::TENSOR_DTYPE_UNDEFINED)
+{
+    size_t start = rangeThread.first;
+    size_t end = rangeThread.second;
+    switch (tensorDType) {
+        case Mki::TensorDType::TENSOR_DTYPE_UNDEFINED: {
+            const T* data = static_cast<const T*>(binData);
+            for (size_t i = start; i < end; ++i) {
+                stats.Compute(data[i]);
+            }
+            break;
+        }
+        case Mki::TensorDType::TENSOR_DTYPE_FLOAT16: {
+            const uint16_t* data16 = static_cast<const uint16_t*>(binData);
+            constexpr size_t exponentBits = 5;
+            constexpr size_t mantissaBits = 10;
+            for (size_t i = start; i < end; ++i) {
+                float value = Mki::ConvertToFloat32(data16[i], exponentBits, mantissaBits);
+                stats.Compute(static_cast<T>(value));
+            }
+            break;
+        }
+        case Mki::TensorDType::TENSOR_DTYPE_BF16: {
+            const uint16_t* data16 = static_cast<const uint16_t*>(binData);
+            constexpr size_t exponentBits = 8;
+            constexpr size_t mantissaBits = 7;
+            for (size_t i = start; i < end; ++i) {
+                float value = Mki::ConvertToFloat32(data16[i], exponentBits, mantissaBits);
+                stats.Compute(static_cast<T>(value));
+            }
+            break;
+        }
+        default:
+            AIT_LOG_ERROR("Invalid datatype: " + Mki::GetDTypeStr(tensorDType));
+    }
+}
+
+template<typename T>
+static std::unique_ptr<LLM::StatisticsBase> GetStatisticsFromBinaryDataWithBasicType(
+    const void *binData, size_t dataSize,
+    Mki::TensorDType tensorDType = Mki::TensorDType::TENSOR_DTYPE_UNDEFINED)
+{
+    size_t typeSize = (tensorDType != Mki::TensorDType::TENSOR_DTYPE_UNDEFINED) ?
+                    Mki::GetTensorElementSize(tensorDType) : sizeof(T);
+    if (typeSize == 0) {
+        AIT_LOG_ERROR("Invalid typeSize: " + std::to_string(typeSize));
+        return std::make_unique<LLM::Statistics<std::string>>();
+    }
+    if (dataSize == 0 || dataSize % typeSize != 0) {
+        AIT_LOG_ERROR("Invalid dataSize: " + std::to_string(dataSize));
+        return std::make_unique<LLM::Statistics<std::string>>();
+    }
+
+    size_t numElements = dataSize / typeSize;
+    size_t numThreads = numElements > POOLNUM ? POOLNUM : numElements;
+    size_t chunkSize = numElements / numThreads; // Elements per thread
+    
+    // 线程池初始化
+    auto& pool = GetGlobalPool(numThreads);
+    std::vector<LLM::Statistics<T>> threadStats(numThreads);
+    std::vector<std::future<void>> futures;
+    futures.reserve(numThreads);  // 预分配避免重分配
+
+    // 任务分发
+    for (size_t i = 0; i < numThreads; ++i) {
+        const size_t start = i * chunkSize;
+        const size_t end = (i == numThreads - 1) ? numElements : start + chunkSize;
+
+        auto task = [i, start, end, binData, tensorDType, &threadStats]() {
+            CalculateStatistics<T>(binData, std::make_pair(start, end), threadStats[i], tensorDType);
+        };
+
+        futures.emplace_back(pool->Enqueue(std::move(task)));
+    }
+
+    // 等待任务完成
+    for (auto& future : futures) {
+        future.get();  // 阻塞直到任务完成
+    }
+
+    auto totalStats = std::make_unique<LLM::Statistics<T>>();
+    for (const auto& stats : threadStats) {
+        (*totalStats) += stats; // call the Overloaded operator+=
+    }
+
+    // Finalize average and L2 norm
+    totalStats->ComputeAverage();
+    totalStats->l2norm_ = std::sqrt(totalStats->sumOfSquares_);
+
+    return totalStats; // std::unique_ptr 支持派生类到基类的隐式转换
+}
+
+std::unordered_map<Mki::TensorDType,
+    std::function<std::unique_ptr<LLM::StatisticsBase>(const void*, size_t)>> typeToFunctionMap = {
+    {Mki::TensorDType::TENSOR_DTYPE_INT8,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<int8_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_INT16,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<int16_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_INT32,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<int32_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_INT64,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<int64_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_UINT8,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<uint8_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_UINT16,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<uint16_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_UINT32,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<uint32_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_UINT64,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<uint64_t>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_FLOAT,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<float>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_DOUBLE,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<double>(binData, dataSize); }},
+    {Mki::TensorDType::TENSOR_DTYPE_FLOAT16,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<float>(binData, dataSize,
+                Mki::TensorDType::TENSOR_DTYPE_FLOAT16); }},
+    {Mki::TensorDType::TENSOR_DTYPE_BF16,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<float>(binData, dataSize,
+                Mki::TensorDType::TENSOR_DTYPE_BF16); }},
+    {Mki::TensorDType::TENSOR_DTYPE_COMPLEX64,
+        [](const void* binData, size_t dataSize)
+            { return GetStatisticsFromBinaryDataWithBasicType<std::complex<float>>(binData, dataSize); }}
+};
+
+std::unique_ptr<LLM::StatisticsBase> GetStatisticsFromBinaryDataWithTensorDType(
+    const void* binData, size_t dataSize, Mki::TensorDType dType)
+{
+    auto it = typeToFunctionMap.find(dType);
+    if (Likely(it != typeToFunctionMap.end())) {
+        return it->second(binData, dataSize);
+    } else {
+        AIT_LOG_WARNING("Unsupported tensor datatype: " + Mki::GetDTypeStr(dType));
+        return std::make_unique<LLM::Statistics<std::string>>();
+    }
+}
+
+static bool IsSaveTensorValid(const BinFileInfo &fileInfo, std::string &filePath)
+{
+    // 检查dataSize是否超过最大值，是否为0
+    if ((fileInfo.dataSize > MsConst::MAX_FILE_SIZE_DEFAULT) || (fileInfo.dataSize == 0)) {
+        AIT_LOG_WARNING("Invalid dataSize: " + std::to_string(fileInfo.dataSize));
+        return false;
+    }
+
+    filePath = GetOutDir();
+    if (filePath.empty()) { return false; }
+    filePath.append(TENSOR_AND_STATS_DATA_DIR).append(fileInfo.filePath);
+    size_t found = filePath.rfind('/');
+    std::string directory = filePath.substr(0, found);
+
+    bool envValidFlag = IsDeviceIdValid(fileInfo.filePath);
+    if (g_task == TENSOR_TASK || g_task == ALL_TASK) {
+        envValidFlag = (envValidFlag && IsDiskSpaceValid(GetOutDir(), fileInfo.dataSize) &&
+                        Utils::CheckDirectory(directory));
+    }
+    if (!envValidFlag) { return false; }
+
+    if (!fileInfo.hostData) {
+        AIT_LOG_WARNING("hostData is None.");
+        return false;
+    }
+
+    bool isIntensorBefore = IsSubString(fileInfo.filePath, {"before", "intensor"});
+    bool isOuttensorAfter = IsSubString(fileInfo.filePath, {"after", "outtensor"});
+    if (!(isIntensorBefore || isOuttensorAfter)) {
+        return false;
+    }
+
+    if (!IsTensorFileHeadVaild(fileInfo.format) ||
+        !IsTensorFileHeadVaild(fileInfo.dtype) ||
+        !IsTensorFileHeadVaild(fileInfo.dims)) {
+        return false;
+    }
+
+    return true;
+}
+
+static void CreateTensorBinFile(std::shared_ptr<FileSystem::BinFile> binFile, const BinFileInfo &fileInfo,
+                                const std::string &opId, const std::string &opName, const std::string &fileName)
+{
+    binFile->AddAttr("format", fileInfo.format);
+    binFile->AddAttr("dtype", fileInfo.dtype);
+    binFile->AddAttr("dims", fileInfo.dims);
+    if (!g_saveChild || g_filterLevel == NO_FILTER_FOR_DATA) {
+        binFile->AddObject("data", fileInfo.hostData, fileInfo.dataSize);
+        return;
+    }
+
+    const std::string layerId = opId.substr(0, opId.find('_'));
+    if (layerId == opId) {
+        g_DumpedLayerSet.insert(layerId);
+    }
+    if (g_DumpedLayerSet.find(layerId) == g_DumpedLayerSet.end()) {
+        binFile->AddObject("data", fileInfo.hostData, fileInfo.dataSize);
+        return;
+    }
+
+    const std::string tensorKey = opId + "_" + fileName;
+    if (g_realTensors.find(tensorKey) == g_realTensors.end()) {
+        if (g_filterLevel == FILTER_KERNEL_DATA && opName.substr(opName.rfind("Kernel")) == "Kernel") {
+            binFile->AddAttr("data", fileName);
+            return;
+        }
+        binFile->AddObject("data", fileInfo.hostData, fileInfo.dataSize);
+        return;
+    }
+
+    if (g_realTensors[tensorKey] != "bin") {
+        binFile->AddAttr("data", g_realTensors[tensorKey]);
+        return;
+    }
+
+    binFile->AddObject("data", fileInfo.hostData, fileInfo.dataSize);
+}
+
+static std::string CreateTensorStats(BinFileInfo &fileInfo)
+{
+    const Mki::TensorFormat tensorFormat = Mki::ConvertToTensorFormat(SafetyStoi(fileInfo.format.c_str(), -1));
+    const Mki::TensorDType tensorDType = Mki::ConvertToTensorDType(SafetyStoi(fileInfo.dtype.c_str(), -1));
+    std::string formatStr = Mki::GetFormatStr(tensorFormat);
+    std::string dtypeStr = Mki::GetDTypeStr(tensorDType);
+    if (formatStr == Mki::UNDEFINED_STR) { formatStr.append("(").append(fileInfo.format).append(")"); }
+    if (dtypeStr == Mki::UNDEFINED_STR) { dtypeStr.append("(").append(fileInfo.dtype).append(")"); }
+    fileInfo.format = formatStr;
+    fileInfo.dtype = dtypeStr;
+    for (char &c : fileInfo.dims) { if (c == ',') { c = 'x'; } }
+
+    std::string maxStr = "N/A";
+    std::string minStr = "N/A";
+    std::string meanStr = "N/A";
+    std::string l2normStr = "N/A";
+
+    if (g_task == STATS_TASK || g_task == ALL_TASK) {
+        auto stats = GetStatisticsFromBinaryDataWithTensorDType(fileInfo.hostData, fileInfo.dataSize, tensorDType);
+        maxStr = stats ? stats->GetMaxStr() : "N/A";
+        minStr = stats ? stats->GetMinStr() : "N/A";
+        meanStr = stats ? stats->GetMeanStr() : "N/A";
+        l2normStr = stats ? stats->GetL2NormStr() : "N/A";
+    }
+    return GenLineStrforStatsCsv(fileInfo, maxStr, minStr, meanStr, l2normStr);
+}
+
+void atb::Probe::SaveTensor(const std::string &format, const std::string &dtype, const std::string &dims,
+                            const void *hostData, uint64_t dataSize, const std::string &filePath)
+{
+    std::vector<std::string> splitPath = SplitDataPath(filePath);
+    if (splitPath.empty()) { return; }
+    std::string opId = GetOpIdFromDataPath(splitPath, 2);
+    if (opId.empty()) { return; }
+    std::string opName = GetFullOpNameFromDataPath(splitPath, 2);
+    if (opName.empty()) { return; }
+    std::string fileName = splitPath[splitPath.size() - 1];
+
+    BinFileInfo fileInfo{format, dtype, dims, filePath, opId, opName, hostData, dataSize};
+    std::string fullFilePath;
+    if (!IsSaveTensorValid(fileInfo, fullFilePath)) { return; }
+
+    std::shared_ptr<FileSystem::BinFile> binFile(std::make_shared<FileSystem::BinFile>());
+    if (g_task == TENSOR_TASK || g_task == ALL_TASK) {
+        CreateTensorBinFile(binFile, fileInfo, opId, opName, fileName);
+    }
+
+    std::string statsPath = GetOutDir();
+    statsPath.append(TENSOR_AND_STATS_DATA_DIR).append(splitPath.at(0)).append("/").append(splitPath.at(1));
+    if (!Utils::CheckDirectory(statsPath)) { return;}
+
+    std::string statsInfo = CreateTensorStats(fileInfo);
+    statsPath.append("/").append(STATS_FILE_NAME);
+
+    GetGlobalPool()->Enqueue(CheckAndWriteFile, binFile, fullFilePath, statsInfo, statsPath);
+}
+
+void atb::Probe::SaveTiling(const uint8_t* data, uint64_t dataSize, const std::string &filePath)
+{
+    if (data == nullptr) { return; }
+    (void)dataSize;
+    (void)filePath;
+}
+
+bool atb::Probe::IsSaveTiling()
+{
+    return false;
+}
+
+bool atb::Probe::IsSaveIntensor()
+{
+    return true;
+}
+
+bool atb::Probe::IsSaveOuttensor()
+{
+    return true;
+}
+
+bool atb::Probe::ReportOperationGraphEnable()
+{
+    return true;
+}
 } // end of namespace atb
