@@ -42,13 +42,16 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 ### vLLM推理场景
 
+#### aclgraph图模式
+1. [数据采集](docs/zh/dump/aclgraph_dump_instruct.md)
+
+   通过acl_save接口完成精度数据采集操作。
+
 #### torchair图模式
 
 1. [数据采集](docs/zh/dump/torchair_dump_instruct.md)
 
-   通过config.json配置，完成msProbe精度数据采集操作。
-
-   config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
+   通过set_ge_dump_config接口完成精度数据采集操作。
 
 2. [精度比对](docs/zh/accuracy_compare/torchair_compare_instruct.md)
 
