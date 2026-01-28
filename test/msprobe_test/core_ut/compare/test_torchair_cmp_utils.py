@@ -266,8 +266,10 @@ class TestCompareTensorAndCheck(unittest.TestCase):
         self.assertEqual(result[utils.CMP_FAIL_REASON], "data shape doesn't match.")
         mock_logger.debug.assert_called_once()
 
-    @patch("msprobe.core.compare.torchair_cmp_utils.CUSTOM_ALG_MAP", {"cust": lambda a, b: (True, "custom_warn")})
-    @patch("msprobe.core.compare.torchair_cmp_utils.CMP_ALG_MAP", {"alg": lambda a, b: (False, "alg_warn")})
+    @patch(
+        "msprobe.core.compare.torchair_cmp_utils._lazy_cmp_alg_maps",
+        return_value=({"alg": lambda a, b: (False, "alg_warn")}, {"cust": lambda a, b: (True, "custom_warn")}),
+    )
     def test_compare_tensor_when_all_algorithms_run_then_pass(self, *_):
         golden = torch.ones(3)
         my = torch.ones(3)
