@@ -25,13 +25,11 @@ from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
-import torch
 
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import FileChecker, create_directory, write_df_to_csv
 from msprobe.core.common.log import logger
 from msprobe.infer.utils.check.rule import Rule
-from msprobe.infer.utils.cmp_algorithm import CMP_ALG_MAP, CUSTOM_ALG_MAP
 from msprobe.infer.utils.constants import TENSOR_MAX_SIZE
 from msprobe.infer.utils.util import safe_torch_load
 
@@ -60,7 +58,7 @@ MAX_VALUE = "max_value"
 MIN_VALUE = "min_value"
 MEAN_VALUE = "mean_value"
 
-CSV_GOLDEN_HEADER = [
+CSV_GOLDEN_HEADER_BASE = [
     TOKEN_ID,
     DATA_ID,
     GOLDEN_DATA_PATH,
@@ -78,8 +76,30 @@ CSV_GOLDEN_HEADER = [
     MY_MIN_VALUE,
     MY_MEAN_VALUE,
 ]
-CSV_GOLDEN_HEADER.extend(list(CMP_ALG_MAP.keys()))
-CSV_GOLDEN_HEADER.append(CMP_FAIL_REASON)
+
+
+def _lazy_import_torch():
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+    except ModuleNotFoundError as err:
+        if err.name == "torch":
+            logger.error("Missing dependency: torch. Please install torch to use torchair compare.")
+        raise
+    return torch
+
+
+def _lazy_cmp_alg_maps():
+    from msprobe.infer.utils import cmp_algorithm  # pylint: disable=import-outside-toplevel
+
+    return cmp_algorithm.CMP_ALG_MAP, cmp_algorithm.CUSTOM_ALG_MAP
+
+
+def _build_csv_golden_header():
+    cmp_alg_map, _ = _lazy_cmp_alg_maps()
+    header = list(CSV_GOLDEN_HEADER_BASE)
+    header.extend(list(cmp_alg_map.keys()))
+    header.append(CMP_FAIL_REASON)
+    return header
 
 
 class BasicDataInfo:
@@ -151,8 +171,8 @@ class BasicDataInfo:
 
 def fill_row_data(
     data_info: BasicDataInfo,
-    loaded_my_data: torch.Tensor = None,
-    loaded_golden_data: torch.Tensor = None,
+    loaded_my_data: Any = None,
+    loaded_golden_data: Any = None,
 ):
     golden_data_path, my_data_path = data_info.golden_data_path, data_info.my_data_path
     row_data = data_info.to_dict()
@@ -174,6 +194,7 @@ def fill_row_data(
 
 
 def load_as_torch_tensor(data_path, loaded_data=None):
+    torch = _lazy_import_torch()
     if loaded_data is not None:
         if str(loaded_data.dtype) in BasicDataInfo.TORCH_UNSUPPORTED_D_TYPE_MAP:
             mapped = BasicDataInfo.TORCH_UNSUPPORTED_D_TYPE_MAP.get(str(loaded_data.dtype))
@@ -182,7 +203,7 @@ def load_as_torch_tensor(data_path, loaded_data=None):
     return read_data(data_path)
 
 
-def get_tensor_basic_info(data: torch.Tensor) -> Dict[str, Any]:
+def get_tensor_basic_info(data: Any) -> Dict[str, Any]:
     tensor_info: Dict[str, Any] = {}
     tensor_info[DTYPE] = str(data.dtype)
     tensor_info[SHAPE] = str(list(data.shape))
@@ -207,7 +228,7 @@ def set_tensor_basic_info_in_row_data(golden_data, my_data):
 def save_compare_result_to_csv(gathered_row_data, output_path=".", columns=None, rank_id=-1):
     create_directory(output_path)
     cur_time = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
-    columns = columns or CSV_GOLDEN_HEADER
+    columns = columns or _build_csv_golden_header()
     if rank_id != -1:
         csv_save_path = os.path.join(output_path, f"msit_cmp_report_rank{rank_id}_{cur_time}.csv")
     else:
@@ -232,6 +253,7 @@ def save_compare_result_to_csv(gathered_row_data, output_path=".", columns=None,
 
 
 def compare_data(golden_data, my_data):
+    torch = _lazy_import_torch()
     if not hasattr(compare_data, "index"):
         compare_data.index = 0
 
@@ -251,6 +273,7 @@ def compare_data(golden_data, my_data):
 
 
 def read_data(data_path):
+    torch = _lazy_import_torch()
     data_path = os.path.realpath(data_path)
     Rule.input_file().check(data_path, will_raise=True)
     if data_path.endswith(".npy"):
@@ -281,7 +304,8 @@ def compare_tensor(golden_data_fp32, my_data_fp32):
         row_data[CMP_FAIL_REASON] = message
         return row_data
 
-    for name, cmp_func in list(CMP_ALG_MAP.items()) + list(CUSTOM_ALG_MAP.items()):
+    cmp_alg_map, custom_alg_map = _lazy_cmp_alg_maps()
+    for name, cmp_func in list(cmp_alg_map.items()) + list(custom_alg_map.items()):
         result, message = cmp_func(golden_data_fp32, my_data_fp32)
         row_data[name] = result
         if message:
@@ -291,6 +315,7 @@ def compare_tensor(golden_data_fp32, my_data_fp32):
 
 
 def check_tensor(golden_data_fp32, my_data_fp32):
+    torch = _lazy_import_torch()
     tensor_pass = True
     fail_reasons = []
 

@@ -18,7 +18,6 @@ import os
 import sys
 
 import numpy as np
-import torch
 
 from msprobe.core.common.log import logger
 from msprobe.infer.utils.check.string_checker import StringChecker
@@ -29,7 +28,18 @@ IS_MSACCUCMP_PATH_SET = False
 GLOBAL_TENSOR_CONVERTER = None
 
 
+def _lazy_import_torch():
+    try:
+        import torch  # pylint: disable=import-outside-toplevel
+    except ModuleNotFoundError as err:
+        if err.name == "torch":
+            logger.error("Missing dependency: torch. Please install torch to use torchair compare.")
+        raise
+    return torch
+
+
 def default_tensor_converter(tensor):
+    torch = _lazy_import_torch()
     if not isinstance(tensor, torch.Tensor):
         raise TypeError(f"Expected a torch.Tensor, but got {type(tensor).__name__}")
     return tensor.data.reshape(tensor.shape)
