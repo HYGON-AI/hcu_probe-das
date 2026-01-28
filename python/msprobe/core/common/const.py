@@ -634,6 +634,7 @@ class CompareConst:
     NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
     DIFF = 'Different'
+    DIFF_FLAG = 'Diff'
     UNSUPPORTED = 'unsupported'
     NAN = 'Nan'
     PASS = 'pass'

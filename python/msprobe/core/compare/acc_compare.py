@@ -36,6 +36,7 @@ from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 from msprobe.core.compare.indicator_analysis.calculator import calculate_excel_result_df
+from msprobe.core.compare.stats_diff_calc import ValType, ALL_TYPES
 
 
 @dataclass
@@ -807,52 +808,187 @@ class CreateTable:
 class CalcStatsDiff:
     def __init__(self, mode_config: ModeConfig):
         self.mode_config = mode_config
+        self.rules = None
+        self.build_rules()
+        self.DEFAULT_RULE = self.static_diff(CompareConst.N_A)
 
     @staticmethod
-    def type_check(val):
+    def is_same_value(a: pd.Series, b: pd.Series) -> pd.Series:
         """
-        检查是否为数值或字符串形式的nan, 如果是返回True
+        检查是否相等
         """
-        check_series = pd.Series(False, index=val.index)
+        return a.astype(str).eq(b.astype(str))
+
+    @staticmethod
+    def is_number(val: pd.Series) -> pd.Series:
+        """
+        检查是否为有效的数值，并排除布尔类型
+        """
         val_str = val.astype(str)
-        check_series[pd.to_numeric(val_str, errors='coerce').notna() | val_str.str.lower().eq('nan')] = True
-        return check_series
+        mask_bool = val_str.str.lower().eq('true') | val_str.str.lower().eq('false')
+        mask_numeric = pd.to_numeric(val, errors='coerce').notna()
+        return mask_numeric & ~mask_bool
+
+    @staticmethod
+    def is_nan(val: pd.Series) -> pd.Series:
+        """
+        检查是否为字符串形式的 'nan' (包括大小写) 或实际的 NaN
+        """
+        val_str = val.astype(str)
+        return val.isna() | val_str.str.lower().eq('nan')
+
+    @staticmethod
+    def is_inf(val: pd.Series) -> pd.Series:
+        """
+        检查是否为正无穷 (inf)
+        """
+        val_str = val.astype(str)
+        return (val == np.inf) | val_str.str.lower().eq('inf')
+
+    @staticmethod
+    def is_neg_inf(val: pd.Series) -> pd.Series:
+        """
+        检查是否为负无穷 (-inf)
+        """
+        val_str = val.astype(str)
+        return (val == -np.inf) | val_str.str.lower().eq('-inf')
+
+    @staticmethod
+    def is_device(val: pd.Series) -> pd.Series:
+        """
+        检查是否包含 'npu', 'cpu' 或 'cuda' 字符串
+        """
+        return val.astype(str).str.contains('npu|cpu|cuda', case=False, na=False)
+
+    @staticmethod
+    def is_na(val: pd.Series) -> pd.Series:
+        """
+        检查是否为 N/A
+        """
+        return val.astype(str).eq(CompareConst.N_A)
+
+    @staticmethod
+    def rule_num_num(npu_num: pd.Series, bench_num: pd.Series):
+        diff = npu_num - bench_num
+        rel = pd.Series(CompareConst.INF, index=diff.index)
+        mask_nonzero = bench_num != 0
+        rel.loc[mask_nonzero] = (diff[mask_nonzero] / bench_num[mask_nonzero] * 100).abs().astype(str) + "%"
+        return diff, rel
+
+    @staticmethod
+    def static_diff(diff: str, rel=None):
+        if rel is None:
+            rel = diff
+        return diff, rel
 
     @staticmethod
     def get_number(val):
         return pd.to_numeric(val.astype(str), errors='coerce')
 
-    def calc_summary_diff(self, result_df, cond_no_bench, stats_index: str):
+    def build_rules(self):
+        """
+        创建npu、bench不相等规则
+        """
+        # NUM × NUM
+        self.rules = {(ValType.NUM, ValType.NUM): self.rule_num_num}
+
+        # ---------- NAN 规则 ----------
+        nan_rule = self.static_diff(CompareConst.NAN)
+        nan_range = {ValType.NUM, ValType.NAN, ValType.INF, ValType.NEG_INF}
+        for t in nan_range:
+            self.rules[(ValType.NAN, t)] = nan_rule
+            self.rules[(t, ValType.NAN)] = nan_rule
+
+        # ---------- INF / -INF 规则 ----------
+        pos_inf = self.static_diff(CompareConst.INF)
+        neg_inf = self.static_diff(CompareConst.NEG_INF)
+        # INF / -INF 在左
+        for r in (ValType.NUM, ValType.NEG_INF):
+            self.rules[(ValType.INF, r)] = pos_inf
+        for r in (ValType.NUM, ValType.INF):
+            self.rules[(ValType.NEG_INF, r)] = neg_inf
+        # INF / -INF 在右
+        self.rules[(ValType.NUM, ValType.INF)] = neg_inf
+        self.rules[(ValType.NUM, ValType.NEG_INF)] = pos_inf
+
+        # ---------- N/A 规则 ----------
+        na_rule = self.static_diff(CompareConst.N_A)
+        na_range = {ValType.NUM, ValType.NAN, ValType.INF, ValType.NEG_INF, ValType.DEVICE, ValType.NA, ValType.OTHER}
+        for t in na_range:
+            self.rules[(ValType.NA, t)] = na_rule
+            self.rules[(t, ValType.NA)] = na_rule
+
+        # ---------- DEVICE / OTHER 规则 ----------
+        # 给diff，都是device给N/A
+        diff_rule = self.static_diff(CompareConst.DIFF_FLAG)
+        diff_range = {ValType.NUM, ValType.NAN, ValType.INF, ValType.NEG_INF, ValType.DEVICE, ValType.OTHER}
+        for t in diff_range:
+            self.rules[(ValType.DEVICE, t)] = diff_rule
+            self.rules[(t, ValType.DEVICE)] = diff_rule
+            self.rules[(ValType.OTHER, t)] = diff_rule
+            self.rules[(t, ValType.OTHER)] = diff_rule
+        self.rules[(ValType.DEVICE, ValType.DEVICE)] = na_rule
+
+    def classify(self, val: pd.Series) -> pd.Series:
+        result_values = np.select(
+            [
+                self.is_nan(val),
+                self.is_inf(val),
+                self.is_neg_inf(val),
+                self.is_number(val),  # 'inf', '-inf'会被pandas认为是number，所以放在inf/-inf判断后面
+                self.is_device(val),
+                self.is_na(val),
+            ],
+            [
+                ValType.NAN.value,
+                ValType.INF.value,
+                ValType.NEG_INF.value,
+                ValType.NUM.value,
+                ValType.DEVICE.value,
+                ValType.NA.value,
+            ],
+            default=ValType.OTHER.value,
+        )
+        val_to_enum = {t.value: t for t in ValType}
+        result_series = pd.Series(result_values, index=val.index).map(val_to_enum)
+        return result_series
+
+    def calc_summary_diff(self, result_df, stats_index: str):
         npu_val = result_df['NPU ' + stats_index]
         bench_val = result_df['Bench ' + stats_index]
         diff_name = stats_index.capitalize() + ' diff'
         rel_err_name = ('norm' if stats_index == 'l2norm' else stats_index).capitalize() + 'RelativeErr'
 
-        # npu、bench中统计量均为数字或nan
-        cond_num_nan = self.type_check(npu_val) & self.type_check(bench_val)
+        # ---------------------- 初始化 ----------------------
+        result_df[[diff_name, rel_err_name]] = CompareConst.N_A
 
-        # 如果统计量不是数字或nan，就赋值统计量差异为N/A
-        result_df.loc[~cond_num_nan, [diff_name, rel_err_name]] = CompareConst.N_A
-        cond_valid_stat = ~cond_no_bench & cond_num_nan  # 有效统计条件：bench_name不是N/A，并且NPU和bench的统计量都是数字或nan
-        result_df.loc[cond_valid_stat, diff_name] = self.get_number(npu_val) - self.get_number(bench_val)
+        # ---------------------- 基础 mask ----------------------
+        npu_num = self.get_number(npu_val)
+        bench_num = self.get_number(bench_val)
+        mask_equal = self.is_same_value(npu_val, bench_val)
+        mask_unequal = ~mask_equal
 
-        cond_diff_nan = result_df[diff_name].isna()  # 统计量差异是nan
-        cond_nan_diff = cond_valid_stat & cond_diff_nan
-        result_df.loc[cond_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
+        # ---------------------- npu, bench统计量相等 ----------------------
+        result_df.loc[mask_equal, [diff_name, rel_err_name]] = 0
 
-        cond_not_nan_diff = cond_valid_stat & ~cond_diff_nan
-        condition_pt_zero = self.get_number(bench_val) == 0
-        result_df.loc[cond_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.N_A
+        # ---------------------- npu, bench统计量不相等 ----------------------
+        npu_type = self.classify(npu_val)
+        bench_type = self.classify(bench_val)
+        for t1 in ALL_TYPES:
+            for t2 in ALL_TYPES:
+                mask = mask_unequal & (npu_type == t1) & (bench_type == t2)
+                if not mask.any():
+                    continue
 
-        # 相对误差转成百分比字符串
-        cond_ref_err = cond_not_nan_diff & ~condition_pt_zero
-        result_df.loc[cond_ref_err, rel_err_name] = (
-                result_df.loc[cond_ref_err, diff_name] / bench_val[cond_ref_err].astype(float) * 100)
-        result_df.loc[cond_ref_err, rel_err_name] = (result_df.loc[cond_ref_err, rel_err_name].abs().astype(str) + '%')
+                rule = self.rules.get((t1, t2), self.DEFAULT_RULE)
 
-        magnitude = self.get_number(result_df[diff_name]).abs() / (pd.Series(
-            np.maximum(self.get_number(npu_val), self.get_number(bench_val))).abs() + CompareConst.EPSILON)
-        return magnitude > CompareConst.MAGNITUDE
+                if callable(rule):
+                    diff, rel = rule(npu_num[mask], bench_num[mask])
+                else:
+                    diff, rel = rule
+
+                result_df.loc[mask, diff_name] = diff
+                result_df.loc[mask, rel_err_name] = rel
 
     def calc_accuracy(self, result_df, header):
         # bench name N/A represents no bench data, err_msg adds "No bench data matched."
@@ -866,14 +1002,9 @@ class CalcStatsDiff:
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
             result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
         elif self.mode_config.first_diff_analyze or self.mode_config.dump_mode == Const.SUMMARY:
-            warning_list = [
-                self.calc_summary_diff(result_df, condition_no_bench, stats_index)
-                for stats_index in ['max', 'min', 'mean', 'l2norm']
-            ]
-            warning_flag = pd.DataFrame(warning_list).any()
+            for stats_index in ['max', 'min', 'mean', 'l2norm']:
+                self.calc_summary_diff(result_df, stats_index)
             result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
-            result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
-            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy. '
             result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] += 'Requires_grad inconsistent. '
         else:
             fill_cols = [CompareConst.COSINE, CompareConst.EUC_DIST,
@@ -881,7 +1012,6 @@ class CalcStatsDiff:
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
             result_df.loc[~condition_no_bench, fill_cols] = ''  # 默认填充'', df默认省缺值为nan，不便后续处理，容易出现意外情况
-            result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
             result_df.loc[~condition_req_grad_consist, CompareConst.ERROR_MESSAGE] = 'Requires_grad inconsistent. '
 
         return result_df[header]
