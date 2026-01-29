@@ -42,10 +42,10 @@
 1. 从仓库下载源码并切换到 master 分支:
 
    ```
-   git clone https://gitcode.com/Ascend/mstt.git -b master
+   git clone https://gitcode.com/Ascend/msprobe.git -b master
    ```
 
-2. 进入目录 `plugins/tensorboard-plugins/tb_graph_ascend` 下
+2. 进入目录 `plugins/tb_graph_ascend` 下
 3. 编译前端代码，根据操作系统选取不同指令
 
    ```
@@ -70,14 +70,14 @@
   ```
   python secure_build.py
   ```
-  在 `plugins/tensorboard-plugins/tb_graph_ascend/dist` 目录下取出 whl 包，使用以下指令安装（此处{version}为 whl 包实际版本）
+  在 `plugins/tb_graph_ascend/dist` 目录下取出 whl 包，使用以下指令安装（此处{version}为 whl 包实际版本）
   ```
   pip install tb_graph_ascend_{version}-py3-none-any.whl
   ```
 
 ### 3. 解析数据说明
 
-将通过[msprobe](https://gitcode.com/Ascend/mstt/blob/master/debug/accuracy_tools/msprobe/README.md#3-%E5%88%86%E7%BA%A7%E5%8F%AF%E8%A7%86%E5%8C%96%E6%9E%84%E5%9B%BE%E6%AF%94%E5%AF%B9)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件放置于某个文件夹中，路径名称下文称之为 `output_path`
+将通过[msprobe](https://gitcode.com/Ascend/msprobe/blob/master/README.md)工具构图功能采集得到的文件后缀为.vis.db 的模型结构文件放置于某个文件夹中，路径名称下文称之为 `output_path`
 
 图构建：
 
