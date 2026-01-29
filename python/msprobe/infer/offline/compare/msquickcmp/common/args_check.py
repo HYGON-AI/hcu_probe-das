@@ -19,7 +19,8 @@ import argparse
 import re
 
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import check_file_or_directory_path, check_output_dir_path
+from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import check_file_or_directory_path, check_output_dir_path, check_file_type
 
 
 def check_model_path_legality(path):
@@ -35,6 +36,10 @@ def check_input_data_path(path):
         return path
     input_item_paths = path.split(',')
     for input_item_path in input_item_paths:
+        file_type = check_file_type(input_item_path)
+        if file_type != FileCheckConst.FILE:
+            logger.error("The '--input_data' parameter only supports file paths, not folder paths. Please check.")
+            raise argparse.ArgumentTypeError
         check_file_or_directory_path(input_item_path, False, False, [".npy", ".bin"])
     return path
 
