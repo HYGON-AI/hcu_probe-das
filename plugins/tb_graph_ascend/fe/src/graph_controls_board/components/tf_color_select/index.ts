@@ -218,7 +218,7 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
                       <div
                         style="width: 12px; height: 12px; background-color: [[item.0]]; margin-right: 8px; border: 1px solid gray;"
                       ></div>
-                      [[item.1.accuracy_level]]
+                      [[_getColorDisplayLabel(item.1)]]
                     </div>
                   </template>
                 </div>
@@ -364,10 +364,10 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
         '--color-config-add': i18next.language === 'zh-CN' ? '100px' : '143px',
       });
       this.closeButtonElements.forEach(button => {
-          button.textContent = this.t('close');
+        button.textContent = this.t('close');
       });
       this.titleElements.forEach(title => {
-          title.textContent = this.t('info');
+        title.textContent = this.t('info');
       });
     }
   }
@@ -583,5 +583,9 @@ class Legend extends LegacyElementMixin(DarkModeMixin(PolymerElement)) {
     const prefix = this.isSingleGraph ? '' : NPU_PREFIX;
     const node = prefix + this.selectedOverflowNode;
     this.set('selectedNode', node);
+  };
+
+  _getColorDisplayLabel = (obj: any): string => {
+    return obj.accuracy_level ?? obj.value;
   };
 }
