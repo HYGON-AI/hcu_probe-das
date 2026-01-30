@@ -143,7 +143,15 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_framework)
+        # 真实数据比对时，避免高频率进度监控线程与多进程池之间的GIL 抢占 + CPU 资源竞争，暂停进度监控线程，防止卡死
+        if self.pbar_info and self.pbar_info.progress_dict is not None:
+            self.pbar_info.set_wait_monitor(True)
+        try:
+            df = run_real_data(self.dump_path_param, df, self.framework, self.is_cross_framework)
+        finally:
+            if self.pbar_info and self.pbar_info.progress_dict is not None:
+                self.pbar_info.set_continue_monitor(True)
+
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             compare_result_list = get_real_api_data_list(node, compare_data_dict)

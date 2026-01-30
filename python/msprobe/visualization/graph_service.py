@@ -847,6 +847,8 @@ class PbarInfo:
         self.current_stage_dict = Manager().dict()  # 当前阶段，进程共享
         self.stage_progress = round(self.total / self.stage_total, 2)  # 每个阶段的最大进度
         self.stop_monitor = False
+        self.wait_monitor = False
+        self.continue_monitor = True
 
     def __deepcopy__(self, memo):
         new_obj = PbarInfo()
@@ -859,6 +861,8 @@ class PbarInfo:
         new_obj.stage_progress = self.stage_progress
         new_obj.total = self.total
         new_obj.stop_monitor = self.stop_monitor
+        new_obj.wait_monitor = self.wait_monitor
+        new_obj.continue_monitor = self.continue_monitor
         return new_obj
 
     @staticmethod
@@ -889,3 +893,11 @@ class PbarInfo:
         for task_id in task_ids:
             pbar_info.progress_dict[task_id] = GraphConst.PBAR_TOTAL * pbar_info.step
             pbar_info.current_stage_dict[task_id] = pbar_info.stage_total // pbar_info.step_total * pbar_info.step
+
+    def set_continue_monitor(self, value: bool):
+        self.continue_monitor = value
+        self.wait_monitor = not value
+
+    def set_wait_monitor(self, value: bool):
+        self.wait_monitor = value
+        self.continue_monitor = not value
