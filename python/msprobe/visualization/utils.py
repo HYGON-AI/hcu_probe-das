@@ -462,6 +462,14 @@ def monitor_progress(pbar_info, pbar, all_task_ids, is_parallel_merge=False):
     while not all_complete:
         if pbar_info.stop_monitor:
             break
+        if pbar_info.wait_monitor:
+            logger.info('Detected wait_monitor=True, the progress monitoring thread has entered a paused state...')
+            while pbar_info.wait_monitor:
+                time.sleep(0.1)
+                if pbar_info.stop_monitor:
+                    break
+            if pbar_info.continue_monitor:
+                logger.info('Detected continue_monitor=True, the progress monitoring thread resumes running.')
         # 总进度取所有进程进度的平均值，但不超过数据库后处理进度
         current_progress = min(sum(task_progress.values()) // len(task_progress), POST_DB_PROCESS)
         ProgressInfo.update_current_progress(current_progress // pbar_info.step_total)
