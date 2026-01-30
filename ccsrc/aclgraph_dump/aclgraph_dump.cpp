@@ -136,11 +136,8 @@ static void acl_save_callback(aclrtStream /*stream*/, const at::Tensor& x_dev_c,
         std::cout << "Memcpy failed with error: " << static_cast<int>(memcpy_status) << std::endl;
         return;
     }
-    try {
-        write_pt_or_throw(out, path);
-    } catch (...) {
-        std::cout << "Failed to write pt file." << std::endl;
-    }
+    write_pt_or_throw(out, path);
+
 }
 
 static aclError launch_blocking_callback(aclrtStream stream, aclrtCallback callback, void* user_data) {
