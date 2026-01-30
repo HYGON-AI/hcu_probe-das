@@ -25,8 +25,6 @@ from msprobe.core.config_check.config_check_cli import _config_checking_parser, 
 from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflow_check
 from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
-from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
-    _api_precision_compare_command
 from msprobe.core.dump.dump2db.dump2db import _data2db_service_parser, _data2db_command
 from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
 from msprobe.core.install_deps.install_deps import _install_deps_parser, install_deps_cli
@@ -53,8 +51,26 @@ def main():
     _overflow_check_parser(overflow_check_parse)
     config_checking_parser = subparsers.add_parser('config_check')
     _config_checking_parser(config_checking_parser)
+    # api_precision_compare 是 PyTorch 相关能力，延迟加载
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
-    _api_precision_compare_parser(api_precision_compare_cmd_parser)
+    try:
+        from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
+            _api_precision_compare_parser
+        )
+        _api_precision_compare_parser(api_precision_compare_cmd_parser)
+    except ImportError as e:
+        # torch 不存在时，parser 仍然存在，但给提示
+        def _no_torch_parser(_):
+            api_precision_compare_cmd_parser.set_defaults(
+                func=lambda *_: (
+                    logger.error(
+                        "api_precision_compare requires PyTorch environment. "
+                        "Please install torch / torch_npu first."
+                    ),
+                    sys.exit(1)
+                )
+            )
+        _no_torch_parser(api_precision_compare_cmd_parser)
     graph_service_cmd_parser = subparsers.add_parser('graph_visualize')
     _graph_service_parser(graph_service_cmd_parser)
     graph_service_cmd_parser_deprecated = subparsers.add_parser('graph')
@@ -88,7 +104,18 @@ def main():
     elif sys.argv[1] == "graph_visualize":
         _graph_service_command(args)
     elif sys.argv[1] == "api_precision_compare":
-        _api_precision_compare_command(args)
+        try:
+            from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
+                _api_precision_compare_command
+            )
+            _api_precision_compare_command(args)
+        except ImportError:
+            logger.error(
+                "api_precision_compare requires PyTorch environment. "
+                "Please install torch / torch_npu first."
+            )
+            sys.exit(1)
+
     elif sys.argv[1] == "graph":
         logger.warning('The "graph" parameter has been deprecated and will be removed in future versions. '
                        'Please use the "graph_visualize" parameter instead.')

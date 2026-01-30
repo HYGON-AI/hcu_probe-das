@@ -92,7 +92,7 @@ class TestMsprobeMain(TestCase):
         mock_graph_service_cmd.assert_called_once_with(args)
         mock_logger.warning.assert_called_once()
 
-    @patch("msprobe.msprobe._api_precision_compare_command")
+    @patch("msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare._api_precision_compare_command")
     @patch("msprobe.msprobe.argparse.ArgumentParser.parse_args")
     def test_main_when_api_precision_compare_subcommand_then_pass(self, mock_parse_args, mock_api_precision_cmd):
         args = MagicMock()

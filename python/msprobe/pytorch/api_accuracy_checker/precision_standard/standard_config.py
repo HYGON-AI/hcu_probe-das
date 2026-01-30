@@ -55,11 +55,14 @@ class StandardConfig:
     """
     # 维护三份列表（示例）
     L1_API_LIST = { 
-        # "aten::xxx", "torch.xxx", ...
+        "embedding", "npu_fusion_attention_grad",
+        "npu_fusion_attention", "scatter_", "scatter_add_"
     }
     L2_API_LIST = {
-        # ...
-    }
+        "addmm", "npu_cross_entropy_loss", "npu_cross_entropy_loss_backward"
+        ,"GELU", "layer_norm", "matmul", "mm", "index", "one_hot", "sum",
+        "npu_rms_norm", "npu_rms_norm_backward", "nonzero"
+    } 
     _small_value = {
         torch.float16: 2**-10,
         torch.bfloat16: 2**-10,
