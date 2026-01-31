@@ -125,9 +125,9 @@ main_install() {
 function get_install_path() {
     if [ -z "${input_install_path}" ]; then
         local _install_path
-        _install_path="/usr/local/Ascend/ascend-toolkit/latest/tools/operator_cmp/compare"
+        _install_path="/usr/local/Ascend/operator_cmp/compare"
     else
-        _install_path="${input_install_path}/ascend-toolkit/latest/tools/operator_cmp/compare"
+        _install_path="${input_install_path}/operator_cmp/compare"
     fi
     install_path=$(convert_install_path "${_install_path}")
     echo "${install_path}"
