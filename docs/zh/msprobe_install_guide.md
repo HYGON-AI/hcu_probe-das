@@ -35,8 +35,8 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 - 编译安装基础工具包
 
   ```
-  git clone https://gitcode.com/Ascend/MindStudio-Probe.git
-  cd MindStudio-Probe
+  git clone https://gitcode.com/Ascend/msprobe.git
+  cd msprobe
   
   pip install setuptools wheel
   
@@ -48,8 +48,8 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 - 编译安装基础工具包和adump模块
 
   ```
-  git clone https://gitcode.com/Ascend/MindStudio-Probe.git
-  cd MindStudio-Probe
+  git clone https://gitcode.com/Ascend/msprobe.git
+  cd msprobe
   
   pip install setuptools wheel
   
@@ -61,8 +61,8 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 - 编译安装基础工具包和aclgraph_dump模块
 
   ```
-  git clone https://gitcode.com/Ascend/MindStudio-Probe.git
-  cd MindStudio-Probe
+  git clone https://gitcode.com/Ascend/msprobe.git
+  cd msprobe
   
   pip install setuptools wheel
   
@@ -74,8 +74,8 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 - 编译安装基础工具包和分级可视化插件
 
   ```
-  git clone https://gitcode.com/Ascend/MindStudio-Probe.git
-  cd MindStudio-Probe
+  git clone https://gitcode.com/Ascend/msprobe.git
+  cd msprobe
   
   pip install setuptools wheel
   
@@ -87,8 +87,8 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 - 编译安装基础工具包和atb_probe模块
 
   ```
-  git clone https://gitcode.com/Ascend/MindStudio-Probe.git
-  cd MindStudio-Probe
+  git clone https://gitcode.com/Ascend/msprobe.git
+  cd msprobe
 
   pip install setuptools wheel
 
