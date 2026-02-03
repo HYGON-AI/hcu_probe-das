@@ -131,6 +131,25 @@ class FmkAdp:
         return module.parameters_and_names()
 
     @classmethod
+    def iter_named_modules(cls, model):
+        """
+        Unified module iterator across frameworks.
+
+        Returns an iterable of (name, module) pairs using framework-specific
+        traversal APIs:
+        - PyTorch: model.named_modules()
+        - MindSpore: model.cells_and_names()
+        """
+        if cls.fmk == Const.PT_FRAMEWORK:
+            if not hasattr(model, "named_modules"):
+                raise Exception(f"{model} does not implement named_modules()")
+            return model.named_modules()
+        # MindSpore
+        if not hasattr(model, "cells_and_names"):
+            raise Exception(f"{model} does not implement cells_and_names()")
+        return model.cells_and_names()
+
+    @classmethod
     def register_forward_pre_hook(cls, module, hook, with_kwargs=False):
         if cls.fmk == Const.PT_FRAMEWORK:
             if not isinstance(module, cls.framework.nn.Module):
