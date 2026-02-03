@@ -62,7 +62,7 @@ COMMON_SCRIPT=common.sh
 INSTALL_SCRIPT=install.sh
 UTILS_SCRIPT=utils.sh
 
-CMP_RUN_NAME="Ascend-mindstudio-accucmp"
+CMP_RUN_NAME="mindstudio-accucmp"
 
 PKG_LIMIT_SIZE=524288000 # 500M
 
@@ -107,9 +107,12 @@ function get_package_name() {
 
       CONFIG_FILE="${CUR_DIR}/conf/version.info"
     NAME=$(grep -E '^Name=' "$CONFIG_FILE" | cut -d'=' -f2)
-    VERSION=$(grep -E '^Version=' "$CONFIG_FILE" | cut -d'=' -f2)
+    # 如果VERSION未通过参数设置，则从配置文件读取
+    if [ -z "${VERSION}" ]; then
+        VERSION=$(grep -E '^Version=' "$CONFIG_FILE" | cut -d'=' -f2)
+    fi
     local os_arch=$(arch)
-    echo "${NAME}_${VERSION}_linux-${os_arch}.run"
+    echo "${NAME}_${VERSION}_linux_${os_arch}.run"
 }
 
 function create_run_package() {
@@ -175,6 +178,9 @@ function main() {
 		rm -f "${OUTPUT_DIR}/temp"
 	fi
 }
+
+# 解析脚本参数
+parse_script_args "$@"
 
 main
 
