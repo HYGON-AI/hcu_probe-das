@@ -118,7 +118,6 @@ class TfGraphNodeInfo extends PolymerElement {
         background-color: white;
       }
     </style>
-    <tf-resize-height height="{{height}}">
       <vaadin-tabsheet>
         <vaadin-tabs slot="tabs" class="vaadin-tabs">
           <vaadin-tab id="io-tab" class="vaadin-tab">
@@ -129,7 +128,7 @@ class TfGraphNodeInfo extends PolymerElement {
         </vaadin-tabs>
 
         <div tab="io-tab" class="vaadin-tab-content">
-          <tf-resize-height height="{{height}} show-handle="false">
+          <tf-resize-height height="{{height}}" show-handle="false">
             <div class="table-wrapper">
               <div class="node-info-wrapper">
                 <div class="node-info">
@@ -173,7 +172,7 @@ class TfGraphNodeInfo extends PolymerElement {
           </tf-resize-height>
         </div>
         <div tab="stack-info-tab" class="vaadin-tab-content">
-          <tf-resize-height height="{{height}} show-handle="false">
+          <tf-resize-height height="{{height}}" show-handle="false">
             <div class="table-wrapper">
               <tf-vaadin-text-table
                 id="main-table"
@@ -186,7 +185,7 @@ class TfGraphNodeInfo extends PolymerElement {
           </tf-resize-height>
         </div>
       </vaadin-tabsheet>
-    </tf-resize-height>
+
   `;
   @property({ type: Object })
   get t() {

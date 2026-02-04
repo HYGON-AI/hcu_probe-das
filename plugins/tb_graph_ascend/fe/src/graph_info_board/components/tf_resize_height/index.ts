@@ -39,7 +39,6 @@ class ResizableTabsheet extends PolymerElement {
         height: 2px;
         width: 100%;
         cursor: ns-resize;
-        bottom: 2px;
         z-index: 999;
         position: relative;
         background-color: rgb(141, 141, 141);

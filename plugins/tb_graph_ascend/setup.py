@@ -16,7 +16,7 @@
 
 import setuptools
 
-VERSION = '8.3.1'
+VERSION = '8.3.2'
 INSTALL_REQUIRED = ["tensorboard >= 2.11.2"]
 
 setuptools.setup(
