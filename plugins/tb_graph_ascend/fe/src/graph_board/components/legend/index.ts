@@ -241,7 +241,7 @@ class Legend extends PolymerElement {
         <!-- 小键盘图标按钮 -->
         <button class="keyboard-button" on-click="toggleShortcutPanel">
           <div class="keyboard-icon"></div>
-          <paper-tooltip animation-delay="300" position="top" offset="0">
+          <paper-tooltip animation-delay="300" position="left" offset="0">
             [[t('shortcut_help')]]
           </paper-tooltip>
         </button>
