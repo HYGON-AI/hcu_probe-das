@@ -21,8 +21,8 @@ ShapeConversion class. This class mainly involves the convert_shape function.
 """
 import sys
 import time
-from msprobe.msaccucmp.cmp_utils import log, file_utils
-from msprobe.msaccucmp.conversion.shape_format_conversion import ShapeConversionMain
+from cmp_utils import log, file_utils
+from conversion.shape_format_conversion import ShapeConversionMain
 
 
 if __name__ == "__main__":

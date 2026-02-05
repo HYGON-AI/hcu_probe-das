@@ -21,20 +21,20 @@ NpuVsNpuComparison class. This class mainly involves the compare function.
 """
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import utils
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse.dump import CompareData
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import Tensor
-from msprobe.msaccucmp.vector_cmp.fusion_manager import compare_result
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.overflow.overflow_detection import OverflowDetection
-from msprobe.msaccucmp.dump_parse.ffts_parser import FFTSParser
-from msprobe.msaccucmp.dump_parse import dump_utils
-from msprobe.msaccucmp.conversion.tensor_conversion import ConvertSingleTensorFormat 
+from cmp_utils import utils
+from cmp_utils import common
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse.dump import CompareData
+from algorithm_manager.algorithm_manager import AlgorithmManager
+from vector_cmp.fusion_manager.fusion_op import FusionOp
+from vector_cmp.fusion_manager.fusion_op import Tensor
+from vector_cmp.fusion_manager import compare_result
+from cmp_utils.constant.compare_error import CompareError
+from overflow.overflow_detection import OverflowDetection
+from dump_parse.ffts_parser import FFTSParser
+from dump_parse import dump_utils
+from conversion.tensor_conversion import ConvertSingleTensorFormat 
 
 
 class NpuVsNpuComparison:

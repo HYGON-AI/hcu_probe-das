@@ -21,10 +21,10 @@ This class mainly involves the advisor result function.
 """
 import os
 
-from msprobe.msaccucmp.advisor.advisor_const import AdvisorConst
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils import path_check
-from msprobe.msaccucmp.cmp_utils import log
+from advisor.advisor_const import AdvisorConst
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils import path_check
+from cmp_utils import log
 
 
 class AdvisorResult:

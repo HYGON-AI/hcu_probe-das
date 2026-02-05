@@ -20,17 +20,17 @@ Function:
 TensorConversion class. This class mainly involves the convert_shape function.
 """
 
-from msprobe.msaccucmp.dump_parse.dump import CompareData
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.format_manager.format_manager import SrcToDest
-from msprobe.msaccucmp.format_manager.format_manager import ShapeConversion
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import Tensor
-from msprobe.msaccucmp.cmp_utils import log, utils_type
-from msprobe.msaccucmp.cmp_utils import utils
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from dump_parse.dump import CompareData
+from format_manager.format_manager import FormatManager
+from format_manager.format_manager import SrcToDest
+from format_manager.format_manager import ShapeConversion
+from vector_cmp.fusion_manager.fusion_op import FusionOp
+from vector_cmp.fusion_manager.fusion_op import Tensor
+from cmp_utils import log, utils_type
+from cmp_utils import utils
+from cmp_utils import common
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.constant.compare_error import CompareError
 
 
 class TensorConversion:

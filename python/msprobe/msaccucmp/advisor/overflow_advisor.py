@@ -20,9 +20,9 @@ Function:
 This file mainly involves the overflow advisor function.
 """
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.advisor.advisor_const import AdvisorConst
-from msprobe.msaccucmp.advisor.advisor_result import AdvisorResult
+from cmp_utils import log
+from advisor.advisor_const import AdvisorConst
+from advisor.advisor_result import AdvisorResult
 
 
 class OverflowAdvisor:

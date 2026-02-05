@@ -25,11 +25,11 @@ import warnings
 from typing.io import BinaryIO
 from enum import Enum
 
-from msprobe.msaccucmp.cmp_utils import path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.tlv_parse import TLV
+from cmp_utils import path_check
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.tlv_parse import TLV
 
 
 NANO_DUMP_DATA_MAGIC_NUM = 0x5a5a5a5a

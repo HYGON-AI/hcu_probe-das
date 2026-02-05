@@ -24,15 +24,15 @@ import os
 
 from functools import wraps
 import numpy as np
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData
+from dump_parse.proto_dump_data import DumpData
 
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.dump_parse.big_dump_data import DumpDataHandler
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpDataObj, DumpTensor
-from msprobe.msaccucmp.dump_parse.nano_dump_data import NanoDumpData, NanoDumpDataParser, NanoDumpDataHandler
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.reg_manager import RegManager
+from cmp_utils import log
+from dump_parse.big_dump_data import DumpDataHandler
+from dump_parse.dump_data_object import DumpDataObj, DumpTensor
+from dump_parse.nano_dump_data import NanoDumpData, NanoDumpDataParser, NanoDumpDataHandler
 
 
 class SortMode:

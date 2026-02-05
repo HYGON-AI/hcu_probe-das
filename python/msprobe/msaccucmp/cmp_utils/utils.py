@@ -26,11 +26,11 @@ import collections
 import csv
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.utils_type import ShapeType
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import common
+from cmp_utils import log
+from cmp_utils.utils_type import ShapeType
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.compare_error import CompareError
 
 
 PATH_BLACK_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.,-]")  # Includes `,`

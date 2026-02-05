@@ -22,7 +22,7 @@ This file mainly involves the reg const.
 
 import re
 
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.const_manager import ConstManager
 
 
 class RegManager:

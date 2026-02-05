@@ -24,8 +24,8 @@ This class mainly involves the get function.
 import sys
 from abc import ABC, abstractmethod
 
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_rule import CompareRule
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.fusion_manager.compare_rule import CompareRule
 
 
 class RangeManager(ABC):

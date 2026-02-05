@@ -21,11 +21,11 @@ SelectMode class.
 This class mainly involves functions for selecting operators.
 """
 
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_rule import CompareRule
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.vector_cmp.range_manager import range_manager
+from cmp_utils.reg_manager import RegManager
+from cmp_utils import log
+from vector_cmp.fusion_manager.compare_rule import CompareRule
+from cmp_utils.constant.compare_error import CompareError
+from vector_cmp.range_manager import range_manager
 
 
 class SelectMode(range_manager.RangeManager):

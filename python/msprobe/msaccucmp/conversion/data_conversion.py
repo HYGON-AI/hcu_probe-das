@@ -26,14 +26,14 @@ import sys
 import argparse
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import utils, path_check
-from msprobe.msaccucmp.dump_parse import big_dump_data, dump_utils
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.multi_process.multi_convert_process import MultiConvertProcess
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import utils, path_check
+from dump_parse import big_dump_data, dump_utils
+from cmp_utils import log
+from cmp_utils.utils import safe_path_string
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.multi_process.multi_convert_process import MultiConvertProcess
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
 
 
 class DumpDataConversion:

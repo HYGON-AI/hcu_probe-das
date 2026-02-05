@@ -22,8 +22,8 @@ StandardDeviation algorithm. This file mainly involves the compare function.
 
 import numpy as np
 
-from msprobe.msaccucmp.algorithm_manager.algorithm_parameter import AlgorithmParameter
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from algorithm_manager.algorithm_parameter import AlgorithmParameter
+from cmp_utils.constant.const_manager import ConstManager
 
 
 def compare(my_output_dump_data: any, ground_truth_dump_data: any, args: AlgorithmParameter) -> (str, str):

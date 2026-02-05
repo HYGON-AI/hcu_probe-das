@@ -21,22 +21,22 @@ FusionOpComparison class. This class mainly involves the compare function.
 """
 import collections
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_rule_parser
-from msprobe.msaccucmp.cmp_utils import utils, utils_type
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_npu_vs_npu import NpuVsNpuComparison
-from msprobe.msaccucmp.vector_cmp.fusion_manager import compare_result
-from msprobe.msaccucmp.dump_parse.dump import DumpType
-from msprobe.msaccucmp.overflow.overflow_detection import OverflowDetection
-from msprobe.msaccucmp.vector_cmp.range_manager.range_manager import RangeManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import Tensor
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.conversion.tensor_conversion import TensorConversion
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpDataObj
-from msprobe.msaccucmp.dump_parse import dump_utils
-from msprobe.msaccucmp.cmp_utils import common
+from vector_cmp.fusion_manager import fusion_rule_parser
+from cmp_utils import utils, utils_type
+from cmp_utils import log
+from vector_cmp.fusion_manager.compare_npu_vs_npu import NpuVsNpuComparison
+from vector_cmp.fusion_manager import compare_result
+from dump_parse.dump import DumpType
+from overflow.overflow_detection import OverflowDetection
+from vector_cmp.range_manager.range_manager import RangeManager
+from vector_cmp.fusion_manager.fusion_op import FusionOp
+from vector_cmp.fusion_manager.fusion_op import Tensor
+from cmp_utils.constant.const_manager import ConstManager
+from conversion.tensor_conversion import TensorConversion
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse.dump_data_object import DumpDataObj
+from dump_parse import dump_utils
+from cmp_utils import common
 
 
 class FusionOpComparison:

@@ -22,10 +22,10 @@ This file mainly involves xxxx function.
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse import dump_utils
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils import log
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse import dump_utils
 
 
 class OverflowDetection:

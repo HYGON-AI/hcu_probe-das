@@ -22,12 +22,12 @@ MultiConvertProcess class. This class mainly involves the process function.
 import os
 import multiprocessing
 import psutil
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.file_utils import FileUtils
 
-from msprobe.msaccucmp.cmp_utils.multi_process.progress import Progress
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils.multi_process.progress import Progress
+from cmp_utils.constant.compare_error import CompareError
 
 
 class MultiConvertProcess:

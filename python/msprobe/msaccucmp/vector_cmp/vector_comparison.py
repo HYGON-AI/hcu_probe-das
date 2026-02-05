@@ -28,25 +28,25 @@ import csv
 import time
 import psutil
 
-from msprobe.msaccucmp.dump_parse import dump, mapping
-from msprobe.msaccucmp.vector_cmp.compare_detail import detail
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager import compare_result
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_rule import CompareRule
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
-from msprobe.msaccucmp.vector_cmp.compare_detail.compare_detail import DetailComparison
-from msprobe.msaccucmp.vector_cmp.compare_detail.compare_detail import DumpDetailComparison
-from msprobe.msaccucmp.dump_parse.dump import DumpType
-from msprobe.msaccucmp.cmp_utils import log, utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.range_manager.range_manager import RangeManager
-from msprobe.msaccucmp.vector_cmp.range_manager.range_mode import RangeMode
-from msprobe.msaccucmp.vector_cmp.range_manager.select_mode import SelectMode
-from msprobe.msaccucmp.overflow.overflow_detection import OverflowDetection
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.utils import sanitize_csv_value
+from dump_parse import dump, mapping
+from vector_cmp.compare_detail import detail
+from algorithm_manager.algorithm_manager import AlgorithmManager
+from vector_cmp.fusion_manager import compare_result
+from vector_cmp.fusion_manager.compare_rule import CompareRule
+from format_manager.format_manager import FormatManager
+from vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
+from vector_cmp.compare_detail.compare_detail import DetailComparison
+from vector_cmp.compare_detail.compare_detail import DumpDetailComparison
+from dump_parse.dump import DumpType
+from cmp_utils import log, utils, utils_type, path_check
+from cmp_utils.utils import safe_path_string
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.range_manager.range_manager import RangeManager
+from vector_cmp.range_manager.range_mode import RangeMode
+from vector_cmp.range_manager.select_mode import SelectMode
+from overflow.overflow_detection import OverflowDetection
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.utils import sanitize_csv_value
 
 
 class VectorComparison:
@@ -435,7 +435,7 @@ class VectorComparison:
 
     def _do_advisor(self):
         try:
-            from msprobe.msaccucmp.advisor.compare_advisor import CompareAdvisor
+            from advisor.compare_advisor import CompareAdvisor
         except ImportError as import_error:
             log.print_warn_log("Unable to import module: %s." % str(import_error))
             log.print_warn_log("Skip compare results Analysis.")

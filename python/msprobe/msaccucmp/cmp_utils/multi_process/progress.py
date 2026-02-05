@@ -22,9 +22,9 @@ Progress class. This class mainly involves the print_progress function.
 import time
 import math
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.compare_error import CompareError
 
 
 class Progress:

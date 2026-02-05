@@ -22,9 +22,9 @@ convert format from NHWC to FRACTAL_Z.
 from itertools import product
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.utils import least_common_multiple as lcm
-from msprobe.msaccucmp.cmp_utils.utils import ceiling_divide as ceil
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.utils import least_common_multiple as lcm
+from cmp_utils.utils import ceiling_divide as ceil
 
 
 def _get_axis(gnh_axis: list, value_map: dict, dst_c: int, w_axis: int) -> int:

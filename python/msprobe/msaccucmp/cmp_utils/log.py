@@ -23,7 +23,7 @@ This file mainly involves the print function.
 import os
 import logging
 from functools import wraps
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.const_manager import ConstManager
 
 
 def filter_special_chars(func):

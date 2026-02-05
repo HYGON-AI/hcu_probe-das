@@ -26,13 +26,13 @@ import uuid
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import log, path_check
-from msprobe.msaccucmp.dump_parse import dump_utils, mapping
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail import DetailInfo
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
-from msprobe.msaccucmp.cmp_utils.multi_process.progress import Progress
+from cmp_utils import log, path_check
+from dump_parse import dump_utils, mapping
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.compare_detail.detail import DetailInfo
+from cmp_utils.file_utils import FileUtils
+from cmp_utils.multi_process.progress import Progress
 
 
 class MinMaxValue:

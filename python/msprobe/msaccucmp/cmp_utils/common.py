@@ -22,9 +22,9 @@ This file mainly involves the dump data proto function.
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.constant.compare_error import CompareError
 
 
 def contain_depth_dimension(tensor_format: any) -> bool:

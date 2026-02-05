@@ -22,9 +22,9 @@ DumpDataConversion class. This class mainly involves the convert_data function.
 """
 import sys
 import time
-from msprobe.msaccucmp.cmp_utils import log, file_utils
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.conversion.data_conversion import DumpDataConversion
+from cmp_utils import log, file_utils
+from cmp_utils.constant.compare_error import CompareError
+from conversion.data_conversion import DumpDataConversion
 
 
 if __name__ == "__main__":

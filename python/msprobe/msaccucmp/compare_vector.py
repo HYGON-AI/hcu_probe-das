@@ -23,9 +23,9 @@ VectorComparison class. This class mainly involves the compare function.
 import sys
 import time
 import signal
-from msprobe.msaccucmp.cmp_utils import log, file_utils
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.vector_cmp.vector_comparison import VectorComparison
+from cmp_utils import log, file_utils
+from cmp_utils.constant.compare_error import CompareError
+from vector_cmp.vector_comparison import VectorComparison
 
 
 if __name__ == "__main__":

@@ -24,11 +24,11 @@ import re
 import stat
 from enum import Enum
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils import utils
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from cmp_utils import log
+from cmp_utils import utils
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
 
 
 class PathType(Enum):

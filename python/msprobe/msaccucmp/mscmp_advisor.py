@@ -24,11 +24,11 @@ import os
 import sys
 import argparse
 import re
-from msprobe.msaccucmp.cmp_utils import log, path_check, file_utils
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.advisor.compare_advisor import CompareAdvisor
+from cmp_utils import log, path_check, file_utils
+from cmp_utils.utils import safe_path_string
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
+from advisor.compare_advisor import CompareAdvisor
 MAX_STRING_LENGTH = 1024
 NODE_WHITE_LIST_REGEX = re.compile(r"[^_A-Za-z0-9/.,;-]")
 

@@ -22,9 +22,9 @@ AccumulatedRelativeError algorithm. This file mainly involves the compare functi
 
 import numpy as np
 
-from msprobe.msaccucmp.algorithm_manager.algorithm_parameter import AlgorithmParameter
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils import utils
+from algorithm_manager.algorithm_parameter import AlgorithmParameter
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils import utils
 
 
 def compare(my_output_dump_data: any, ground_truth_dump_data: any, args: AlgorithmParameter) -> (str, str):

@@ -21,13 +21,13 @@ This FusionOpComResult class. This file mainly involves the get_result function.
 """
 import collections
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_rule_parser
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.range_manager.range_manager import RangeManager
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from vector_cmp.fusion_manager import fusion_rule_parser
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.range_manager.range_manager import RangeManager
+from algorithm_manager.algorithm_manager import AlgorithmManager
+from vector_cmp.fusion_manager.fusion_op import FusionOp
+from cmp_utils.constant.compare_error import CompareError
 
 
 class TensorResult:

@@ -29,14 +29,14 @@ import importlib
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import log, utils_type
-from msprobe.msaccucmp.cmp_utils import utils, path_check
-from msprobe.msaccucmp.algorithm_manager.algorithm_parameter import AlgorithmParameter
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
-from msprobe.msaccucmp.dump_parse import dump_utils
+from cmp_utils import log, utils_type
+from cmp_utils import utils, path_check
+from algorithm_manager.algorithm_parameter import AlgorithmParameter
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.file_utils import FileUtils
+from dump_parse import dump_utils
 
 
 class AlgorithmManager:
@@ -295,7 +295,7 @@ class AlgorithmManager:
             module_type = ConstManager.CUSTOM
         elif algorithm_name in self.built_in_support_algorithm:
             algorithm_module = importlib.import_module('%s.%s.alg_%s' %
-                                                       ("msprobe.msaccucmp.algorithm_manager",
+                                                       ("algorithm_manager",
                                                         ConstManager.BUILT_IN_ALGORITHM_DIR_NAME,
                                                         algorithm_name))
             module_type = ConstManager.BUILTIN
