@@ -1,0 +1,14 @@
+# 版本说明
+
+## 版本配套说明
+
+- msProbe支持AscendPyTorch 1.11.0或更高版本，支持的PyTorch和CANN以及PyTorch和python软件版本配套关系请参见《[Ascend Extension for PyTorch插件](https://gitcode.com/Ascend/pytorch)》。
+- msProbe支持MindSpore 2.4.0或更高版本，支持的MindSpore和CANN以及MindSpore和python软件版本配套关系请参见《[MindSpore版本发布列表](https://www.mindspore.cn/versions)》。
+- msProbe支持MSAdapter 2.1.0。
+- msProbe支持的固件驱动版本与配套CANN软件支持的固件驱动版本相同，开发者可通过“[昇腾社区-固件与驱动](https://www.hiascend.com/hardware/firmware-drivers/community?product=2&model=28&cann=8.0.RC3.alpha003&driver=1.0.25.alpha)”页面根据产品型号与CANN软件版本获取配套的固件与驱动。
+
+msProbe详细版本配套关系及对应软件包下载链接如下：
+
+|  版本   |   发布日期   |支持 PyTorch 版本|支持 MindSpore 版本|                                                                下载链接                                                                |校验码|
+|:-----:|:--------:|:--:|:--:|:----------------------------------------------------------------------------------------------------------------------------------:|:--:|
+| 26.0.0-alpha.1 | 2026.2.4 |1.11/2.1/2.2/2.5/2.6/2.7|2.4.0/2.5.0/2.6.0/2.7.1| [mindstudio_probe-26.0.0a1-py3-none-any.whl](https://ascend-package.obs.cn-north-4.myhuaweicloud.com/msprobe/26.0.0/B020/mindstudio_probe-26.0.0a1-py3-none-any.whl) |52512b082dcb0a0c5de62684b770d24741b9aa0ab89c73763a882a8ded3ad8c3|
