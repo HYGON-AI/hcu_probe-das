@@ -2,7 +2,7 @@
 
 ## 安装说明
 
-本文主要介绍msProbe工具的安装。当前仅支持**编译安装**方式。
+本文主要介绍msProbe工具的安装。当前支持**从PyPI安装、下载whl包安装和编译安装**三种方式。
 
 推荐使用[miniconda](https://docs.anaconda.com/miniconda/)管理环境依赖。
 
@@ -10,6 +10,35 @@
 conda create -n msprobe python
 conda activate msprobe
 ```
+## 从PyPI安装
+```shell
+pip install mindstudio-probe --pre
+```
+**目前msProbe工具版本为预发布版本，请在命令行末尾添加`--pre`参数进行安装。**
+
+打印如下信息时，表示msProbe安装成功。
+
+`Successfully installed mindstudio-probe-{version}`
+
+## 下载whl包安装
+
+请参考[版本说明](./release_notes.md)中的“版本配套说明”章节，下载msProbe的whl软件包。
+
+获取到whl软件包后执行如下命令进行安装。
+
+```bash
+sha256sum {name}.whl # 验证whl包，若校验码一致，则whl包在下载中没有受损
+```
+
+```bash
+pip install ./mindstudio_probe-{version}-py3-none-any.whl # 安装whl包
+```
+打印如下信息时，表示msProbe安装成功。
+
+`Successfully installed mindstudio-probe-{version}`
+
+若覆盖安装，请在命令行末尾添加 `--force-reinstall` 参数。  
+上面提供的whl包链接不包含adump、aclgraph_dump和atb_probe功能，如果需要使用这些功能，请参考[编译安装](#编译安装)下载源码编译whl包。
 
 ## 编译安装
 
@@ -133,7 +162,7 @@ pip show mindstudio-probe
 
 ```bash
 Name: mindstudio-probe
-Version: 8.3.x
+Version: 26.0.x
 Summary: Ascend MindStudio Probe Utils
 Home-page: https://gitcode.com/Ascend/MindStudio-Probe
 Author: Ascend Team

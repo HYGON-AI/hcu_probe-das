@@ -33,15 +33,9 @@ MindSpore场景分级可视化构图比对：将msProbe工具dump的精度数据
 
 **环境准备**
 
-- 安装msProbe工具，具体请参见《[msProbe安装指南](../msprobe_install_guide.md)》。
-- 安装tb_graph_ascend，具体请参见《[tb_graph_ascend](../../../plugins/tb_graph_ascend/README.md#2-安装方式)》。
+安装msProbe工具，具体请参见《[msProbe工具安装指南](../msprobe_install_guide.md)》。
 
-**版本配套关系**
-
-| msProbe版本 | tb_graph_ascend版本 | 说明                                                                   |
-|-----------|-------------------|----------------------------------------------------------------------|
-| 大于等于8.2.1 | 大于等于8.2.0             | msProbe工具的分级可视化构图比对功能自8.2.1版本起，输出件切换为db格式，需要对应版本的tb_graph_ascend进行解析。 |
-| 小于8.2.1   | 小于8.2.0            | 无                                                                    |
+安装方式选择“编译安装”时，编译命令须配置参数`--include-mod tb_graph_ascend`来构建分级可视化插件。
 
 **数据准备**
 
