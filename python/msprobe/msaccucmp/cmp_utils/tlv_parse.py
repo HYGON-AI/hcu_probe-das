@@ -30,7 +30,7 @@ TLV_CONFIG_TAB = [
 ]
 
 2、parse an bytes:
-from msprobe.msaccucmp.cmp_utils.tlv_parse import TLV
+from cmp_utils.tlv_parse import TLV
 
 class ParseInfo:
     def __init__(self):
@@ -52,8 +52,8 @@ aux, input = tlv.parse_tlv_by_cfg_tab(aux, input)
 """
 import struct
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log
+from cmp_utils.constant.compare_error import CompareError
 
 CHAR_SIZE = 1
 INT16_SIZE = 2

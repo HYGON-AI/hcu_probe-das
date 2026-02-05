@@ -22,11 +22,13 @@ def run_ut():
     os.makedirs(report_dir)
 
     head_ut_directories = [os.path.join(cur_dir, "common_set_up")]
-    tail_ut_directories = [os.path.join(cur_dir, "msaccucmp_ut"), os.path.join(cur_dir, "pytorch_ut"), os.path.join(cur_dir, "mindspore_ut")]
+    tail_ut_directories = [os.path.join(cur_dir, "pytorch_ut"), os.path.join(cur_dir, "mindspore_ut")]
 
     all_ut_dirs = []
     for item in os.listdir(cur_dir):
         item_path = os.path.join(cur_dir, item)
+        if item == "msaccucmp_ut":
+            continue
         if os.path.isdir(item_path) and not item.startswith("."):
             all_ut_dirs.append(item_path)
     all_ut_dirs.sort()

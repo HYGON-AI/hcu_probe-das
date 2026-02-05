@@ -22,16 +22,16 @@ DetailComparison class. This class mainly involves the compare function.
 
 import os
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_rule_parser
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse import dump, mapping
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail_writer import DetailWriter
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail import DetailInfo
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
-from msprobe.msaccucmp.conversion.tensor_conversion import TensorConversion
+from vector_cmp.fusion_manager import fusion_rule_parser
+from cmp_utils import utils, utils_type, path_check
+from cmp_utils import log
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse import dump, mapping
+from vector_cmp.compare_detail.detail_writer import DetailWriter
+from vector_cmp.compare_detail.detail import DetailInfo
+from vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
+from conversion.tensor_conversion import TensorConversion
 
 
 class DetailComparison:

@@ -18,10 +18,10 @@
 import os
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpTensor, DumpDataObj
-from msprobe.msaccucmp.dump_parse import dump
+from cmp_utils import log
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse.dump_data_object import DumpTensor, DumpDataObj
+from dump_parse import dump
 
 
 class FFTSParser:

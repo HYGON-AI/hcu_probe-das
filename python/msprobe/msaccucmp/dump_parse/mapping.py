@@ -22,9 +22,9 @@ This file mainly involves the mapping function.
 import os
 import csv
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.utils import check_file_size
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.utils import check_file_size
 
 
 def _handle_csv_object(csv_object: any, mapping_file_path: str) -> dict:

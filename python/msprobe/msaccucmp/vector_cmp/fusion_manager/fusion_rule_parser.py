@@ -23,14 +23,14 @@ This class mainly involves the analysis_fusion_rule function.
 
 import uuid
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.vector_cmp.fusion_manager.quant_filter import QuantFilter
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import OpAttr, FusionOp, OutputDesc
-from msprobe.msaccucmp.dump_parse import dump
+from cmp_utils import utils, utils_type
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.file_utils import FileUtils
+from cmp_utils.constant.compare_error import CompareError
+from vector_cmp.fusion_manager.quant_filter import QuantFilter
+from vector_cmp.fusion_manager.fusion_op import OpAttr, FusionOp, OutputDesc
+from dump_parse import dump
 
 
 def make_left_and_right_string(ground_truth_to_my_output_map: dict) -> (str, str):

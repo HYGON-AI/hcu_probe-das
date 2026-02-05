@@ -22,9 +22,9 @@ KullbackLeiblerDivergence algorithm. This file mainly involves the compare funct
 
 import numpy as np
 
-from msprobe.msaccucmp.algorithm_manager.algorithm_parameter import AlgorithmParameter
-from msprobe.msaccucmp.cmp_utils import utils, log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from algorithm_manager.algorithm_parameter import AlgorithmParameter
+from cmp_utils import utils, log
+from cmp_utils.constant.const_manager import ConstManager
 
 
 FLOAT_EPSILON = np.finfo(np.float32).eps

@@ -29,10 +29,10 @@ import os
 import google.protobuf.text_format
 import caffe.proto.caffe_pb2 as caffe_pb2
 
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils import log, file_utils
-from msprobe.msaccucmp.cmp_utils import path_check
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log, file_utils
+from cmp_utils import path_check
+from cmp_utils.utils import safe_path_string
 
 MAX_SIZE = 10 * 1024 * 1024 * 1024
 

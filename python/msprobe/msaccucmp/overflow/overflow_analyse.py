@@ -25,11 +25,11 @@ import time
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import log, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse.dump_data_parser import DumpDataParser
-from msprobe.msaccucmp.cmp_utils.file_utils import OverflowFileUtils, DumpFileDesc
+from cmp_utils import log, utils_type, path_check
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse.dump_data_parser import DumpDataParser
+from cmp_utils.file_utils import OverflowFileUtils, DumpFileDesc
 
 
 class OverflowAnalyse:

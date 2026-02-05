@@ -20,12 +20,12 @@ from functools import reduce
 import json
 
 import numpy as np
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.conversion.dtype_conversion import hifloat8_to_float32, float8e4m3fn_to_float32, float8e5m2_to_float32
+from dump_parse.proto_dump_data import DumpData
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils import log
+from cmp_utils import common
+from conversion.dtype_conversion import hifloat8_to_float32, float8e4m3fn_to_float32, float8e5m2_to_float32
 
 
 CommonAttr = collections.namedtuple('CommonAttr', ['data_type', 'tensor_format', 'address', 'original_shape'])

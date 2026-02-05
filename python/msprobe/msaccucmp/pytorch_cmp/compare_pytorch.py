@@ -26,13 +26,13 @@ import csv
 import time
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check, log
-from msprobe.msaccucmp.pytorch_cmp import pytorch_dump_data as pytorch_dump
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager import compare_result
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.utils import sanitize_csv_value
+from cmp_utils import utils, utils_type, path_check, log
+from pytorch_cmp import pytorch_dump_data as pytorch_dump
+from algorithm_manager.algorithm_manager import AlgorithmManager
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.fusion_manager import compare_result
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.utils import sanitize_csv_value
 
 
 class PytorchComparison:
@@ -376,7 +376,7 @@ class PytorchComparison:
 
     def _do_advisor(self):
         try:
-            from msprobe.msaccucmp.advisor.compare_advisor import CompareAdvisor
+            from advisor.compare_advisor import CompareAdvisor
         except ImportError as import_error:
             log.print_warn_log("Unable to import module: %s." % str(import_error))
             log.print_warn_log("Skip compare results Analysis.")

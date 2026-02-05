@@ -19,10 +19,10 @@
 Function:
 FusionOp class. This class mainly involves the fusion op info.
 """
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
 
 
 class OutputDesc:

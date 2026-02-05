@@ -21,16 +21,16 @@ VectorComparison class. This class mainly involves the compare function.
 """
 
 import os
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser import FusionRuleParser
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser import merge_fusion_rule
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser import merge_close_and_open_fusion_rule
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import OpAttr
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse.dump import CompareData, DumpInfo
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse import dump_utils
+from cmp_utils import utils, utils_type, path_check
+from vector_cmp.fusion_manager.fusion_rule_parser import FusionRuleParser
+from vector_cmp.fusion_manager.fusion_rule_parser import merge_fusion_rule
+from vector_cmp.fusion_manager.fusion_rule_parser import merge_close_and_open_fusion_rule
+from vector_cmp.fusion_manager.fusion_op import FusionOp
+from vector_cmp.fusion_manager.fusion_op import OpAttr
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse.dump import CompareData, DumpInfo
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse import dump_utils
 
 
 class CompareRule:

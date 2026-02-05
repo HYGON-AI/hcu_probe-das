@@ -27,12 +27,12 @@ from functools import reduce
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import utils, utils_type, path_check
+from cmp_utils import log
+from cmp_utils import common
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.constant.compare_error import CompareError
 
 
 class SrcToDest:
@@ -165,7 +165,7 @@ class FormatManager:
 
     def _get_module(self: any, format_name: str, dir_name: str, module_type: str) -> (bool, any):
         if dir_name is self.BUILT_IN_FORMAT_CONVERT_DIR_NAME:
-            format_module = importlib.import_module('%s.%s.%s' % ("msprobe.msaccucmp.format_manager",
+            format_module = importlib.import_module('%s.%s.%s' % ("format_manager",
                                                                   dir_name, format_name))
         if dir_name is self.CUSTOM_FORMAT_CONVERT_DIR_NAME:
             format_module = importlib.import_module('%s.%s' % (dir_name, format_name))

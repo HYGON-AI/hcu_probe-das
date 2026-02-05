@@ -27,21 +27,21 @@ import re
 
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.multi_process.multi_convert_process import MultiConvertProcess
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.format_manager.format_manager import SrcToDest
-from msprobe.msaccucmp.format_manager.format_manager import ShapeConversion
-from msprobe.msaccucmp.conversion.tensor_conversion import TensorConversion
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpDataObj, DumpTensor
+from cmp_utils import utils, utils_type, path_check
+from cmp_utils import common
+from cmp_utils import log
+from cmp_utils.utils import safe_path_string
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.multi_process.multi_convert_process import MultiConvertProcess
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.file_utils import FileUtils
+from cmp_utils.constant.compare_error import CompareError
+from format_manager.format_manager import FormatManager
+from format_manager.format_manager import SrcToDest
+from format_manager.format_manager import ShapeConversion
+from conversion.tensor_conversion import TensorConversion
+from dump_parse import dump, dump_utils, mapping
+from dump_parse.dump_data_object import DumpDataObj, DumpTensor
 
 
 def _check_shape_valid(shape_str: str) -> list:

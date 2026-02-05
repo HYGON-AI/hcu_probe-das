@@ -24,14 +24,14 @@ import os
 from enum import Enum
 from enum import unique
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse.ffts_parser import FFTSParser
-from msprobe.msaccucmp.dump_parse import dump_utils, mapping
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpDataObj, DumpTensor
+from cmp_utils import utils, utils_type, path_check
+from cmp_utils import log
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse.ffts_parser import FFTSParser
+from dump_parse import dump_utils, mapping
+from dump_parse.dump_data_object import DumpDataObj, DumpTensor
 
 
 @unique

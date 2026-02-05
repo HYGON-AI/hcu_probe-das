@@ -31,12 +31,12 @@ from typing.io import BinaryIO
 import numpy as np
 from google.protobuf.message import DecodeError
 
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData
-from msprobe.msaccucmp.cmp_utils import path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from dump_parse.proto_dump_data import DumpData
+from cmp_utils import path_check
+from cmp_utils import log
+from cmp_utils import common
+from cmp_utils.constant.const_manager import ConstManager, DD
+from cmp_utils.constant.compare_error import CompareError
 
 
 class BigDumpDataParser:
@@ -53,6 +53,7 @@ class BigDumpDataParser:
         self.dump_json_data = {}
         self.data_types = ['input', 'output', 'buffer', 'space']
         self.parse_dump_so = "libascend_dump_parser.so"
+        self.cann_toolkit_path = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
 
     @staticmethod
     def find_shared_library(lib_name: str, relative_path: str) -> str:
@@ -69,6 +70,11 @@ class BigDumpDataParser:
         current_dir = os.path.dirname(os.path.realpath(__file__))
         candidate = os.path.realpath(os.path.join(current_dir, relative_path, lib_name))
 
+        if os.path.exists(candidate):
+            return candidate
+
+        cann_toolkit_path = os.environ.get('ASCEND_TOOLKIT_HOME', "/usr/local/Ascend/ascend-toolkit/latest")
+        candidate = os.path.realpath(os.path.join(cann_toolkit_path, "tools/adump/lib64", lib_name))
         if os.path.exists(candidate):
             return candidate
 

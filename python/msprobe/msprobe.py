@@ -15,8 +15,10 @@
 # -------------------------------------------------------------------------
 
 import argparse
+import os
 import sys
 
+sys.path.append(os.path.join(os.path.dirname(__file__), 'msaccucmp'))
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli

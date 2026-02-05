@@ -26,19 +26,19 @@ import sys
 import argparse
 import time
 
-from msprobe.msaccucmp.cmp_utils import log, path_check, file_utils
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string, check_file_size
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.reg_manager import RegManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.path_check import check_others_permission
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManagerMain
-from msprobe.msaccucmp.compare_vector import VectorComparison
-from msprobe.msaccucmp.conversion.shape_format_conversion import FormatConversionMain
-from msprobe.msaccucmp.dump_parse.dump_data_parser import DumpDataParser
-from msprobe.msaccucmp.overflow.overflow_analyse import OverflowAnalyse
-from msprobe.msaccucmp.pytorch_cmp.compare_pytorch import PytorchComparison
-from msprobe.msaccucmp.vector_cmp.batch_compare import BatchCompare
+from cmp_utils import log, path_check, file_utils
+from cmp_utils.utils import safe_path_string, check_file_size
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.reg_manager import RegManager
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.path_check import check_others_permission
+from algorithm_manager.algorithm_manager import AlgorithmManagerMain
+from compare_vector import VectorComparison
+from conversion.shape_format_conversion import FormatConversionMain
+from dump_parse.dump_data_parser import DumpDataParser
+from overflow.overflow_analyse import OverflowAnalyse
+from pytorch_cmp.compare_pytorch import PytorchComparison
+from vector_cmp.batch_compare import BatchCompare
 
 
 MIND_STUDIO_LOGO = "[Powered by MindStudio]"

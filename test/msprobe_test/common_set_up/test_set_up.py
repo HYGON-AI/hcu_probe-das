@@ -13,7 +13,6 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
-
 import importlib
 from unittest import TestCase
 from unittest.mock import MagicMock
@@ -48,7 +47,6 @@ utils.mindtorch_check_result = None
 importlib.reload(mindspore_service)
 importlib.reload(common_func)
 reset_torch_tensor()
-
 
 def register_backward_pre_hook(*args, **kwargs):
     pass

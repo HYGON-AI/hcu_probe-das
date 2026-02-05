@@ -20,8 +20,8 @@ Function:
 convert format from NDC1HWC0 to NCDHW.
 """
 import numpy as np
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import log
+from cmp_utils.constant.compare_error import CompareError
 
 
 def convert(shape_from: list, shape_to: list, array: any) -> any:

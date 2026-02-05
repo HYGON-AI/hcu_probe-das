@@ -24,10 +24,10 @@ import argparse
 import sys
 import time
 
-from msprobe.msaccucmp.cmp_utils import log, file_utils
-from msprobe.msaccucmp.cmp_utils.utils import safe_path_string
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse.dump_data_parser import DumpDataParser
+from cmp_utils import log, file_utils
+from cmp_utils.utils import safe_path_string
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse.dump_data_parser import DumpDataParser
 
 
 def _save_log_parser(save_log_parser: argparse.ArgumentParser) -> None:

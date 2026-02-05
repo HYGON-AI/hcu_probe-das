@@ -23,13 +23,13 @@ import os
 import re
 import time
 
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.cmp_utils.file_utils import FileUtils
-from msprobe.msaccucmp.cmp_utils import path_check as path_utils
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.compare_vector import VectorComparison
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser import FusionRuleParser
+from cmp_utils import log
+from cmp_utils.file_utils import FileUtils
+from cmp_utils import path_check as path_utils
+from cmp_utils.constant.const_manager import ConstManager
+from cmp_utils.constant.compare_error import CompareError
+from compare_vector import VectorComparison
+from vector_cmp.fusion_manager.fusion_rule_parser import FusionRuleParser
 
 
 class BatchCompare:
