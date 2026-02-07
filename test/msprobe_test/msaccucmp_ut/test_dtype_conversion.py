@@ -16,7 +16,7 @@
 
 import unittest
 import numpy as np
-from msprobe.msaccucmp.conversion.dtype_conversion import hifloat8_to_float32, float8e4m3fn_to_float32, float8e5m2_to_float32
+from conversion.dtype_conversion import hifloat8_to_float32, float8e4m3fn_to_float32, float8e5m2_to_float32
  
  
 class TestFloatConversions(unittest.TestCase):

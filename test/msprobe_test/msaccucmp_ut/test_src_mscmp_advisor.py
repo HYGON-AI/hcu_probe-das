@@ -20,16 +20,16 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from msprobe.msaccucmp.mscmp_advisor import _check_input_file, check_safe_string, check_string_length, check_file_size, parse_input_nodes
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
+from mscmp_advisor import _check_input_file, check_safe_string, check_string_length, check_file_size, parse_input_nodes
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
 
 
 
 class TestUtilsMethods(unittest.TestCase):
     
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid')
+    @patch('cmp_utils.log.print_error_log')
+    @patch('cmp_utils.path_check.check_exec_file_valid')
     def test_valid_file(self, mock_check_exec_file_valid, mock_print_error_log):
         # 模拟 check_exec_file_valid 返回正常值
         mock_check_exec_file_valid.return_value = CompareError.MSACCUCMP_NONE_ERROR
@@ -42,8 +42,8 @@ class TestUtilsMethods(unittest.TestCase):
         # 断言没有打印错误日志
         mock_print_error_log.assert_not_called()
 
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid')
+    @patch('cmp_utils.log.print_error_log')
+    @patch('cmp_utils.path_check.check_exec_file_valid')
     def test_invalid_file_type(self, mock_check_exec_file_valid, mock_print_error_log):
         input_file = 'test.jpg'
         file_type = '.txt'
@@ -53,8 +53,8 @@ class TestUtilsMethods(unittest.TestCase):
         # 断言打印了错误日志
         mock_print_error_log.assert_called_once()
 
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid')
+    @patch('cmp_utils.log.print_error_log')
+    @patch('cmp_utils.path_check.check_exec_file_valid')
     def test_invalid_exec_file(self, mock_check_exec_file_valid, mock_print_error_log):
         # 模拟 check_exec_file_valid 返回错误值
         mock_check_exec_file_valid.return_value = CompareError.MSACCUCMP_OPEN_FILE_ERROR
@@ -67,7 +67,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_print_error_log.assert_not_called()
     
     @patch('os.path.getsize')
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
+    @patch('cmp_utils.log.print_error_log')
     def test_file_size_within_limit(self, mock_print_error_log, mock_getsize):
         # 模拟文件大小在限制范围内
         mock_getsize.return_value = 10 * 1024 * 1024  # 10MB
@@ -80,7 +80,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_print_error_log.assert_not_called()
 
     @patch('os.path.getsize')
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
+    @patch('cmp_utils.log.print_error_log')
     def test_file_size_exceeds_limit(self, mock_print_error_log, mock_getsize):
         # 模拟文件大小超过限制
         mock_getsize.return_value = 200 * 1024 * 1024  # 200MB
@@ -92,7 +92,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_print_error_log.assert_called_once()
 
     @patch('os.path.getsize')
-    @patch('msprobe.msaccucmp.cmp_utils.log.print_error_log')
+    @patch('cmp_utils.log.print_error_log')
     def test_os_error(self, mock_print_error_log, mock_getsize):
         # 模拟 os.path.getsize 抛出 OSError
         mock_getsize.side_effect = OSError('Mocked OSError')

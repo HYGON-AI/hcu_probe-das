@@ -21,9 +21,9 @@ from unittest import mock
 import numpy as np
 import pytest
 
-from msprobe.msaccucmp.cmp_utils import file_utils
-from msprobe.msaccucmp.overflow import overflow_analyse
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import file_utils
+from overflow import overflow_analyse
+from cmp_utils.constant.compare_error import CompareError
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -35,21 +35,21 @@ class TestUtilsMethods(unittest.TestCase):
         args.top_num = 2
         decode = overflow_analyse.OverflowAnalyse(args)
 
-        with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid",
+        with mock.patch("cmp_utils.path_check.check_path_valid",
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
-            with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid",
+            with mock.patch("cmp_utils.path_check.check_output_path_valid",
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 ret = decode.check_argument(args)
         self.assertEqual(ret, CompareError.MSACCUCMP_NONE_ERROR)
 
-        with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid",
+        with mock.patch("cmp_utils.path_check.check_path_valid",
                         return_value=CompareError.MSACCUCMP_UNKNOWN_ERROR):
             ret = decode.check_argument(args)
         self.assertEqual(ret, CompareError.MSACCUCMP_UNKNOWN_ERROR)
 
-        with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid",
+        with mock.patch("cmp_utils.path_check.check_path_valid",
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
-            with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid",
+            with mock.patch("cmp_utils.path_check.check_output_path_valid",
                             return_value=CompareError.MSACCUCMP_UNKNOWN_ERROR):
                 ret = decode.check_argument(args)
         self.assertEqual(ret, CompareError.MSACCUCMP_UNKNOWN_ERROR)
@@ -82,12 +82,12 @@ class TestUtilsMethods(unittest.TestCase):
         }
 
         dump_file_desc = file_utils.ParsedDumpFileDesc(file_desc, dump_attr, {})
-        with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
+        with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
                         return_value=[dump_file_desc]):
             ret = decode._find_all_debug_files()
         self.assertEqual(ret, True)
 
-        with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_dump_files', return_value=[]):
+        with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_dump_files', return_value=[]):
             ret = decode._find_all_debug_files()
         self.assertEqual(ret, CompareError.MSACCUCMP_NONE_ERROR)
 
@@ -111,17 +111,17 @@ class TestUtilsMethods(unittest.TestCase):
         decode.debug_files = ["/home/testfile1", "home/testfile2", "home/testfile3"]
 
         dump_file_desc = file_utils.ParsedDumpFileDesc(file_desc, dump_attr, {})
-        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._find_all_debug_files',
+        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._find_all_debug_files',
                         return_value=True):
-            with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._get_parsed_debug_file',
+            with mock.patch('overflow.overflow_analyse.OverflowAnalyse._get_parsed_debug_file',
                             return_value=dump_file_desc):
-                with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.FileUtils.load_json_file',
+                with mock.patch('cmp_utils.file_utils.FileUtils.load_json_file',
                                 return_value=''):
-                    with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.FileUtils.load_json_file',
+                    with mock.patch('cmp_utils.file_utils.FileUtils.load_json_file',
                                     return_value=''):
-                        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._json_summary',
+                        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._json_summary',
                                         return_value='result_'):
-                            with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.FileUtils.save_file',
+                            with mock.patch('cmp_utils.file_utils.FileUtils.save_file',
                                             return_value=True):
                                 ret = decode.analyse()
         self.assertEqual(ret, CompareError.MSACCUCMP_NONE_ERROR)
@@ -249,7 +249,7 @@ class TestUtilsMethods(unittest.TestCase):
             "stream_id": '25'
         }
         debug_file_desc = file_utils.DumpFileDesc(file_desc, dump_attr)
-        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
+        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
                         side_effect=CompareError(CompareError.MSACCUCMP_NO_DUMP_FILE_ERROR)):
             ret = decode._json_summary(overflow_index, json_txt, debug_file_desc)
         print(ret)
@@ -302,7 +302,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
 
         debug_file_desc = file_utils.DumpFileDesc(file_desc, dump_attr)
-        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
+        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
                         side_effect=CompareError(CompareError.MSACCUCMP_NO_DUMP_FILE_ERROR)):
             ret = decode._json_summary(overflow_index, json_txt, debug_file_desc)
         print(ret)
@@ -358,11 +358,11 @@ class TestUtilsMethods(unittest.TestCase):
         }
         parsed_dump_file_desc = file_utils.ParsedDumpFileDesc(file_desc, dump_attr, anchor)
         np_summary_result = '[Shape: (3, 4)] [Dtype: int64] [Max: 6] [Min: 1] [Mean: 3.5]'
-        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
+        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._find_dump_files_by_task_id',
                         return_value=debug_file_desc):
-            with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._get_parsed_dump_file',
+            with mock.patch('overflow.overflow_analyse.OverflowAnalyse._get_parsed_dump_file',
                             return_value=[parsed_dump_file_desc]):
-                with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse.npy_data_summary',
+                with mock.patch('overflow.overflow_analyse.OverflowAnalyse.npy_data_summary',
                                 return_value=np_summary_result):
                     ret = decode._json_summary(overflow_index, json_txt, debug_file_desc)
         print(ret)
@@ -381,7 +381,7 @@ class TestUtilsMethods(unittest.TestCase):
         args.output_path = "/home"
         args.top_num = 2
         decode = overflow_analyse.OverflowAnalyse(args)
-        with mock.patch('msprobe.msaccucmp.dump_parse.dump_data_parser.DumpDataParser.parse_dump_data',
+        with mock.patch('dump_parse.dump_data_parser.DumpDataParser.parse_dump_data',
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
             ret = decode._parse_overflow_file("/home", "/home")
         self.assertEqual(ret, CompareError.MSACCUCMP_NONE_ERROR)
@@ -414,9 +414,9 @@ class TestUtilsMethods(unittest.TestCase):
         parsed_debug_file_desc = file_utils.ParsedDumpFileDesc(file_desc, dump_attr, anchor)
 
         with mock.patch('os.path.basename', return_value='Opdebug.Node_OpDebug.1.25.161233160'):
-            with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
+            with mock.patch('overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
                             return_value=''):
-                with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_parsed_debug_files',
+                with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_parsed_debug_files',
                                 side_effect=iter([{},
                                                   {'Opdebug.Node_OpDebug.1.25.161233160.output'
                                                    '.0.json': parsed_debug_file_desc}])):
@@ -443,9 +443,9 @@ class TestUtilsMethods(unittest.TestCase):
 
         with pytest.raises(CompareError) as err:
             with mock.patch('os.path.basename', return_value='Opdebug.Node_OpDebug.1.25.161233160'):
-                with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
+                with mock.patch('overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
                                 return_value=''):
-                    with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_parsed_debug_files',
+                    with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_parsed_debug_files',
                                     side_effect=iter([{}, {}])):
                         ret = decode._get_parsed_debug_file(debug_file_desc)
         self.assertEqual(err.value.args[0],
@@ -478,20 +478,20 @@ class TestUtilsMethods(unittest.TestCase):
             "format": 'NCHW'
         }
         parsed_dump_file_desc = file_utils.ParsedDumpFileDesc(file_desc, dump_attr, anchor)
-        with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
+        with mock.patch('overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
                         return_value=''):
             with mock.patch('os.path.basename', return_value='convolution.cov2d.1.25.161233160'):
-                with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_parsed_dump_files',
+                with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_parsed_dump_files',
                                 return_value={'convolution.cov2d.1.25.161233160.output'
                                               '.0.npy': parsed_dump_file_desc}):
                     ret = decode._get_parsed_dump_file(dump_file_desc)
         self.assertEqual(ret, [parsed_dump_file_desc])
 
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
+            with mock.patch('overflow.overflow_analyse.OverflowAnalyse._parse_overflow_file',
                             return_value=''):
                 with mock.patch('os.path.basename', return_value='convolution.cov2d.1.25.161233160'):
-                    with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_parsed_dump_files',
+                    with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_parsed_dump_files',
                                     return_value={}):
                         ret = decode._get_parsed_dump_file(dump_file_desc)
         self.assertEqual(err.value.args[0],
@@ -515,13 +515,13 @@ class TestUtilsMethods(unittest.TestCase):
             "stream_id": '25'
         }
         dump_file_desc = file_utils.DumpFileDesc(file_desc, dump_attr)
-        with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
+        with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
                         return_value=[dump_file_desc]):
             ret = decode._find_dump_files_by_task_id('/test/', (12, 25, None, None))
         self.assertEqual(ret, dump_file_desc)
 
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
+            with mock.patch('cmp_utils.file_utils.OverflowFileUtils.list_dump_files',
                             return_value=[dump_file_desc]):
                 ret = decode._find_dump_files_by_task_id('/test/', (12, 24, None, None))
         self.assertEqual(err.value.args[0],

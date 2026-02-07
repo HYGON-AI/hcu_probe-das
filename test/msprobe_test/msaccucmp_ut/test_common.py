@@ -19,9 +19,9 @@ import unittest
 import pytest
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils import common
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils import common
+from cmp_utils.constant.const_manager import DD
+from cmp_utils.constant.compare_error import CompareError
 
 
 class TestUtilsMethods(unittest.TestCase):

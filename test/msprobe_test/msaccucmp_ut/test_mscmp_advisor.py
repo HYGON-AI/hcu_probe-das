@@ -18,11 +18,11 @@ import unittest
 from unittest import mock
 import pandas as pd
 
-from msprobe.msaccucmp.advisor.advisor_const import AdvisorConst
-from msprobe.msaccucmp.advisor.compare_advisor import CompareAdvisor
-from msprobe.msaccucmp.advisor.advisor_result import AdvisorResult
-from msprobe.msaccucmp import mscmp_advisor
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from advisor.advisor_const import AdvisorConst
+from advisor.compare_advisor import CompareAdvisor
+from advisor.advisor_result import AdvisorResult
+import mscmp_advisor
+from cmp_utils.constant.compare_error import CompareError
 
 result = AdvisorResult()
 
@@ -35,9 +35,9 @@ class TestUtilsMethods(unittest.TestCase):
         data = {"Index": ['0', '1', '2'],
                 "CosineSimilarity": [0.99, 0.99, 0.99]}
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor._parse_input_file',
+            with mock.patch('advisor.compare_advisor.CompareAdvisor._parse_input_file',
                             return_value=pd.DataFrame(data)):
-                with mock.patch("msprobe.msaccucmp.advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
+                with mock.patch("advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
                     compare_advisor = CompareAdvisor("input_file.csv")
                     advisor_result = compare_advisor.advisor()
                     advisor_result.print_advisor_log()
@@ -52,9 +52,9 @@ class TestUtilsMethods(unittest.TestCase):
         data = {"Index": ['0', '1', '2'],
                 "CosineSimilarity": [0.98, 0.99, 0.98]}
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor._parse_input_file',
+            with mock.patch('advisor.compare_advisor.CompareAdvisor._parse_input_file',
                             return_value=pd.DataFrame(data)):
-                with mock.patch("msprobe.msaccucmp.advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
+                with mock.patch("advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
                     compare_advisor = CompareAdvisor("input_file.csv")
                     advisor_result = compare_advisor.advisor()
                     advisor_result.print_advisor_log()
@@ -69,9 +69,9 @@ class TestUtilsMethods(unittest.TestCase):
         data = {"Index": ['0', '1', '2'],
                 "CosineSimilarity": [0.98, 0.99, 0.99]}
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor._parse_input_file',
+            with mock.patch('advisor.compare_advisor.CompareAdvisor._parse_input_file',
                             return_value=pd.DataFrame(data)):
-                with mock.patch("msprobe.msaccucmp.advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
+                with mock.patch("advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
                     compare_advisor = CompareAdvisor("input_file.csv")
                     advisor_result = compare_advisor.advisor()
                     advisor_result.print_advisor_log()
@@ -87,9 +87,9 @@ class TestUtilsMethods(unittest.TestCase):
                 "CosineSimilarity": [0.98, 0.99, 0.99],
                 "OverFlow": ["NO", "YES", "NO"]}
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor._parse_input_file',
+            with mock.patch('advisor.compare_advisor.CompareAdvisor._parse_input_file',
                             return_value=pd.DataFrame(data)):
-                with mock.patch("msprobe.msaccucmp.advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
+                with mock.patch("advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
                     compare_advisor = CompareAdvisor("input_file.csv")
                     advisor_result = compare_advisor.advisor()
                     advisor_result.print_advisor_log()
@@ -105,9 +105,9 @@ class TestUtilsMethods(unittest.TestCase):
                 "CosineSimilarity": [0.98, 0.95, 0.99],
                 "NPUDump": ["good", "error_node", "good"]}
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor._parse_input_file',
+            with mock.patch('advisor.compare_advisor.CompareAdvisor._parse_input_file',
                             return_value=pd.DataFrame(data)):
-                with mock.patch("msprobe.msaccucmp.advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
+                with mock.patch("advisor.advisor_result.AdvisorResult.gen_summary_file", return_value=True):
                     compare_advisor = CompareAdvisor("input_file.csv", ["error_node"])
                     advisor_result = compare_advisor.advisor()
                     advisor_result.print_advisor_log()
@@ -119,9 +119,9 @@ class TestUtilsMethods(unittest.TestCase):
 
 class TestMscmpAdvisorFuncs(unittest.TestCase):
 
-    @mock.patch("msprobe.msaccucmp.advisor.compare_advisor.CompareAdvisor.advisor")
-    @mock.patch("msprobe.msaccucmp.mscmp_advisor._check_input_file", return_value=None)
-    @mock.patch("msprobe.msaccucmp.mscmp_advisor.check_file_size", return_value=None)
+    @mock.patch("advisor.compare_advisor.CompareAdvisor.advisor")
+    @mock.patch("mscmp_advisor._check_input_file", return_value=None)
+    @mock.patch("mscmp_advisor.check_file_size", return_value=None)
     def test_output_path_when_is_softlink_then_rasie_error(self, mock1, mock2, mock3):
         def mock_print_advisor_log():
             return ['TEST']

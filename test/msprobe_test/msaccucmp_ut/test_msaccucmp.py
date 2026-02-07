@@ -21,9 +21,9 @@ import tempfile
 
 import pytest
 
-from msprobe.msaccucmp import msaccucmp
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.pytorch_cmp.compare_pytorch import PytorchComparison
+import msaccucmp
+from cmp_utils.constant.compare_error import CompareError
+from pytorch_cmp.compare_pytorch import PytorchComparison
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestUtilsMethods(unittest.TestCase):
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
                 with mock.patch('os.path.isfile', return_value=True):
-                    with mock.patch("msprobe.msaccucmp.msaccucmp._check_dump_path_exist"):
+                    with mock.patch("msaccucmp._check_dump_path_exist"):
                         with mock.patch('os.stat', return_value=self.mock_stat_result):
                             msaccucmp.main()
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_PATH_ERROR)
@@ -46,7 +46,7 @@ class TestUtilsMethods(unittest.TestCase):
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
                 with mock.patch('os.path.isfile', return_value=False):
-                    with mock.patch("msprobe.msaccucmp.msaccucmp._check_dump_path_exist"):
+                    with mock.patch("msaccucmp._check_dump_path_exist"):
                         msaccucmp.main()
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_ALGORITHM_ERROR)
 
@@ -219,16 +219,16 @@ class TestUtilsMethods(unittest.TestCase):
         args.op_name = "data"
         args.post_process = 0
         with pytest.raises(CompareError) as error:
-            with mock.patch("msprobe.msaccucmp.msaccucmp._check_hdf5_file_valid", return_value=False):
+            with mock.patch("msaccucmp._check_hdf5_file_valid", return_value=False):
                 with mock.patch("os.path.isfile", return_value=False):
                     with mock.patch("os.path.exists", return_value=False):
-                        with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid",
+                        with mock.patch("cmp_utils.path_check.check_path_valid",
                                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
                             msaccucmp.start_compare(args)
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_PARAM_ERROR)
     
     @mock.patch('os.path.getsize', return_value=209715200)
-    @mock.patch('msprobe.msaccucmp.msaccucmp._check_hdf5_file_valid', return_value=True)
+    @mock.patch('msaccucmp._check_hdf5_file_valid', return_value=True)
     def test_start_compare_when_file_size_exceed_limit_then_pass(self,
                                                                  mock_check_hdf5_file_valid,
                                                                  mock_getsize):        
@@ -253,7 +253,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(mock_getsize.call_count, 2)
     
     @mock.patch('os.path.getsize', return_value=5200)
-    @mock.patch('msprobe.msaccucmp.msaccucmp._check_hdf5_file_valid', return_value=True)
+    @mock.patch('msaccucmp._check_hdf5_file_valid', return_value=True)
     def test_start_compare_when_permission_not_valid(self,
                                                      mock_check_hdf5_file_valid,
                                                      mock_getsize):  
@@ -286,9 +286,9 @@ class TestUtilsMethods(unittest.TestCase):
         args = ['aaa.py', 'overflow', '-d', '/home/left.bin', '-out', '/home/output', '-n', '1']
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
-                with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse.check_argument',
+                with mock.patch('overflow.overflow_analyse.OverflowAnalyse.check_argument',
                                 return_value=CompareError.MSACCUCMP_NONE_ERROR):
-                    with mock.patch('msprobe.msaccucmp.overflow.overflow_analyse.OverflowAnalyse.analyse',
+                    with mock.patch('overflow.overflow_analyse.OverflowAnalyse.analyse',
                                     return_value=CompareError.MSACCUCMP_NONE_ERROR):
                         msaccucmp.main()
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_NONE_ERROR)
@@ -309,7 +309,7 @@ class TestUtilsMethods(unittest.TestCase):
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
                 with mock.patch("os.path.exists", return_value=False):
-                    with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid", return_value=0):
+                    with mock.patch("cmp_utils.path_check.check_path_valid", return_value=0):
                         msaccucmp.main()
         self.assertEqual(error.value.args[0],
                          CompareError.MSACCUCMP_INVALID_TYPE_ERROR)
@@ -319,8 +319,8 @@ class TestUtilsMethods(unittest.TestCase):
                 '/home/right.npy', '-out', '/home/output']
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
-                with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid", return_value=0):
-                    with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid", return_value=0):
+                with mock.patch("cmp_utils.path_check.check_path_valid", return_value=0):
+                    with mock.patch("cmp_utils.path_check.check_output_path_valid", return_value=0):
                         msaccucmp.main()
         self.assertEqual(error.value.args[0],
                          CompareError.MSACCUCMP_DUMP_FILE_ERROR)
@@ -371,7 +371,7 @@ class TestUtilsMethods(unittest.TestCase):
                 '/home/right.bin', '-f', '', '--max_line', '100']
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
-                with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid", return_value=0):
+                with mock.patch("cmp_utils.path_check.check_path_valid", return_value=0):
                     msaccucmp.main()
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_PARAM_ERROR)
 
@@ -380,7 +380,7 @@ class TestUtilsMethods(unittest.TestCase):
                 '/home/right.bin', '-f', '', '--max_line', '10000000']
         with pytest.raises(SystemExit) as error:
             with mock.patch('sys.argv', args):
-                with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_path_valid", return_value=0):
+                with mock.patch("cmp_utils.path_check.check_path_valid", return_value=0):
                     msaccucmp.main()
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_PARAM_ERROR)
 

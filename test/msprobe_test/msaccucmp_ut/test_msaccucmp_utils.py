@@ -25,16 +25,16 @@ import pytest
 import numpy as np
 from google.protobuf.message import DecodeError
 
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.cmp_utils import log
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
-from msprobe.msaccucmp.dump_parse.big_dump_data import BigDumpDataParser
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.multi_process.progress import Progress
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping, dump_data_object
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
+from cmp_utils import utils, utils_type, path_check
+from cmp_utils import log
+from vector_cmp.fusion_manager import fusion_op
+from dump_parse.big_dump_data import BigDumpDataParser
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.multi_process.progress import Progress
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse import dump, dump_utils, mapping, dump_data_object
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from cmp_utils.constant.const_manager import DD
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -131,7 +131,7 @@ class TestUtilsMethods(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertEqual(value, utils.sanitize_csv_value(value))
 
-    @mock.patch("msprobe.msaccucmp.cmp_utils.common.get_dtype_by_data_type")
+    @mock.patch("cmp_utils.common.get_dtype_by_data_type")
     def test_deserialize_dump_data_to_array(self, mock_common):
         mock_common.return_value = np.uint8
         op_output = mock.Mock()
@@ -154,7 +154,7 @@ class TestUtilsMethods(unittest.TestCase):
     
     @patch('os.stat')
     @patch('os.getuid', return_value=100)
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_check_exec_file_valid_when_not_owner(self, mock_error, mock_getuid, mock_os_stat):
         exist_path = "path"
         mock_os_stat.return_value = MagicMock(st_uid=1000)
@@ -165,7 +165,7 @@ class TestUtilsMethods(unittest.TestCase):
     @patch('os.stat')
     @patch('os.getuid', return_value=1000)
     @patch('os.getgroups', return_value=[100, 200])
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_check_exec_file_valid_when_not_in_group(self, mock_error, mock_getgroups, mock_getuid, mock_os_stat):
         exist_path = "path"
         mock_os_stat.return_value = MagicMock(st_uid=1000)
@@ -176,7 +176,7 @@ class TestUtilsMethods(unittest.TestCase):
     @patch('os.stat')
     @patch('os.getuid', return_value=1000)
     @patch('os.getgroups', return_value=[1000, 2000])
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_others_permission', return_value=9)
+    @patch('cmp_utils.path_check.check_others_permission', return_value=9)
     def test_check_exec_file_valid_when_not_none_error(self, mock_check_others_permission, 
                                                             mock_getgroups, mock_getuid, mock_os_stat):
         exist_path = "path"
@@ -189,8 +189,8 @@ class TestUtilsMethods(unittest.TestCase):
     @patch('os.stat')
     @patch('os.getuid', return_value=1000)
     @patch('os.getgroups', return_value=[1000, 2000])
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_others_permission', return_value=0)
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value="hhh")
+    @patch('cmp_utils.path_check.check_others_permission', return_value=0)
+    @patch('cmp_utils.path_check.check_path_valid', return_value="hhh")
     def test_check_exec_file_valid_when_correct_input(self, mock_check_path_valid, 
                                         mock_check_others_permission, mock_getgroups, mock_getuid, mock_os_stat):
         exist_path = "path"
@@ -206,7 +206,7 @@ class TestUtilsMethods(unittest.TestCase):
         assert context.exception.args[0] == f"custom path is deep then {ConstManager.MAX_WALK_DIR_DEEP_NUM}"
     
     @patch('os.walk', return_value=[["z/z"*10, 1, ['1']]])
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid', return_value=9)
+    @patch('cmp_utils.path_check.check_exec_file_valid', return_value=9)
     def test_check_path_all_file_exec_valid_when_raise_raise_compare_error_ret(self, 
                                                                         mock_check_exec_file_valid, mock_os_walk):
         custom_path = "path"
@@ -215,8 +215,8 @@ class TestUtilsMethods(unittest.TestCase):
         assert context.exception.args[0] == CompareError.MSACCUCMP_OPEN_DIR_ERROR
     
     @patch('os.walk', return_value=[["z/z"*10, 1, ['1']*2000]])
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid', return_value=0)
-    @patch('msprobe.msaccucmp.cmp_utils.utils.check_file_size', return_value=True)
+    @patch('cmp_utils.path_check.check_exec_file_valid', return_value=0)
+    @patch('cmp_utils.utils.check_file_size', return_value=True)
     def test_check_path_all_file_exec_valid_when_input_too_much_files(self, mock_check_file_size, 
                                                                             mock_check_exec_file_valid, mock_os_walk):
         custom_path = "path"
@@ -225,8 +225,8 @@ class TestUtilsMethods(unittest.TestCase):
         assert context.exception.args[0] == f"file count in custom path is more then {ConstManager.MAX_WALK_FILE_NUM}"
 
     @patch('os.walk', return_value=[["z/z"*10, ["1"], []]])
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_exec_file_valid', return_value=1)
-    @patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=9)
+    @patch('cmp_utils.path_check.check_exec_file_valid', return_value=1)
+    @patch('cmp_utils.path_check.check_path_valid', return_value=9)
     def test_check_path_all_file_exec_valid_when_input_dir_not_valid(self, mock_check_path_valid, 
                                                                             mock_check_exec_file_valid, mock_os_walk):
         custom_path = "path"
@@ -260,22 +260,22 @@ class TestUtilsMethods(unittest.TestCase):
         mock_os_stat.return_value = MagicMock(st_mode=0o000)
         self.assertFalse(path_check.is_group_and_others_writable(path))
 
-    @patch("msprobe.msaccucmp.cmp_utils.path_check.is_same_owner", return_value=True)
-    @patch("msprobe.msaccucmp.cmp_utils.path_check.is_group_and_others_writable", return_value=False)
+    @patch("cmp_utils.path_check.is_same_owner", return_value=True)
+    @patch("cmp_utils.path_check.is_group_and_others_writable", return_value=False)
     def test_is_parent_dir_has_right_permission_both_true(self,     
                                                         mock_is_group_and_others_writable, mock_is_same_owner):
         path = "path"
         self.assertTrue(path_check.is_parent_dir_has_right_permission(path))
     
-    @patch("msprobe.msaccucmp.cmp_utils.path_check.is_same_owner", return_value=True)
-    @patch("msprobe.msaccucmp.cmp_utils.path_check.is_group_and_others_writable", return_value=True)
+    @patch("cmp_utils.path_check.is_same_owner", return_value=True)
+    @patch("cmp_utils.path_check.is_group_and_others_writable", return_value=True)
     def test_is_parent_dir_has_right_permission_both_false(self, 
                                                         mock_is_group_and_others_writable, mock_is_same_owner):
         path = "path"
         self.assertFalse(path_check.is_parent_dir_has_right_permission(path))
     
     @patch('os.stat')
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_check_others_permission_when_groups_have_write_premission(self, mock_error, mock_os_stat):
         exist_path = "path"
         mock_os_stat.return_value = MagicMock(st_gid=1, st_mode=stat.S_IWGRP)
@@ -285,7 +285,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(ret, CompareError.MSACCUCMP_INVALID_PATH_ERROR)
     
     @patch('os.stat')
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_check_others_permission_when_others_have_write_premission(self, mock_error, mock_os_stat):
         exist_path = "path"
         mock_os_stat.return_value = MagicMock(st_gid=0, st_mode=stat.S_IWOTH)
@@ -295,7 +295,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(ret, CompareError.MSACCUCMP_INVALID_PATH_ERROR)
     
     @patch('os.stat')
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_check_others_permission_when_premission_right(self, mock_error, mock_os_stat):
         exist_path = "path"
         mock_os_stat.return_value = MagicMock(st_gid=0, st_mode=0)
@@ -323,7 +323,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_read_numpy_file1(self):
         dump_data = np.arange(2)
         with mock.patch('numpy.loadtxt', return_value=dump_data):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                     mock.patch('os.path.getsize', return_value=12):
                 ret = dump_utils.read_numpy_file('/home/a.txt')
@@ -340,7 +340,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_read_numpy_file3(self):
         dump_data = np.arange(2)
         with mock.patch('numpy.load', return_value=dump_data):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                     mock.patch('os.path.getsize', return_value=12):
                 ret = dump_utils.read_numpy_file('/home/a.bin')
@@ -350,7 +350,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_read_numpy_file4(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                     mock.patch('os.path.getsize', return_value=12):
                 with mock.patch('numpy.load', side_effect=ValueError):
@@ -360,7 +360,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_read_numpy_file5(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                     mock.patch('os.path.getsize', return_value=12):
                 with mock.patch('numpy.load', side_effect=UnicodeDecodeError):
@@ -370,7 +370,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_read_numpy_file6(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                     mock.patch('os.path.getsize', return_value=12):
                 with mock.patch('numpy.loadtxt', side_effect=UnicodeDecodeError):
@@ -382,7 +382,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data = np.arange(2)
         with pytest.raises(CompareError) as error:
             with mock.patch('numpy.loadtxt', return_value=dump_data):
-                with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+                with mock.patch('cmp_utils.path_check.check_path_valid',
                                 return_value=CompareError.MSACCUCMP_NONE_ERROR), \
                         mock.patch('os.path.getsize', return_value=0):
                     ret = dump_utils.read_numpy_file('/home/a.txt')
@@ -478,7 +478,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_parse_dump_file1(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_INVALID_PATH_ERROR):
                 dump_utils.parse_dump_file('/home', 2)
         self.assertEqual(error.value.args[0],
@@ -486,9 +486,9 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_parse_dump_file2(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
-                with mock.patch('msprobe.msaccucmp.dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
+                with mock.patch('dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
                                 return_value=False):
                     with mock.patch('builtins.open', side_effect=IOError):
                         dump_utils.parse_dump_file('/home', 2)
@@ -497,9 +497,9 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_parse_dump_file3(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
-                with mock.patch('msprobe.msaccucmp.dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
+                with mock.patch('dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
                                 return_value=False):
                     with mock.patch('os.path.getsize', return_value=0):
                         dump_utils.parse_dump_file('/home/a.dump', 2)
@@ -517,9 +517,9 @@ class TestUtilsMethods(unittest.TestCase):
                 {"data_type": 2, "size": 8}
             ]
         }
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+        with mock.patch('cmp_utils.path_check.check_path_valid',
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
-            with mock.patch('msprobe.msaccucmp.dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
+            with mock.patch('dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
                             return_value=False):
                 with mock.patch('os.path.getsize', return_value=10):
                     with mock.patch('builtins.open', mock.mock_open(read_data="0")):
@@ -540,7 +540,7 @@ class TestUtilsMethods(unittest.TestCase):
                 {"data_type": 2, "size": 8}
             ]
         }
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+        with mock.patch('cmp_utils.path_check.check_path_valid',
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
             with mock.patch('os.path.getsize', return_value=10):
                 with mock.patch('builtins.open', mock.mock_open(read_data="0")):
@@ -554,11 +554,11 @@ class TestUtilsMethods(unittest.TestCase):
         self._set_op_output(output, DD.FORMAT_NC1HWC0, [1, 3, 2, 2, 2])
         dump_data_ser = dump_data.SerializeToString()
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.path.getsize', return_value=len(dump_data_ser)):
                     with mock.patch('builtins.open', mock.mock_open(read_data=dump_data_ser)):
-                        with mock.patch('msprobe.msaccucmp.dump_parse.proto_dump_data.DumpData.ParseFromString', return_value=1000):
+                        with mock.patch('dump_parse.proto_dump_data.DumpData.ParseFromString', return_value=1000):
                             dump_utils.parse_dump_file('/home/a.dump', 0)
         self.assertEqual(error.value.args[0],
                          CompareError.MSACCUCMP_INVALID_DUMP_DATA_ERROR)
@@ -569,24 +569,24 @@ class TestUtilsMethods(unittest.TestCase):
         self._set_op_output(output, DD.FORMAT_NC1HWC0, [1, 3, 2, 2, 2])
         dump_data_ser = dump_data.SerializeToString()
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.path.getsize',
                                 return_value=len(dump_data_ser)):
                     with mock.patch('builtins.open',
                                     mock.mock_open(read_data=dump_data_ser)):
                         with mock.patch(
-                                'msprobe.msaccucmp.dump_parse.proto_dump_data.DumpData.ParseFromString',
+                                'dump_parse.proto_dump_data.DumpData.ParseFromString',
                                 side_effect=DecodeError):
                             dump_utils.parse_dump_file('/home/a.dump', 0)
         self.assertEqual(error.value.args[0],
                          CompareError.MSACCUCMP_INVALID_DUMP_DATA_ERROR)
 
     def test_parse_dump_file8(self):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR):
+        with mock.patch('cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR):
             with mock.patch('os.path.getsize', return_value=1210):
                 with mock.patch('numpy.load', return_value=np.ones([1, 3, 2, 2])):
-                    with mock.patch('msprobe.msaccucmp.dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
+                    with mock.patch('dump_parse.nano_dump_data.NanoDumpDataHandler.check_is_nano_dump_format',
                                     return_value=False):
                         dump_data = dump_utils.parse_dump_file('/home/a.npy', 0)
         self.assertEqual(dump_data.output_data[0].shape[1], 3)
@@ -679,27 +679,27 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, utils_type.ShapeType.Tensor)
 
     def test_get_path_list_for_str1(self):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+        with mock.patch('cmp_utils.path_check.check_path_valid',
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
             path_list = path_check.get_path_list_for_str('/home/a.bin')
         self.assertEqual(1, len(path_list))
 
     def test_get_path_list_for_str2(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_UNKNOWN_ERROR):
                 path_check.get_path_list_for_str('/home/a.bin')
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_UNKNOWN_ERROR)
 
     def test_get_path_list_for_str3(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_UNKNOWN_ERROR):
                 path_check.get_path_list_for_str('/home/a.bin,/home/b.bin')
         self.assertEqual(error.value.args[0], CompareError.MSACCUCMP_INVALID_PATH_ERROR)
 
     def test_get_path_list_for_str4(self):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+        with mock.patch('cmp_utils.path_check.check_path_valid',
                         return_value=CompareError.MSACCUCMP_NONE_ERROR):
             path_list = path_check.get_path_list_for_str('/home/a.bin,/home/b.bin')
         self.assertEqual(2, len(path_list))

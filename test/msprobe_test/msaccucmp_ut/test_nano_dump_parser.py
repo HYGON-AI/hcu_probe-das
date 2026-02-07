@@ -21,8 +21,8 @@ import stat
 from msaccucmp_ut.resource.concatV2D import binary_stream_concatV2D
 import pytest
 
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse import dump_utils
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse import dump_utils
 
 OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 OPEN_MODES = stat.S_IWUSR | stat.S_IRUSR

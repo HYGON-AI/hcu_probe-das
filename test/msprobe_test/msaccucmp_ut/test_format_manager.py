@@ -21,12 +21,12 @@ import pytest
 
 import numpy as np
 
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.format_manager.format_manager import ShapeConversion
-from msprobe.msaccucmp.format_manager.format_manager import SrcToDest
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpTensor
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
+from format_manager.format_manager import FormatManager
+from format_manager.format_manager import ShapeConversion
+from format_manager.format_manager import SrcToDest
+from dump_parse.dump_data_object import DumpTensor
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import DD
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -64,14 +64,14 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_arguments_valid2(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=2):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=2):
                 manager = FormatManager("/home/gzj")
                 manager.check_arguments_valid()
         self.assertEqual(error.value.args[0], 2)
 
     def test_check_arguments_valid3(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.path.exists', return_value=False):
                     manager = FormatManager("/home/gzj")
@@ -80,7 +80,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_arguments_valid4(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.listdir',
                                 return_value=['xxx', 'ccc', 'ddd', 'eee']), \
@@ -92,7 +92,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_arguments_valid5(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.listdir',
                                 return_value=['xxx', 'ccc', 'ddd', 'eee']), \
@@ -104,7 +104,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_arguments_valid6(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.listdir',
                                 return_value=['convert_xxx_to_yyx.py',
