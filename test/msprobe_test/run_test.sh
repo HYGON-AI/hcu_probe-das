@@ -19,7 +19,6 @@ install_pytest() {
 run_ut() {
     install_pytest
 
-    export PYTHONPATH=${SRC_DIR}:${PYTHONPATH}
     python3 run_ut.py
 }
 

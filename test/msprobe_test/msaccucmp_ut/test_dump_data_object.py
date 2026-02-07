@@ -17,8 +17,8 @@
 import unittest
 from unittest.mock import patch
 import numpy as np
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.dump_parse.dump_data_object import build_dump_tensor, _deserialize_dump_data_fp_low_to_array
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from dump_parse.dump_data_object import build_dump_tensor, _deserialize_dump_data_fp_low_to_array
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -49,19 +49,19 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result.shape, (0,))
  
     def test_deserialize_dump_data_fp_low_to_array_given_shape_when_float8_e4m3fn_then_return_correct_array(self):
-        with patch('msprobe.msaccucmp.cmp_utils.common.get_dtype_by_data_type', return_value="float8_e4m3fn"):
+        with patch('cmp_utils.common.get_dtype_by_data_type', return_value="float8_e4m3fn"):
             result = _deserialize_dump_data_fp_low_to_array(self.mock_float8e4m3fn.tobytes(), 'float8_e4m3fn', [1])
             self.assertEqual(result[0], 1.5)
             self.assertEqual(result.shape, (1,))
  
     def test_deserialize_dump_data_fp_low_to_array_given_shape_when_hifloat8_then_return_correct_array(self):
-        with patch('msprobe.msaccucmp.cmp_utils.common.get_dtype_by_data_type', return_value="float8_e5m2"):
+        with patch('cmp_utils.common.get_dtype_by_data_type', return_value="float8_e5m2"):
             result = _deserialize_dump_data_fp_low_to_array(self.mock_float8e5m2.tobytes(), 'float8_e5m2', [1])
             self.assertEqual(result[0], 5.0)
             self.assertEqual(result.shape, (1,))
  
     def test_deserialize_dump_data_fp_low_to_array_given_shape_when_float8_e5m2_then_return_correct_array(self):
-        with patch('msprobe.msaccucmp.cmp_utils.common.get_dtype_by_data_type', return_value="hifloat8"):
+        with patch('cmp_utils.common.get_dtype_by_data_type', return_value="hifloat8"):
             result = _deserialize_dump_data_fp_low_to_array(self.mock_hifloat8, 'hifloat8', [1])
             self.assertEqual(result[0], 16.0)
             self.assertEqual(result.shape, (1,))

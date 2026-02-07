@@ -16,7 +16,7 @@
 
 import base64
 import unittest
-from msprobe.msaccucmp.dump_parse.proto_dump_data import (
+from dump_parse.proto_dump_data import (
     DumpData, OpOutput, OpInput, OpBuffer, OpAttr, Workspace,
     Shape, RepeatedField, OriginalOp, DimRange, fill_dump_data
 )

@@ -23,12 +23,12 @@ import pytest
 from unittest import mock
 import numpy as np
 
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.dump_parse import dump_data_parser as DP
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager
+from dump_parse import dump_data_parser as DP
+from dump_parse import dump, dump_utils, mapping
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from cmp_utils.constant.const_manager import DD
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -108,24 +108,24 @@ class TestUtilsMethods(unittest.TestCase):
     @staticmethod
     def _base_mock_run(run_func, dump_data):
         non_error = CompareError.MSACCUCMP_NONE_ERROR
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=non_error):
-            with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid", return_value=non_error):
-                with mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data):
+        with mock.patch('cmp_utils.path_check.check_path_valid', return_value=non_error):
+            with mock.patch("cmp_utils.path_check.check_output_path_valid", return_value=non_error):
+                with mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data):
                     with mock.patch("os.path.isfile", return_value=True), mock.patch('os.fdopen'):
                         return run_func()
 
     def test_check_arguments_valid_check_path_valid(self):
         arguments = self._fake_arguments()
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=1):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=1):
                 DP.DumpDataParser(arguments).check_arguments_valid()
         self.assertEqual(error.value.args[0], 1)
 
     def test_check_arguments_valid_check_output_path_valid(self):
         arguments = self._fake_arguments()
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
-                with mock.patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid", return_value=1):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
+                with mock.patch("cmp_utils.path_check.check_output_path_valid", return_value=1):
                     DP.DumpDataParser(arguments).check_arguments_valid()
         self.assertEqual(error.value.args[0], 1)
 
@@ -235,8 +235,8 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(ret, CompareError.MSACCUCMP_NONE_ERROR)
 
     def test_when_parse_invalid_thread_id_then_raise_error(self):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR), \
-                mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file',
+        with mock.patch('cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR), \
+                mock.patch('dump_parse.dump_utils.parse_dump_file',
                            return_value=mock.Mock(get_ffts_mode=True, output_data=None)):
             arguments = self._fake_arguments(dump_path='/home/Opdebug.OpDebug.a.invalid_thread_id')
             dump_data = self._fake_uint8_dump_data()

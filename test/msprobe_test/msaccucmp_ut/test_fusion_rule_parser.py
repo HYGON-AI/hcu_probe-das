@@ -20,11 +20,11 @@ import uuid
 import pytest
 import json
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_rule_parser
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping
+from vector_cmp.fusion_manager import fusion_op
+from cmp_utils import utils, utils_type, path_check
+from vector_cmp.fusion_manager import fusion_rule_parser
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse import dump, dump_utils, mapping
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -433,7 +433,7 @@ class TestUtilsMethods(unittest.TestCase):
         fusion_op_info = fusion_op.FusionOp(
             12, 'conv1colu', ['a:0'], 'Relu', output_desc_list, fusion_op.OpAttr(['conv1', 'conelu'], '', True, 12))
         with mock.patch(
-                'msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.FusionRuleParser.get_fusion_op_list',
+                'vector_cmp.fusion_manager.fusion_rule_parser.FusionRuleParser.get_fusion_op_list',
                 return_value=[[], input_fusion_op]):
             input_tensor = fusion_op_info.get_input_tensor(0)
         self.assertEqual(input_tensor.name, 'a')

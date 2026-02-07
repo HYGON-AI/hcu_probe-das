@@ -20,12 +20,12 @@ import unittest
 from unittest import mock
 import numpy as np
 
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail_writer import MinMaxValue
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail_writer import TopN
-from msprobe.msaccucmp.vector_cmp.compare_detail.detail_writer import DetailWriter
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager
-from msprobe.msaccucmp.vector_cmp.compare_detail import detail
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
+from vector_cmp.compare_detail.detail_writer import MinMaxValue
+from vector_cmp.compare_detail.detail_writer import TopN
+from vector_cmp.compare_detail.detail_writer import DetailWriter
+from cmp_utils.constant.const_manager import ConstManager
+from vector_cmp.compare_detail import detail
+from vector_cmp.fusion_manager import fusion_op
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -201,7 +201,7 @@ class TestUtilsMethods(unittest.TestCase):
         detail_info = detail.DetailInfo(tensor_id, 10, True, ConstManager.MAX_DETAIL_INFO_LINE_COUNT)
         detail_writer = DetailWriter("/home/demo", detail_info)
         with mock.patch("os.path.exists", return_value=True):
-            with mock.patch('msprobe.msaccucmp.dump_parse.mapping.read_mapping_file',
+            with mock.patch('dump_parse.mapping.read_mapping_file',
                             return_value={'1234566.csv': 'conv1conv1_relu_output_0_0.csv',
                                           '999999.csv': 'conv1conv1_relu_output_0_10000.csv',
                                           '6376427478658.csv': 'conv2_relu_output_0_10000.csv'}):

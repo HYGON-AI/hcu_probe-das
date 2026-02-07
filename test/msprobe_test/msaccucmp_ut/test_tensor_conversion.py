@@ -20,13 +20,13 @@ from collections import namedtuple
 import pytest
 import numpy as np
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import Tensor
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.conversion.tensor_conversion import TensorConversion, ConvertSingleTensorFormat
-from msprobe.msaccucmp.dump_parse.dump_data_object import DumpTensor
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
+from vector_cmp.fusion_manager import fusion_op
+from format_manager.format_manager import FormatManager
+from vector_cmp.fusion_manager.fusion_op import Tensor
+from cmp_utils.constant.compare_error import CompareError
+from conversion.tensor_conversion import TensorConversion, ConvertSingleTensorFormat
+from dump_parse.dump_data_object import DumpTensor
+from cmp_utils.constant.const_manager import DD
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -326,7 +326,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertNotEqual(ret, None)
 
     def test_given_nd_target_format_is_None_then_raise_error(self):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.constant.const_manager.ConstManager.STRING_TO_FORMAT_MAP', {}):
+        with mock.patch('cmp_utils.constant.const_manager.ConstManager.STRING_TO_FORMAT_MAP', {}):
             with pytest.raises(CompareError) as error:
                 ConvertSingleTensorFormat()
         self.assertEqual(error.value.args[0],

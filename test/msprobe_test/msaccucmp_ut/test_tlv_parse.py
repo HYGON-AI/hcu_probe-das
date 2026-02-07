@@ -23,8 +23,8 @@ import struct
 
 import pytest
 
-from msprobe.msaccucmp.cmp_utils.tlv_parse import TLV
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from cmp_utils.tlv_parse import TLV
+from cmp_utils.constant.compare_error import CompareError
 
 
 data_type = 0x5a5a5a5a

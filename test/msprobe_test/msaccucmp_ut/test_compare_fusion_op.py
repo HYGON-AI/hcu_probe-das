@@ -26,14 +26,14 @@ import unittest
 from unittest import mock
 import numpy as np
 import struct
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import FusionOp, OutputDesc, OpAttr
-from msprobe.msaccucmp.dump_parse.dump import DumpType
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from vector_cmp.fusion_manager.compare_fusion_op import FusionOpComparison
+from algorithm_manager.algorithm_manager import AlgorithmManager
+from vector_cmp.fusion_manager.fusion_op import FusionOp, OutputDesc, OpAttr
+from dump_parse.dump import DumpType
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import DD
+from dump_parse import dump, dump_utils, mapping
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -62,7 +62,7 @@ class TestUtilsMethods(unittest.TestCase):
         compare_data.left_dump_info.get_op_dump_file = mock.Mock(return_value="/home/demo")
         format_manager = ""
         fusion_op_name = "demo"
-        with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", side_effect=CompareError(1)):
+        with mock.patch("dump_parse.dump_utils.parse_dump_file", side_effect=CompareError(1)):
             FusionOpComparison(fusion_op_name, compare_rule, compare_data,
                                format_manager,
                                {'algorithm_manager': AlgorithmManager('', 'all', '')}).make_gpu_and_npu_mapping_table()
@@ -98,7 +98,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data.output.append(
             self._make_op_output(DD.FORMAT_NCHW, [1, 3, 4, 4]))
         dump_data = dump_utils.convert_dump_data(dump_data)
-        with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
+        with mock.patch("dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
             FusionOpComparison(fusion_op_name, compare_rule, compare_data,
                                format_manager,
                                {'algorithm_manager': AlgorithmManager('', 'all', '')}).make_gpu_and_npu_mapping_table()
@@ -134,7 +134,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data.output.append(
             self._make_op_output(DD.FORMAT_NCHW, [1, 3, 4, 4]))
         dump_data = dump_utils.convert_dump_data(dump_data)
-        with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
+        with mock.patch("dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
             FusionOpComparison(fusion_op_name, compare_rule, compare_data,
                                format_manager,
                                {'algorithm_manager': AlgorithmManager('', 'all', '')}).make_gpu_and_npu_mapping_table()

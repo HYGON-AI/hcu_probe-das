@@ -22,10 +22,10 @@ from unittest import mock
 import numpy as np
 import pytest
 
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
-from msprobe.msaccucmp import dump_data_conversion
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from cmp_utils.constant.const_manager import DD
+import dump_data_conversion
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -46,7 +46,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_arguments_valid1(self):
         args = ['aaa.py', '-i', '/home/left.bin', '-target', 'xxx', '-o', '/home', '-type', 'tf']
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_INVALID_PATH_ERROR):
                 main = dump_data_conversion.DumpDataConversion()
                 ret = main.check_arguments_valid()
@@ -55,7 +55,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_arguments_valid2(self):
         args = ['aaa.py', '-i', '/home/left.bin', '-target', 'xxx', '-o', '/home', '-type', 'tf']
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             side_effect=[CompareError.MSACCUCMP_NONE_ERROR,
                                          CompareError.MSACCUCMP_INVALID_SHAPE_ERROR]):
                 main = dump_data_conversion.DumpDataConversion()
@@ -65,7 +65,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_arguments_valid3(self):
         args = ['aaa.py', '-i', '/home/left.bin', '-target', 'xxx', '-o', '/home', '-type', 'tf']
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 main = dump_data_conversion.DumpDataConversion()
                 ret = main.check_arguments_valid()
@@ -74,7 +74,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_arguments_valid4(self):
         args = ['aaa.py', '-i', '/home/left.bin', '-target', 'numpy', '-o', '/home', '-type', 'tfe']
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 main = dump_data_conversion.DumpDataConversion()
                 ret = main.check_arguments_valid()
@@ -83,7 +83,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_arguments_valid5(self):
         args = ['aaa.py', '-i', '/home/left.bin', '-target', 'numpy', '-o', '/home', '-type', 'tf']
         with mock.patch('sys.argv', args):
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid',
+            with mock.patch('cmp_utils.path_check.check_path_valid',
                             return_value=CompareError.MSACCUCMP_NONE_ERROR):
                 with mock.patch('os.path.exists', return_value=True):
                     with mock.patch('os.remove'):
@@ -132,7 +132,7 @@ class TestUtilsMethods(unittest.TestCase):
         data = struct.pack(
             struct_format, len(dump_data_ser), dump_data_ser, 88)
         with mock.patch('sys.argv', args):
-            with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file", return_value=np.array([1, 2, 3, 4])):
+            with mock.patch("dump_parse.dump_utils.read_numpy_file", return_value=np.array([1, 2, 3, 4])):
                 with mock.patch('os.open') as open_file, \
                         mock.patch('os.fdopen'):
                     with mock.patch('builtins.open',
@@ -151,7 +151,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data.buffer = "buffer_test"
         dump_data.space = "space_test"
         with mock.patch('sys.argv', args):
-            with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
+            with mock.patch("dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
                 main = dump_data_conversion.DumpDataConversion()
                 main._save_tensor_to_file = mock.Mock()
                 main._save_buffer_to_file = mock.Mock()
@@ -167,7 +167,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data.output_data = 'output_test'
         dump_data.buffer = "buffer_test"
         with mock.patch('sys.argv', args):
-            with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
+            with mock.patch("dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
                 main = dump_data_conversion.DumpDataConversion()
                 main._save_tensor_to_file = mock.Mock()
                 main._save_buffer_to_file = mock.Mock(
@@ -183,7 +183,7 @@ class TestUtilsMethods(unittest.TestCase):
         dump_data.output_data = 'output_test'
         dump_data.buffer = "buffer_test"
         with mock.patch('sys.argv', args):
-            with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
+            with mock.patch("dump_parse.dump_utils.parse_dump_file", return_value=dump_data):
                 main = dump_data_conversion.DumpDataConversion()
                 main._save_tensor_to_file = mock.Mock()
                 main._save_buffer_to_file = mock.Mock(side_effect=MemoryError)
@@ -203,7 +203,7 @@ class TestUtilsMethods(unittest.TestCase):
         data = struct.pack(
             struct_format, len(dump_data_ser), dump_data_ser, 88)
         with mock.patch('sys.argv', args):
-            with mock.patch("msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file", return_value=np.array([1, 2, 3, 4])):
+            with mock.patch("dump_parse.dump_utils.read_numpy_file", return_value=np.array([1, 2, 3, 4])):
                 with mock.patch('os.open') as open_file, \
                         mock.patch('os.fdopen'):
                     with mock.patch('builtins.open',

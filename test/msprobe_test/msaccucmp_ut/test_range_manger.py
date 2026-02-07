@@ -18,11 +18,11 @@ import unittest
 import pytest
 from unittest import mock
 
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.vector_cmp.range_manager.range_manager import RangeManager
-from msprobe.msaccucmp.vector_cmp.range_manager.range_mode import RangeMode
-from msprobe.msaccucmp.vector_cmp.range_manager.select_mode import SelectMode
+from vector_cmp.fusion_manager import fusion_op
+from cmp_utils.constant.compare_error import CompareError
+from vector_cmp.range_manager.range_manager import RangeManager
+from vector_cmp.range_manager.range_mode import RangeMode
+from vector_cmp.range_manager.select_mode import SelectMode
 
 
 class TestUtilsMethods(unittest.TestCase):

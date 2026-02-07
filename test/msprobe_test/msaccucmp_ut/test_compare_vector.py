@@ -25,15 +25,15 @@ import json
 import unittest
 from unittest import mock
 
-from msprobe.msaccucmp import compare_vector
-from msprobe.msaccucmp.cmp_utils import utils, path_check, log
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_op import OutputDesc, FusionOp, OpAttr
-from msprobe.msaccucmp.vector_cmp.fusion_manager.compare_result import SingleOpCmpResult
-from msprobe.msaccucmp.dump_parse import dump_utils
-from msprobe.msaccucmp.vector_cmp import vector_comparison
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
+import compare_vector
+from cmp_utils import utils, path_check, log
+from cmp_utils.constant.compare_error import CompareError
+from vector_cmp.fusion_manager.fusion_op import OutputDesc, FusionOp, OpAttr
+from vector_cmp.fusion_manager.compare_result import SingleOpCmpResult
+from dump_parse import dump_utils
+from vector_cmp import vector_comparison
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from cmp_utils.constant.const_manager import DD
 
 
 vector_comparison.VectorComparison.MULTI_THREAD_MAX_NUM = 1
@@ -1088,7 +1088,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json_object()):
@@ -1149,7 +1149,7 @@ class TestUtilsMethods(unittest.TestCase):
                                 ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json_object()):
@@ -1206,7 +1206,7 @@ class TestUtilsMethods(unittest.TestCase):
                 mock.patch('os.listdir', side_effect=self._fake_listdir), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("json.load", return_value=self._make_json_object()):
                     with mock.patch('builtins.open',
@@ -1263,7 +1263,7 @@ class TestUtilsMethods(unittest.TestCase):
                 mock.patch('os.listdir', side_effect=self._fake_listdir), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("json.load", return_value=self._make_json_object()):
                     with mock.patch('builtins.open',
@@ -1317,7 +1317,7 @@ class TestUtilsMethods(unittest.TestCase):
                 mock.patch('os.listdir', side_effect=self._fake_listdir), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("json.load", return_value=self._make_json_object()):
                     with mock.patch('builtins.open',
@@ -1376,7 +1376,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json()):
@@ -1434,7 +1434,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json()):
@@ -1496,7 +1496,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json()):
@@ -1558,7 +1558,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json()):
@@ -1597,8 +1597,8 @@ class TestUtilsMethods(unittest.TestCase):
         arguments.algorithm_options = ''
         arguments.range = None
         arguments.select = None
-        with mock.patch("msprobe.msaccucmp.compare_vector.VectorComparison._compare_by_multi_process", return_value=(0, False)):
-                with mock.patch("msprobe.msaccucmp.cmp_utils.utils.sort_result_file_by_index"):
+        with mock.patch("compare_vector.VectorComparison._compare_by_multi_process", return_value=(0, False)):
+                with mock.patch("cmp_utils.utils.sort_result_file_by_index"):
                     compare_instance = compare_vector.VectorComparison(arguments)
                     compare_instance._compare_vector()
                     compare_instance.args["range"] = '[1,-1,2]'
@@ -1643,7 +1643,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json()):
@@ -1709,7 +1709,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                  mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_L1_fusion_json_object()):
@@ -1852,7 +1852,7 @@ class TestUtilsMethods(unittest.TestCase):
                                              ['convert_NC1HWC0_to_NCHW.py']]), \
                      mock.patch('os.path.isdir', return_value=True), \
                      mock.patch('os.path.isfile', return_value=True), \
-                     mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                     mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                     with mock.patch("os.path.getsize", return_value=100):
                         with mock.patch('builtins.open',
@@ -1881,7 +1881,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py'], []]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch('builtins.open',
@@ -1914,7 +1914,7 @@ class TestUtilsMethods(unittest.TestCase):
                                              ['convert_NC1HWC0_to_NCHW.py'], []]), \
                      mock.patch('os.path.isdir', return_value=True), \
                      mock.patch('os.path.isfile', return_value=True), \
-                     mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                     mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                     with mock.patch("os.path.getsize", return_value=100):
                         with mock.patch('builtins.open',
@@ -1949,7 +1949,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py'], []]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch('builtins.open',
@@ -1985,7 +1985,7 @@ class TestUtilsMethods(unittest.TestCase):
                                              ['convert_NC1HWC0_to_NCHW.py']]), \
                      mock.patch('os.path.isdir', return_value=True), \
                      mock.patch('os.path.isfile', return_value=True), \
-                     mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                     mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                     with mock.patch('builtins.open',
                                     mock.mock_open(
@@ -2023,7 +2023,7 @@ class TestUtilsMethods(unittest.TestCase):
                                              ['convert_NC1HWC0_to_NCHW.py']]), \
                      mock.patch('os.path.isdir', return_value=True), \
                      mock.patch('os.path.isfile', return_value=True), \
-                     mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                     mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                     with mock.patch("os.path.getsize", return_value=100):
                         with mock.patch('builtins.open',
@@ -2062,7 +2062,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py'], []]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch('builtins.open',
@@ -2102,7 +2102,7 @@ class TestUtilsMethods(unittest.TestCase):
                                              ['convert_NC1HWC0_to_NCHW.py']]), \
                      mock.patch('os.path.isdir', return_value=True), \
                      mock.patch('os.path.isfile', return_value=True), \
-                     mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                     mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                     with mock.patch("os.path.getsize", return_value=100):
                         with mock.patch('builtins.open',
@@ -2139,7 +2139,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py'], []]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch('builtins.open',
@@ -2176,7 +2176,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py'], []]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch('builtins.open',
@@ -2225,7 +2225,7 @@ class TestUtilsMethods(unittest.TestCase):
                                          ['convert_NC1HWC0_to_NCHW.py']]), \
                  mock.patch('os.path.isdir', return_value=True), \
                  mock.patch('os.path.isfile', return_value=True), \
-                 mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
+                 mock.patch('dump_parse.dump_utils.parse_dump_file', return_value=dump_data), \
                      mock.patch('os.stat', return_value=self.mock_stat_result):
                 with mock.patch("os.path.getsize", return_value=100):
                     with mock.patch("json.load", return_value=self._make_json_object()):

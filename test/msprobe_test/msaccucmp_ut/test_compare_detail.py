@@ -19,15 +19,15 @@ from unittest import mock
 import pytest
 import numpy as np
 import struct
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
-from msprobe.msaccucmp.vector_cmp.compare_detail import compare_detail
-from msprobe.msaccucmp.vector_cmp.compare_detail import detail
-from msprobe.msaccucmp.cmp_utils import utils, utils_type, path_check
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_op
-from msprobe.msaccucmp.format_manager.format_manager import FormatManager
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import DD
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.dump_parse import dump, dump_utils, mapping
+from dump_parse.proto_dump_data import DumpData, OpInput, OpOutput
+from vector_cmp.compare_detail import compare_detail
+from vector_cmp.compare_detail import detail
+from cmp_utils import utils, utils_type, path_check
+from vector_cmp.fusion_manager import fusion_op
+from format_manager.format_manager import FormatManager
+from cmp_utils.constant.const_manager import DD
+from cmp_utils.constant.compare_error import CompareError
+from dump_parse import dump, dump_utils, mapping
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestUtilsMethods(unittest.TestCase):
             mock.Mock(side_effect=CompareError(CompareError.MSACCUCMP_NO_DUMP_FILE_ERROR))
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+            with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                             return_value=utils_type.FusionRelation.L1Fusion):
                 ret = detail_comparison.compare()
         self.assertEqual(err.value.args[0], CompareError.MSACCUCMP_NO_DUMP_FILE_ERROR)
@@ -87,7 +87,7 @@ class TestUtilsMethods(unittest.TestCase):
         fusion_op_comparison.compare_data.get_left_dump_data = mock.Mock(return_value=("/home/bin/", dump_data))
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+            with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                             return_value=utils_type.FusionRelation.L1Fusion):
                 ret = detail_comparison.compare()
         self.assertEqual(err.value.args[0], CompareError.MSACCUCMP_INDEX_OUT_OF_BOUNDS_ERROR)
@@ -110,7 +110,7 @@ class TestUtilsMethods(unittest.TestCase):
         fusion_op_comparison.compare_data.get_left_dump_data = mock.Mock(return_value=("/home/bin", dump_data))
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+            with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                             return_value=utils_type.FusionRelation.L1Fusion):
                 ret = detail_comparison.compare()
         self.assertEqual(err.value.args[0], CompareError.MSACCUCMP_INDEX_OUT_OF_BOUNDS_ERROR)
@@ -137,7 +137,7 @@ class TestUtilsMethods(unittest.TestCase):
             6, 'gggg', [], 'Left', ['/home/left/aaa.aaa.21.333333'], attr), 'xx,bb']])
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+            with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                             return_value=utils_type.FusionRelation.L1Fusion):
                 with mock.patch('os.path.exists', return_value=False):
                     ret = detail_comparison.compare()
@@ -169,7 +169,7 @@ class TestUtilsMethods(unittest.TestCase):
         fusion_op_comparison.get_right_dump_data = mock.Mock(return_value=tensor)
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
         with pytest.raises(CompareError) as err:
-            with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+            with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                             return_value=utils_type.FusionRelation.OneToOne):
                 with mock.patch('os.path.exists', return_value=False):
                     with mock.patch('numpy.save'):
@@ -204,7 +204,7 @@ class TestUtilsMethods(unittest.TestCase):
         tensor.set_data(dump_data.output_data[0])
         fusion_op_comparison.get_right_dump_data = mock.Mock(return_value=tensor)
         detail_comparison = compare_detail.DetailComparison(detail_info, fusion_op_comparison, "/home/demo")
-        with mock.patch('msprobe.msaccucmp.vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
+        with mock.patch('vector_cmp.fusion_manager.fusion_rule_parser.get_relation_for_fusion', 
                         return_value=utils_type.FusionRelation.OneToOne):
             with mock.patch('os.path.exists', return_value=False):
                 with mock.patch('numpy.save'):

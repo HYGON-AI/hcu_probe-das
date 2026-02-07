@@ -23,23 +23,23 @@ import numpy as np
 from unittest import mock
 from google.protobuf.message import DecodeError
 
-from msprobe.msaccucmp.dump_parse.proto_dump_data import DumpData, OpBuffer
-from msprobe.msaccucmp.dump_parse import big_dump_data
-from msprobe.msaccucmp.dump_parse.big_dump_data import BigDumpDataParser
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from dump_parse.proto_dump_data import DumpData, OpBuffer
+from dump_parse import big_dump_data
+from dump_parse.big_dump_data import BigDumpDataParser
+from cmp_utils.constant.compare_error import CompareError
 
 
 class TestUtilsMethods(unittest.TestCase):
 
     def test_parse1(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=1):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=1):
                 BigDumpDataParser('a.bin').parse()
         self.assertEqual(error.value.args[0], 1)
 
     def test_parse2(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
                 with mock.patch('os.path.getsize', return_value=3):
                     BigDumpDataParser('a.bin').parse()
         self.assertEqual(error.value.args[0],
@@ -48,7 +48,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_parse3(self):
         data = struct.pack('Q', 10)
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
                 with mock.patch('os.path.getsize', return_value=10):
                     with mock.patch('builtins.open', mock.mock_open(
                             read_data=data)):
@@ -59,12 +59,12 @@ class TestUtilsMethods(unittest.TestCase):
     def test_parse5(self):
         data = struct.pack('QQ', 4, 10)
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
                 with mock.patch('os.path.getsize', return_value=20):
                     with mock.patch('builtins.open', mock.mock_open(
                             read_data=data)):
                         with mock.patch(
-                                'msprobe.msaccucmp.dump_parse.proto_dump_data.DumpData.ParseFromString',
+                                'dump_parse.proto_dump_data.DumpData.ParseFromString',
                                 side_effect=DecodeError):
                             BigDumpDataParser('a.bin').parse()
         self.assertEqual(error.value.args[0],
@@ -96,7 +96,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_parse7(self):
         with pytest.raises(CompareError) as error:
-            with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
+            with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
                 BigDumpDataParser('a.bin').parse()
         self.assertEqual(error.value.args[0],
                          CompareError.MSACCUCMP_DUMP_FILE_ERROR)

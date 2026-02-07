@@ -23,8 +23,8 @@ from collections import namedtuple
 import pytest
 import numpy as np
 
-from msprobe.msaccucmp.algorithm_manager.algorithm_manager import AlgorithmManager, AlgorithmManagerMain
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
+from algorithm_manager.algorithm_manager import AlgorithmManager, AlgorithmManagerMain
+from cmp_utils.constant.compare_error import CompareError
 
 
 class Args:
@@ -46,7 +46,7 @@ def fake_arguments():
 
 
 def _mock_algorithm_manager(custom_script_path, select_algorithm="", algorithm_options=""):
-    with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR):
+    with mock.patch('cmp_utils.path_check.check_path_valid', return_value=CompareError.MSACCUCMP_NONE_ERROR):
         with mock.patch('os.path.exists', return_value=True):
             with mock.patch('os.path.isfile', return_value=True):
                 return AlgorithmManager(custom_script_path, select_algorithm, algorithm_options)
@@ -179,7 +179,7 @@ def test_check_file_permission_when_others_have_write_permission_then_raise_erro
 
 def test_algorithm_manager_main_given_any_when_unknown_error_then_error(fake_arguments):
     with pytest.raises(CompareError, match=str(CompareError.MSACCUCMP_UNKNOWN_ERROR)):
-        with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', side_effect=[0, 1]):
+        with mock.patch('cmp_utils.path_check.check_path_valid', side_effect=[0, 1]):
             AlgorithmManagerMain(fake_arguments).process()
 
 
@@ -187,8 +187,8 @@ def test_algorithm_manager_main_given_any_when_invalid_shape_then_error(fake_arg
     dump_data1 = np.arange(2)
     dump_data2 = np.arange(6)
 
-    with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
-        with mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file', side_effect=[dump_data1, dump_data2]):
+    with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
+        with mock.patch('dump_parse.dump_utils.read_numpy_file', side_effect=[dump_data1, dump_data2]):
             ret = AlgorithmManagerMain(fake_arguments).process()
     assert ret == CompareError.MSACCUCMP_INVALID_SHAPE_ERROR
 
@@ -196,8 +196,8 @@ def test_algorithm_manager_main_given_any_when_invalid_shape_then_error(fake_arg
 def test_algorithm_manager_main_given_valid_when_any_then_pass(fake_arguments):
     dump_data = np.arange(2)
 
-    with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
-        with mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
+    with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
+        with mock.patch('dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
             ret = AlgorithmManagerMain(fake_arguments).process()
     assert ret == CompareError.MSACCUCMP_NONE_ERROR
 
@@ -205,16 +205,16 @@ def test_algorithm_manager_main_given_valid_when_any_then_pass(fake_arguments):
 def test_algorithm_manager_main_given_algorithm_when_valid_then_pass(fake_arguments):
     dump_data = np.arange(2)
     fake_arguments.algorithm = "5,1,0"
-    with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
-        with mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
+    with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
+        with mock.patch('dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
             ret = AlgorithmManagerMain(fake_arguments).process()
     assert ret == CompareError.MSACCUCMP_NONE_ERROR
 
 
 def test_algorithm_manager_main_given_zeros_when_valid_then_pass(fake_arguments):
     dump_data = np.zeros(5)
-    with mock.patch('msprobe.msaccucmp.cmp_utils.path_check.check_path_valid', return_value=0):
-        with mock.patch('msprobe.msaccucmp.dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
+    with mock.patch('cmp_utils.path_check.check_path_valid', return_value=0):
+        with mock.patch('dump_parse.dump_utils.read_numpy_file', side_effect=dump_data):
             ret = AlgorithmManagerMain(fake_arguments).process()
     assert ret == CompareError.MSACCUCMP_NONE_ERROR
 
@@ -223,7 +223,7 @@ def test_algorithm_manager_compare_given_bool_when_valid_then_pass():
     a_m = AlgorithmManager('', 'all', '')
     my_output_dump_data = namedtuple('aa', ['dtype', 'test'])(np.bool_, 'test')
     ground_truth_dump_data = namedtuple('aa', ['dtype', 'test'])(np.bool_, 'test')
-    with mock.patch('msprobe.msaccucmp.algorithm_manager.algorithm_manager.AlgorithmManager._make_algorithm_param', return_value={}):
+    with mock.patch('algorithm_manager.algorithm_manager.AlgorithmManager._make_algorithm_param', return_value={}):
         a_m.compare(my_output_dump_data, ground_truth_dump_data, {})
 
 
@@ -231,10 +231,10 @@ def test_algorithm_manager_compare_given_none_dtype_when_valid_then_pass():
     a_m = AlgorithmManager('', 'all', '')
     my_output_dump_data = namedtuple('aa', ['dtype', 'test', "test_2"])(None, 1, 2)
     ground_truth_dump_data = namedtuple('aa', ['dtype', 'test', "test_2"])(None, 1, 2)
-    with mock.patch('msprobe.msaccucmp.algorithm_manager.algorithm_manager.AlgorithmManager._check_data_size_valid'):
-        with mock.patch('msprobe.msaccucmp.algorithm_manager.algorithm_manager.AlgorithmManager._make_algorithm_param', return_value={}):
+    with mock.patch('algorithm_manager.algorithm_manager.AlgorithmManager._check_data_size_valid'):
+        with mock.patch('algorithm_manager.algorithm_manager.AlgorithmManager._make_algorithm_param', return_value={}):
             with mock.patch(
-                    'msprobe.msaccucmp.algorithm_manager.algorithm_manager.AlgorithmManager._call_compare_function',
+                    'algorithm_manager.algorithm_manager.AlgorithmManager._call_compare_function',
                     return_value=(123, '')):
                 a_m.compare(my_output_dump_data, ground_truth_dump_data, {})
 
@@ -252,14 +252,14 @@ class TestAlgorithmManagerMain(unittest.TestCase):
 
     @patch('os.path.realpath', return_value=True)
     @patch('os.path.islink', return_value=True)
-    @patch("msprobe.msaccucmp.cmp_utils.log.print_error_log")
+    @patch("cmp_utils.log.print_error_log")
     def test_init_when_init_raise_error(self, mock_error_log, mock_islink, mock_realpath):
         with self.assertRaises(CompareError) as context:
             ret = AlgorithmManagerMain(self.args)
         mock_error_log.assert_called_once_with('The path "%r" is a softlink, not permitted.' % self.args.output_path)
         assert context.exception.args[0] == CompareError.MSACCUCMP_INVALID_PATH_ERROR
     
-    @patch("msprobe.msaccucmp.cmp_utils.path_check.check_output_path_valid", return_value=9)
+    @patch("cmp_utils.path_check.check_output_path_valid", return_value=9)
     def test_print_result_save_result_invalid(self, mock_check_output_path_valid):
         with self.assertRaises(CompareError) as context:
             ret = AlgorithmManagerMain(self.args)._print_result([], [], "path")

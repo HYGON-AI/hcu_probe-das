@@ -20,10 +20,10 @@ import unittest
 import pytest
 from unittest import mock
 
-from msprobe.msaccucmp.vector_cmp.compare_detail import detail
-from msprobe.msaccucmp.vector_cmp.fusion_manager import fusion_rule_parser
-from msprobe.msaccucmp.cmp_utils.constant.compare_error import CompareError
-from msprobe.msaccucmp.cmp_utils.constant.const_manager import ConstManager, DD
+from vector_cmp.compare_detail import detail
+from vector_cmp.fusion_manager import fusion_rule_parser
+from cmp_utils.constant.compare_error import CompareError
+from cmp_utils.constant.const_manager import ConstManager, DD
 
 
 class TestUtilsMethods(unittest.TestCase):
