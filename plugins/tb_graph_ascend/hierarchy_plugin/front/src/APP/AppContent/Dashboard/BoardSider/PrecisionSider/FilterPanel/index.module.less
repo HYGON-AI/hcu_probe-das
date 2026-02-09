@@ -1,0 +1,72 @@
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
+.filterPanel {
+  padding: 16px;
+
+  .segmentedLabel {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+.tabItem {
+  .title {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    margin: 10px 0;
+    font-weight: 500;
+
+    .icon {
+      font-size: 16px;
+      margin-left: 8px;
+      cursor: pointer;
+
+      &:hover {
+        color: #1677FF;
+      }
+    }
+  }
+
+  .checkBoxItemGroup {
+    display: flex;
+    flex-direction: column;
+
+    .checkBoxItem {
+      height: 30px;
+      display: flex;
+      align-items: center;
+    }
+
+    .colorBlock {
+      display: inline-block;
+      height: 16px;
+      width: 16px;
+      margin-right: 8px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+  }
+}
+
+.tooltipContent {
+  color: var(--ant-color-text-light-solid);
+
+  .tooltipLink {
+    font-weight: bold;
+  }
+}

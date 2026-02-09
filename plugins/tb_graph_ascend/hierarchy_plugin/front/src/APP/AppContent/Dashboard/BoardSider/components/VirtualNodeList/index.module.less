@@ -1,0 +1,66 @@
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
+.virtualNodeList {
+  overflow-y: auto;
+  position: relative;
+  margin-top: 8px;
+
+  .container {
+    position: absolute;
+    width: 100%;
+
+    .nodeItem,
+    .selectedItem {
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      box-sizing: border-box;
+
+      .colorBlock {
+        display: inline-block;
+        height: 16px;
+        width: 16px;
+        margin-right: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 4px;
+      }
+
+      .nodeName {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        .matchedStr {
+          color: red;
+        }
+      }
+    }
+
+    .nodeItem:hover {
+      background-color: var(--ant-color-list-hover);
+    }
+
+    .selectedItem {
+      background-color: var(--ant-color-list-selected);
+
+      &:hover {
+        background-color: var(--ant-color-list-selected-hover);
+      }
+    }
+  }
+}

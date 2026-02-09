@@ -4,8 +4,11 @@ yarn.lock
 dist/
 build/
 tb_graph_ascend.egg-info/
+monvis.egg-info/
 __pycache__/
-**/server/static/index.html
 report.html
-assets/
+**/static/index.html
+assets
 /htmlcov/
+# package-lock.json
+!**/public/index.html

@@ -1,22 +1,19 @@
-# -------------------------------------------------------------------------
-#  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# This file is part of the MindStudio project.
+# Copyright (c) 2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
 # You may obtain a copy of Mulan PSL v2 at:
 #
-#          http://license.coscl.org.cn/MulanPSL2
+#     http://license.coscl.org.cn/MulanPSL2
 #
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 # EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
-# See the Mulan PSL v2 for more details.
-# -------------------------------------------------------------------------
-
+# ==============================================================================
 import setuptools
 
-VERSION = '8.3.2'
+VERSION = '26.0.0'
 INSTALL_REQUIRED = ["tensorboard >= 2.11.2"]
 
 setuptools.setup(
@@ -24,17 +21,20 @@ setuptools.setup(
     version=VERSION,
     description="Model Hierarchical Visualization TensorBoard Plugin",
     long_description="Model Hierarchical Visualization TensorBoard Plugin : \
-        https://gitcode.com/Ascend/mstt/tree/master/plugins/tensorboard-plugins/tb_graph_ascend",
-    url="https://gitcode.com/Ascend/mstt/tree/master/plugins/tensorboard-plugins/tb_graph_ascend",
+        https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend",
+    url="https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
     packages=setuptools.find_packages(),
+    include_package_data=True,
     package_data={
-        "server": ["static/**"],
+        "graph_ascend": ["hierarchy_plugin/server/static/**"],
+        "mon_vis": ["monvis_plugin/server/static/**"],
     },
     entry_points={
         "tensorboard_plugins": [
-            "graph_ascend = server.plugin:GraphsPlugin",
+            "graph_ascend = hierarchy_plugin.server.plugin:GraphsPlugin",
+            "mon_vis = monvis_plugin.server.app:TrendVis",
         ],
     },
     python_requires=">=3.7",
@@ -43,8 +43,8 @@ setuptools.setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Typescript',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',

@@ -1,0 +1,90 @@
+# This file is part of the MindStudio project.
+# Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# ==============================================================================
+"""The TensorBoard Graphs plugin."""
+
+import os
+from tensorboard.plugins import base_plugin
+from tensorboard.util import tb_logging
+
+from .app.views.graph_views import GraphView
+from .app.utils.graph_utils import GraphUtils
+from .app.utils.global_state import GraphState
+from .app.utils.constant import Extension
+
+logger = tb_logging.get_logger()
+
+PLUGIN_NAME = "graph_ascend"
+PLUGIN_NAME_RUN_METADATA_WITH_GRAPH = "graph_ascend_run_metadata_graph"
+DB_EXT = Extension.DB.value
+JSON_EXT = Extension.JSON.value
+
+
+class GraphsPlugin(base_plugin.TBPlugin):
+    """Graphs Plugin for TensorBoard."""
+
+    plugin_name = PLUGIN_NAME
+
+    def __init__(self, context):
+        """Instantiates GraphsPlugin via TensorBoard core.·
+
+        Args:
+          context: A base_plugin.TBContext instance.
+        """
+        super().__init__(context)
+        GraphState.reset_global_state()
+        self.logdir = os.path.abspath(os.path.expanduser(context.logdir.rstrip("/")))
+        # 将logdir赋值给global_state中的logdir属性,方便其他模块使用
+        GraphState.set_global_value("logdir", self.logdir)
+
+    def get_plugin_apps(self):
+        return {
+            "/index.js": GraphView.static_file_route,
+            "/index.html": GraphView.static_file_route,
+            "/load_meta_dir": GraphView.load_meta_dir,
+            "/filterNodes": GraphView.search_node,
+            "/loadConvertedGraphData": GraphView.load_converted_graph_data,
+            "/convertToGraph": GraphView.convert_to_graph,
+            "/getConvertProgress": GraphView.get_convert_progress,
+            "/screen": GraphView.search_node,
+            "/loadGraphData": GraphView.load_graph_data,
+            "/loadGraphConfigInfo": GraphView.load_graph_config_info,
+            "/loadGraphAllNodeList": GraphView.load_graph_all_node_list,
+            "/loadGraphMatchedRelations": GraphView.load_graph_matched_relations,
+            "/changeNodeExpandState": GraphView.change_node_expand_state,
+            "/updateHierarchyData": GraphView.update_hierarchy_data,
+            "/getNodeInfo": GraphView.get_node_info,
+            "/addMatchNodes": GraphView.add_match_nodes,
+            "/addMatchNodesByConfig": GraphView.add_match_nodes_by_config,
+            "/deleteMatchNodes": GraphView.delete_match_nodes,
+            "/saveData": GraphView.save_data,
+            "/updateColors": GraphView.update_colors,
+            "/saveMatchedRelations": GraphView.save_matched_relations,
+            "/updatePrecisionError": GraphView.update_precision_error,
+        }
+
+    def is_active(self):
+        """The graphs plugin is active if any run has a graph."""
+        return True
+
+    def data_plugin_names(self):
+        return (
+            PLUGIN_NAME,
+            PLUGIN_NAME_RUN_METADATA_WITH_GRAPH,
+        )
+
+    def frontend_metadata(self):
+        return base_plugin.FrontendMetadata(
+            es_module_path="/index.js",
+            disable_reload=True,
+        )
