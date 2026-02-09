@@ -27,7 +27,7 @@ import pandas as pd
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, \
     safe_get_value, is_module_available
-from msprobe.core.common.file_utils import check_file_or_directory_path, load_json
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_json, find_proc_dir
 
 json_file_mapping = {
     Const.DUMP_JSON_FILE: "dump.json",
@@ -66,7 +66,7 @@ def set_stack_json_path(input_param):
     return bool(stack_path), input_param
 
 
-def check_and_return_dir_contents(dump_dir, prefix):
+def check_and_return_dir_contents(dump_dir, prefix, skip_wrong_dir=False):
     """
     check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
     pattern: ^{prefix}(?:0|[1-9][0-9]*)?$
@@ -74,7 +74,7 @@ def check_and_return_dir_contents(dump_dir, prefix):
     Args:
         dump_dir (str): dump dir
         prefix (str): prefix for the patterns, prefix should be less than 20 characters and alphanumeric/-/_ only
-
+        skip_wrong_dir (bool): whether skip found dirs
     Returns:
         content [list]: dir contents
     Raises:
@@ -88,13 +88,15 @@ def check_and_return_dir_contents(dump_dir, prefix):
     pattern = re.compile(rf'^{prefix}(?:0|[1-9][0-9]*)?$')
     for name in contents:
         if not pattern.match(name):
-            logger.error(
-                f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
-                f"output. Please check and delete irrelevant files in {dump_dir} and try again."
-            )
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            if skip_wrong_dir:
+                contents.remove(name)
+            else:
+                logger.error(
+                    f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
+                    f"output. Please check and delete irrelevant files in {dump_dir} and try again."
+                )
+                raise CompareException(CompareException.INVALID_PATH_ERROR)
     return contents
-
 
 def read_op(op_data, op_name):
     if not isinstance(op_name, str):
@@ -718,9 +720,9 @@ def _compare_parser(parser):
 def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
     """
     get the ranks and match by order
-    """ 
-    unsorted_npu_ranks = check_and_return_dir_contents(npu_dump_dir, 'rank')
-    unsorted_bench_ranks = check_and_return_dir_contents(bench_dump_dir, 'rank')
+    """
+    unsorted_npu_ranks = check_and_return_dir_contents(npu_dump_dir, 'rank', skip_wrong_dir=True)
+    unsorted_bench_ranks = check_and_return_dir_contents(bench_dump_dir, 'rank', skip_wrong_dir=True)
     # 正则匹配已经校验rank后面必是数字，或者无数字的rank
     npu_ranks = sorted(unsorted_npu_ranks, key=lambda x: int(x[4:]) if len(x) > 4 else -1)  # 前四个字符都是rank，后面是卡号
     bench_ranks = sorted(unsorted_bench_ranks, key=lambda x: int(x[4:]) if len(x) > 4 else -1)
@@ -829,6 +831,15 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
     npu_ranks, bench_ranks = get_sorted_ranks(npu_dump_dir, bench_dump_dir)
+    if not kwargs.get('first_diff_analyze', False) and not npu_ranks:
+        npu_proc_dir = find_proc_dir(npu_dump_dir)
+        bench_proc_dir = find_proc_dir(bench_dump_dir)
+        if npu_proc_dir and bench_proc_dir:
+            npu_ranks = [os.path.basename(npu_proc_dir)]
+            bench_ranks = [os.path.basename(bench_proc_dir)]
+        else:
+            logger.error("No dir found to compare, please check!")
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     # ------------------预载rank0的json用于判断是什么类型dump数据------------------
     # 判断是否存在dump.json或debug.json
