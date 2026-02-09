@@ -223,13 +223,6 @@ class NpuVsNpuComparison:
         tensor_id_prefix = "%s:%s" % (self.op_name, tensor_type)
         for index, (my_output_tensor, ground_truth_tensor) in enumerate(zip(my_output_list, ground_truth_list)):
             tensor_id = '%s:%d' % (tensor_id_prefix, index)
-            # check format valid
-            if my_output_tensor.tensor_format != ground_truth_tensor.tensor_format:
-                message = log.print_not_match_error(
-                    self.op_name, 'format',
-                    common.get_format_string(my_output_tensor.tensor_format),
-                    common.get_format_string(ground_truth_tensor.tensor_format), tensor_id)
-                return CompareError.MSACCUCMP_INVALID_DUMP_DATA_ERROR, message
 
             # check the length of shape is the same
             if len(my_output_tensor.shape) != len(ground_truth_tensor.shape):
