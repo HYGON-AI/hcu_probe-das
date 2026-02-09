@@ -21,7 +21,7 @@ from contextlib import nullcontext
 import torch
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import replace_last_occurrence, ThreadSafe
 from msprobe.core.dump.data_dump.data_processor.base import ModuleForwardInputsOutputs
@@ -29,10 +29,12 @@ from msprobe.core.dump.hook_manager import BaseHookManager, HookSet
 from msprobe.pytorch.common.utils import (
     torch_version_above_or_equal_2,
     register_forward_hook,
-    Const as PtConst
+    Const as PtConst,
+    get_rank_if_initialized
 )
 from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
 from msprobe.pytorch.dump.module_dump.module_processor import ModuleProcessor
+
 
 class PytorchHookManager(BaseHookManager):
     @staticmethod
@@ -57,6 +59,10 @@ class PytorchHookManager(BaseHookManager):
             output = output_or_kwargs if torch_version_above_or_equal_2 else kwargs_or_output
         return kwargs, output
 
+    @staticmethod
+    def _get_current_rank():
+        return get_rank_if_initialized()
+
     def build_hook(self, hook_type, name):
         if hook_type == Const.API:
             hook_set = HookSet(
@@ -70,6 +76,9 @@ class PytorchHookManager(BaseHookManager):
                 backward_hook=self._build_backward_hook(hook_type, full_backward_name)
             )
         return hook_set
+
+    def _init_specific_components(self):
+        self.logger = logger
 
     def _register_forward_hook(self, module, api_name):
         if not hasattr(module, 'msprobe_forward_hook'):
@@ -85,7 +94,9 @@ class PytorchHookManager(BaseHookManager):
             if len(args) >= 2:
                 p = args[1]
             if p == 0:
-                logger.debug(f"The parameter 'p' is set to 0, so the {full_backward_name} data will not be collected.")
+                self.logger.debug(
+                    f"The parameter 'p' is set to 0, so the {full_backward_name} data will not be collected."
+                )
                 return output
 
         var = output

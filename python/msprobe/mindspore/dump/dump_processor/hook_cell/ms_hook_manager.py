@@ -24,15 +24,16 @@ from mindspore.common.api import _no_grad, _pynative_executor
 from mindspore.ops.operations import _inner_ops as inner
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
 from msprobe.core.common.utils import replace_last_occurrence, ThreadSafe
 from msprobe.core.dump.data_dump.data_processor.base import ModuleBackwardInputs
 from msprobe.core.dump.hook_manager import BaseHookManager, HookSet
 from msprobe.mindspore.common.const import Const as MsConst
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import (
     has_kwargs_in_forward_hook,
     is_mindtorch,
-    is_backward_hook_output_a_view
+    is_backward_hook_output_a_view,
+    get_rank_if_initialized
 )
 from msprobe.mindspore.dump.dump_processor.hook_cell.hook_cell import HOOKCell
 
@@ -73,6 +74,10 @@ class MindsporeHookManager(BaseHookManager):
             output = output_or_kwargs
         return kwargs, output
 
+    @staticmethod
+    def _get_current_rank():
+        return get_rank_if_initialized()
+
     def build_hook(self, hook_type, name):
         if hook_type == Const.API:
             hook_set = HookSet(
@@ -86,6 +91,9 @@ class MindsporeHookManager(BaseHookManager):
                 backward_hook=self._build_backward_hook(hook_type, full_backward_name)
             )
         return hook_set
+
+    def _init_specific_components(self):
+        self.logger = logger
 
     def _register_forward_hook(self, module, api_name):
         if not hasattr(module, 'msprobe_forward_hook'):
@@ -121,9 +129,9 @@ class MindsporeHookManager(BaseHookManager):
         bw_hook = MindsporeHookManager.cell_bw_hook_kernels.get(full_backward_name)
         if bw_hook:
             if not isinstance(output, (Tensor, tuple)):
-                logger.debug("For backward hooks to be called, "
-                             "cell output should be a Tensor or a tuple of Tensors "
-                             f"but received {type(output)}")
+                self.logger.debug("For backward hooks to be called, "
+                                  "cell output should be a Tensor or a tuple of Tensors "
+                                  f"but received {type(output)}")
             if is_backward_hook_output_a_view():
                 new_outputs = bw_hook(output)
             else:

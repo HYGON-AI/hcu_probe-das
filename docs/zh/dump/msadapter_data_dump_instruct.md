@@ -290,7 +290,7 @@ MSAdapter场景下，dump输出件的目录结构示例如下：
 │   |   ├── ...
 │   ├── step2
 ```
-* `rank`：设备ID，每张卡的数据保存在对应的`rank{ID}`目录下。非分布式场景下没有rank ID，目录名称为rank。
+* `rank`：设备ID，每张卡的数据保存在对应的`rank{ID}`目录下。非分布式场景下没有rank ID，目录名称为`proc{pid}`，pid为进程ID。
 
 * `dump_tensor_data`：保存采集到的张量数据。
 

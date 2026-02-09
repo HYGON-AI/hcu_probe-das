@@ -47,7 +47,8 @@ class TestMindsporeService(unittest.TestCase):
         self.service.primitive_hook_service = MagicMock()
         self.service.cell_processor = MagicMock()
         self.service.api_register = MagicMock()
-    
+        self.service.config.bench_path = None
+
     @patch('msprobe.mindspore.dump.mindspore_service.is_mindtorch')
     def test_framework_type(self, mock_is_mindtorch):
         mock_is_mindtorch.return_value = True

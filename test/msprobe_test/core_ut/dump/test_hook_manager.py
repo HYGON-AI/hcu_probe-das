@@ -46,6 +46,10 @@ class TestBaseHookManager(unittest.TestCase):
         def _process_kwargs_and_output(module, tid, hook_type, kwargs_or_output, output_or_kwargs):
             return {"kwargs": kwargs_or_output}, output_or_kwargs
 
+        @staticmethod
+        def _get_current_rank():
+            pass
+
         def build_hook(self):
             pass
 
@@ -65,6 +69,10 @@ class TestBaseHookManager(unittest.TestCase):
             return False
 
         def _register_param_hook(self, name, module, params_dict):
+            pass
+
+        def _init_specific_components(self):
+            """初始化框架特定组件"""
             pass
 
     def setUp(self):
@@ -118,6 +126,7 @@ class TestBaseHookManager(unittest.TestCase):
 
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_forward_pre_hook_behavior(self, mock_should_execute_hook):
+        Runtime.current_rank = None
         mock_should_execute_hook.return_value = True
         hook = self.manager._build_forward_pre_hook(Const.API, "api_name")
         module = MagicMock()
@@ -132,6 +141,7 @@ class TestBaseHookManager(unittest.TestCase):
 
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_forward_hook_behavior(self, mock_should_execute_hook):
+        Runtime.current_rank = None
         mock_should_execute_hook.return_value = True
         hook = self.manager._build_forward_hook(Const.MODULE, "module_name")
         module = MagicMock()
@@ -153,6 +163,7 @@ class TestBaseHookManager(unittest.TestCase):
 
     @patch.object(BaseHookManager, "_should_execute_hook")
     def test_backward_hook_behavior(self, mock_should_execute_hook):
+        Runtime.current_rank = None
         mock_should_execute_hook.return_value = True
         hook = self.manager._build_backward_hook(Const.API, "api_name")
         module = MagicMock()

@@ -14,35 +14,20 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import os
 import unittest
 from unittest.mock import patch
 
 from msprobe.core.dump.kernel_dump.kernel_config import create_kernel_config_json
 
 
-class TestPtKernelConfig(unittest.TestCase):
+class TestMsKernelConfig(unittest.TestCase):
     @patch("msprobe.core.dump.kernel_dump.kernel_config.save_json")
-    def test_create_kernel_config_json_with_rank(self, mock_save_json):
+    def test_create_kernel_config_json(self, mock_save_json):
         dump_path = "./step0"
-        cur_rank = 0
-        kernel_config_path = create_kernel_config_json(dump_path, cur_rank)
-        self.assertEqual(kernel_config_path, "./step0/kernel_config_0.json")
-        config_info = {
-            "dump": {
-                "dump_list": [],
-                "dump_path": dump_path,
-                "dump_mode": "all",
-                "dump_op_switch": "on"
-            }
-        }
-        mock_save_json.assert_called_once_with(kernel_config_path, config_info, indent=4)
-
-    @patch("msprobe.core.dump.kernel_dump.kernel_config.save_json")
-    def test_create_kernel_config_json_without_rank(self, mock_save_json):
-        dump_path = "./step0"
-        cur_rank = ''
-        kernel_config_path = create_kernel_config_json(dump_path, cur_rank)
-        self.assertEqual(kernel_config_path, "./step0/kernel_config.json")
+        cur_pid = os.getpid()
+        kernel_config_path = create_kernel_config_json(dump_path, cur_pid)
+        self.assertEqual(kernel_config_path, f"./step0/kernel_config_{cur_pid}.json")
         config_info = {
             "dump": {
                 "dump_list": [],

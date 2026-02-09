@@ -1030,6 +1030,40 @@ def check_output_dir_path(path):
         check_path_owner_consistent(path)
 
 
+def find_proc_dir(base_dir):
+    """
+    在指定目录下查找是否存在 proc{pid} 格式的目录
+
+    Args:
+        base_dir (str): 基础目录路径
+
+    Returns:
+        str or None: 如果找到唯一匹配的目录名称（如 "proc12345"），则返回该名称；找不到或找到多个则抛出 ValueError
+
+    Raises:
+        ValueError: 当找不到或找到多个匹配的目录时
+    """
+    dirs_list = os.listdir(base_dir)
+
+    proc_dirs = [
+        os.path.join(base_dir, dirname)
+        for dirname in dirs_list
+        if os.path.isdir(os.path.join(base_dir, dirname)) and dirname.startswith(Const.PROC) and dirname[4:].isdigit()
+    ]
+
+    if len(proc_dirs) == 1:
+        return proc_dirs[0]
+    else:
+        logger.error(
+            f"No or multiple {Const.PROC} directories were found in the <{base_dir}>. "
+            "Expected exactly one."
+        )
+        raise ValueError(
+            f"No or multiple {Const.PROC} directories were found in the <{base_dir}>. "
+            "Expected exactly one."
+        )
+
+
 class SharedDict:
     def __init__(self):
         self._changed = False

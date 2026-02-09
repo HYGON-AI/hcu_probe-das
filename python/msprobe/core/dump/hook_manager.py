@@ -16,10 +16,12 @@
 
 import gc
 import os
+import re
 import threading
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
+from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import Const, ThreadSafe
 from msprobe.core.dump.data_dump.data_processor.base import (ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs)
@@ -52,6 +54,8 @@ class BaseHookManager(ABC):
         self.data_collector = data_collector
         self.config = config
         self.current_pid = self._pid
+        self.logger = None
+        self._init_specific_components()
 
     @property
     def _pid(self):
@@ -109,6 +113,11 @@ class BaseHookManager(ABC):
     def _process_kwargs_and_output(module, tid, hook_type, kwargs_or_output, output_or_kwargs):
         pass
 
+    @staticmethod
+    @abstractmethod
+    def _get_current_rank():
+        pass
+
     @abstractmethod
     def build_hook(self, hook_type, name):
         pass
@@ -137,8 +146,32 @@ class BaseHookManager(ABC):
     def _register_param_hook(self, name, module, params_dict):
         pass
 
+    @abstractmethod
+    def _init_specific_components(self):
+        """初始化框架特定组件"""
+        pass
+
     def is_child_process(self):
         return self.current_pid != self._pid
+
+    def _maybe_update_dump_dir(self):
+        if not self.data_collector.dump_file_path or Runtime.current_rank is not None:
+            return
+
+        parent_dir = os.path.dirname(self.data_collector.dump_file_path)
+        is_proc_dir = bool(re.search(r'proc\d+$', parent_dir))
+        current_rank = None
+        try:
+            current_rank = self._get_current_rank()
+        except DistributedNotInitializedError:
+            pass
+        else:
+            Runtime.current_rank = current_rank
+        if is_proc_dir and current_rank is not None:
+            new_rank_dir = os.path.join(os.path.dirname(parent_dir), f"{Const.RANK}{current_rank}")
+            os.rename(parent_dir, new_rank_dir)
+            self.data_collector.replace_proc_with_rank(new_rank_dir)
+            self.logger.info(f"Successfully replaced proc path<{parent_dir}> with rank path<{new_rank_dir}>")
 
     def _should_execute_hook(self, hook_type, tid, is_forward=True):
         is_api_hook = hook_type == Const.API
@@ -164,6 +197,7 @@ class BaseHookManager(ABC):
                 return None
 
             with ThreadSafe():
+                self._maybe_update_dump_dir()
                 original_state = self.ensure_gc_enabled()
                 self._register_forward_hook(module, api_name)
                 BaseHookManager.inner_api_count[tid] += 1
@@ -201,6 +235,7 @@ class BaseHookManager(ABC):
                 return None
 
             with ThreadSafe():
+                self._maybe_update_dump_dir()
                 original_state = self.ensure_gc_enabled()
                 if hook_type == Const.API:
                     if BaseHookManager.inner_api_count[tid] != 1:
@@ -260,6 +295,7 @@ class BaseHookManager(ABC):
                 return
 
             with ThreadSafe():
+                self._maybe_update_dump_dir()
                 original_state = self.ensure_gc_enabled()
                 BaseHookManager.inner_switch[tid] = True
                 self.data_collector.update_api_or_module_name(full_name)

@@ -170,6 +170,22 @@ class DataWriter:
         self.bench_dump_file_path = getattr(dump_path_aggregation, "bench_dump_file_path", None)
         self.dump_error_info_path = dump_path_aggregation.dump_error_info_path
 
+    def replace_proc_with_rank(self, rank_path):
+        path_attrs = [
+            "dump_file_path",
+            "stack_file_path",
+            "construct_file_path",
+            "dump_tensor_data_dir",
+            "debug_file_path",
+            "dump_error_info_path"
+        ]
+
+        for attr in path_attrs:
+            if hasattr(self, attr):
+                old_dump_path = getattr(self, attr)
+                if old_dump_path is not None and isinstance(old_dump_path, str):
+                    new_dump_path = os.path.join(rank_path, os.path.basename(old_dump_path))
+                    setattr(self, attr, new_dump_path)
 
     def flush_data_periodically(self):
         dump_data = self.cache_data.get(Const.DATA)
