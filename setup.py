@@ -31,12 +31,13 @@ if platform.system() != "Linux":
     raise SystemError("This package only supports Linux platform. {}".format(platform.system()))
 
 
-def build_frontend():
+def build_frontend(plugin_name):
     """构建前端资源"""
-    fe_path = os.path.join("plugins", "tb_graph_ascend", "fe")
+    fe_path = os.path.join("plugins", "tb_graph_ascend", plugin_name, "front")
+    failed_message = f"Failed to build fronted of {plugin_name},"
 
     if not os.path.exists(fe_path):
-        return False
+        raise RuntimeError(f"{failed_message} the fronted path '{fe_path}' is not exist")
 
     original_cwd = os.getcwd()
 
@@ -46,7 +47,7 @@ def build_frontend():
 
         # 检查package.json是否存在
         if not os.path.exists("package.json"):
-            return True
+            raise RuntimeError(f"{failed_message} file 'package.json' is not exist!")
 
         # 安装依赖
         install_result = subprocess.run(
@@ -55,40 +56,24 @@ def build_frontend():
             text=True
         )
         if install_result.returncode != 0:
-            return False
+            raise RuntimeError(f"{failed_message} run 'npm install --force' failed!")
 
         # 执行构建
         build_result = subprocess.run(
-            ["npm", "run", "buildLinux"],
+            ["npm", "run", "build"],
             capture_output=True,
             text=True
         )
         if build_result.returncode != 0:
-            return False
-        else:
-            return True
-    except Exception:
-        return False
+            raise RuntimeError(f"{failed_message} run 'npm run build' failed!")
+    except Exception as e:
+        raise RuntimeError(f"{failed_message} {e}")
     finally:
         # 切换回原始目录
         os.chdir(original_cwd)
 
 
-def is_frontend_built():
-    """检查前端是否已经构建完成"""
-    fe_dist_path = os.path.join("plugins", "tb_graph_ascend", "fe", "dist")
-    fe_build_path = os.path.join("plugins", "tb_graph_ascend", "fe", "build")
-
-    # 检查是否存在构建产物
-    index_html_exists = (
-        os.path.exists(os.path.join(fe_dist_path, "index.html")) or
-        os.path.exists(os.path.join(fe_build_path, "index.html"))
-    )
-
-    return index_html_exists
-
-
-def clean_frontend_build():
+def clean_frontend_build(plugin_name_list):
     """清除前端构建产物"""
     fe_path = os.path.join("build", "lib")
 
@@ -96,9 +81,7 @@ def clean_frontend_build():
         return True
 
     # 需要清除的目录和文件
-    clean_targets = [
-        os.path.join(fe_path, "tb_graph_ascend"),
-    ]
+    clean_targets = [os.path.join(fe_path, plugin_name) for plugin_name in plugin_name_list]
 
     cleaned = False
     for target in clean_targets:
@@ -114,28 +97,10 @@ def clean_frontend_build():
                 continue
 
             cleaned = True
+        else:
+            cleaned = True
 
     return cleaned
-
-
-class CustomBdistWheelCommand(bdist_wheel):
-    """自定义wheel构建命令"""
-
-    # 类属性，用于存储是否包含tb_graph_ascend
-    with_tb_graph_ascend = False
-
-    def run(self):
-        # 使用类属性来判断是否包含tb_graph_ascend
-        include_tb_graph_ascend = CustomBdistWheelCommand.with_tb_graph_ascend
-
-        if include_tb_graph_ascend:
-            # 包含所有包
-            self.distribution.packages = packages
-        else:
-            # 只包含 msprobe 相关的包，排除 tb_graph_ascend
-            self.distribution.packages = [pkg for pkg in packages if not pkg.startswith('tb_graph_ascend')]
-
-        super().run()
 
 
 INSTALL_REQUIRED = [
@@ -162,7 +127,7 @@ if platform.system() != "Linux":
     raise SystemError("MindStudio-Probe is only supported on Linux platforms.")
 
 # 扩展模块范围，包括adump和tb_graph_ascend
-mod_list_range = {"adump", "tb_graph_ascend", "atb_probe", "aclgraph_dump"}
+mod_list_range = {"adump", "tb_graph_ascend", "trend_analyzer", "atb_probe", "aclgraph_dump"}
 mod_list = []
 for i, arg in enumerate(sys.argv):
     if arg.startswith("--include-mod"):
@@ -181,26 +146,37 @@ for i, arg in enumerate(sys.argv):
 
 # 处理包含的模块
 with_tb_graph_ascend = False
+with_trend_analyzer = False
 if mod_list:
-    # 如果包含tb_graph_ascend，则构建前端
+    # 如果包含tb_graph_ascend，则构建模型分级可视化前端
     if "tb_graph_ascend" in mod_list:
         print("Building tb_graph_ascend frontend...")
-        success = build_frontend()
-        if not success:
-            raise RuntimeError("tb_graph_ascend 前端构建失败")
+        build_frontend('hierarchy_plugin')
         # 设置包含tb_graph_ascend的标志
         with_tb_graph_ascend = True
-        # 设置到CustomBdistWheelCommand类属性
-        CustomBdistWheelCommand.with_tb_graph_ascend = True
     else:
         # 不包含tb_graph_ascend，清除相关构建产物
-        clean_success = clean_frontend_build()
+        clean_success = clean_frontend_build(['hierarchy_plugin'])
         if not clean_success:
             raise RuntimeError("警告: 前端构建产物清理不完整")
         # 根据业务需求决定是否继续
         # 可选：raise BuildError(f"清理失败: {e}")
         with_tb_graph_ascend = False
-        CustomBdistWheelCommand.with_tb_graph_ascend = False
+    
+    # 如果包含trend_analyzer，则构建趋势分析可视化前端
+    if "trend_analyzer" in mod_list:
+        print("Building trend_analyzer frontend...")
+        build_frontend('monvis_plugin')
+        # 设置包含trend_analyzer的标志
+        with_trend_analyzer = True
+    else:
+        # 不包含tb_graph_ascend，清除相关构建产物
+        clean_success = clean_frontend_build(['trend_analyzer'])
+        if not clean_success:
+            raise RuntimeError("警告: 前端构建产物清理不完整")
+        # 根据业务需求决定是否继续
+        # 可选：raise BuildError(f"清理失败: {e}")
+        with_trend_analyzer = False
 
     # 如果包含adump/atb_probe/aclgraph_dump，则进行C++相关的构建
     if "adump" in mod_list or "atb_probe" in mod_list or "aclgraph_dump" in mod_list:
@@ -216,11 +192,10 @@ if mod_list:
             raise RuntimeError(f"Failed to build source({p.returncode})")
 else:
     # 如果没有指定任何模块，默认不包含tb_graph_ascend，并清除构建产物
-    clean_success = clean_frontend_build()
+    clean_success = clean_frontend_build(['hierarchy_plugin', 'monvis_plugin'])
     if not clean_success:
         raise RuntimeError("警告: 前端构建产物清理不完整")
     with_tb_graph_ascend = False
-    CustomBdistWheelCommand.with_tb_graph_ascend = False
 
 # 添加scripts脚本
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -241,23 +216,28 @@ packages = setuptools.find_packages(where="python")
 
 # 只有在包含tb_graph_ascend时才添加相关包
 if with_tb_graph_ascend:
-    tb_packages = [
-        "tb_graph_ascend",
-        "tb_graph_ascend.server",
-        "tb_graph_ascend.fe",
-    ]
-    packages.extend(tb_packages)
+    packages.append('hierarchy_plugin')
+
+if with_trend_analyzer:
+    packages.append('trend_analyzer')
 
 # 检查前端是否已构建，决定entry_points内容
 entry_points_dict = {
     'console_scripts': ['msprobe=msprobe.msprobe:main'],
 }
 
-# 只有在包含tb_graph_ascend时才注册tensorboard插件
+tensorboard_plugins = []
 if with_tb_graph_ascend:
-    entry_points_dict['tensorboard_plugins'] = [
-        'graph_ascend = tb_graph_ascend.server.plugin:GraphsPlugin',
-    ]
+    tensorboard_plugins.append(
+        'graph_ascend = hierarchy_plugin.server.plugin:GraphsPlugin'
+    )
+if with_trend_analyzer:
+    tensorboard_plugins.append(
+        'TrendVis = trend_analyzer.server.app:TrendVis'
+    )
+# 只有在包含tensorboard插件时才注册
+if tensorboard_plugins:
+    entry_points_dict['tensorboard_plugins'] = tensorboard_plugins
 
 # 构建package_dir和package_data
 package_dir_config = {"": "python"}
@@ -265,22 +245,15 @@ package_data_config = {}
 
 if with_tb_graph_ascend:
     package_dir_config.update({
-        "tb_graph_ascend": "plugins/tb_graph_ascend",
-        "tb_graph_ascend.server": "plugins/tb_graph_ascend/server",
-        "tb_graph_ascend.fe": "plugins/tb_graph_ascend/fe",
+        'hierarchy_plugin': 'plugins/tb_graph_ascend/hierarchy_plugin'
     })
+    package_data_config['hierarchy_plugin'] = ['server/**/*.py', 'server/**/*.js', 'server/**/*.html']
 
-    package_data_config["tb_graph_ascend.server"] = [
-        "static/**",
-        "static/**/*",
-        "app/**",
-        "app/**/*",
-        "*.py",
-        "**/*.py",
-        "**/*.js",
-        "**/*.css",
-        "**/*.html"
-    ]
+if with_trend_analyzer:
+    package_dir_config.update({
+        'trend_analyzer': 'plugins/tb_graph_ascend/monvis_plugin',
+    })
+    package_data_config['trend_analyzer'] = ['server/**/*.py', 'server/**/*.js', 'server/**/*.html']
 
 setuptools.setup(
     name="mindstudio-probe",
@@ -314,8 +287,5 @@ setuptools.setup(
     keywords='pytorch msprobe ascend',
     ext_modules=[],
     zip_safe=False,
-    cmdclass={
-        'bdist_wheel': CustomBdistWheelCommand,
-    },
     entry_points=entry_points_dict,
 )
