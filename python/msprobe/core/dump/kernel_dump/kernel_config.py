@@ -19,8 +19,9 @@ import os
 from msprobe.core.common.file_utils import save_json
 
 
-def create_kernel_config_json(dump_path, cur_rank):
-    kernel_config_name = "kernel_config.json" if cur_rank == '' else f"kernel_config_{cur_rank}.json"
+def create_kernel_config_json(dump_path, cur_pid):
+    kernel_config_name = f"kernel_config_{cur_pid}.json"
+
     kernel_config_path = os.path.join(dump_path, kernel_config_name)
     config_info = {
         "dump": {

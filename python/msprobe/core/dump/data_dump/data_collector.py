@@ -66,7 +66,7 @@ class DataCollector:
 
     @staticmethod
     def set_is_recomputable(data_info, is_recompute):
-        if data_info and len(data_info) == 1 and is_recompute is not None: # 正常情况下data_info的长度应改为1
+        if data_info and len(data_info) == 1 and is_recompute is not None:  # 正常情况下data_info的长度应改为1
             data_info[list(data_info.keys())[0]]["is_recompute"] = is_recompute
 
     def reset_status(self):
@@ -136,7 +136,6 @@ class DataCollector:
             return
         self.data_processor.analyze_forward(name, module, module_input_output)
 
-
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
@@ -147,12 +146,10 @@ class DataCollector:
         self.call_stack_collect(data_info, name)
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output):
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
         self.data_processor.analyze_backward(name, module, module_input_output)
-
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -168,7 +165,6 @@ class DataCollector:
             self.backward_module_names[module_name] = True
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
-
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
@@ -178,7 +174,6 @@ class DataCollector:
             data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
         self.handle_data(name, data_info)
 
-
     def backward_output_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
@@ -187,7 +182,6 @@ class DataCollector:
         if self.config.task != Const.STRUCTURE:
             data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
         self.handle_data(name, data_info)
-
 
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
@@ -200,7 +194,7 @@ class DataCollector:
                     {name: self.optimizer_status if not is_megatron() else [self.optimizer_status, get_micro_step()]})
             else:
                 if self.config.level == Const.LEVEL_MIX and \
-                  not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
+                        not (name.startswith(Const.MODULE) or name.startswith(Const.CELL)):
                     self.data_writer.update_construct(
                         {name: self.module_processor.api_parent_node.get(threading.get_ident())}
                     )
@@ -222,6 +216,9 @@ class DataCollector:
 
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
+
+    def replace_proc_with_rank(self, rank_path):
+        self.data_writer.replace_proc_with_rank(rank_path)
 
     def initialize_json_file(self, framework=Const.UNKNOWN_FRAMEWORK):
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level, framework=framework)

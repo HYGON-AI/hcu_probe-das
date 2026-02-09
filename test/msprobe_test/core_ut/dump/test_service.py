@@ -62,10 +62,10 @@ class TestBaseService(unittest.TestCase):
         self.config.async_dump = True
         self.config.tensor_list = []
         self.config.framework = "test_framwork"
-        
         with patch('msprobe.core.dump.service.build_data_collector'):
             self.service = ConcreteBaseService(self.config)
-        
+            self.service.config.bench_path = None
+
     def tearDown(self):
         self.temp_dir.cleanup()
     
@@ -166,7 +166,7 @@ class TestBaseService(unittest.TestCase):
         self.service.data_collector.data_processor.is_terminated = False
         model_mock = MagicMock()
         token_range = [10, 20]
-        
+
         self.service.start(model=model_mock, token_range=token_range)
         model_mock.register_forward_pre_hook.assert_called_once()
         self.assertEqual(self.service.cur_token_id, 0)
@@ -303,7 +303,7 @@ class TestBaseService(unittest.TestCase):
         self.assertEqual(self.service.dump_iter_dir, expected_dir)
         self.assertTrue(os.path.exists(expected_dir))
 
-        kernel_config_path = os.path.join(expected_dir, "kernel_config_0.json")
+        kernel_config_path = os.path.join(expected_dir, f"kernel_config_{os.getpid()}.json")
         self.assertTrue(os.path.exists(kernel_config_path))
         self.assertEqual(self.service.config.kernel_config_path, kernel_config_path)
     

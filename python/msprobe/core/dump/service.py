@@ -21,13 +21,13 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.file_utils import create_directory, find_proc_dir, FileChecker, FileCheckConst
+from msprobe.core.common.megatron_utils import MegatronStepInfo
 from msprobe.core.common.runtime import Runtime
 from msprobe.core.common.utils import Const, print_tools_ends_info, DumpPathAggregation
 from msprobe.core.dump.api_dump.api_registry import ApiRegistry
 from msprobe.core.dump.data_dump.data_collector import build_data_collector
 from msprobe.core.dump.kernel_dump.kernel_config import create_kernel_config_json
-from msprobe.core.common.megatron_utils import MegatronStepInfo
 
 
 class BaseService(ABC):
@@ -44,6 +44,7 @@ class BaseService(ABC):
         self.first_start = True
         self.primitive_switch = False
         self.current_rank = None
+        self.current_pid = os.getpid()
         self.dump_iter_dir = None
         self.should_stop_service = False
         self.hooked_modules = []
@@ -79,11 +80,11 @@ class BaseService(ABC):
 
     @property
     def _is_no_dump_step(self):
-        return (self.config.step and self.current_iter not in self.config.step)
+        return self.config.step and self.current_iter not in self.config.step
 
     @property
     def _is_no_dump_rank(self):
-        return (self.config.rank and self.current_rank not in self.config.rank)
+        return self.config.rank and self.current_rank not in self.config.rank
 
     @property
     def _need_tensor_data(self):
@@ -179,14 +180,14 @@ class BaseService(ABC):
         MegatronStepInfo.reset()
 
     def save(self, variable, name, save_backward):
-        '''
+        """
         Args:
-            variable: Union[List[variable], dict{str: variable}, mindspore.tensor, str, float, int]
+            variable: Union[List[variable], dict{str: variable}, tensor, str, float, int]
             name: str
             save_backward: boolean
         Return:
             void
-        '''
+        """
         if not self._is_debug_level:
             return
         self.current_iter = self.loop + self.init_step
@@ -242,11 +243,10 @@ class BaseService(ABC):
         else:
             self.bench_dump_iter_dir = None
 
-        cur_rank = self.current_rank if self.current_rank is not None else ''
         if self._is_l2_level:
-            self._create_l2_dirs(cur_rank)
+            self._create_l2_dirs(self.current_rank)
         else:
-            self._create_default_dirs(cur_rank)
+            self._create_default_dirs(self.current_rank)
 
     @abstractmethod
     def _init_specific_components(self):
@@ -291,6 +291,7 @@ class BaseService(ABC):
         param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
         return: None
         """
+
         def infer_hook(model, args):
             if self.cur_token_id == token_range[0]:
                 Runtime.is_running = True
@@ -306,6 +307,7 @@ class BaseService(ABC):
                 self.logger.info(
                     f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
+
         # 此处root_model可以保证为 Module/Cell类型 或 [Module/Cell]类型
         if root_model and isinstance(root_model, list):
             root_model = root_model[0]
@@ -315,24 +317,28 @@ class BaseService(ABC):
 
     def _create_l2_dirs(self, cur_rank):
         create_directory(self.dump_iter_dir)
-        kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
-        self.config.kernel_config_path = kernel_config_path
+        self.config.kernel_config_path = create_kernel_config_json(self.dump_iter_dir, self.current_pid)
 
     def _create_default_dirs(self, cur_rank):
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
+        subdir = f"{Const.RANK}{cur_rank}" if cur_rank is not None else f"{Const.PROC}{self.current_pid}"
+
+        dump_dir = os.path.join(self.dump_iter_dir, subdir)
+        create_directory(dump_dir)
+
         bench_dump_dir = None
         if self.bench_dump_iter_dir:
-            bench_dump_dir = os.path.join(self.bench_dump_iter_dir, f"rank{cur_rank}")
-        create_directory(dump_dir)
-        if bench_dump_dir:
-            create_directory(bench_dump_dir)
+            if cur_rank is not None:
+                bench_dump_dir = os.path.join(self.bench_dump_iter_dir, subdir)
+            else:
+                bench_dump_dir = find_proc_dir(self.bench_dump_iter_dir)
+            FileChecker(bench_dump_dir, FileCheckConst.DIR).common_check()
+
         dump_data_dir = None
         if self._need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             create_directory(dump_data_dir)
 
         self._configure_dump_paths(dump_dir, dump_data_dir, bench_dump_dir)
-
 
     def _configure_dump_paths(self, dump_dir, dump_data_dir, bench_dump_dir):
         dump_path_aggregation = DumpPathAggregation()

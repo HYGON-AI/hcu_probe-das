@@ -224,6 +224,7 @@ class Const:
 
     STEP = "step"
     RANK = "rank"
+    PROC = "proc"
     HYPHEN = "-"
     STEP_RANK_MINIMUM_VALUE = 0
     STEP_RANK_MAXIMUM_VALUE = int(1e6)
