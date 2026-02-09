@@ -1,0 +1,74 @@
+/* -------------------------------------------------------------------------
+ *  This file is part of the MindStudio project.
+ * Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+ *
+ * MindStudio is licensed under Mulan PSL v2.
+ * You can use this software according to the terms and conditions of the Mulan PSL v2.
+ * You may obtain a copy of Mulan PSL v2 at:
+ *
+ *          http://license.coscl.org.cn/MulanPSL2
+ *
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+ * EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+ * See the Mulan PSL v2 for more details.
+ * -------------------------------------------------------------------------
+ */
+
+.legend {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 38px;
+}
+
+.legend-item {
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.legend-item-value {
+    margin: 0 5px 0 5px;
+    font-size: 12px;
+}
+
+.module-rect {
+    width: 30px;
+    height: 16px;
+    border-radius: 6px;
+    border: 1px solid rgb(99, 99, 99);
+    background: rgb(230, 230, 230);
+}
+
+.unexpanded-nodes {
+    width: 36px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid rgb(99, 99, 99);
+    background: rgb(230, 230, 230);
+}
+
+.api-list {
+    width: 30px;
+    height: 16px;
+    border-radius: 6px;
+    border: 1px dashed rgb(99, 99, 99);
+    background: rgb(255, 255, 255);
+}
+
+.fusion-node {
+    width: 30px;
+    height: 18px;
+}
+
+.fusion-node rect {
+    fill: rgb(255, 255, 255);
+    /* 内部无填充 */
+    stroke: rgb(99, 99, 99);
+    /* 边框颜色 */
+    stroke-width: 1;
+    /* 边框宽度 */
+    stroke-dasharray: 2 1;
+    /* 虚线样式 */
+}

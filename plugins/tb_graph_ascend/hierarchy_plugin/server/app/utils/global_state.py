@@ -1,0 +1,92 @@
+# This file is part of the MindStudio project.
+# Copyright (c) 2026 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# ==============================================================================
+
+# 全局常量
+
+from .i18n import ZH
+
+
+class GraphState:
+    # 模块级全局变量
+    _state = {
+        "logdir": "",
+        "current_tag": "",
+        "current_run": "",
+        "current_file_data": {},
+        "current_hierarchy": {},
+        "config_data": {
+            "run": "",
+            "npuUnMatchNodes": [],
+            "benchUnMatchNodes": [],
+            "npuMatchNodes": {},
+            "benchMatchNodes": {},
+            "manualMatchNodes": {},
+        },
+        "config_info": {},  # 全局的配置信息
+        "first_run_tags": {},
+        "runs": {},
+        "update_precision_cache": {},  # {node_name{precision，...}}，方便查询精度，提高性能
+        "all_node_info_cache": {},  # {rank_step_micro_step:{node_name:node_info,...}}，方便查询节点信息，提高性能
+        "matched_relations_cache": {},
+        "lang": ZH,
+    }
+
+    @staticmethod
+    def init_defaults():
+        """
+        初始化全局变量的默认值
+        """
+        GraphState._state = {
+            "logdir": "",
+            "current_tag": "",
+            "current_run": "",
+            "current_file_data": {},
+            "current_hierarchy": {},
+            "config_data": {
+                "run": "",
+                "npuUnMatchNodes": [],
+                "benchUnMatchNodes": [],
+                "npuMatchNodes": {},
+                "benchMatchNodes": {},
+                "manualMatchNodes": {},
+            },
+            "config_info": {},  # 全局的配置信息
+            "first_run_tags": {},
+            "runs": {},
+            "update_precision_cache": {},
+            "all_node_info_cache": {},
+            "matched_relations_cache": {},
+            "lang": ZH,
+        }
+
+    @staticmethod
+    def set_global_value(key, value):
+        """
+        设置全局变量的值
+        """
+        GraphState._state[key] = value
+
+    @staticmethod
+    def get_global_value(key, default=None):
+        """
+        获取全局变量的值
+        """
+        return GraphState._state.get(key, default)
+
+    @staticmethod
+    def reset_global_state():
+        """
+        重置所有全局变量为默认值
+        """
+        GraphState.init_defaults()
