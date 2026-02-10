@@ -183,6 +183,10 @@ class DumpDataParser:
                 file_name = utils.make_msnpy_file_name(dump_path, op_name, tensor_type, index, tensor.tensor_format)
                 file_name = FileUtils.handle_too_long_file_name(
                     file_name, '.npy', os.path.join(self.output_path, ConstManager.MAPPING_FILE_NAME))
+            elif self.output_file_type == 'pt':
+                file_name = '%s.%s.%d.pt' % (name, tensor_type, index)
+                file_name = FileUtils.handle_too_long_file_name(
+                    file_name, '.pt', os.path.join(self.output_path, ConstManager.MAPPING_FILE_NAME))
             else:
                 file_name = '%s.%s.%d.%s.%s.%s.bin' \
                             % (name, tensor_type, index, utils.get_string_from_list(array.shape, '_'),
@@ -191,7 +195,13 @@ class DumpDataParser:
                 file_name = FileUtils.handle_too_long_file_name(
                     file_name, '.bin', os.path.join(self.output_path, ConstManager.MAPPING_FILE_NAME))
             output_file_path = os.path.join(self.output_path, file_name)
-            if ffts_auto:
+            if self.output_file_type == 'pt':
+                if ffts_auto:
+                    shape = shape_list[index] if shape_list and index < len(shape_list) else None
+                else:
+                    shape = tensor.shape if hasattr(tensor, 'shape') else None
+                FileUtils.save_array_to_pt_file(output_file_path, array, shape)
+            elif ffts_auto:
                 FileUtils.save_array_to_file(
                     output_file_path, array, self.output_file_type != 'bin', shape_list[index])
             else:

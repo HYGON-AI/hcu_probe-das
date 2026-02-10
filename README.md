@@ -68,6 +68,10 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将ATB dump的精度数据进行精度比对，进而定位精度问题。
 
+3. [数据转换](docs/zh/dump/data_parse_instruct.md)
+
+   将ATB dump的精度数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
+
 
 ### 离线模型推理场景
 
@@ -81,6 +85,10 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 3. [离线模型数据精度比对](docs/zh/accuracy_compare/offlline_data_compare_instruct.md)
    提供离线模型数据比对功能，输入离线模型的dump数据进行精度比对。
+
+4. [数据转换](docs/zh/dump/data_parse_instruct.md)
+
+   将离线模型的dump数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
 
 
 ### PyTorch训练场景
