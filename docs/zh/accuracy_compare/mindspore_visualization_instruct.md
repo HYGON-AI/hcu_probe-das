@@ -16,6 +16,10 @@ MindSpore场景分级可视化构图比对：将msProbe工具dump的精度数据
 3. 启动tensorboard服务，详见[启动tensorboard。](#启动tensorboard)
 4. 使用浏览器查看图结构，分析模型结构和精度数据，详见[浏览器查看](#浏览器查看)。
 
+**注意事项**
+
+多卡场景仅识别`step{Step ID}`或`rank{Rank ID}`目录的数据进行构图。
+
 **工具特性**
 
 - 支持重建模型的层级结构。
