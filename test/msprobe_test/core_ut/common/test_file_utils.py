@@ -103,18 +103,6 @@ class TestFileChecks:
         with patch('os.stat', return_value=self.mock_stat):
             check_other_user_writable(self.test_file)
 
-    def test_check_path_owner_consistent(self):
-        with patch('os.stat', return_value=self.mock_stat), \
-                patch('os.getuid', return_value=1001), \
-                pytest.raises(FileCheckException) as exc_info:
-            check_path_owner_consistent(self.test_file)
-        assert exc_info.value.code == FileCheckException.FILE_PERMISSION_ERROR
-
-        # Test root user case
-        with patch('os.stat', return_value=self.mock_stat), \
-                patch('os.getuid', return_value=0):
-            check_path_owner_consistent(self.test_file)
-
     def test_check_path_pattern_valid(self):
         valid_paths = [
             self.test_dir / "file.txt",
@@ -553,11 +541,9 @@ class TestDirectoryChecks:
 
     def test_check_dirpath_permission(self):
         with patch('msprobe.core.common.file_utils.check_others_writable', return_value=True), \
-                patch('msprobe.core.common.file_utils.check_path_owner_consistent',
-                      side_effect=FileCheckException(0)), \
                 patch('msprobe.core.common.file_utils.logger') as mock_logger:
             check_dirpath_permission(self.test_dir)
-            assert mock_logger.warning.call_count == 2
+            assert mock_logger.warning.call_count == 1
 
     def test_check_file_or_directory_path(self):
         with patch('msprobe.core.common.file_utils.FileChecker') as mock_checker:
@@ -780,7 +766,6 @@ class TestCheckOutputDirPath:
                 patch('msprobe.core.common.file_utils.check_path_length') as mock_check_length, \
                 patch('msprobe.core.common.file_utils.check_path_pattern_valid') as mock_check_pattern, \
                 patch('msprobe.core.common.file_utils.check_path_writability') as mock_check_writability, \
-                patch('msprobe.core.common.file_utils.check_path_owner_consistent') as mock_check_owner, \
                 patch('os.path.exists', return_value=True):
             
             check_output_dir_path(existing_dir)
@@ -790,7 +775,6 @@ class TestCheckOutputDirPath:
             mock_check_length.assert_called_once()
             mock_check_pattern.assert_called_once()
             mock_check_writability.assert_called_once()
-            mock_check_owner.assert_called_once()
 
 
 class TestExtractZip:

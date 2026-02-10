@@ -90,11 +90,9 @@ class FileChecker:
         check_path_length(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
-        check_path_owner_consistent(self.file_path)
         check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
-        check_path_no_others_write(self.file_path)
         if self.path_type == FileCheckConst.FILE:
             check_dirpath_permission(self.file_path)
         return self.file_path
@@ -154,21 +152,17 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
-            check_path_no_others_write(self.file_path)
             check_dirpath_permission(self.file_path)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
             check_path_exists(self.file_path)
             check_path_readability(self.file_path)
-            check_path_owner_consistent(self.file_path)
         if self.mode in self.SUPPORT_WRITE_MODE and os.path.exists(self.file_path):
             check_path_writability(self.file_path)
-            check_path_owner_consistent(self.file_path)
         if self.mode in self.SUPPORT_READ_WRITE_MODE and os.path.exists(self.file_path):
             check_path_readability(self.file_path)
             check_path_writability(self.file_path)
-            check_path_owner_consistent(self.file_path)
 
 
 def check_link(path):
@@ -220,13 +214,6 @@ def check_other_user_writable(path):
     st = os.stat(path)
     if st.st_mode & 0o002:
         logger.error('The file path %s may be insecure because other users have write permissions. ' % path)
-        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
-
-
-def check_path_owner_consistent(path):
-    file_owner = os.stat(path).st_uid
-    if file_owner != os.getuid() and os.getuid() != 0:
-        logger.error('The file path %s may be insecure because is does not belong to you.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
@@ -349,10 +336,6 @@ def check_dirpath_permission(path):
     if dedup_log('check_dirpath_before_read', dirpath):
         if check_others_writable(dirpath):
             logger.warning(f"The directory is writable by others: {dirpath}.")
-        try:
-            check_path_owner_consistent(dirpath)
-        except FileCheckException:
-            logger.warning(f"The directory {dirpath} is not yours.")
 
 
 def check_file_or_directory_path(path, isdir=False, is_strict=False, file_suffix=None):
@@ -378,18 +361,6 @@ def check_file_or_directory_path(path, isdir=False, is_strict=False, file_suffix
                 FileCheckException.FILE_PERMISSION_ERROR,
                 f"The directory/file must not allow write access to group. Directory/File path: {path}"
             )
-
-
-def check_path_no_others_write(file_path):
-    if dedup_log('check_path_no_others_write', file_path):
-        if check_group_writable(file_path):
-            logger.warning(f"The directory/file path is writable by group: {file_path}.")
-
-    if check_others_writable(file_path):
-        raise FileCheckException(
-            FileCheckException.FILE_PERMISSION_ERROR,
-            f"The directory/file must not allow write access to others. Directory/File path: {file_path}"
-        )
 
 
 def check_path_no_group_others_write(file_path):
@@ -1027,7 +998,6 @@ def check_output_dir_path(path):
     check_path_pattern_valid(path)
     if os.path.exists(path):
         check_path_writability(path)
-        check_path_owner_consistent(path)
 
 
 def find_proc_dir(base_dir):
