@@ -24,7 +24,7 @@ from typing import Callable, Optional
 
 from tqdm import tqdm
 from msprobe.core.common.file_utils import (check_file_type, create_directory, FileChecker,
-                                            check_file_or_directory_path, load_json)
+                                            check_file_or_directory_path, find_proc_dir)
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException, get_dump_mode
 from msprobe.visualization.compare.graph_comparator import GraphComparator
@@ -231,9 +231,12 @@ def _mp_compare_and_export(input_param, args, rank, step, pbar_info=None):
 def _compare_graph_ranks(input_param, args, step=None, pbar_info=None):
     dump_rank_n = input_param.get('npu_path')
     dump_rank_b = input_param.get('bench_path')
-    npu_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_n, Const.RANK))
-    bench_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_b, Const.RANK))
-    if npu_ranks != bench_ranks:
+    npu_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_n, Const.RANK, skip_wrong_dir=True))
+    bench_ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_rank_b, Const.RANK, skip_wrong_dir=True))
+    if not npu_ranks and not bench_ranks:
+        npu_ranks = [os.path.basename(find_proc_dir(dump_rank_n))]
+        bench_ranks = [os.path.basename(find_proc_dir(dump_rank_b))]
+    elif npu_ranks != bench_ranks:
         intersection_ranks = sort_rank_number_strings(list(set(npu_ranks) & set(bench_ranks)))
         if not intersection_ranks:
             logger.error('The ranks in the two runs are completely different. Unable to match the ranks.')
@@ -320,7 +323,9 @@ def _compare_graph_steps(input_param, args, pbar_info=None):
 
 def _build_graph_ranks_parallel(args, step=None, pbar_info=None):
     dump_ranks_path = os.path.join(args.target_path, step) if step is not None else args.target_path
-    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
+    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK, skip_wrong_dir=True))
+    if not ranks:
+        ranks = [os.path.basename(find_proc_dir(dump_ranks_path))]
     serializable_args = SerializableArgs(args)
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
         def err_call(err):
@@ -370,7 +375,9 @@ def _build_graph_ranks_parallel(args, step=None, pbar_info=None):
 
 def _build_graph_ranks(args, step=None, pbar_info=None):
     dump_ranks_path = os.path.join(args.target_path, step) if step is not None else args.target_path
-    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
+    ranks = sort_rank_number_strings(check_and_return_dir_contents(dump_ranks_path, Const.RANK, skip_wrong_dir=True))
+    if not ranks:
+        ranks = [os.path.basename(find_proc_dir(dump_ranks_path))]
     args.rank_list = [get_step_or_rank_int(rank, True) for rank in ranks]
     serializable_args = SerializableArgs(args)
     with Pool(processes=max(int((cpu_count() + 1) // 4), 1)) as pool:
@@ -414,8 +421,11 @@ def _compare_graph_ranks_parallel(input_param, args, step=None, pbar_info=None):
     args.fuzzy_match = True
     npu_path = input_param.get('npu_path')
     bench_path = input_param.get('bench_path')
-    ranks_n = sort_rank_number_strings(check_and_return_dir_contents(npu_path, Const.RANK))
-    ranks_b = sort_rank_number_strings(check_and_return_dir_contents(bench_path, Const.RANK))
+    ranks_n = sort_rank_number_strings(check_and_return_dir_contents(npu_path, Const.RANK, skip_wrong_dir=True))
+    ranks_b = sort_rank_number_strings(check_and_return_dir_contents(bench_path, Const.RANK, skip_wrong_dir=True))
+    if not ranks_n and not ranks_b:
+        ranks_n = [os.path.basename(find_proc_dir(npu_path))]
+        ranks_b = [os.path.basename(find_proc_dir(bench_path))]
     parallel_params = args.parallel_params
     if len(parallel_params) != 2:
         raise RuntimeError('Parallel params error in compare graph!')
@@ -644,7 +654,10 @@ def _build_graph_ranks_with_pbar(args):
             _build_graph_ranks(args, pbar_info=pbar_info)
 
     def get_ranks(args):
-        return check_and_return_dir_contents(args.target_path, Const.RANK)
+        ranks = check_and_return_dir_contents(args.target_path, Const.RANK, skip_wrong_dir=True)
+        if not ranks:
+            ranks = [os.path.basename(find_proc_dir(args.target_path))]
+        return ranks
 
     stage_total = _get_parallel_stage_total(args) if args.parallel_merge else GraphConst.BUILD_STAGES_TOTAL
 
@@ -664,7 +677,10 @@ def _build_graph_steps_with_pbar(args):
     steps = check_and_return_dir_contents(args.target_path, Const.STEP)
 
     def get_ranks(args):
-        return check_and_return_dir_contents(os.path.join(args.target_path, steps[0]), Const.RANK)
+        ranks = check_and_return_dir_contents(os.path.join(args.target_path, steps[0]), Const.RANK, skip_wrong_dir=True)
+        if not ranks:
+            ranks = [os.path.basename(find_proc_dir(os.path.join(args.target_path, steps[0])))]
+        return ranks
 
     stage_total = _get_parallel_stage_total(args, steps) if args.parallel_merge else GraphConst.BUILD_STAGES_TOTAL
 

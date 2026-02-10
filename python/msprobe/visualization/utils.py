@@ -19,7 +19,7 @@ import re
 import json
 import pickle
 import time
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import FileOpen, find_proc_dir
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
@@ -66,7 +66,7 @@ def get_step_or_rank_int(x: str, is_rank=False):
     """
     获取字符串rank{int}或者step{int}中的int值，如果x=rank或step，返回0
     """
-    if x in [Const.RANK, Const.STEP] or x is None:
+    if x in [Const.RANK, Const.STEP] or x is None or x.startswith(Const.PROC):
         return 0
     description = Const.RANK if is_rank else Const.STEP
     try:
@@ -94,7 +94,7 @@ def check_directory_content(input_path):
         return GraphConst.FILES
 
     # 单卡只有一个rank文件夹
-    if contents == [Const.RANK]:
+    if contents == [Const.RANK] or contents[0].startswith(Const.PROC):
         return GraphConst.RANKS
 
     rank_pattern = re.compile(r'^rank\d+$')
@@ -373,10 +373,13 @@ def calculate_list(path_n, path_b, prefix_str=Const.RANK, mode=GraphConst.INTERS
                      f'but in reality it is {mode}.')
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
-    npu_list = check_and_return_dir_contents(path_n, prefix_str)
-    bench_list = check_and_return_dir_contents(path_b, prefix_str)
+    npu_list = check_and_return_dir_contents(path_n, prefix_str, skip_wrong_dir=True)
+    bench_list = check_and_return_dir_contents(path_b, prefix_str, skip_wrong_dir=True)
 
     if not npu_list:
+        npu_proc_dir = find_proc_dir(path_n)
+        if npu_proc_dir:
+            return [os.path.basename(npu_proc_dir)]
         logger.error(f'Cannot get {prefix_str} in {path_n}.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
