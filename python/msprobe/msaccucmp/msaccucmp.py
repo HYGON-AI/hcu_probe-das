@@ -225,7 +225,7 @@ def _convert_parser(covert_parser: argparse.ArgumentParser) -> None:
     covert_parser.add_argument('-out', '--output', dest='output_path', default='', help='<Optional> the output path')
     _add_version_argument(covert_parser)
     covert_parser.add_argument(
-        '-t', '--type', dest='output_file_type', choices=['npy', 'bin', 'msnpy'],
+        '-t', '--type', dest='output_file_type', choices=['npy', 'bin', 'msnpy', "pt"],
         default='npy',
         help='<Optional> the type of the output file, '
              'npy means the output is saved as numpy format, '

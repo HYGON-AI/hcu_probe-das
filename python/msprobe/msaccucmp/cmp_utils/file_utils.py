@@ -25,6 +25,7 @@ import os
 import re
 import uuid
 import numpy as np
+import torch
 
 from cmp_utils import log
 from cmp_utils import utils
@@ -136,6 +137,29 @@ class FileUtils:
         """
         try:
             FileUtils._save_array_to_file(path, array, np_save, shape)
+        except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
+            log.print_error_log('Failed to write data to "%r". %s' % (path, str(error)))
+        finally:
+            pass
+
+    @staticmethod
+    def save_array_to_pt_file(path: str, array: np.ndarray, shape: any = None) -> None:
+        """
+        Save numpy array to PyTorch tensor file (.pt format).
+        :param path: the saved file path
+        :param array: the numpy array
+        :param shape: the array shape (optional, will reshape if provided)
+        """
+        try:
+            if shape is not None:
+                array = array.reshape(shape)
+            if os.path.islink(path):
+                os.unlink(path)
+            if os.path.exists(path):
+                os.remove(path)
+            pt_tensor = torch.from_numpy(array)
+            torch.save(pt_tensor, path)
+            os.chmod(path, ConstManager.WRITE_MODES)
         except (OSError, SystemError, ValueError, TypeError, RuntimeError, MemoryError) as error:
             log.print_error_log('Failed to write data to "%r". %s' % (path, str(error)))
         finally:

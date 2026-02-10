@@ -30,6 +30,7 @@ from msprobe.visualization.graph_service import _graph_service_parser, _graph_se
 from msprobe.core.dump.dump2db.dump2db import _data2db_service_parser, _data2db_command
 from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
 from msprobe.core.install_deps.install_deps import _install_deps_parser, install_deps_cli
+from msprobe.core.parse.parse_cli import _parse_parser, parse_cli
 
 
 def main():
@@ -79,6 +80,9 @@ def main():
     _graph_service_parser(graph_service_cmd_parser_deprecated)
     data2db_parser = subparsers.add_parser('data2db')
     _data2db_service_parser(data2db_parser)
+    
+    parse_parser = subparsers.add_parser('parse')
+    _parse_parser(parse_parser)
 
     offline_dump_parser = subparsers.add_parser('offline_dump')
     _offline_dump_parser(offline_dump_parser)
@@ -131,6 +135,8 @@ def main():
         offline_dump_cli(args)
     elif sys.argv[1] == "install_deps":
         install_deps_cli(args)
+    elif sys.argv[1] == "parse":
+        parse_cli(args)
 
 
 if __name__ == "__main__":
