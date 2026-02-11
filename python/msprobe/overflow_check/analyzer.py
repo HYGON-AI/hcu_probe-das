@@ -51,15 +51,18 @@ class OverFlowCheck:
     def _resolve_input_path(self):
         contents = os.listdir(self._input_path)
         for path in contents:
-            if not path.startswith('rank'):
-                continue
-            rank_str = path[len('rank'):]
-            if not rank_str:
+            if len(contents) == 1 and path.startswith('proc'):
                 rank = 0
-            elif not rank_str.isdigit():
+            elif not path.startswith('rank'):
                 continue
             else:
-                rank = int(rank_str)
+                rank_str = path[len('rank'):]
+                if not rank_str:
+                    rank = 0
+                elif not rank_str.isdigit():
+                    continue
+                else:
+                    rank = int(rank_str)
             dump_path = os.path.join(self._input_path, path, OverFlowCheckConst.DUMP_FILE)
             construct_path = os.path.join(self._input_path, path, OverFlowCheckConst.CONSTRUCT_FILE)
             stack_path = os.path.join(self._input_path, path, OverFlowCheckConst.STACK_FILE)
