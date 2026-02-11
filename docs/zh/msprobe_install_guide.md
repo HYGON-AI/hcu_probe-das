@@ -169,7 +169,7 @@ Author: Ascend Team
 Author-email: pmail_mindstudio@xx.com
 License: Mulan PSL v2
 Location: /home/xxx/miniconda3/envs/xxx/lib/python3.x/site-packages/
-Requires: einops, matplotlib, numpy, onnx, onnxruntime, openpyxl, pandas, protobuf, pyyaml, rich, skl2onnx, tensorboard, tqdm, wheel
+Requires: einops, matplotlib, numpy, onnx, onnxruntime, openpyxl, pandas, protobuf, pyyaml, rich, setuptools, skl2onnx, tensorboard, tqdm, wheel
 Required-by:
 ```
 
