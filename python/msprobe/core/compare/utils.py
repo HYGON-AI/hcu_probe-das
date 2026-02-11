@@ -865,6 +865,9 @@ def compare_distributed_inner(npu_dump_dir, bench_dump_dir, output_path, **kwarg
     dump_data = load_json(pre_check_dump_path)
 
     compare_framework = dump_data.get("framework", None)
+    if not compare_framework:
+        logger.warning(f"Unable to get framework information from dump.json, default setting is {Const.PT_FRAMEWORK}.")
+        compare_framework = Const.PT_FRAMEWORK
     if compare_framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import pt_compare
         compare_func = pt_compare
@@ -908,7 +911,15 @@ def get_compare_framework(target_path, golden_path):
     target_dump_json_content = load_json(target_path)
     golden_dump_json_content = load_json(golden_path)
     target_framework = target_dump_json_content.get("framework", None)
+    if not target_framework:
+        logger.warning(f"Unable to get framework information from target dump.json, "
+                       f"default setting is {Const.PT_FRAMEWORK}.")
+        target_framework = Const.PT_FRAMEWORK
     golden_framework = golden_dump_json_content.get("framework", None)
+    if not golden_framework:
+        logger.warning(f"Unable to get framework information from golden dump.json, "
+                       f"default setting is {Const.PT_FRAMEWORK}.")
+        golden_framework = Const.PT_FRAMEWORK
     if target_framework == Const.PT_FRAMEWORK and golden_framework == Const.PT_FRAMEWORK:
         frame_name = Const.PT_FRAMEWORK
     elif (target_framework in [Const.MS_FRAMEWORK, Const.MT_FRAMEWORK] and
