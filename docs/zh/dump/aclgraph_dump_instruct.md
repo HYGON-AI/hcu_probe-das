@@ -104,9 +104,10 @@ for step in range(3):
 ### dump 结果文件介绍
 
 调用 `acl_save` 后，会在 `path` 指定目录下生成 `.pt` 文件。
-**注意**：
 
-* 文件名会在你传入的 `path` 基础上自动追加递增序号，格式为 `{base}_{seq}.pt`。例如传入 `./dump/act.pt`，实际落盘为 `./dump/act_0.pt`、`./dump/act_1.pt`。
+> [!NOTE]  说明
+>
+> 文件名会在传入的 `path` 基础上自动追加递增序号，格式为 `{base}_{seq}.pt`。例如传入 `./dump/act.pt`，实际落盘为 `./dump/act_0.pt`、`./dump/act_1.pt`。
 
 ### 数据解析
 

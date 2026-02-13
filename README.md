@@ -17,7 +17,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 
 ### 工具安装
 
-安装msProbe工具，当前仅支持编译安装方式，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
+安装msProbe工具，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
 
 ## 快速入门
 

@@ -57,7 +57,7 @@ MindSpore场景分级可视化构图比对：将msProbe工具dump的精度数据
 
 **注意事项**
 
-依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息和和API信息），采集结果文件construct.json内容不为空。
+依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息和API信息），采集结果文件construct.json内容不为空。
 
 **命令格式**
 
@@ -69,7 +69,7 @@ msprobe graph_visualize -tp <target_path> -o <output_path> [-oc] [-tensor_log] [
 
 | 参数名                                 | 可选/必选 | 说明                                                         |
 | -------------------------------------- | --------- | ------------------------------------------------------------ |
-| -tp或--target_path                     | 必选      | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank构建、多rank批量构建或多step批量比构建。 |
+| -tp或--target_path                     | 必选      | 指定待调试侧比对路径，str类型。工具根据路径格式自动进行单rank构建、多rank批量构建或多step批量构建。 |
 | -o或--output_path                      | 必选      | 配置构图结果文件存盘目录，str类型。文件名称基于时间戳自动生成，格式为：`build_{timestamp}.vis.db`。 |
 | -oc或--overflow_check                  | 可选      | 是否开启溢出检测模式，开启后会在输出db文件中（`build_{timestamp}.vis.db`）对每个溢出节点进行标记溢出等级。配置该参数表示开启，默认未配置表示关闭。 |
 | -tensor_log或--is_print_compare_log    | 可选      | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。配置该参数表示开启，默认未配置表示关闭。 |
@@ -130,7 +130,7 @@ dump类型如何配置见[数据采集配置文件介绍](../dump/config_json_in
 
 **注意事项**
 
-依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息+和API信息），采集结果文件construct.json内容不为空。
+依赖采集的模型结构数据，需确保dump配置的level为L0（module信息）或者mix（module信息和API信息），采集结果文件construct.json内容不为空。
 
 **命令格式**
 
@@ -357,7 +357,7 @@ ubuntu是机器地址，6008是端口号。
 
    按住CTRL点击链接即可。
 
-3. 或者将构图结果文件vis文件从服务器传输至本地电脑，在本地电脑中安装tb_graph_ascend插件查看构图结果。
+3. 或者将构图结果文件从服务器传输至本地电脑，在本地电脑中安装tb_graph_ascend插件查看构图结果。
 
    电脑终端输入：
    ```
