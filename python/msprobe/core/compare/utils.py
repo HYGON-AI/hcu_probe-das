@@ -86,17 +86,21 @@ def check_and_return_dir_contents(dump_dir, prefix, skip_wrong_dir=False):
     check_file_or_directory_path(dump_dir, True)
     contents = os.listdir(dump_dir)
     pattern = re.compile(rf'^{prefix}(?:0|[1-9][0-9]*)?$')
+    final_contents = []
     for name in contents:
         if not pattern.match(name):
             if skip_wrong_dir:
-                contents.remove(name)
+                pass
             else:
                 logger.error(
                     f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
                     f"output. Please check and delete irrelevant files in {dump_dir} and try again."
                 )
                 raise CompareException(CompareException.INVALID_PATH_ERROR)
-    return contents
+        else:
+            final_contents.append(name)
+    return final_contents
+
 
 def read_op(op_data, op_name):
     if not isinstance(op_name, str):
