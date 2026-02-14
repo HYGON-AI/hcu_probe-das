@@ -133,33 +133,34 @@ const useHeatMap = () => {
 
   const updateHeatMap = (data, dimension, heatMapType) => {
     const ModuleNameMap = new Map(); // ID -> ModuleName
-    const yAxisMap = new Map(); // ID -> Index
     let heatMapChartData = data.map((entry) => {
-      ModuleNameMap.set(entry[1][0], entry[1][1]);
-      return [entry[0], entry[1][0], entry[2]];
+      // 数据格式校验
+      if (entry?.length !== 3 || entry[1]?.length !== 2) {
+        return [];
+      }
+      ModuleNameMap.set(String(entry[1][0]), entry[1][1]);
+      // 转化为字符串，如果是值的话，echarts默认为索引
+      return [String(entry[0]), String(entry[1][0]), entry[2]];
     });
 
-    // x轴和y轴的刻度
-    const xAxisSet = new Set<number>();
-    const yAxisData = Array.from(ModuleNameMap.keys()).sort((a: number, b: number) => a - b);
-    yAxisData.forEach((id, index) => {
-      yAxisMap.set(id, index);
-    });
-    heatMapChartData = heatMapChartData.map((entry) => {
-      return [entry[0], yAxisMap.get(entry[1]), entry[2]];
-    });
-    // x轴和y轴的标签
     const xAxisName = DIMENSIONS_AXIS_MAP[dimension]?.x;
     const yAxisName = DIMENSIONS_AXIS_MAP[dimension]?.y;
 
+    const xAxisSet = new Set<number>();
     let minValue = Number.MAX_VALUE;
     let maxValue = Number.MIN_VALUE;
     heatMapChartData.forEach((entry) => {
-      xAxisSet.add(entry[0]);
+      xAxisSet.add(Number(entry[0]));
       minValue = Math.min(minValue, entry[2]);
       maxValue = Math.max(maxValue, entry[2]);
     });
-    const xAxisData = Array.from(xAxisSet).sort((a: number, b: number) => a - b);
+    // x轴和y轴的刻度，转化为字符串，如果是值的话，echarts默认为索引
+    const xAxisData = Array.from(xAxisSet)
+      .sort((a: number, b: number) => a - b)
+      .map((x) => x.toString());
+    const yAxisData = Array.from(ModuleNameMap.keys())
+      .sort((a: number, b: number) => a - b)
+      .map((x) => x.toString());
 
     // 配置项
     const option = {
@@ -187,7 +188,7 @@ const useHeatMap = () => {
         },
         formatter: (params) => {
           const xLabel = params.data?.[0];
-          const yLabel = ModuleNameMap.get(yAxisData[params.data?.[1]]);
+          const yLabel = ModuleNameMap.get(params.data?.[1]);
           return `
                   <div style="z-index=1000;">
                     <div style="font-weight:bold;margin-bottom:5px">${yAxisName}: ${yLabel}</div>
@@ -320,7 +321,7 @@ const useHeatMap = () => {
       animationEasing: 'cubicInOut',
     };
 
-    return { yAxisData, option };
+    return { option };
   };
 
   return { updateHeatMap, loadGraphData };

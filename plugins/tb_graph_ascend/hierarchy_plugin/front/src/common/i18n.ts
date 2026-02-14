@@ -76,6 +76,11 @@ export const resources = {
       build_info_desc_2: 'This tool requires the use of graph structure files for visualization',
       build_info_desc_3: 'How To Start',
 
+      build_info_desc_permission:
+        'For security, directories with permissions > 640 are hidden. Please adjust manually.',
+
+      build_info_file_permission: 'For security, files with permissions > 750 are hidden. Please adjust manually.',
+
       build_info_main_title: 'Build a graph structure file from the model data file. ',
       build_info_sub_title: 'Supports hierarchical visual graph comparison. ',
 
@@ -291,6 +296,10 @@ export const resources = {
       build_info_desc_1: '当前目录下未找到图结构文件',
       build_info_desc_2: '本工具需要使用图结构文件进行可视化',
       build_info_desc_3: '如何开始',
+
+      build_info_desc_permission: '出于安全考虑，目录权限超过640将不会在此处显示，请自行修改权限。',
+      build_info_file_permission: '出于安全考虑，文件权限超过750将不会在此处显示，请自行修改权限。',
+
       build_info_main_title: '构建图结构文件',
       build_info_sub_title: '从模型数据文件构建图结构文件。',
 

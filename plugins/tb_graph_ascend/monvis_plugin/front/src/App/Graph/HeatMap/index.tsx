@@ -41,7 +41,6 @@ const HeatMap = () => {
   const setLoadingLineChart = useGlobalStore((state) => state.setLoadingLineChart);
   const setTrendData = useGlobalStore((state) => state.setTrendData);
   const [option, setOption] = useState({});
-  const yAxisMapRef = useRef(new Map());
 
   // 2. 创建 ref 存储最新状态
   const latestPropsRef = useRef({
@@ -59,6 +58,7 @@ const HeatMap = () => {
   // 3. 每次 render 更新 ref（不会触发重渲染）
   useEffect(() => {
     latestPropsRef.current = {
+      tags,
       metric,
       stat,
       dimension,
@@ -74,20 +74,29 @@ const HeatMap = () => {
 
   useEffect(() => {
     if (metric && stat && dimension) {
-      const { yAxisData, option } = useHeatMapInstance.updateHeatMap(heatMapData, dimension, heatMapType);
+      const { option } = useHeatMapInstance.updateHeatMap(heatMapData, dimension, heatMapType);
       setOption(option);
-      yAxisMapRef.current = yAxisData;
     }
   }, [heatMapData, heatMapType]);
 
   // 4. 使用 useCallback 固定函数引用，从 ref 读取最新值
   const onChartClick = useCallback(async (echartsParams) => {
     const dimX = echartsParams.data[0];
-    const dimY = yAxisMapRef.current[echartsParams.data[1]];
+    const dimY = echartsParams.data[1];
 
     // 从 ref 拿最新值，避免 stale closure
-    const { metric, stat, dimension, trendData, dimensionValue, setDimX, setDimY, setTrendData, setLoadingLineChart } =
-      latestPropsRef.current;
+    const {
+      metric,
+      stat,
+      dimension,
+      trendData,
+      dimensionValue,
+      setDimX,
+      setDimY,
+      setTrendData,
+      setLoadingLineChart,
+      tags,
+    } = latestPropsRef.current;
 
     if (!metric || !stat || !dimension) {
       console.warn('Missing required props in onChartClick');
@@ -149,13 +158,12 @@ const HeatMap = () => {
       const value = item[2]; // 假设第3维是映射维度
       return value >= minVal && value <= maxVal;
     });
-    const { yAxisData, option } = useHeatMapInstance.updateHeatMap(filteredData, dimension, heatMapType);
+    const { option } = useHeatMapInstance.updateHeatMap(filteredData, dimension, heatMapType);
     setOption({
       xAis: option.xAxis,
       yAxis: option.yAxis,
       series: option.series,
     });
-    yAxisMapRef.current = yAxisData;
   }, []);
 
   return (

@@ -57,10 +57,6 @@ const BuildInfo = () => {
       {contextHolder}
       <div className={styles.buildWrapper}>
         <div className={styles.buildHeader}>
-          <div className={styles.topContentWarning}>
-            <span className={styles.topContentWarningImportant}>{t('build_info_desc_1')} (*.vis.db)</span>
-            <span>, {t('build_info_desc_2')}</span>
-          </div>
           <p className={styles.topContentCenterTitle}>{t('build_info_desc_3')}:</p>
           <Steps
             progressDot
@@ -128,7 +124,16 @@ const BuildInfo = () => {
               onFinish={onFinish}
             >
               <div className={styles.subTitle}>{t('file_param_config')}</div>
-              <Form.Item label={t('label_npu_path')} name="npu_path" rules={[{ required: true }]}>
+              <Form.Item
+                label={
+                  <div>
+                    {t('label_npu_path')}
+                    <div className={styles.permissionWarning}>{t('build_info_desc_permission')}</div>
+                  </div>
+                }
+                name="npu_path"
+                rules={[{ required: true }]}
+              >
                 <Select allowClear options={npuPathItems} showSearch placeholder={t('placeholder_select')} />
               </Form.Item>
               <Form.Item label={t('label_bench_path')} name="bench_path">
@@ -253,7 +258,15 @@ const BuildInfo = () => {
                 </div>
               )}
               <div className={styles.subTitle}>{t('more_options')}</div>
-              <Form.Item label={t('label_layer_mapping')} name="layer_mapping">
+              <Form.Item
+                label={
+                  <div>
+                    {t('label_layer_mapping')}
+                    <div className={styles.permissionWarning}>{t('build_info_file_permission')}</div>
+                  </div>
+                }
+                name="layer_mapping"
+              >
                 <Select allowClear options={layerMappingItems} placeholder={t('placeholder_select')} />
               </Form.Item>
               <Form.Item name="overflow_check" valuePropName="checked" className={styles.itemStyle}>

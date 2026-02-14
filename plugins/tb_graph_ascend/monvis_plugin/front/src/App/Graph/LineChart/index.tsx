@@ -29,16 +29,8 @@ const LineChart = () => {
 
   const heatMapXAxisName = DIMENSIONS_AXIS_MAP[dimension || '']?.x;
   const heatMapYAxisName = DIMENSIONS_AXIS_MAP[dimension || '']?.y;
-  let yAxisMap = new Map<string, string>();
   let xAxisData = trendData?.[0]?.dimensions;
   let xAxisName = dimension;
-  if (dimension === MODULE_NAME_DIMENSION && !isEmpty(trendData)) {
-    xAxisName = 'Target Id';
-    trendData?.[0]?.dimensions.forEach((item, index) => {
-      yAxisMap.set(String(index), item);
-    });
-    xAxisData = Array.from(yAxisMap.keys());
-  }
 
   const option = {
     title: {
@@ -81,11 +73,20 @@ const LineChart = () => {
     xAxis: {
       type: 'category',
       data: xAxisData,
+
       name: xAxisName,
       axisLabel: {
         rotate: 45,
         fontSize: 12,
         fontWeight: 'bold',
+        formatter: (value: string): string => {
+          // 标签太长，只保留targetId
+          if (dimension === MODULE_NAME_DIMENSION) {
+            return value?.split('_')[0];
+          } else {
+            return value;
+          }
+        },
       },
       nameTextStyle: {
         fontSize: 12,
@@ -155,7 +156,11 @@ const LineChart = () => {
       return {
         name: `${heatMapXAxisName}: ${trend.dimX ?? ' '} / ${heatMapYAxisName}: ${trend.dimY ?? ' '}`,
         type: 'line',
-        data: trend?.values,
+        data: trend?.values.map((value) => {
+          if (Number(value) > 100000000) return 1000000000;
+          if (Number(value) < -100000000) return -1000000000;
+          return Number(value);
+        }),
         lineStyle: {
           width: 2,
         },
