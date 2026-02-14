@@ -177,6 +177,7 @@ const Controller: React.FC = (props: ControllerProps) => {
   const onSelectMetricChange = (value: string) => {
     const statNameList = metricsMapStats[value];
     const selectedStat = statNameList?.[0]?.value;
+    setTags([]);
     setMetric(value);
     setStat(selectedStat);
     setStatNameList(statNameList);
@@ -184,6 +185,7 @@ const Controller: React.FC = (props: ControllerProps) => {
 
   // 统计量选择
   const onSelectStatChange = (value: string) => {
+    setTags([]);
     setStat(value);
   };
 
@@ -193,6 +195,7 @@ const Controller: React.FC = (props: ControllerProps) => {
       metric,
       stat,
       dimension: value,
+      tags,
     } as ValuesRequestParamsType;
     updateDimensionValueList(params);
   };
@@ -255,8 +258,6 @@ const Controller: React.FC = (props: ControllerProps) => {
           mode="multiple"
           value={tags}
           placeholder="请选择标签"
-          showSearch
-          filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
           onChange={onSelectTagsChange}
           options={tagsValueList}
         />
