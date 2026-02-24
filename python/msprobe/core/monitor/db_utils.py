@@ -18,7 +18,7 @@ from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Dict, List, Optional, Set, Tuple
 
-from msprobe.core.common.const import MonitorConst, Const, Data2DBConst
+from msprobe.core.common.const import Const, Data2DBConst
 from msprobe.core.common.db_manager import DBManager, TrendSql
 
 
@@ -73,7 +73,7 @@ class MonitorDB:
     ) -> None:
         """Insert dimension data into database"""
         # Insert targets
-        metrics = get_ordered_list(set(targets.keys()), MonitorConst.METRICS_TRENDVIS_SUPPORTED)
+        metrics = get_ordered_list(set(targets.keys()), Data2DBConst.METRICS_TRENDVIS_SUPPORTED)
         for metric_name in metrics:
             self.db_manager.insert_data(
                 "monitoring_targets",
@@ -133,7 +133,7 @@ class MonitorDB:
             ordered_stats = []
             if stats_value:
                 stats_list = stats_value.split(",") if isinstance(stats_value, str) else []
-                ordered_stats = get_ordered_list(stats_list, MonitorConst.OP_MONVIS_SUPPORTED)                
+                ordered_stats = get_ordered_list(stats_list, Data2DBConst.OP_TRENDVIS_SUPPORTED)                
             metric_mapping[metric_name] = (metric_id, ordered_stats)
         return metric_mapping
 

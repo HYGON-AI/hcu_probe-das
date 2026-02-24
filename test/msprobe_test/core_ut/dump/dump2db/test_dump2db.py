@@ -9,53 +9,10 @@ import sys
 from msprobe.core.dump.dump2db.dump2db import (
     DumpRecordBuilder,
     TensorProcessingParams,
-    validate_micro_step,
-    load_mapping,
+    scan_files
 )
 from msprobe.core.dump.dump2db.db_utils import DumpDB
 from msprobe.core.common.const import Const, Data2DBConst
-
-
-class TestValidationFunctions(unittest.TestCase):
-    """测试验证函数"""
-
-    def test_validate_micro_step_valid(self):
-        """测试有效的micro_step值"""
-        # 正常值
-        validate_micro_step(1)
-        validate_micro_step(5000)
-        validate_micro_step(10000)
-
-        # None值应该被允许
-        validate_micro_step(None)
-
-    def test_validate_micro_step_invalid_type(self):
-        """测试无效的micro_step类型"""
-        with self.assertRaises(ValueError, msg="Micro step must be an integer"):
-            validate_micro_step("invalid")
-
-    def test_validate_micro_step_out_of_range(self):
-        """测试超出范围的micro_step值"""
-        with self.assertRaises(ValueError):
-            validate_micro_step(0)  # 小于最小值
-
-        with self.assertRaises(ValueError):
-            validate_micro_step(10001)  # 大于最大值
-
-    def test_load_mapping_none_path(self):
-        """测试加载映射文件 - 空路径"""
-        result = load_mapping(None)
-        self.assertEqual(result, {})
-        result = load_mapping("")
-        self.assertEqual(result, {})
-
-    def test_load_mapping_valid_path(self):
-        """测试加载映射文件 - 有效路径"""
-        with patch('msprobe.core.dump.dump2db.dump2db.load_json') as mock_load:
-            mock_load.return_value = {"key": "value"}
-            result = load_mapping("/path/to/mapping.json")
-            self.assertEqual(result, {"key": "value"})
-            mock_load.assert_called_once_with("/path/to/mapping.json")
 
 
 class TestDumpRecordBuilderStaticMethods(unittest.TestCase):
@@ -99,25 +56,6 @@ class TestDumpRecordBuilderStaticMethods(unittest.TestCase):
                     metric_type, tensor_type, tensor_idx)
                 self.assertEqual(result, expected,
                                  f"Failed for {description}: {metric_type}, {tensor_type}, {tensor_idx}")
-
-    def test_process_tensor_value_edge_cases(self):
-        """测试处理tensor值的边界情况"""
-        edge_cases = [
-            # (value, expected_result, description)
-            (sys.float_info.max, sys.float_info.max, "maximum float value"),
-            (sys.float_info.min, sys.float_info.min, "minimum float value"),
-            (None, sys.float_info.max, "None value"),
-            (float("inf"), sys.float_info.max - 1, "positive infinity"),
-            (float("-inf"), sys.float_info.min + 1, "negative infinity"),
-            (object(), None, "generic object"),
-            (1.1, 1.1, "normal float value"),
-        ]
-
-        for value, expected, description in edge_cases:
-            with self.subTest(value=value, description=description):
-                result = DumpRecordBuilder.process_tensor_value(value)
-                self.assertEqual(result, expected,
-                                 f"Failed for {description}: input={value}")
 
 
 class TestDetermineMetricType(unittest.TestCase):
@@ -438,7 +376,7 @@ class TestIntegration(unittest.TestCase):
 
         # 执行测试
         self.builder._process_dump_file(
-            dump_file_path, step=0, rank=0)
+            dump_file_path, "", 0, 2)
 
         self.mock_db.batch_insert_data.assert_called()
         self.mock_db.batch_insert_targets.assert_called()
@@ -477,16 +415,12 @@ class TestIntegration(unittest.TestCase):
             # 模拟get_metric_id
             self.mock_db.get_metric_id.return_value = 1
             # 模拟table_name_cache
-
+            valid_ranks = scan_files(self.data_dir)
             with patch.object(self.builder, '_process_dump_file') as mock_process_dump:
                 # 执行测试
-                self.builder.import_data()
+                self.builder.import_data(valid_ranks)
                 # 验证全局统计更新被调用
                 self.mock_db.init_global_stats_data.assert_called_once()
                 # 验证处理了正确数量的step
                 self.assertEqual(mock_process_dump.call_count,
                                  len(step_dirs) * len(rank_dirs))
-
-
-if __name__ == '__main__':
-    unittest.main()
