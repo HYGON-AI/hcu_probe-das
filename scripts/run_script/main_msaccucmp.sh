@@ -24,21 +24,6 @@ error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 检查是否已安装
-check_installation() {
-    if [[ -d "$INSTALL_DIR" ]]; then
-        if [[ "$SILENT_MODE" != "true" ]]; then
-            echo -n "目录 $INSTALL_DIR 已存在，是否覆盖？ (y/N): "
-            read -r response
-            if [[ ! "$response" =~ ^[Yy]$ ]]; then
-                info "安装已取消"
-                exit 0
-            fi
-        fi
-        warn "将覆盖现有安装: $INSTALL_DIR"
-    fi
-}
-
 # 创建安装目录
 create_install_dir() {
     info "创建安装目录: $INSTALL_DIR"
@@ -103,8 +88,6 @@ main_install() {
         echo ""
     fi
 
-    # 检查是否已安装
-    check_installation
     # 创建安装目录
     create_install_dir
 
