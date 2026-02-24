@@ -37,15 +37,21 @@ def parse_full_key(full_key):
 
     # 关联默认标签
     filtered_parts = []
+    is_module = False
     for part in parts[:-2]:
         if part not in Data2DBConst.DEFAULT_TAGS:
             filtered_parts.append(part)
         else:
             tags.add((part, Data2DBConst.TAG_DEFAULT))
+            is_module = True
 
     if not filtered_parts:
         return set()
-
+    if not is_module:
+        api_tag = (".".join(filtered_parts), Data2DBConst.TAG_FUNCTION)
+        tags.add(api_tag)
+        return tags
+    # module级别拆分layer标签
     processed_indices = [-1]
     for i, part in enumerate(filtered_parts):
         if part.isdigit():
@@ -62,15 +68,11 @@ def parse_full_key(full_key):
                 module_tag = (before_layer, Data2DBConst.TAG_MODULE)
                 tags.add(module_tag)
             processed_indices.append(i)
-
     if processed_indices[-1] != len(filtered_parts) - 1 and \
             ".".join(filtered_parts[processed_indices[-1] + 1:]):
         module_tag = (
             ".".join(filtered_parts[processed_indices[-1] + 1:]), Data2DBConst.TAG_MODULE)
         tags.add(module_tag)
-    if len(processed_indices) == 1:
-        api_tag = (".".join(filtered_parts), Data2DBConst.TAG_FUNCTION)
-        tags.add(api_tag)
     return tags
 
 

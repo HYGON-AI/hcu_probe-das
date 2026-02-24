@@ -437,16 +437,13 @@ class Data2DBConst:
     PARAMETERS_GRAD = "parameters_grad"
     METRICS = [FORWARD, BACKWARD, RECOMPUTE, PARAMETERS_GRAD]
     DEFAULT_TAGS = ["Module", "Cell"]
+    ROOT_NODE_PREFIX = ["Module", "Cell", "optimizer"]
     ORDERED_STAT = ["norm", "max", "min", "mean"]
     TAG_DEFAULT = "default"
     TAG_INDEX = "index"
     TAG_LAYER = "layer"
     TAG_MODULE = "module"
     TAG_FUNCTION = "function"
-    MAX_PARTITION = 10_000_000
-    MIN_PARTITION = 10
-    MAX_MICRO_STEP = 10000
-    MIN_MICRO_STEP = 1
     SUPPORT_TYPE = ["torch.Tensor", "mindspore.Tensor", "mindtorch.Tensor"]
     SUPPORT_DTYPE = [Const.FLOAT16,
                      Const.FLOAT32,
@@ -454,6 +451,23 @@ class Data2DBConst:
                      Const.TORCH_FLOAT16,
                      Const.TORCH_FLOAT32,
                      Const.TORCH_BFLOAT16]
+    DB_DUMP = "dump_data.trend.db"
+    DB_MONITOR = "monitor_data.trend.db"
+    # csv2db
+    DEFAULT_INT_VALUE = 0
+    MAX_PROCESS_NUM = 128
+    OP_TRENDVIS_SUPPORTED = [
+        "norm", "min", "max", "zeros", "nans", "mean",
+        "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
+        "proxy", "token_similarity"
+    ]
+    METRICS_TRENDVIS_SUPPORTED = [
+        "actv", "actv_grad", "exp_avg", "exp_avg_sq",
+        "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
+    ]
+    FILE_BATCH_SIZE = 100
+    MAX_FLOAT_VALUE = 1e9
+    MIN_FLOAT_VALUE = -1e9
 
 
 class CompareConst:
@@ -868,15 +882,6 @@ class MonitorConst:
     DEFAULT_STEP_INTERVAL = 1
 
     OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean", "shape", "dtype"]
-    OP_MONVIS_SUPPORTED = [
-        "norm", "min", "max", "zeros", "nans", "mean",
-        "entropy", "softmax_max", "sr", "kernel_norm", "std_x", "jacobian",
-        "proxy", "token_similarity"
-    ]
-    METRICS_TRENDVIS_SUPPORTED = [
-        "actv", "actv_grad", "exp_avg", "exp_avg_sq",
-        "grad_unreduced", "grad_reduced", "param_origin", "param_updated", "other"
-    ]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -942,12 +947,4 @@ class MonitorConst:
         TRAIN_STAGE[key] = BACKWARD_STAGE
     for key in OPTIMIZER_KEY:
         TRAIN_STAGE[key] = OPTIMIZER_STAGE
-
-    # csv2db
-    DEFAULT_INT_VALUE = 0
-    MAX_PROCESS_NUM = 128
     CSV_FILE_PATTERN = r"_(\d+)-(\d+)\.csv"
-    BATCH_SIZE = 10000
-    MAX_PARTITION = 10_000_000
-    MIN_PARTITION = 10
-    

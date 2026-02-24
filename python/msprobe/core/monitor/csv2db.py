@@ -14,328 +14,359 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
-import datetime
 import os
 import re
 from collections import OrderedDict, defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple, Any
 
-import pytz
-from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import (create_directory, read_csv,
-                                            recursive_chmod, remove_path)
+from msprobe.core.common.const import MonitorConst, Data2DBConst
+from msprobe.core.common.file_utils import read_csv
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import is_int
 from msprobe.core.monitor.db_utils import MonitorDB, update_ordered_dict, get_ordered_list
-from msprobe.core.monitor.utils import get_target_output_dir
+from msprobe.core.common.data2db_utils import process_tensor_value
 from tqdm import tqdm
 
 
 @dataclass
 class CSV2DBConfig:
     """Configuration for CSV to database conversion"""
-    monitor_path: str
-    time_start: Optional[str] = None
-    time_end: Optional[str] = None
+    target_output_dirs: Dict[int, str]
     process_num: int = 1
-    data_type_list: Optional[List[str]] = None
-    output_dirpath: Optional[str] = None
+    db_file: str = None
+    micro_step: bool = True
+    mapping: Dict = None
 
 
-def validate_process_num(process_num: int) -> None:
-    """Validate process number parameter"""
-    if not is_int(process_num) or process_num <= 0:
-        raise ValueError("process_num must be a positive integer")
-    if process_num > MonitorConst.MAX_PROCESS_NUM:
-        raise ValueError(f"Maximum supported process_num is {MonitorConst.MAX_PROCESS_NUM}")
-
-
-def validate_data_type_list(data_type_list: Optional[List[str]]) -> None:
-    """Validate data type list parameter"""
-    if data_type_list is None or not data_type_list:
-        logger.info(f"Using default data types: {MonitorConst.METRICS_TRENDVIS_SUPPORTED}")
-        return
-
-    if not isinstance(data_type_list, list):
-        raise ValueError("data_type_list must be a list")
-
-    invalid_types = [t for t in data_type_list if t not in MonitorConst.METRICS_TRENDVIS_SUPPORTED]
-    if invalid_types:
-        raise ValueError(f"Unsupported data types: {invalid_types}")
-
-
-def get_info_from_filename(file_name, metric_list=None):
-    metric_name = "_".join(file_name.split('_')[:-1])
-    if metric_list and metric_name not in metric_list:
-        return "", 0, 0
-    match = re.match(f"{metric_name}{MonitorConst.CSV_FILE_PATTERN}", file_name)
+def get_metric_name_from_filename(file_name: str) -> Tuple[str, str, str]:
+    """Extract metric name from filename"""
+    parts = file_name.split('_')
+    if len(parts) < 2:
+        return ""
+    metric_candidate = "_".join(parts[:-1])
+    if metric_candidate in Data2DBConst.METRICS_TRENDVIS_SUPPORTED:
+        metric_name = metric_candidate
+    else:
+        return ""
+    # step pattern
+    pattern = f"{re.escape(metric_name)}{MonitorConst.CSV_FILE_PATTERN}"
+    match = re.match(pattern, file_name)
     if not match:
-        return "", 0, 0
-    step_start, step_end = match.groups()
-    return metric_name, step_start, step_end
+        return ""
+    return metric_name
 
 
-def _pre_scan_single_rank(rank: int, files: List[str]) -> Dict:
+def _pre_scan_single_rank(
+    rank: int,
+    files: List[str],
+    mapping: Dict[str, str],
+    use_micro_step: bool
+) -> Dict[str, Any]:
     """Pre-scan files for a single rank to collect metadata"""
-    metrics = set()
-    min_step = None
+    min_step = 0
     max_step = 0
+    micro_step_dict = defaultdict(int)  # 记录step下的micro_step数量, micro_step最大值
     metric_stats = defaultdict(set)
-    targets = defaultdict(OrderedDict)
+    targets = defaultdict(dict)  # 记录targets
 
     for file_path in files:
         file_name = os.path.basename(file_path)
-        metric_name, step_start, step_end = get_info_from_filename(file_name)
+        metric_name = get_metric_name_from_filename(file_name)
         if not metric_name:
             continue
-        step_start, step_end = int(step_start), int(step_end)
-
-        metrics.add(metric_name)
-        min_step = min(
-            step_start if min_step is None else min_step, step_start)
-        max_step = max(max_step, step_end)
 
         data = read_csv(file_path)
-        stats = [k for k in data.keys() if k in MonitorConst.OP_MONVIS_SUPPORTED]
+        stats = [k for k in data.columns if k in Data2DBConst.OP_TRENDVIS_SUPPORTED]
         metric_stats[metric_name].update(stats)
 
-        for row_id, row in data.iterrows():
+        for _, row in data.iterrows():
             try:
-                name = row[MonitorConst.HEADER_NAME]
+                name = str(row[MonitorConst.HEADER_NAME])
                 vpp_stage = int(row['vpp_stage'])
-                micro_step = int(row.get('micro_step', MonitorConst.DEFAULT_INT_VALUE))
-            except (ValueError, KeyError) as e:
-                logger.warning(
-                    f"CSV conversion failed | file={file_path}:{row_id+2} | error={str(e)}")
+                step = int(row.get('step', Data2DBConst.DEFAULT_INT_VALUE))
+                micro_step = int(
+                    row.get('micro_step', Data2DBConst.DEFAULT_INT_VALUE))
+            except (ValueError, KeyError, TypeError) as e:
+                logger.warning(f"Skip invalid row in {file_path}: {e}")
                 continue
+            # 使用 mapping
+            if mapping:
+                for key, value in mapping.items():
+                    name = name.replace(key, value)
+
+            if use_micro_step:
+                if micro_step >= micro_step_dict[step]:
+                    # count of micro step
+                    micro_step_dict[step] = micro_step + 1  
+                micro_step = Data2DBConst.DEFAULT_INT_VALUE
+            else:
+                # 整体的step范围
+                min_step = min(min_step or step, step)
+                max_step = max(max_step, step)
+
+            # 记录target
             target = (name, vpp_stage, micro_step)
-            if target not in targets[metric_name]:
-                targets[metric_name][target] = None
+            targets[metric_name][target] = None
 
     return {
-        'max_rank': int(rank),
+        'rank': rank,
         'min_step': min_step,
         'max_step': max_step,
+        'micro_step_dict': dict(micro_step_dict),
         'metric_stats': metric_stats,
-        'targets': {metric_name: list(target_dict.keys()) for metric_name, target_dict in targets.items()}
+        'targets': {m: list(t.keys()) for m, t in targets.items()}
     }
 
 
-def _pre_scan(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: List[str], workers: int = 1):
+def _build_global_micro_step_mapping(
+    results: List[Dict],
+    use_micro_step: bool
+) -> Tuple[int, int, Dict[int, int]]:
+    """Build global step range and micro_step prefix sum mapping"""
+    if not use_micro_step:
+        # 如果不开mciro_step 则直接统计step最大最小值
+        all_min_steps = [r['min_step'] for r in results if r['min_step'] is not None]
+        all_max_steps = [r['max_step'] for r in results]
+        min_step = min(all_min_steps) if all_min_steps else 0
+        max_step = max(all_max_steps) if all_max_steps else 0
+        return min_step, max_step, {}
+
+    # 开启micro-step
+    # 合并step中micro_step最大数量
+    merged = defaultdict(int)
+    for res in results:
+        for step, micro_val in res.get('micro_step_dict', {}).items():
+            if micro_val > merged[step]:
+                merged[step] = micro_val
+
+    if not merged:
+        return 0, 0, {}
+
+    # 按step排序 计算prefix sum
+    sorted_steps = sorted(merged.items())
+    prefix_sum = {}
+    cumsum = 0
+    for step, micro_val in sorted_steps:
+        prefix_sum[step] = cumsum
+        cumsum += micro_val
+
+    min_step = 0
+    max_step = cumsum - 1  # steps are 0-indexed
+    return min_step, max_step, prefix_sum
+
+
+def _pre_scan(config: CSV2DBConfig, monitor_db: MonitorDB):
     """Pre-scan all targets, metrics, and statistics"""
     logger.info("Scanning dimensions...")
     rank_files = defaultdict(list)
 
-    # Collect files for each rank
-    for rank, dir_path in data_dirs.items():
-        files = os.listdir(dir_path)
-        for file in files:
-            metric_name, _, _ = get_info_from_filename(
-                file, metric_list=data_type_list)
-            if not metric_name:
-                continue
-            rank_files[rank].append(os.path.join(dir_path, file))
+    # 收集每个rank下csv文件
+    for rank, dir_path in config.target_output_dirs.items():
+        if not os.path.isdir(dir_path):
+            continue
+        for file in os.listdir(dir_path):
+            if get_metric_name_from_filename(file):
+                rank_files[rank].append(os.path.join(dir_path, file))
 
-    # Parallel pre-scan
-    with ProcessPoolExecutor(max_workers=workers) as executor:
+    if not rank_files:
+        logger.warning("No valid CSV files found")
+        return {}, {}, {}, {}
+
+    batch_size = Data2DBConst.FILE_BATCH_SIZE  # 默认每批次100个文件
+    tasks = []  # 每个元素: (rank, batch_files)
+    
+    for rank, files in rank_files.items():
+        if not files:
+            logger.warning(f"Rank {rank} has no files, skipped")
+            continue
+        # 按批次切分文件列表（保持原始顺序）
+        for i in range(0, len(files), batch_size):
+            batch_files = files[i:i + batch_size]
+            tasks.append((rank, batch_files))
+    
+    total_batches = len(tasks)
+    total_files = sum(len(f) for _, f in tasks)
+    logger.info(f"Split {len(rank_files)} ranks into {total_batches} batches "
+                f"(batch_size={batch_size}, total_files={total_files})")
+
+    # Parallel
+    with ProcessPoolExecutor(max_workers=config.process_num) as executor:
         futures = {
-            executor.submit(_pre_scan_single_rank, rank, files): rank
-            for rank, files in rank_files.items()
+            executor.submit(
+                _pre_scan_single_rank,
+                rank, files, config.mapping or {}, config.micro_step
+            ): rank
+            for rank, files in tasks
         }
 
         results = []
-        with tqdm(total=len(futures), desc="Pre-scanning ranks") as pbar:
+        with tqdm(total=len(futures), desc="Pre-scanning batches") as pbar:
             for future in as_completed(futures):
                 rank = futures[future]
                 try:
-                    result = future.result()
-                    results.append(result)
+                    results.append(future.result())
                 except Exception as e:
-                    logger.error(
-                        f"Error pre-scanning rank {rank}: {str(e)}")
+                    logger.error(f"Batch failed for rank {rank}: {e}")
                 pbar.update(1)
 
-    # Aggregate results
+    if not results:
+        return {}, {}, {}, {}
+
+    # Aggregate targets and stats
     targets = defaultdict(OrderedDict)
     all_stats = set()
-    global_stats = {
-        "min_step": None,
-        "max_step": 0,
-        "max_rank": 0
-    }
-    for rank_result in results:
-        global_stats["max_rank"] = max(global_stats["max_rank"], rank_result['max_rank'])
-        if global_stats["min_step"] is None:
-            global_stats["min_step"] = rank_result['min_step']
-        else:
-            global_stats["min_step"] = min(
-                global_stats["min_step"],
-                rank_result['min_step']
-            )
-        global_stats["max_step"] = max(global_stats["max_step"], rank_result['max_step'])
+    metric_stats_agg = defaultdict(set)
 
-        for metric, stats in rank_result['metric_stats'].items():
-            if metric not in global_stats:
-                global_stats[metric] = set()
-            global_stats[metric].update(stats)
+    for res in results:
+        for metric, t_list in res['targets'].items():
+            targets[metric] = update_ordered_dict(targets[metric], t_list)
+        for metric, stats in res['metric_stats'].items():
+            metric_stats_agg[metric].update(stats)
             all_stats.update(stats)
-        for metric_name in rank_result['targets']:
-            targets[metric_name] = update_ordered_dict(
-                targets[metric_name], rank_result['targets'][metric_name])
 
+    # 提取全局最大最小步数
+    min_step, max_step, micro_step_prefix = _build_global_micro_step_mapping(
+        results, config.micro_step
+    )
+
+    max_rank = max(int(r['rank']) for r in results)
+
+    # 插入数据库
+    global_stats = {
+        "min_step": min_step,
+        "max_step": max_step,
+        "max_rank": max_rank,
+        **metric_stats_agg
+    }
     monitor_db.insert_dimensions(targets)
     monitor_db.init_global_stats_data(global_stats)
     monitor_db.create_trend_data(
-        get_ordered_list(all_stats, MonitorConst.OP_MONVIS_SUPPORTED))
+        get_ordered_list(all_stats, Data2DBConst.OP_TRENDVIS_SUPPORTED)
+    )
+
     metric_id_dict = monitor_db.get_metric_mapping()
     target_dict = monitor_db.get_target_mapping()
     monitor_db.extract_tags_from_processed_targets(
         targets, metric_id_dict, target_dict)
-    return rank_files, metric_id_dict, target_dict
+
+    return tasks, metric_id_dict, target_dict, micro_step_prefix
 
 
 def process_single_rank(
     task: Tuple[int, List[str]],
     metric_id_dict: Dict[str, Tuple[int, List[str]]],
     target_dict: Dict[Tuple[str, int, int], int],
-    db_path: str
+    micro_step_prefix: Dict[int, int],
+    config: CSV2DBConfig
 ) -> int:
     """Process data import for a single rank"""
     rank, files = task
-    db = MonitorDB(db_path)
+    db = MonitorDB(config.db_file)
     total_inserted = 0
     batch_data = []
+
     all_stats = get_ordered_list(
-        set().union(*[stats for _, stats in metric_id_dict.values()]),
-        MonitorConst.OP_MONVIS_SUPPORTED
+        set().union(*(stats for _, stats in metric_id_dict.values())),
+        Data2DBConst.OP_TRENDVIS_SUPPORTED
     )
-    for file in files:
-        filename = os.path.basename(file)
-        metric_name, _, _ = get_info_from_filename(filename)
-        if not metric_name:
-            continue
-        metric_info = metric_id_dict.get(metric_name)
-        if not metric_info:
-            continue
-        metric_id, _ = metric_info
 
-        for row_id, row in read_csv(file).iterrows():
+    for file_path in files:
+        filename = os.path.basename(file_path)
+        metric_name = get_metric_name_from_filename(filename)
+        if not metric_name or metric_name not in metric_id_dict:
+            continue
+
+        metric_id, _ = metric_id_dict[metric_name]
+
+        for _, row in read_csv(file_path).iterrows():
             try:
-                # Parse row data
-                name = row.get(MonitorConst.HEADER_NAME)
+                name = str(row[MonitorConst.HEADER_NAME])
                 vpp_stage = int(row['vpp_stage'])
-                micro_step = int(row.get('micro_step', MonitorConst.DEFAULT_INT_VALUE))
-                target_id = target_dict.get((name, vpp_stage, micro_step))
-                if not target_id:
-                    continue
-
-                step = int(row['step'])
-                # Prepare row data
-                row_data = [rank, step, target_id, metric_id]
-                row_data.extend(
-                    float(row[stat]) if stat in row else None
-                    for stat in all_stats
-                )
-            except (ValueError, KeyError) as e:
-                logger.error(
-                    f"CSV conversion failed | file={file}:{row_id+2} | error={str(e)}")
+                original_step = int(
+                    row.get('step', Data2DBConst.DEFAULT_INT_VALUE))
+                micro_step_val = int(
+                    row.get('micro_step', Data2DBConst.DEFAULT_INT_VALUE))
+            except (ValueError, KeyError, TypeError) as e:
+                logger.error(f"Skip invalid row in {file_path}: {e}")
                 continue
 
+            # 应用 mapping
+            if config.mapping:
+                for k, v in config.mapping.items():
+                    name = name.replace(k, v)
+
+            if config.micro_step:
+                # 计算 global step index: prefix[step] + micro_step
+                base_offset = micro_step_prefix.get(original_step, 0)
+                global_step = base_offset + micro_step_val
+                micro_step_for_target = Data2DBConst.DEFAULT_INT_VALUE
+            else:
+                global_step = original_step
+                micro_step_for_target = micro_step_val
+
+            target_id = target_dict.get(
+                (name, vpp_stage, micro_step_for_target))
+            if target_id is None:
+                continue
+
+            # row data
+            row_data = [rank, global_step, target_id, metric_id]
+            row_data.extend(
+                process_tensor_value(row[stat]) if stat in row else None
+                for stat in all_stats
+            )
             batch_data.append(tuple(row_data))
-            # Batch insert when threshold reached
-            if len(batch_data) >= MonitorConst.BATCH_SIZE:
+
+            if len(batch_data) >= Data2DBConst.BATCH_SIZE:
                 inserted = db.insert_rows(batch_data)
-                if inserted is not None:
-                    total_inserted += inserted
+                total_inserted += inserted or 0
                 batch_data = []
 
-    # Insert remaining data
     if batch_data:
         inserted = db.insert_rows(batch_data)
-        if inserted is not None:
-            total_inserted += inserted
+        total_inserted += inserted or 0
 
     logger.info(f"Rank {rank} inserted {total_inserted} rows")
     return total_inserted
 
 
-def import_data(monitor_db: MonitorDB, data_dirs: Dict[int, str], data_type_list: List[str], workers: int = 4) -> bool:
+def import_data(config: CSV2DBConfig) -> bool:
     """Main method to import data into database"""
-    # 1. Pre-scan to get rank tasks
+    monitor_db = MonitorDB(config.db_file)
     monitor_db.init_schema()
-    rank_tasks, metric_id_dict, target_dict = _pre_scan(monitor_db, data_dirs, data_type_list, workers)
-    if not rank_tasks:
+
+    tasks, metric_id_dict, target_dict, micro_step_prefix = _pre_scan(
+        config, monitor_db)
+    if not tasks:
         logger.error("No valid data files found during pre-scan")
         return False
 
-    # 2. Process data for each rank in parallel
-    total_files = sum(len(files) for files in rank_tasks.values())
-    logger.info(f"Starting data import for {len(rank_tasks)} ranks,"
-                f"{total_files} files..."
-                )
+    total_files = sum(len(files) for _, files in tasks)
+    logger.info(
+        f"Starting data import for {len(tasks)} batches, {total_files} files...")
+
     all_succeeded = True
-    with ProcessPoolExecutor(max_workers=workers) as executor:
+    with ProcessPoolExecutor(max_workers=config.process_num) as executor:
         futures = {
             executor.submit(
                 process_single_rank,
                 (rank, files),
                 metric_id_dict,
                 target_dict,
-                monitor_db.db_path): rank
-            for rank, files in rank_tasks.items()
+                micro_step_prefix,
+                config
+            ): rank
+            for rank, files in tasks
         }
 
         with tqdm(as_completed(futures), total=len(futures), desc="Import progress") as pbar:
             for future in pbar:
                 rank = futures[future]
                 try:
-                    inserted = future.result()
-                    pbar.set_postfix_str(
-                        f"Rank {rank}: inserted {inserted} rows")
+                    future.result()
                 except Exception as e:
-                    logger.error(
-                        f"Failed to process Rank {rank}: {str(e)}")
+                    logger.error(f"Failed to process batch of Rank {rank}: {e}")
                     all_succeeded = False
+
     return all_succeeded
-
-
-def csv2db(config: CSV2DBConfig) -> None:
-    """Main function to convert CSV files to database"""
-    validate_process_num(config.process_num)
-    validate_data_type_list(config.data_type_list)
-
-    target_output_dirs = get_target_output_dir(
-        config.monitor_path, config.time_start, config.time_end)
-
-    if config.output_dirpath is None:
-        local_tz = pytz.timezone("Asia/Shanghai")
-        cur_time = datetime.datetime.now(local_tz).strftime("%b%d_%H-%M-%S")
-        config.output_dirpath = os.path.join(
-            config.monitor_path, f"{cur_time}-csv2db")
-
-    create_directory(config.output_dirpath)
-    db_path = os.path.join(config.output_dirpath, "monitor_metrics.db")
-
-    if os.path.exists(db_path):
-        remove_path(db_path)
-        logger.warning(f"Existing path {db_path} will be recovered")
-
-    db = MonitorDB(db_path)
-
-    result = import_data(
-        db,
-        target_output_dirs,
-        config.data_type_list if config.data_type_list else MonitorConst.METRICS_TRENDVIS_SUPPORTED,
-        workers=config.process_num
-    )
-    recursive_chmod(config.output_dirpath)
-    if result:
-        logger.info(
-            f"Data import completed. Output saved to: {config.output_dirpath}")
-    else:
-        logger.warning(
-            f"Data import may be incomplete. Output directory: {config.output_dirpath} "
-            f"(Some records might have failed)"
-        )

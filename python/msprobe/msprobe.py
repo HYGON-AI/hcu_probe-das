@@ -27,7 +27,7 @@ from msprobe.core.config_check.config_check_cli import _config_checking_parser, 
 from msprobe.overflow_check.analyzer import _overflow_check_parser, _run_overflow_check
 from msprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
-from msprobe.core.dump.dump2db.dump2db import _data2db_service_parser, _data2db_command
+from msprobe.core.compare.data2db import _data2db_service_parser, _data2db_command
 from msprobe.infer.offline.compare.msquickcmp.main import _offline_dump_parser, offline_dump_cli
 from msprobe.core.install_deps.install_deps import _install_deps_parser, install_deps_cli
 from msprobe.core.parse.parse_cli import _parse_parser, parse_cli

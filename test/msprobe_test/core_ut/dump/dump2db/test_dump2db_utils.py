@@ -21,7 +21,6 @@ class TestParseFunctions(unittest.TestCase):
             ("Module.layer1.conv.input.0",
              [
                  ("input.0", Data2DBConst.TAG_INDEX),
-                 ("layer1.conv", Data2DBConst.TAG_FUNCTION),
                  ("layer1.conv", Data2DBConst.TAG_MODULE),
                  ("Module", Data2DBConst.TAG_DEFAULT)
              ]),
@@ -37,7 +36,6 @@ class TestParseFunctions(unittest.TestCase):
             ("short.key",  []),
             ("function_name.input.0", [
              ("function_name", Data2DBConst.TAG_FUNCTION),
-             ("function_name", Data2DBConst.TAG_MODULE),
              ("input.0", Data2DBConst.TAG_INDEX)
              ]),
         ]

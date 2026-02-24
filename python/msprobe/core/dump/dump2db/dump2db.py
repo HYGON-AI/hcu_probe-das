@@ -15,7 +15,6 @@
 # -------------------------------------------------------------------------
 
 import os
-import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -25,32 +24,172 @@ from tqdm import tqdm
 from msprobe.core.common.const import Const, Data2DBConst
 from msprobe.core.common.file_utils import (
     check_file_or_directory_path,
-    create_directory,
     load_json,
-    recursive_chmod,
-    remove_path,
+    load_construct_json,
 )
+from msprobe.core.common.data2db_utils import process_tensor_value
 from msprobe.core.common.log import logger
 from msprobe.core.dump.dump2db.db_utils import DumpDB
 
 
-def validate_micro_step(micro_step):
+def extract_root_nodes(data):
     """
-    校验 micro_step 值是否在有效范围内
+    从给定的数据中提取每个key的最终父节点
     """
-    if micro_step is not None:
-        if type(micro_step) is not int:
-            raise ValueError("Micro step must be an integer")
-        if micro_step < Data2DBConst.MIN_MICRO_STEP or micro_step > Data2DBConst.MAX_MICRO_STEP:
-            raise ValueError(f"Micro step must be between"
-                             f"{Data2DBConst.MIN_MICRO_STEP} and {Data2DBConst.MAX_MICRO_STEP}")
+    # 存储每个key的父节点关系
+    parent_map = {}
+    micro_step = 0
+    # 遍历数据，建立父子关系
+    for key, value in data.items():
+        if value is None:
+            if f"{Const.SEP}{Const.BACKWARD}" in key:
+                parent_map[key] = None
+                continue
+            if not isinstance(key, str):
+                continue
+            # 如果父节点是null，则该key自己就是根节点
+            root_flag = max([key.startswith(prefix) for prefix in Data2DBConst.ROOT_NODE_PREFIX])
+            if root_flag:
+                parent_map[key] = micro_step
+                micro_step += 1
+        else:
+            parent_map[key] = value
+    
+    # 查找每个key的根节点（递归查找直到找到没有父节点的节点）
+    root_nodes = {}
+    
+    def find_root(node):
+        """递归查找根节点"""
+        if isinstance(node, str):
+            node = node.replace(
+                f"{Const.SEP}{Const.BACKWARD}", f"{Const.SEP}{Const.FORWARD}").replace(
+                    f"{Const.SEP}{Const.PARAMS_GRAD}", f"{Const.SEP}{Const.FORWARD}")
+        if node not in parent_map:
+            return node
+        return find_root(parent_map[node])
+    
+    # 为每个key找到其根节点
+    for key in data.keys():
+        parent = find_root(key)
+        if parent is not None and isinstance(parent, int):
+            root_nodes[key] = parent
+    
+    return root_nodes
 
+def reindex_keys_with_mapping(original_dict):
+    """
+    将同一个micro step的module和api，重新编号，同时返回映射关系
 
-def load_mapping(mapping_path):
-    if mapping_path and isinstance(mapping_path, str):
-        return load_json(mapping_path)
-    else:
-        return {}
+    Args:
+        original_dict: 原始字典，格式为 {'Tensor.add.10.forward': 3, ...}
+    Returns:
+        key_mapping: 映射字典 {'Tensor.add.10.forward': 新k'Tensor.add.0.forward'})
+    """
+    # 按照原始value分组
+    grouped_by_value = defaultdict(list)
+    for key, value in original_dict.items():
+        grouped_by_value[value].append(key)
+
+    key_mapping = {}  # 存储原始key到新key的映射
+    for _, keys in grouped_by_value.items():
+        prefix_groups = defaultdict(list)
+        for key in keys:
+            parts = key.split('.')
+            # 检查倒数第一位是否为数字: Module
+            if len(parts) >= 1 and parts[-1].isdigit():
+                prefix = '.'.join(parts[:-1])  # 除最后一位外的其他部分
+                # 31
+                number = int(parts[-1])
+                prefix_groups[prefix].append((number, key))
+            elif len(parts) >= 2 and parts[-2].isdigit():
+                prefix = '.'.join(parts[:-2]) + '.' + parts[-1]  # 除倒数第二位外的其他部分
+                number = int(parts[-2])
+                prefix_groups[prefix].append((number, key))
+            else:
+                # 如果最后两位都不是数字，直接使用整个key作为前缀
+                prefix_groups[key].append((0, key))
+
+        # 对每组前缀进行重新编号
+        for prefix, items in prefix_groups.items():
+            # 按原数字排序
+            sorted_items = sorted(items, key=lambda x: x[0])
+            for new_index, (_, original_key) in enumerate(sorted_items):
+                # 重新构造key：前缀 + 新索引
+                original_parts = original_key.split('.')
+                if len(original_parts) >= 1 and original_parts[-1].isdigit():
+                    new_key = f"{prefix}.{new_index}"
+                elif len(original_parts) >= 2 and original_parts[-2].isdigit():
+                    parts = original_parts.copy()
+                    parts[-2] = str(new_index)
+                    new_key = '.'.join(parts)
+                else:
+                    new_key = original_key
+                # 记录映射关系
+                key_mapping[original_key] = new_key
+    return key_mapping
+
+def scan_files(data_dir):
+    logger.info("Scanning data directory...")
+    # 扫描所有step和rank
+    valid_ranks = defaultdict(list)
+    
+    # 首先扫描目录结构获取有效rank
+    for step_dir in os.listdir(data_dir):
+        if not step_dir.startswith('step'):
+            continue
+        try:
+            step = int(step_dir[4:])  # 提取step数字
+        except ValueError:
+            continue
+        step_path = os.path.join(data_dir, step_dir)
+        
+        # 分别收集当前step的rank和proc信息
+        normal_ranks = []
+        proc_items = []
+        
+        for item_dir in os.listdir(step_path):
+            if item_dir.startswith('rank') or item_dir.startswith('proc'):
+                try:
+                    original_id = int(item_dir[4:])  # 提取rank或proc数字
+                except ValueError:
+                    continue
+                item_path = os.path.join(step_path, item_dir)
+                json_path = os.path.join(item_path, "dump.json")
+                if not os.path.exists(json_path):
+                    continue
+                construct_path = os.path.join(item_path, "construct.json")
+                if item_dir.startswith('rank'):
+                    normal_ranks.append((original_id, json_path, construct_path))
+                else:  # proc directory
+                    proc_items.append((original_id, json_path, construct_path))
+        
+        # 处理并分配连续的rank编号
+        if normal_ranks or proc_items:
+            proc_items.sort(key=lambda x: x[0])
+            normal_ranks.sort(key=lambda x: x[0])
+            
+            # 计算下一个可用的rank编号
+            if normal_ranks:
+                max_rank = normal_ranks[-1][0]
+                start_rank = max_rank + 1
+            else:
+                start_rank = 0
+            
+            # 组合结果：先放正常rank，再放映射后的proc
+            final_ranks = normal_ranks[:]
+            # 记录proc到rank的映射关系
+            proc_to_rank_mapping = {}
+            for i, (proc_num, json_path, construct_path) in enumerate(proc_items):
+                mapped_rank = start_rank + i
+                proc_to_rank_mapping[f"proc{proc_num}"] = mapped_rank
+                final_ranks.append((mapped_rank, json_path, construct_path))
+            # 如果有proc映射，记录日志
+            if proc_to_rank_mapping:
+                logger.info(f"Step {step}: proc to rank mapping - {proc_to_rank_mapping}")
+            # 按rank排序后存储
+            valid_ranks[step] = final_ranks
+    
+    return valid_ranks
 
 
 @dataclass
@@ -67,11 +206,11 @@ class TensorProcessingParams:
 
 
 class DumpRecordBuilder:
-    def __init__(self, db: DumpDB, data_dir, mapping, micro_step):
+    def __init__(self, db: DumpDB, data_dir, mapping, micro_step=True):
         self.db = db
         self.data_dir = data_dir
         self.mapping = mapping
-        self.micro_step = micro_step if micro_step else None
+        self.micro_step = micro_step
 
     @staticmethod
     def extract_target_info(full_key):
@@ -108,76 +247,10 @@ class DumpRecordBuilder:
                 return f".output.{tensor_idx}"
         return ""
 
-    @staticmethod
-    def process_tensor_value(value):
-        """处理统计量值  将inf转换为float极值"""
-        if value is None:
-            return sys.float_info.max
-        elif value == float("inf"):
-            return sys.float_info.max - 1  # 最大float值
-        elif value == float("-inf"):
-            return sys.float_info.min + 1  # 最小float值
-        elif isinstance(value, (int, float)):
-            return float(value)
-        else:
-            return None
-
-    def import_data(self):
+    def import_data(self, valid_ranks):
         """导入数据"""
-        logger.info("Scanning data directory...")
-
-        # 扫描所有step和rank
+        current_start_step = 0
         max_rank = 0
-        min_step = float('inf')
-        max_step = 0
-        valid_ranks = defaultdict(list)
-
-        # 首先扫描目录结构获取step和rank信息
-        for step_dir in os.listdir(self.data_dir):
-            if not step_dir.startswith('step'):
-                continue
-            try:
-                step = int(step_dir[4:])  # 提取step数字
-            except ValueError:
-                continue
-            min_step = min(min_step, step *
-                           self.micro_step if self.micro_step else step)
-            max_step = max(max_step, (step + 1) *
-                           self.micro_step if self.micro_step else step)
-
-            step_path = os.path.join(self.data_dir, step_dir)
-            for rank_dir in os.listdir(step_path):
-                if not rank_dir.startswith('rank'):
-                    continue
-                if rank_dir == "rank":
-                    rank = 0
-                else:
-                    try:
-                        rank = int(rank_dir[4:])  # 提取rank数字
-                    except ValueError:
-                        continue
-
-                rank_path = os.path.join(step_path, rank_dir)
-                json_path = os.path.join(rank_path, "dump.json")
-                if os.path.exists(json_path):
-                    valid_ranks[step].append((rank, json_path))
-                    max_rank = max(max_rank, rank)
-
-        if min_step == float('inf'):
-            logger.warning(f"No valid step directories found in: {self.data_dir},"
-                           f"looking for directories starting with 'step' (e.g., step0, step1")
-            return
-
-        # 更新全局统计信息
-        global_stats = {
-            "max_rank": max_rank,
-            "min_step": min_step,
-            "max_step": max_step
-        }
-        for metric_name in Data2DBConst.METRICS:
-            global_stats[metric_name] = Data2DBConst.ORDERED_STAT
-        self.db.init_global_stats_data(global_stats)
-
         for step in tqdm(sorted(valid_ranks.keys()), desc="Processing steps"):
             step_dir = f"step{step}"
             step_path = os.path.join(self.data_dir, step_dir)
@@ -187,9 +260,29 @@ class DumpRecordBuilder:
             # 为当前step的所有有效rank创建进度条
             if not valid_ranks[step]:
                 continue
-            for rank, json_path in tqdm(valid_ranks[step], desc=f"Step {step} ranks", leave=False):
-                self._process_dump_file(
-                    json_path, step, rank)
+            # 设置起始步,如果用step则为当前step，否则为micro_step累计
+            if not self.micro_step:
+                current_start_step = step
+            total_micro_step = []
+            for rank, json_path, construct_path in tqdm(valid_ranks[step], desc=f"Step {step} ranks", leave=False):
+                max_rank = max(max_rank, rank)
+                total_micro_step.append(self._process_dump_file(
+                    json_path, construct_path, current_start_step, rank))
+            if self.micro_step:
+                logger.info(f"Step {step} processing completed. Total micro steps identified: {total_micro_step}")
+                total_micro_step = max(total_micro_step)
+                current_start_step += total_micro_step
+
+        # 更新全局统计信息
+        global_stats = {
+            "max_rank": max_rank,
+            "min_step": 0 if self.micro_step else min(valid_ranks.keys()),
+            # micro_step下实际步数为下一个micro_step起始步数-1
+            "max_step": current_start_step - 1 if self.micro_step else current_start_step
+        }
+        for metric_name in Data2DBConst.METRICS:
+            global_stats[metric_name] = Data2DBConst.ORDERED_STAT
+        self.db.init_global_stats_data(global_stats)
         self.db.extract_tags_from_processed_targets()
 
     def _determine_metric_type(self, full_key, tensor_data):
@@ -231,7 +324,6 @@ class DumpRecordBuilder:
 
         cache_key = (target_name, tensor_params.vpp_stage,
                      tensor_params.micro_step)
-
         # 如果缓存中不存在，创建临时ID
         cache_id_dict = self.db.cache_targets(
             cache_key, tensor_params.metric_id)
@@ -240,7 +332,7 @@ class DumpRecordBuilder:
         row_data = [tensor_params.rank, tensor_params.step, cache_id_dict, tensor_params.metric_id]
         for stat in Data2DBConst.ORDERED_STAT:
             value = tensor.get(stat.capitalize(), None)
-            row_data.append(DumpRecordBuilder.process_tensor_value(value))
+            row_data.append(process_tensor_value(value))
         batch_data.append((row_data))
 
     def _process_forward_data(self, tensor_params: TensorProcessingParams, batch_data):
@@ -321,39 +413,48 @@ class DumpRecordBuilder:
                     self._add_tensor_data(
                         tensor, target_name, tensor_params, batch_data)
 
-    def _process_dump_file(self, json_path, step, rank):
+    def _process_dump_file(self, json_path, construct_path, start_step, rank):
         """处理单个dump.json文件"""
         data = load_json(json_path)
+        micro_step_dict = {}
+        total_micro_step = 1
+        index_mapping = {}
+        if self.micro_step:
+            construct_dict, _ = load_construct_json(construct_path)
+            micro_step_dict = extract_root_nodes(construct_dict)
+            # 当前从0记起，实际micro+1
+            total_micro_step = max(micro_step_dict.values() or [0]) + 1
+            index_mapping = reindex_keys_with_mapping(micro_step_dict)
         if 'data' not in data or not isinstance(data['data'], dict):
             return
-
+        
         batch_data = []
-        # 预先计算所有metric_type的table_name
-
-        for i, (ori_key, tensor_data) in enumerate(data['data'].items()):
+        for _, (ori_key, tensor_data) in enumerate(data['data'].items()):
             if not isinstance(ori_key, str) or not isinstance(tensor_data, dict):
                 continue
+            # 对于micro_step内, 对index重新计数
+            full_key = index_mapping.get(ori_key, None) if index_mapping else ori_key
+            if not full_key:
+                continue
+            mstep = micro_step_dict.get(ori_key, 0)
+            
             metric_type, full_key = self._determine_metric_type(
-                ori_key, tensor_data)
+                full_key, tensor_data)
+
             if not metric_type:
                 continue
 
             # 使用缓存获取metric_id和stats
             metric_id = self.db.get_metric_id(metric_type)
-            target_prefix, vpp_stage, mstep = DumpRecordBuilder.extract_target_info(
+            target_prefix, vpp_stage, target_index = DumpRecordBuilder.extract_target_info(
                 full_key)
-            if self.micro_step:
-                current_mstep = step * self.micro_step + mstep
-                mstep = 0
-            else:
-                current_mstep = step
 
             tensor_params = TensorProcessingParams(
                 tensor_data=tensor_data,
                 target_prefix=target_prefix,
                 vpp_stage=vpp_stage,
-                micro_step=mstep,
-                step=current_mstep,
+                micro_step=target_index,
+                step=start_step + mstep,
                 rank=rank,
                 metric_id=metric_id,
                 metric_type=metric_type
@@ -374,36 +475,4 @@ class DumpRecordBuilder:
 
         self.db.batch_insert_targets()
         self.db.batch_insert_data(batch_data)
-
-
-def _data2db_service_parser(parser):
-    parser.add_argument('--db', type=str, required=True,
-                        help='Path to SQLite database file')
-    parser.add_argument('--data', type=str, required=True,
-                        help='Path to dump output directory')
-    parser.add_argument('--mapping', type=str, default=None,
-                        help='Path to optional JSON mapping file')
-    parser.add_argument('--micro_step', type=int, default=None,
-                        help='Specific micro step value to split data in one step (must be between 1 and 10000)')
-
-
-def _data2db_command(args):
-    data_path = args.data
-
-    check_file_or_directory_path(data_path, isdir=True, is_strict=True)
-    create_directory(args.db)
-    db_path = os.path.join(args.db, "monitor_metrics.db")
-
-    if os.path.exists(db_path):
-        logger.warning(f"Existing path {db_path} will be recovered")
-        remove_path(db_path)
-
-    micro_step = args.micro_step
-    validate_micro_step(micro_step)
-    mapping = load_mapping(args.mapping)
-    db = DumpDB(db_path)
-    builder = DumpRecordBuilder(
-        db, data_path, mapping=mapping, micro_step=micro_step)
-    builder.import_data()
-
-    recursive_chmod(args.db)
+        return total_micro_step
