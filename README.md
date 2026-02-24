@@ -57,6 +57,19 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
 
+### SGLang推理场景
+
+#### eager模式
+
+1. [数据采集](docs/zh/dump/sglang_eager_dump_instruct.md)
+
+   完成msProbe精度数据采集操作。
+
+2. 数据比对
+   
+   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
+
+   请参考[分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)或[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)。
 
 ### ATB推理场景
 
