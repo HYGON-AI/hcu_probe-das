@@ -22,16 +22,17 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.compare.indicator_analysis.utils import CompareMode, ResultLevel, divide_result_df, IgnoreInfo
 from msprobe.core.compare.indicator_analysis.algorithm import BaseAlgorithm, TENSOR_CHECKERS, STATISTICS_CHECKERS, \
-    MD5_CHECKERS, STATISTICS_CHECKERS_PARALLEL_MERGE
+    MD5_CHECKERS, STATISTICS_CHECKERS_PARALLEL_MERGE, VERL_TENSOR_CHECKERS
 from msprobe.core.compare.indicator_analysis.api_data import ApiData
 
 
 class ApiIndicatorCalculator:
     RANK_SUFFIX_PATTERN = re.compile(r'_rank\d+$')
 
-    def __init__(self, mode, parallel_merge=False):
+    def __init__(self, mode, parallel_merge=False, consistent_check=False):
         self.mode = mode
         self.parallel_merge = parallel_merge
+        self.consistent_check = consistent_check
         self.all_ignore_set = {'empty', 'empty_like', 'numpy', 'to', '__setitem__', 'empty_with_format',
                                'new_empty_strided', 'new_empty', 'empty_strided'}
         self.input_ignore_set = {'_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv'}
@@ -115,24 +116,29 @@ class ApiIndicatorCalculator:
             for checker in checkers:
                 self.add_algorithm(checker())
         elif self.mode == CompareMode.TENSOR.value:
-            for checker in TENSOR_CHECKERS:
+            if self.consistent_check:
+                checkers = VERL_TENSOR_CHECKERS
+            else:
+                checkers = TENSOR_CHECKERS
+            for checker in checkers:
                 self.add_algorithm(checker())
         elif self.mode == CompareMode.MD5.value:
             for checker in MD5_CHECKERS:
                 self.add_algorithm(checker())
 
 
-def calculate_excel_result_df(result_df, mode, chunk_size=1000):
+def calculate_excel_result_df(result_df, mode, consistent_check=False, chunk_size=1000):
     """
     仅适用于excel比对场景，得到表格每行数据的精度比对指标（pass/warning/error）
 
     Args:
         result_df: DataFrame数据结构，即转换成excel前的表单结构
         mode: 比对模式，分为 tensor 模式、统计量模式和 md5 模式
+        consistent_check: 是否使用verl训推一致指定比对算法
         chunk_size: 分块赋值参数，默认1000，把 result 分成小块，逐块赋值给 result_df，这样每次只占用小块内存，避免内存峰值过高
     """
     result_dict = divide_result_df(result_df)
-    calculator = ApiIndicatorCalculator(mode)
+    calculator = ApiIndicatorCalculator(mode, consistent_check=consistent_check)
     calculated_result_lists = []
     for data_lists in result_dict.values():
         calculator.calculate(data_lists)

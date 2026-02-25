@@ -567,12 +567,14 @@ def save_excel(path, data):
     def check_value_is_valid(value: str) -> bool:
         if not isinstance(value, str):
             return True
-        try:
-            # -1.00 or +1.00 should be considered as digit numbers
-            float(value)
-        except ValueError:
-            # otherwise, they will be considered as formular injections
-            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        parts = value.split(';')
+        for p in parts:
+            try:
+                # -1.00 or +1.00 should be considered as digit numbers
+                float(p)
+            except ValueError:
+                # otherwise, they will be considered as formular injections
+                return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
         return True
 
     def malicious_check(df):

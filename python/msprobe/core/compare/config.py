@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -28,6 +28,8 @@ class ModeConfig:
         self.first_diff_analyze = kwargs.get('first_diff_analyze', False)
         self.diff_analyze = kwargs.get('diff_analyze', False)
         self.compared_file_type = kwargs.get('compared_file_type', Const.DUMP_JSON_FILE)
+        self.consistent_check = kwargs.get('consistent_check', False)
+        self.backend = kwargs.get('backend', '')
 
 
 class MappingConfig:

@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -13,15 +13,54 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
+import numpy as np
 
+from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.acc_compare import Comparator, ModeConfig, MappingConfig, setup_comparison
+from msprobe.core.compare.utils import split_tensors
 from msprobe.pytorch.compare.utils import read_pt_data
 
 
-def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, _) -> tuple:
-    n_value = read_pt_data(npu_dir, npu_data_name)
-    b_value = read_pt_data(bench_dir, bench_data_name)
-    return n_value, b_value
+def need_cat(backend: str, npu_data_name: str) -> bool:
+    rule = CompareConst.BACKEND_CAT_RULES.get(backend)
+    if rule is None:
+        return False
+    return rule(npu_data_name)
+
+
+def read_real_data(data_path_dict: dict, cross_frame, backend) -> tuple:
+    """
+    PT 版本：
+    - cross_frame: 为了和 MS 版本接口统一保留，不使用
+    - backend: 用于区分 fsdp / megatron
+
+    npu_data_name/bench_data_name存在两种情况:
+        单tensor：'xxx.pt'
+        多tensor：'xx1.pt;xx2.pt;xx3.pt'，tensor名以;分割
+    """
+    npu_dir = data_path_dict.get("npu_dir")
+    bench_dir = data_path_dict.get("bench_dir")
+    npu_data_name = data_path_dict.get("npu_data_name")
+    bench_data_name = data_path_dict.get("bench_data_name")
+
+    if need_cat(backend, npu_data_name):
+        npu_tensors_list = split_tensors(npu_data_name)
+        if '.input.' in npu_data_name:
+            npu_value = read_pt_data(npu_dir, npu_tensors_list[0])
+            npu_value = np.squeeze(npu_value)
+        elif '.parameters.' in npu_data_name:
+            npu_tensors = [np.squeeze(read_pt_data(npu_dir, t)) for t in npu_tensors_list]
+            npu_value = np.concatenate(npu_tensors, axis=0)
+        else:
+            npu_tensors = [np.squeeze(read_pt_data(npu_dir, t)) for t in npu_tensors_list]
+            npu_value = np.concatenate(npu_tensors, axis=1)
+    else:
+        npu_value = read_pt_data(npu_dir, npu_data_name)
+        npu_value = np.squeeze(npu_value)
+
+    bench_value = read_pt_data(bench_dir, bench_data_name)
+    bench_value = np.squeeze(bench_value)
+    return npu_value, bench_value
 
 
 def pt_compare(input_param, output_path, **kwargs):
@@ -32,7 +71,9 @@ def pt_compare(input_param, output_path, **kwargs):
         'fuzzy_match': config.fuzzy_match,
         'dump_mode': config.dump_mode,
         'first_diff_analyze': config.first_diff_analyze,
-        'compared_file_type': config.compared_file_type
+        'compared_file_type': config.compared_file_type,
+        'consistent_check': config.consistent_check,
+        'backend': config.backend
     }
     mode_config = ModeConfig(**config_dict)
     mapping_config = MappingConfig(cell_mapping=config.cell_mapping, data_mapping=config.data_mapping)

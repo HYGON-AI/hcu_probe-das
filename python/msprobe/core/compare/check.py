@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -115,4 +115,13 @@ def check_configuration_param(config):
     for arg, name in zip(arg_list, arg_names):
         if not isinstance(arg, bool):
             logger.error(f"Invalid input parameter, {name} which should be only bool type.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+
+def check_consistent_param(consistent_check: bool, backend: str):
+    if consistent_check:
+        if backend not in [Const.FSDP, Const.MEGATRON]:
+            logger.error(f"If the 'consistent_check' parameter is specified, "
+                         f"the 'backend' parameter must be set to '{Const.FSDP}' or '{Const.MEGATRON}'. "
+                         f"Current 'backend' parameter is {backend}.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)

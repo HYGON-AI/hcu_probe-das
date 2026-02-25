@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -37,7 +37,7 @@ VALID_ARGS_MAP = {
         '--mode', '-m', '--target_path', '-tp', '--golden_path', '-gp', '--output_path', '-o', 
         '--fuzzy_match', '-fm', '--cell_mapping', '-cm', '--api_mapping', '-am', '--data_mapping',
         '-dm', '--layer_mapping', '-lm', '--diff_analyze', '-da', '--rank', '--step',
-        '--is_print_compare_log', '-tensor_log'
+        '--is_print_compare_log', '-tensor_log', '--consistent_check', '--backend'
     ],
     'offline_data': [
         "-m", "-tp", "-gp", "-fr", "-qfr", "-cfr", "-o", "--mode", "--target_path", "--golden_path", 

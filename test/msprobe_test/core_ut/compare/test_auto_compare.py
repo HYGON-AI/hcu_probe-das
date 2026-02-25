@@ -21,7 +21,9 @@ def _build_args(
     api_mapping=None,
     layer_mapping=None,
     rank=None,
-    is_print_compare_log=False
+    is_print_compare_log=False,
+    consistent_check=False,
+    backend=''
 ):
     return SimpleNamespace(
         target_path=target_path,
@@ -34,7 +36,9 @@ def _build_args(
         api_mapping=api_mapping,
         layer_mapping=layer_mapping,
         rank=rank,
-        is_print_compare_log=is_print_compare_log
+        is_print_compare_log=is_print_compare_log,
+        consistent_check=consistent_check,
+        backend=backend
     )
 
 

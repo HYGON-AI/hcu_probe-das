@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -719,6 +719,10 @@ def _compare_parser(parser):
     parser.add_argument('-ofs', '--onnx_fusion_switch', dest="onnx_fusion_switch", default=True,
                         help='Onnxruntime fusion switch, set False for dump complete onnx data when necessary. '
                              'Usage: -ofs False')
+    parser.add_argument("--consistent_check", dest="consistent_check", action="store_true",
+                        help="<optional> Whether to compare train and infer data.", required=False)
+    parser.add_argument("--backend", dest="backend", type=str, choices=["fsdp", "megatron"], default="",
+                        help="<optional> Backend when comparing train and infer data.", required=False)
 
 
 def get_sorted_ranks(npu_dump_dir, bench_dump_dir):
@@ -948,3 +952,8 @@ def check_input_param_path_and_framework(args, target_framework):
     if target_framework == Const.MS_FRAMEWORK and not is_module_available("mindspore"):
         logger.error("MindSpore does not exist, please install MindSpore library")
         raise Exception("MindSpore does not exist, please install MindSpore library")
+
+
+def split_tensors(data_name):
+    tensor_list = data_name.split(';')
+    return tensor_list

@@ -98,7 +98,7 @@ class TestCompareRealData(unittest.TestCase):
 
         # normal
         result = compare_real_data.read_dump_data(result_df)
-        self.assertEqual(result, {'Functional.linear.0.forward.input.0': ['-1', '-1']})
+        self.assertEqual(result, {'Functional.linear.0.forward.input.0Functional.linear.0.forward.input.0': ['-1', '-1']})
 
         # index error
         with self.assertRaises(CompareException) as context:
@@ -156,14 +156,14 @@ class TestCompareRealData(unittest.TestCase):
         compare_real_data = CompareRealData(file_reader, mode_config, cross_frame)
 
         pt_name = '-1'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0Functional.linear.0.forward.input.0': [pt_name, pt_name]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                                   'unsupported', 'NPU does not have data file.'])
 
         pt_name = 'Functional.linear.0.forward.input.0.pt'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_name, pt_name]}
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0Functional.linear.0.forward.input.0': [pt_name, pt_name]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
@@ -176,7 +176,7 @@ class TestCompareRealData(unittest.TestCase):
     def test_compare_by_op_bench_no_npu_real_data(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
         bench_op_name = 'N/A'
-        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0N/A': [-1, -1]}
         input_param = {}
 
         file_reader = read_real_data
@@ -196,7 +196,7 @@ class TestCompareRealData(unittest.TestCase):
         stack_path = os.path.join(base_dir3, 'stack.json')
         input_param = {'npu_json_path': dump_path, 'bench_json_path': dump_path, 'stack_json_path': stack_path,
                        'is_print_compare_log': True, 'npu_dump_data_dir': pt_dir, 'bench_dump_data_dir': pt_dir}
-        dump_path_dict = {'Functional.linear.0.forward.input.0': ['Functional.linear.0.forward.input.0.pt',
+        dump_path_dict = {'Functional.linear.0.forward.input.0Functional.linear.0.forward.input.0': ['Functional.linear.0.forward.input.0.pt',
                                                                   'Functional.linear.0.forward.input.0.pt']}
         result_df = pd.DataFrame({
             'NPU Name': ['Functional.linear.0.forward.input.0'],
@@ -249,3 +249,7 @@ class TestCompareRealData(unittest.TestCase):
         lock = multiprocessing.Manager().RLock()
         result = compare_real_data._handle_multi_process(func, input_param, result_df, lock)
         self.assertTrue(result.equals(o_result))
+
+
+if __name__ == '__main__':
+    unittest.main()

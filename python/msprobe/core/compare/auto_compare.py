@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -40,7 +40,9 @@ def compare_auto_mode(args, depth=1):
         "diff_analyze": args.diff_analyze,
         "is_print_compare_log": args.is_print_compare_log,
         "cell_mapping": args.cell_mapping,
-        "layer_mapping": args.layer_mapping
+        "layer_mapping": args.layer_mapping,
+        "consistent_check": args.consistent_check,
+        "backend": args.backend
     }
 
     tp_file_type = check_file_type(args.target_path)
