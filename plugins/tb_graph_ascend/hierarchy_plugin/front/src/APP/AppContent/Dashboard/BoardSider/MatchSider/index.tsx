@@ -226,7 +226,10 @@ const MatchSider = (): JSX.Element => {
   const setGraphMatchedRelations = useGraphStore((state) => state.setGraphMatchedRelations);
   const isMatchCached = useGraphStore((state) => state.isMatchCached);
   const updateMetaDataCacheInMatch = useGraphStore((state) => state.updateMetaDataCacheInMatch);
-
+  const isInitHierarchySwitch = useGraphStore((state) => state.isInitHierarchySwitch);
+  const currentMetaRank = useGraphStore((state) => state.currentMetaRank);
+  const currentMetaStep = useGraphStore((state) => state.currentMetaStep);
+  const currentMetaMicroStep = useGraphStore((state) => state.currentMetaMicroStep);
   const [debugUnmatchedValue, setDebugUnmatchedValue] = useState<string | null>(null);
   const [debugMatchedValue, setDebugMatchedValue] = useState<string | null>(null);
   const [benchUnmatchedValue, setBenchUnmatchedValue] = useState<string | null>(null);
@@ -256,7 +259,7 @@ const MatchSider = (): JSX.Element => {
     if (currentMetaData.tag && currentMetaData.run) {
       fetchGraphMatchedRelations();
     }
-  }, [JSON.stringify(currentMetaData)]);
+  }, [currentMetaRank, currentMetaStep, currentMetaMicroStep, isInitHierarchySwitch]);
 
   useEffect(() => {
     const selectedDebugNode = selectedNode.replace(NPU_PREFIX, '');

@@ -163,16 +163,6 @@ class GraphView:
         if meta_data.get("type") == DataType.DB.value:
             result = strategy.load_graph_data()
             return http_util.Respond(request, result, "application/json")
-        elif meta_data.get("type") == DataType.JSON.value:
-            return Response(
-                strategy.load_graph_data(),
-                mimetype="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "close",  # TCP链接不复用，请求结束释放资源
-                    "X-Content-Type-Options": "nosniff",
-                },
-            )
         else:
             result = {"success": False, "error": GraphUtils.t("typeError")}
             return http_util.Respond(request, result, "application/json")

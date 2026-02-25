@@ -37,6 +37,10 @@ const SearchSider = () => {
   const setGraphNodeList = useGraphStore((state) => state.setGraphNodeList);
   const isSearchCached = useGraphStore((state) => state.isSearchCached);
   const updateMetaDataCacheInSearch = useGraphStore((state) => state.updateMetaDataCacheInSearch);
+  const currentMetaRank = useGraphStore((state) => state.currentMetaRank);
+  const currentMetaStep = useGraphStore((state) => state.currentMetaStep);
+  const currentMetaMicroStep = useGraphStore((state) => state.currentMetaMicroStep);
+  const isInitHierarchySwitch = useGraphStore((state) => state.isInitHierarchySwitch);
   const { t } = useTranslation();
 
   const options: CheckboxGroupProps<string>['options'] = [
@@ -89,7 +93,7 @@ const SearchSider = () => {
     if (currentMetaData.tag && currentMetaData.run) {
       fetchAllNodeList();
     }
-  }, [JSON.stringify(currentMetaData)]);
+  }, [currentMetaRank, currentMetaStep, currentMetaMicroStep, isInitHierarchySwitch]);
 
   useEffect(() => {
     setSearchedNodes(nodeList.filter((node) => lowerCaseInclude(node, searchName)));

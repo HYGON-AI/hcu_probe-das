@@ -23,7 +23,6 @@ HORIZONTAL_SPACING = 5  # 横向排列间距
 VERTICAL_SPACING = 10  # 纵向排列间距
 MAX_PER_ROW = 5  # 横向每行最大数
 DB_TYPE = DataType.DB.value
-JSON_TYPE = DataType.JSON.value
 
 
 class Hierarchy:
@@ -268,7 +267,9 @@ class Hierarchy:
             # DB：查询以根节点为父节点的所有子节点
             sub_nodes = self.repo.query_sub_nodes(node_name, self.graph_type, self.rank, self.step)
             for subnode_name, child_node in sub_nodes.items():
-                child_micro_step_id = child_node.get("micro_step_id", -1)  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
+                child_micro_step_id = child_node.get(
+                    "micro_step_id", -1
+                )  # 如果子节点不包含micro_step_id，则默认为-1，直接添加
                 is_append_all_node = int(self.micro_step_id) == -1 or child_micro_step_id == -1
                 is_append_split_node = int(self.micro_step_id) != -1 and int(child_micro_step_id) == int(
                     self.micro_step_id
@@ -318,13 +319,6 @@ class Hierarchy:
                 self.get_connected_graph(child_name, result, new_hierarchy)
 
     def update_hierarchy_data(self):
-        if self.repo.repo_type == DB_TYPE:
-            return self.current_hierarchy
-        # 处理JSON
-        for node_name, node_info in self.current_hierarchy.items():
-            graph_node_info = self.repo.query_node_info(node_name, self.graph_type)
-            node_info["matchedNodeLink"] = graph_node_info.get("matched_node_link", [])
-            node_info["precisionIndex"] = graph_node_info.get("data", {}).get("precision_index", "NaN")
         return self.current_hierarchy
 
     def update_current_hierarchy_data(self, data):

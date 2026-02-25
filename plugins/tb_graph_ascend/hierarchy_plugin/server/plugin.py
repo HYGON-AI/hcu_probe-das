@@ -18,7 +18,6 @@ from tensorboard.plugins import base_plugin
 from tensorboard.util import tb_logging
 
 from .app.views.graph_views import GraphView
-from .app.utils.graph_utils import GraphUtils
 from .app.utils.global_state import GraphState
 from .app.utils.constant import Extension
 
@@ -27,7 +26,6 @@ logger = tb_logging.get_logger()
 PLUGIN_NAME = "graph_ascend"
 PLUGIN_NAME_RUN_METADATA_WITH_GRAPH = "graph_ascend_run_metadata_graph"
 DB_EXT = Extension.DB.value
-JSON_EXT = Extension.JSON.value
 
 
 class GraphsPlugin(base_plugin.TBPlugin):

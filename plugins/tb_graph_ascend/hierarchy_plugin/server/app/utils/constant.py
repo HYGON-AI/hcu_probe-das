@@ -70,9 +70,7 @@ NORM_RELATIVE_ERR = "3"
 
 class Extension(Enum):
     DB = ".vis.db"
-    JSON = ".vis"
 
 
 class DataType(Enum):
     DB = "db"
-    JSON = "json"

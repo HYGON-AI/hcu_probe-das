@@ -56,7 +56,6 @@ export const BENCH_PREFIX = 'B___';
 
 export const UNMATCHED_COLOR = '#C7C7C7';
 
-export const JSON_TYPE = 'json';
 export const DB_TYPE = 'db';
 
 export const MIN_GRAPH_WIDTH = 200;
