@@ -26,9 +26,7 @@ from msprobe.visualization.utils import ProgressInfo, update_progress_info
 
 logger = tb_logging.get_logger()
 DB_EXT = Extension.DB.value
-JSON_EXT = Extension.JSON.value
 DB_TYPE = DataType.DB.value
-JSON_TYPE = DataType.JSON.value
 
 
 class GraphServiceStrategy(ABC):

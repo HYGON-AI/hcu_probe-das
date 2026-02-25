@@ -224,7 +224,6 @@ const useGraphStore = create<GraphStoreType>()((set, get) => ({
     const metaDirOptions = metaDirectory.map((item) => {
       return {
         value: item,
-
         label: item,
       };
     });
