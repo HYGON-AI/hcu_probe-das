@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -98,13 +98,16 @@ class CompareRealData:
 
     @staticmethod
     def read_dump_data(result_df):
+        """
+        构建算子-真实数据名字典。key：npu_op_name, value: tensor_pair
+        """
         try:
-            npu_dump_name_list = result_df.loc[0:, CompareConst.NPU_NAME].tolist()
+            npu_name_list = result_df.loc[0:, CompareConst.NPU_NAME].tolist()
+            bench_name_list = result_df.loc[0:, CompareConst.BENCH_NAME].tolist()
             dump_tensor_pair_list = result_df.loc[0:, CompareConst.DATA_NAME].tolist()
             op_name_mapping_dict = {}
-            for index, npu_dump_name in enumerate(npu_dump_name_list):
-                dump_tensor_pair = dump_tensor_pair_list[index]
-                op_name_mapping_dict[npu_dump_name] = dump_tensor_pair
+            for npu_name, bench_name, dump_tensor_pair in zip(npu_name_list, bench_name_list, dump_tensor_pair_list):
+                op_name_mapping_dict[str(npu_name)+str(bench_name)] = dump_tensor_pair
             return op_name_mapping_dict
         except ValueError as e:
             logger.error('result dataframe is not found.')
@@ -162,7 +165,7 @@ class CompareRealData:
         """
         relative_err, error_flag, err_msg = None, False, None
 
-        data_name_pair = op_name_mapping_dict.get(npu_op_name)
+        data_name_pair = op_name_mapping_dict.get(str(npu_op_name) + str(bench_op_name))
         npu_data_name = data_name_pair[0]
         bench_data_name = data_name_pair[1]
 
@@ -174,15 +177,22 @@ class CompareRealData:
         elif str(bench_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有bench真实数据
             n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True
             err_msg = "Bench does not have data file."
-        elif str(bench_data_name) == CompareConst.N_A:  # bench没匹配
+        elif (str(npu_data_name) == CompareConst.N_A) ^ (str(bench_data_name) == CompareConst.N_A):  # 没匹配一侧单独N/A
             n_value, b_value, error_flag = CompareConst.API_UNMATCH, CompareConst.API_UNMATCH, True
             err_msg = "Bench api/module unmatched."
         else:
             npu_dir = input_param.get(CompareConst.NPU_DUMP_DATA_DIR)
             bench_dir = input_param.get(CompareConst.BENCH_DUMP_DATA_DIR)
+            data_path_dict = {
+                "npu_dir": npu_dir,
+                "npu_data_name": npu_data_name,
+                "bench_dir": bench_dir,
+                "bench_data_name": bench_data_name
+            }
             try:
-                n_value, b_value = self.file_reader(npu_dir, npu_data_name, bench_dir, bench_data_name,
-                                                    self.cross_frame)
+                # pt中file_reader为pt_compare.py的read_real_data
+                # ms中file_reader为ms_compare.py的read_real_data
+                n_value, b_value = self.file_reader(data_path_dict, self.cross_frame, self.mode_config.backend)
             except IOError as error:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE

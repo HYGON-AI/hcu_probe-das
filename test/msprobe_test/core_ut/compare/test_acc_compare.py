@@ -453,12 +453,12 @@ class TestParseData(unittest.TestCase):
             [
                 ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
                  'Functional.linear.0.forward', 'False',
-                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',]
+                 'forward', '0.forward', 'Functional.linear', 0, 0, '.input.0',]
             ],
             columns=[
                 'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
                 'api_origin_name', 'requires_grad',
-                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix'
+                'direction', 'call_direction', 'op_no_number', 'forward_call_order', 'backward_call_order', 'suffix'
             ]
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -479,12 +479,12 @@ class TestParseData(unittest.TestCase):
             [
                 ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
                  'Functional.linear.0.forward', 'False',
-                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',]
+                 'forward', '0.forward', 'Functional.linear', 0, 0, '.input.0',]
             ],
             columns=[
                 'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
                 'api_origin_name', 'requires_grad',
-                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix'
+                'direction', 'call_direction', 'op_no_number', 'forward_call_order', 'backward_call_order', 'suffix'
             ]
         )
         self.assertTrue(npu_df.equals(target_df))
@@ -504,13 +504,13 @@ class TestParseData(unittest.TestCase):
             [
                 ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
                  'Functional.linear.0.forward', 'False',
-                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',
+                 'forward', '0.forward', 'Functional.linear', 0, 0, '.input.0',
                  'Functional.linear.0.forward.input.0.pt']
             ],
             columns=[
                 'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
                 'api_origin_name', 'requires_grad',
-                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix',
+                'direction', 'call_direction', 'op_no_number', 'forward_call_order', 'backward_call_order', 'suffix',
                 'data_name'
             ]
         )
@@ -531,13 +531,13 @@ class TestParseData(unittest.TestCase):
             [
                 ['Functional.linear.0.forward.input.0', 'torch.float32', [2, 2], [2, 0, 1, 1], ['File'], 'input',
                  'Functional.linear.0.forward', 'False',
-                 'forward', '0.forward', 'Functional.linear', 0, '.input.0',
+                 'forward', '0.forward', 'Functional.linear', 0, 0, '.input.0',
                  123456]
             ],
             columns=[
                 'op_name', 'dtype', 'shape', 'summary', 'stack_info', 'state',
                 'api_origin_name', 'requires_grad',
-                'direction', 'call_direction', 'op_no_number', 'backward_call_order', 'suffix',
+                'direction', 'call_direction', 'op_no_number', 'forward_call_order', 'backward_call_order', 'suffix',
                 'md5'
             ]
         )
@@ -1351,3 +1351,7 @@ class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
 
         self.assertEqual(df.loc[0, "Mean diff"], CompareConst.N_A)
         self.assertEqual(df.loc[1, "Mean diff"], CompareConst.DIFF_FLAG)
+
+
+if __name__ == '__main__':
+    unittest.main()

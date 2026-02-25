@@ -66,6 +66,8 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 | -cm或--cell_mapping                 | 不同平台、不同配置的模块比对。配置该参数时表示开启不同平台、不同配置的模块比对功能，可以指定自定义映射文件*.yaml，不指定映射文件表示不映射比对。自定义映射文件的格式请参见[自定义映射文件（cell_mapping）](#自定义映射文件cell_mapping)。仅[不同平台、不同配置下的模块比对场景](#不同平台、不同配置下的模块比对)需要配置。 | 否       |
 | -da或--diff_analyze                 | 自动识别网络中首差异节点，支持md5、统计量等dump数据。支持单卡/多卡场景。通过直接配置该参数开启，默认未配置，表示关闭。                                                                                                                   | 否       |
 | -tensor_log或--is_print_compare_log | 配置是否开启单个模块或API的日志打印，仅支持msProbe工具dump的tensor数据。通过直接配置该参数开启，默认未配置，表示关闭。                                                                                                             | 否       |
+| --consistent_check | 配置是否开启verl训推一致性比对。通过直接配置该参数开启，默认未配置，表示关闭。仅[verl训推一致性比对场景](#verl训推一致性比对场景)需要配置。                                                                                                  | 否       |
+| --backend | verl训推一致性比对时指定的训练后端，取值为fsdp或megatron。须先配置--consistent_check。                                                                                                                      | 否       |
 
 ### 使用示例
 
@@ -155,6 +157,29 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
     - `compare_result_rank{rank_id}_{timestamp}.json`：包含该rank比对结果，包括API或模块名、比对状态、比对指标等。
     - `diff_analyze_{timestamp}.json`：包含首差异算子节点识别结果，包括算子节点名、算子类型、算子位置等。
 
+#### verl训推一致性比对场景
+
+verl训推一致性比对场景：verl强化学习prefill阶段训练和推理数据的比对。
+
+> [!NOTE]说明
+> - 目前支持fsdp后端dump采集的训推L0级别tensor数据的比对。支持的模型为Qwen3-30B，Qwen3-32B，Qwen3-4B，Qwen2.5-0.5B。
+> - verl训推一致性场景dump需要保存训练和推理两份数据，注意需保证两次dump的路径不同，否则会导致dump数据覆盖。比对时，-tp参数需指定为训练数据，-gp参数需指定为推理数据。
+
+1. 参见《[PyTorch场景精度数据采集](../dump/pytorch_data_dump_instruct.md)》完成verl场景的训练和推理的精度数据dump。
+
+2. 运行命令示例：
+
+   单卡场景：
+   ```shell
+   msprobe compare -tp /train_dump/dump.json -gp /infer_dump/dump.json --consistent_check --backend fsdp -o ./output
+   ```
+   多卡场景：
+   ```shell
+   msprobe compare -tp /train_dump/step0 -gp /infer_dump/step0 --consistent_check --backend fsdp -o ./output
+   ```
+   考虑到verl多卡场景训推时数据切分的随机性，训练和推理dump的数据可能在不同卡下分配不均，这种情况下须使用单卡比对；如果训练和推理dump的数据在每张卡的数量是一一对应的，那么可以直接指定rank父目录（step层级）进行多卡比对。
+   
+3. 查看比对结果，请参见 [精度比对结果分析](#精度比对结果分析)。
 
 
 ### 输出说明

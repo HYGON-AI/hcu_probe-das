@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -30,13 +30,14 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, \
     set_dump_path, get_dump_mode, check_compare_param, load_stack_json, get_file_type, add_time_with_json
 from msprobe.core.compare.check import check_dump_json_str, check_stack_json_str, cross_dtype_mapping, \
-    check_configuration_param
+    check_configuration_param, check_consistent_param
 from msprobe.core.compare.utils import print_compare_ends_info, read_op, set_stack_json_path, reorder_index
 from msprobe.core.compare.config import ModeConfig, MappingConfig, MappingDict
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 from msprobe.core.compare.indicator_analysis.calculator import calculate_excel_result_df
 from msprobe.core.compare.stats_diff_calc import ValType, ALL_TYPES
+from msprobe.core.compare.verl.mapping import FSDP_MODULE_MAP
 
 
 @dataclass
@@ -52,6 +53,8 @@ class ComparisonConfig:
     compared_file_type: str
     first_diff_analyze: bool
     is_print_compare_log: bool
+    consistent_check: bool
+    backend: str
 
 
 class Comparator:
@@ -140,7 +143,7 @@ class Comparator:
 
         # calculate Indicators
         logger.info("Calculating comparison indicators in progress...")
-        calculate_excel_result_df(result_df, self.mode_config.dump_mode)
+        calculate_excel_result_df(result_df, self.mode_config.dump_mode, self.mode_config.consistent_check)
         result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
         logger.info("Comparison indicators calculation done.")
 
@@ -158,19 +161,25 @@ class Comparator:
         # create new columns for compare op_name and shape
         # process npu_df's COMPARE_KEY whether same or different framework
         process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
-        # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
-        if not self.mode_config.fuzzy_match:
-            npu_df = process_df.update_backward_call(npu_df)
-            bench_df = process_df.update_backward_call(bench_df)
-        npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df, bench_df)
+        if self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP:
+            npu_df, bench_df = process_df.process_consistent_df(npu_df, bench_df)
+        else:
+            # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
+            # 训推一致性比对不考虑反向
+            if not self.mode_config.fuzzy_match:
+                npu_df = process_df.update_backward_call(npu_df)
+                bench_df = process_df.update_backward_call(bench_df)
+            npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df, bench_df)
 
         # match npu and bench, match_result contains both npu_info and bench_info
         match = Match(self.mode_config, self.mapping_config, self.cross_frame)
         match_result = match.match_api_infos(npu_df, bench_df)
-        # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
-        match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
-        bench_columns = [i + '_y' for i in bench_df.columns]
-        match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
+        if not (self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP):
+            # 比对主逻辑，训推一致性另外单独处理
+            # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
+            match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
+            bench_columns = [i + '_y' for i in bench_df.columns]
+            match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
 
         # organize compare result table by renaming columns
         if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
@@ -240,6 +249,7 @@ class ParseData:
             Const.DIRECTION: [],  # 目前三种选择：'forward', 'backward', None
             Const.CALL_DIRECTION: [],
             Const.OP_NO_NUMBER: [],  # 删除调用序号
+            Const.FORWARD_CALL_ORDER: [],  # 计算op前向调用顺序，初始化为0
             Const.BACKWARD_CALL_ORDER: [],  # 计算op反向调用顺序，初始化为0
             Const.SUFFIX: []
         }
@@ -257,6 +267,7 @@ class ParseData:
 
     def gen_data_df(self, data_json, stack_json_data, device: str):
         result = self.init_result()
+        op_forward_count = defaultdict(int)  # 记录forward调用次数，用于后续调用序更新
         op_backward_count = defaultdict(int)  # 记录backward调用次数，用于后续调用序更新
 
         apis_data = data_json.get('data', None)
@@ -266,9 +277,17 @@ class ParseData:
 
         progress_bar = self.create_progress_bar(len(apis_data), device)
 
+        parse_flag = True  # 使用布尔值，默认为 True，表示解析开启
+
         # 从json中循环解析API数据，遍历所有API
         for data_name in apis_data:
             check_op_str_pattern_valid(data_name)
+
+            parse_flag = self.should_parse_op(parse_flag, data_name, device)
+            # 如果 parse_flag 为 False，则跳过当前数据项
+            if not parse_flag:
+                progress_bar.update(1)
+                continue
 
             op_parsed_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not op_parsed_list:
@@ -281,7 +300,11 @@ class ParseData:
                 continue
 
             direction, call_direction = self.get_direction_and_call_direction(data_name)
+
+            forward_call_order = op_forward_count.get(op_no_number, 0)
             backward_call_order = op_backward_count.get(op_no_number, 0)
+            if direction == Const.FORWARD:
+                op_forward_count[op_no_number] += 1
             if direction == Const.BACKWARD:
                 op_backward_count[op_no_number] += 1
 
@@ -309,6 +332,7 @@ class ParseData:
                 result[Const.DIRECTION].append(direction)
                 result[Const.CALL_DIRECTION].append(call_direction)
                 result[Const.OP_NO_NUMBER].append(op_no_number)
+                result[Const.FORWARD_CALL_ORDER].append(forward_call_order)
                 result[Const.BACKWARD_CALL_ORDER].append(backward_call_order)
                 result[Const.SUFFIX].append(suffix)
 
@@ -349,6 +373,40 @@ class ParseData:
         })
         return op_parsed_list
 
+    def should_parse_op(self, parse_flag, data_name, device: str):
+        """
+        根据操作名判断是否应解析。
+
+        :param parse_flag: 原是否解析标识
+        :param data_name: 操作名字符串
+        :param device: Npu/Bench
+        :return: 返回解析标志，True表示解析开启，False表示解析关闭
+        """
+        if not self.mode_config.consistent_check:  # 非训推一致性比对均解析数据
+            return True
+
+        if device == 'Bench':
+            return True
+
+        op_name_splits = data_name.split(Const.SEP)
+        # 确保分割后列表长度符合预期
+        if len(op_name_splits) < 3:
+            logger.error(f"Length of op name in dump.json is not as expected. "
+                         f"The division should be no less than 3. Op_name is {data_name}. Please check.")
+            return False  # 确保在长度不符合时返回 False
+
+        # 提取操作名的相关部分
+        third_last = op_name_splits[-3]
+        second_last = op_name_splits[-2]
+
+        # 根据操作名调整解析标志
+        if third_last in CompareConst.VERL_FSDP_STOP_PARSE_LIST and second_last == 'backward':
+            return False
+        elif third_last == 'Embedding' and second_last == 'forward':
+            return True
+
+        return parse_flag
+
 
 class ProcessDf:
     def __init__(self, mode_config: ModeConfig, mapping_config: MappingConfig, mapping_dict: MappingDict):
@@ -364,6 +422,41 @@ class ProcessDf:
             logger.error('Failed to retrieve API name, please check if the dump data is reasonable')
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         return api_name
+
+    @staticmethod
+    def update_forward_call(cmp_df):
+        # ===============================
+        # Step 1: 拆 call_direction 的两部分
+        # ===============================
+        cd_parts = cmp_df[Const.CALL_DIRECTION].str.rsplit(Const.SEP, n=1, expand=True)
+        cd_parts.columns = ["cd_head", "cd_tail"]
+
+        head_is_digit = cd_parts["cd_head"].str.isdigit()
+        tail_is_digit = cd_parts["cd_tail"].str.isdigit()
+        is_forward = cmp_df[Const.DIRECTION] == Const.FORWARD
+
+        # ===============================
+        # Step 2: 矢量化替换 forward_call_order
+        # ===============================
+        mask_head = is_forward & head_is_digit
+        mask_tail = is_forward & tail_is_digit
+        update_mask = mask_head | mask_tail
+
+        cd_parts.loc[mask_head, "cd_head"] = (
+            cmp_df.loc[mask_head, Const.FORWARD_CALL_ORDER].astype(str)
+        )
+        cd_parts.loc[mask_tail, "cd_tail"] = (
+            cmp_df.loc[mask_tail, Const.FORWARD_CALL_ORDER].astype(str)
+        )
+
+        # 只更新需要更新的 call_direction
+        cmp_df.loc[update_mask, Const.CALL_DIRECTION] = (
+                cd_parts.loc[update_mask, "cd_head"]
+                + Const.SEP
+                + cd_parts.loc[update_mask, "cd_tail"]
+        )
+
+        return cmp_df
 
     @staticmethod
     def update_backward_call(cmp_df):
@@ -413,6 +506,71 @@ class ProcessDf:
         )
 
         return cmp_df
+
+    @staticmethod
+    def get_op_layer(data_df):
+        # 获取模块层数，对于非layer的op，layer设置默认值为-1
+        layer_pattern = r'layers\.(\d+)'
+        data_df[Const.LAYER] = data_df[Const.OP_NO_NUMBER].str.extract(layer_pattern).fillna(-1).astype(int)
+
+    @staticmethod
+    def get_op_module_and_class(data_df, engine: str):
+        """
+        根据module_class列处理获取module和class
+        """
+        if engine == 'train':
+            train_fsdp_pattern = '_fsdp_wrapped_module.'
+            data_df[Const.MODULE_CLASS] = data_df[Const.OP_NO_NUMBER].str.split(train_fsdp_pattern).str[-1]
+            # 处理非layer层
+            data_df[Const.MODULE_CLASS] = data_df[Const.MODULE_CLASS].str.replace(r'^model\.', '', regex=True)
+        elif engine == 'infer':
+            infer_layer_pattern = r'^.*layers\.\d+\.'
+            data_df[Const.MODULE_CLASS] = data_df[Const.OP_NO_NUMBER].str.replace(infer_layer_pattern, '', regex=True)
+            # 处理非layer层
+            data_df[Const.MODULE_CLASS] = data_df[Const.MODULE_CLASS].str.replace(r'^Module.model\.', '', regex=True)
+        else:
+            raise ValueError(f'Unsupported engine type: {engine}')
+
+        # 使用 str.rsplit() 拆分，最多拆分一次，最后一个是class
+        split_result = data_df[Const.MODULE_CLASS].str.rsplit(Const.SEP, n=1, expand=True)
+
+        # 处理拆分后的结果，检查拆分后的列数
+        data_df[Const.MODULE] = split_result[0].where(split_result[1].notna(), '')  # 如果没有拆分点，module为''
+        data_df[Const.CLASS] = split_result[1].fillna(data_df[Const.MODULE_CLASS])  # 如果没有拆分点，class为原始字符串
+        data_df[Const.MODULE_LEN] = data_df[Const.MODULE].str.split(Const.SEP).str.len()
+
+    def process_module_mapping(self, data_df, engine: str):
+        """
+        仅映射训练数据，推理数据直接赋值
+        """
+        if engine == 'infer':
+            data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE]
+            return
+
+        # 直接为module_len == 1分配默认值
+        len_1_mask = data_df[Const.MODULE_LEN] == 1
+        data_df[Const.MODULE_PART_PREFIX] = ''
+        data_df[Const.MODULE_LAST] = data_df[Const.MODULE]
+
+        # 对于 module_len > 1 的行，拆分module为prefix和last_part
+        split_columns = data_df.loc[~len_1_mask, Const.MODULE].str.split(Const.SEP, n=1, expand=True)
+        split_columns.columns = [Const.MODULE_PART_PREFIX, Const.MODULE_LAST]  # 设置列名对齐，split分割后默认列名是(0, 1)
+        data_df.loc[~len_1_mask, [Const.MODULE_PART_PREFIX, Const.MODULE_LAST]] = split_columns
+
+        # 映射module_last生成新列module_last_mapping, 使用map()进行矢量化替换
+        mapping = {}
+        if self.mode_config.backend == Const.FSDP:
+            mapping = FSDP_MODULE_MAP
+        last_part_mapped = data_df[Const.MODULE_LAST].map(mapping)
+        data_df[Const.MODULE_LAST_MAPPING] = last_part_mapped.fillna(data_df[Const.MODULE_LAST])
+
+        # 拼接prefix和映射后的last_part
+        data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE_LAST_MAPPING]
+        data_df.loc[~len_1_mask, Const.MODULE_MAPPING] = (
+            data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
+            Const.SEP +
+            data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
+        )
 
     def process_compare_key_and_shape(self, npu_df, bench_df):
         npu_df = self.assign_npu_df_compare_key(npu_df, bench_df)
@@ -565,6 +723,17 @@ class ProcessDf:
     def process_data_mapping(self, npu_op_name):
         return self.mapping_dict.data_mapping_dict.get(npu_op_name, npu_op_name)
 
+    def process_consistent_df(self, npu_df, bench_df):
+        if self.mode_config.backend == Const.FSDP:
+            self.get_op_layer(npu_df)
+            self.get_op_layer(bench_df)
+            self.get_op_module_and_class(npu_df, engine='train')
+            self.get_op_module_and_class(bench_df, engine='infer')
+            self.process_module_mapping(npu_df, engine='train')
+            self.process_module_mapping(bench_df, engine='infer')
+            self.update_forward_call(npu_df)
+        return npu_df, bench_df
+
 
 class Match:
     def __init__(self, mode_config: ModeConfig, mapping_config: MappingConfig, cross_frame):
@@ -609,6 +778,90 @@ class Match:
         torch_func = str(torch_func_split[0]) + Const.SEP + process + str(in_out)
         return torch_func
 
+    @staticmethod
+    def dual_monotonic_sort(match_result, pos1: str, pos2: str):
+        """
+        对 df 按 (pos1, pos2) 排序，保证：
+        - pos1（忽略 NaN）递增, 'npu_pos'
+        - pos2（忽略 NaN）递增, 'bench_pos'
+
+        若数据本身存在冲突，抛出 ValueError。
+        复杂度：O(n log n)
+
+        核心理解：
+        - order1 和 order2 并不是两份不同的数据
+        - 它们只是同一个 DataFrame 的“行索引”的两种排序结果
+        - 元素集合完全相同（都是 0..n-1），只是顺序不同
+        - 本算法是在合并这两种排序约束
+        """
+
+        # 索引重排
+        match_result = match_result.reset_index(drop=True)
+
+        # ------------------------------------------------
+        # 分别按 pos1 / pos2 排序，得到“行索引顺序”
+        #
+        # 注意：
+        # order1 和 order2 中的元素是完全一样的（都是 work 的行号），
+        # 只是排序规则不同：
+        #   order1: 按 pos1 排序后的行顺序
+        #   order2: 按 pos2 排序后的行顺序
+        # ------------------------------------------------
+        order1 = match_result.sort_values(pos1, na_position="last").index.tolist()
+        order2 = match_result.sort_values(pos2, na_position="last").index.tolist()
+
+        used_rows = set()  # 已经选过的“行索引”
+        i = j = 0  # 指针：分别在 order1 / order2 上前进
+        result_idx = []  # 最终结果行顺序
+
+        n = len(match_result)
+
+        while len(result_idx) < n:
+            picked = None
+
+            # 跳过已经用过的行
+            while i < n and order1[i] in used_rows:
+                i += 1
+            while j < n and order2[j] in used_rows:
+                j += 1
+
+            # 当前在 pos1 / pos2 意义下“最小的未使用行”
+            min1 = order1[i] if i < n else None
+            min2 = order2[j] if j < n else None
+
+            # 在 min1 和 min2 中尝试选一个“合法行”
+            for k in (min1, min2):
+                if k is None or k in used_rows:
+                    continue
+
+                row = match_result.loc[k]
+                ok = True
+
+                # 如果该行在 pos1 上不是 NaN，
+                # 它必须是当前 pos1 中的最小值对应行
+                if not pd.isna(row[pos1]) and k != min1:
+                    ok = False
+
+                # 如果该行在 pos2 上不是 NaN，
+                # 它必须是当前 pos2 中的最小值对应行
+                if not pd.isna(row[pos2]) and k != min2:
+                    ok = False
+
+                if ok:
+                    picked = k
+                    break
+
+            # 若两个最小候选都不合法，说明两列排序约束冲突
+            if picked is None:
+                raise ValueError("Conflicting comparison data:"
+                                 " the two columns cannot be monotonically increasing at the same time.")
+
+            used_rows.add(picked)
+            result_idx.append(picked)
+
+        # 按 result_idx 给出的顺序取行
+        return match_result.loc[result_idx].reset_index(drop=True)
+
     def check_op_item(self, npu_op_item, bench_op_item):
         name_match = self.rename_api(npu_op_item[CompareConst.CMP_KEY]) == self.rename_api(
             bench_op_item[CompareConst.CMP_KEY])
@@ -635,15 +888,81 @@ class Match:
                                                                   categories=op_name_order, ordered=True)
             match_result = match_result.sort_values(CompareConst.OP_NAME_X).reset_index(drop=True)
             match_result[CompareConst.OP_NAME_X] = match_result[CompareConst.OP_NAME_X].astype('object')
-        elif not self.mode_config.fuzzy_match:
-            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY],
-                                    how='outer')
-        else:
-            drop_list = [Const.DIRECTION, Const.CALL_DIRECTION, Const.OP_NO_NUMBER, Const.BACKWARD_CALL_ORDER,
-                         Const.SUFFIX]
+        elif self.mode_config.fuzzy_match:
+            drop_list = [Const.DIRECTION, Const.CALL_DIRECTION, Const.OP_NO_NUMBER, Const.FORWARD_CALL_ORDER,
+                         Const.BACKWARD_CALL_ORDER, Const.SUFFIX]
             npu_df.drop(columns=drop_list, inplace=True)
             bench_df.drop(columns=drop_list, inplace=True)
             match_result = self.process_fuzzy_match(npu_df, bench_df)
+
+        # 非fsdp后端暂无layer、class、module_mapping等列，因此增加后端限制
+        elif self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP:
+            match_result = self.consistent_match(npu_df, bench_df)
+        else:
+            match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY], how='outer')
+
+        return match_result
+
+    def consistent_match(self, npu_df, bench_df):
+        keep_list = [CompareConst.OP_NAME, Const.DTYPE, Const.SHAPE, Const.SUMMARY, Const.STACK_INFO, Const.STATE,
+                     Const.API_ORIGIN_NAME, Const.REQ_GRAD, Const.CALL_DIRECTION, Const.SUFFIX,
+                     Const.LAYER, Const.CLASS, Const.MODULE_MAPPING]
+        if self.mode_config.dump_mode == Const.ALL:
+            keep_list.append(Const.DATA_NAME)
+
+        npu_df = npu_df[keep_list]
+        bench_df = bench_df[keep_list]
+        op_name_npu = npu_df[CompareConst.OP_NAME]
+        op_name_bench = bench_df[CompareConst.OP_NAME]
+        npu_rank = {v: i for i, v in enumerate(op_name_npu)}
+        bench_rank = {v: i for i, v in enumerate(op_name_bench)}
+
+        # 1. 根据前向调用、后缀、层数、映射模块名匹配
+        merge_df = pd.merge(
+            npu_df, bench_df,
+            on=[Const.CALL_DIRECTION, Const.SUFFIX, Const.LAYER, Const.MODULE_MAPPING],
+            suffixes=('_x', '_y'),
+            how='outer'
+        )
+
+        matched_df = merge_df
+
+        # 统计量列表转str用于后续拼接
+        matched_df['summary_x'] = matched_df['summary_x'].astype(str)
+        matched_df['summary_y'] = matched_df['summary_y'].astype(str)
+
+        # 非匹配行summary统一设置为 'N/A'
+        npu_unmatched_mask = matched_df['op_name_x'].isna()
+        bench_unmatched_mask = matched_df['op_name_y'].isna()
+        matched_df.loc[npu_unmatched_mask, 'summary_x'] = CompareConst.N_A
+        matched_df.loc[bench_unmatched_mask, 'summary_y'] = CompareConst.N_A
+
+        na_rows = matched_df[matched_df['op_name_y'].isna()]
+        agg_rows = matched_df[matched_df['op_name_y'].notna()]
+        na_rows.fillna(CompareConst.N_A, inplace=True)
+        agg_rows.fillna(CompareConst.N_A, inplace=True)
+
+        # 2. 根据推理测op_name聚合
+        # 初始化聚合字典，默认所有列用 'first'  聚合
+        agg_dict = {col: 'first' for col in agg_rows.columns}
+        # 对 op_name_x 使用自定义聚合方法
+        agg_dict['op_name_x'] = lambda x: ';\n'.join(x)
+        agg_dict['dtype_x'] = lambda x: ';'.join(x)
+        agg_dict['shape_x'] = lambda x: ';'.join(x)
+        agg_dict['summary_x'] = lambda x: ';'.join(x)  # 统计量先按字符串聚合，后续再拆提取
+        if self.mode_config.dump_mode == Const.ALL:
+            agg_dict['data_name_x'] = lambda x: ';'.join(x)  # 真实数据模式还需要对tensor名进行聚合拼接
+        # 根据推理测op_name聚合，聚合连接符为；
+        agg_result = agg_rows.groupby('op_name_y', as_index=False, sort=False).agg(agg_dict)
+
+        match_result = pd.concat([agg_result, na_rows])
+
+        # 3. 调整op顺序
+        match_result['npu_pos'] = match_result['op_name_x'].str.split(';', n=1).str[0].map(npu_rank)
+        match_result['bench_pos'] = match_result['op_name_y'].map(bench_rank)
+        match_result = self.dual_monotonic_sort(match_result, 'npu_pos', 'bench_pos')
+        match_result.drop(columns=['npu_pos', 'bench_pos'], inplace=True)
+
         return match_result
 
     def process_fuzzy_match(self, npu_df, bench_df):
@@ -745,10 +1064,107 @@ class CreateTable:
         return result
 
     @staticmethod
-    def set_summary(summary):
+    def summary_list_str_to_list(s: str):
+        if s.lower() == 'nan':
+            return [CompareConst.NAN] * 4
+        summary = []
+        s = s.strip().strip("[]")
+        parts = s.split(",")
+        for p in parts:
+            p = p.strip()
+            try:
+                p = float(p)
+            except ValueError:
+                p = p.strip('"').strip("'")
+            summary.append(p)
+        return summary
+
+    @staticmethod
+    def filter_numbers(lst):
+        """只保留能转成数字的"""
+        nums = []
+        for x in lst:
+            if isinstance(x, float):
+                nums.append(x)
+        return nums
+
+    @staticmethod
+    def fill_state_api_origin_name(result):
+        """
+        训推一致性比对场景，使用推理数据填充训练npu列的N/A，用于后续比对指标计算能找到唯一op
+        state直接填回，api_origin_name根据映射得到对应训练op_name填回
+        """
+        mask = result['state_x'] == CompareConst.N_A
+        result.loc[mask, 'state_x'] = result.loc[mask, 'state_y']
+
+        # 先算 N/A 行的 mask
+        mask_n_a = result['api_origin_name_x'] == CompareConst.N_A
+
+        # 1. 用非 N/A 行构建映射字典
+        mapping = (
+            result.loc[~mask_n_a, ['api_origin_name_y', 'api_origin_name_x']]
+            .drop_duplicates()
+            .set_index('api_origin_name_y')['api_origin_name_x']
+            .to_dict()
+        )
+        if CompareConst.N_A in mapping:
+            del mapping[CompareConst.N_A]
+
+        # 2. 用映射字典回填 N/A（如果字典里没有对应 key，就用 api_origin_name_y 本身）
+        mapped = result.loc[mask_n_a, 'api_origin_name_y'].map(mapping)
+        result.loc[mask_n_a, 'api_origin_name_x'] = mapped.fillna(result.loc[mask_n_a, 'api_origin_name_y'])
+
+        return result
+
+    def parse_statistic_str(self, s: str):
+        """
+        处理形如：
+        '[2.3, -2.9, -3e-05, 49];[2.3, -2.9, -3e-05, 49];[2.3, -2.9, -3e-05, 49]'
+        返回：
+        [max_of_max, min_of_min, joined_mean, joined_norm]
+        """
+        if ';' not in s:
+            summary_list = self.summary_list_str_to_list(s)
+            return summary_list
+
+        values = []
+        parts = s.split(";")
+        for p in parts:
+            p_list = self.summary_list_str_to_list(p)
+            if p_list == [CompareConst.NAN] * 4:
+                return [CompareConst.NAN] * 4
+            values.append(p_list)
+
+        summary_cols = [list(x) for x in zip(*values)]
+        if len(summary_cols) != len(Const.SUMMARY_METRICS_LIST):
+            return [CompareConst.NAN] * 4
+
+        # 第1列：取最大值
+        col1_nums = self.filter_numbers(summary_cols[0])
+        max_val = max(col1_nums) if col1_nums else CompareConst.NONE
+
+        # 第2列：取最小值
+        col2_nums = self.filter_numbers(summary_cols[1])
+        min_val = min(col2_nums) if col2_nums else CompareConst.NONE
+
+        # 第3、第4列直接用
+        col3 = ';'.join([str(x) for x in summary_cols[2]])
+        col4 = ';'.join([str(x) for x in summary_cols[3]])
+
+        # 拼接结果
+        result = [max_val, min_val, col3, col4]
+        return result
+
+    def set_summary(self, summary):
         if summary == CompareConst.N_A:
             return [CompareConst.N_A] * 4  # 4为统计值个数
+
         summary_list = []
+
+        # 训推一致性场景将统计量列表转了字符串，需要转回来
+        if isinstance(summary, str) or str(summary).lower() == 'nan':
+            summary = self.parse_statistic_str(str(summary))
+
         for i in summary:
             if str(i).lower() == 'nan':
                 summary_list.append(CompareConst.NAN)
@@ -764,6 +1180,9 @@ class CreateTable:
         if self.mode_config.dump_mode == Const.ALL:
             header.append(CompareConst.DATA_NAME)
             result = self.process_data_name(result)
+
+        if self.mode_config.consistent_check:
+            result = self.fill_state_api_origin_name(result)
 
         # rename match_result columns
         result.rename(columns={'op_name_x': CompareConst.NPU_NAME,
@@ -783,19 +1202,16 @@ class CreateTable:
                                },
                       inplace=True)
 
-        # process summary data
-        npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
-                         CompareConst.BENCH_NORM]
         # process requires_grad
         result[CompareConst.REQ_GRAD_CONSIST] = result[CompareConst.NPU_REQ_GRAD] == result[CompareConst.BENCH_REQ_GRAD]
 
+        # process summary data
         if result.empty:
-            result[npu_summary] = pd.DataFrame(columns=npu_summary)
-            result[bench_summary] = pd.DataFrame(columns=bench_summary)
+            result[CompareConst.NPU_SUMMARY] = pd.DataFrame(columns=CompareConst.NPU_SUMMARY)
+            result[CompareConst.BENCH_SUMMARY] = pd.DataFrame(columns=CompareConst.BENCH_SUMMARY)
         else:
-            result[npu_summary] = result['summary_x'].apply(self.set_summary).tolist()
-            result[bench_summary] = result['summary_y'].apply(self.set_summary).tolist()
+            result[CompareConst.NPU_SUMMARY] = result['summary_x'].apply(self.set_summary).tolist()
+            result[CompareConst.BENCH_SUMMARY] = result['summary_y'].apply(self.set_summary).tolist()
 
         header.extend([Const.STATE, Const.API_ORIGIN_NAME])
         result_df = pd.DataFrame(columns=header)
@@ -1031,7 +1447,9 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
             layer_mapping=kwargs.get('layer_mapping', {}),
             first_diff_analyze=kwargs.get('first_diff_analyze', False),
             compared_file_type='',
-            is_print_compare_log=kwargs.get('is_print_compare_log', False)
+            is_print_compare_log=kwargs.get('is_print_compare_log', False),
+            consistent_check=kwargs.get('consistent_check', False),
+            backend=kwargs.get('backend', '')
         )
 
         set_dump_path(input_param)
@@ -1044,6 +1462,7 @@ def setup_comparison(input_param, output_path, **kwargs) -> ComparisonConfig:
         check_configuration_param(config)
         create_directory(output_path)
         check_compare_param(input_param, output_path, config.dump_mode, config.stack_mode)
+        check_consistent_param(config.consistent_check, config.backend)
 
         return config
 

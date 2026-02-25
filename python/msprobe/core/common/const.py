@@ -1,6 +1,6 @@
 # -------------------------------------------------------------------------
 #  This file is part of the MindStudio project.
-# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+# Copyright (c) 2025-2026 Huawei Technologies Co.,Ltd.
 #
 # MindStudio is licensed under Mulan PSL v2.
 # You can use this software according to the terms and conditions of the Mulan PSL v2.
@@ -192,6 +192,7 @@ class Const:
     CELL = "Cell"
     MODULE = "Module"
     API = "api"
+    CLASS = "class"
     PYNATIVE_MODE = "pynative"
     PYNATIVE_GRAPH_MODE = "pynative_graph"
 
@@ -425,8 +426,20 @@ class Const:
     DIRECTION = "direction"
     CALL_DIRECTION = "call_direction"
     OP_NO_NUMBER = "op_no_number"
+    FORWARD_CALL_ORDER = "forward_call_order"
     BACKWARD_CALL_ORDER = "backward_call_order"
     SUFFIX = "suffix"
+
+    LAYER = "layer"
+    MODULE_CLASS = "module_class"
+    MODULE_LEN = "module_len"
+    MODULE_PART_PREFIX = "module_part_prefix"
+    MODULE_LAST = "module_last"
+    MODULE_MAPPING = "module_mapping"
+    MODULE_LAST_MAPPING = "module_last_mapping"
+
+    FSDP = "fsdp"
+    MEGATRON = "megatron"
 
 
 class Data2DBConst:
@@ -489,12 +502,14 @@ class CompareConst:
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
     NPU_NORM = "NPU l2norm"
+    NPU_SUMMARY = [NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM]
     NPU_P2POP_PEER = "NPU P2POp peer"
 
     BENCH_MAX = "Bench max"
     BENCH_MIN = "Bench min"
     BENCH_MEAN = "Bench mean"
     BENCH_NORM = "Bench l2norm"
+    BENCH_SUMMARY = [BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM]
     MAX_DIFF = "Max diff"
     MIN_DIFF = "Min diff"
     MEAN_DIFF = "Mean diff"
@@ -745,6 +760,11 @@ class CompareConst:
     DATA_TYPE = 'Data Type'
     DATA_SHAPE = 'Data Shape'
     TENSOR_PATH = "tensor_path"
+
+    VERL_FSDP_STOP_PARSE_LIST = ['Qwen2Model', 'Qwen3Model', 'Qwen3MoeModel']
+    BACKEND_CAT_RULES = {
+        'fsdp': lambda op_name: '.q_proj.' in op_name or '.gate_proj.' in op_name
+    }
 
 
 class FileCheckConst:

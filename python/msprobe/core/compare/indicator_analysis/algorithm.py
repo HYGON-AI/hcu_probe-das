@@ -242,8 +242,13 @@ class DTypeErrChecker(BaseAlgorithm):
 
         for data_list in data_lists:
             # not match
+            npu_name = api_data.get_data_by_header(CompareConst.NPU_NAME, data_list)
             bench_name = api_data.get_data_by_header(CompareConst.BENCH_NAME, data_list)
-            if not bench_name or bench_name == CompareConst.N_A:
+            if not bench_name or bench_name == CompareConst.N_A or npu_name == CompareConst.N_A:
+                continue
+
+            # 跳过聚合op比较
+            if 'qkv' in bench_name or 'gate_up' in bench_name:
                 continue
 
             npu_dtype = api_data.get_data_by_header(CompareConst.NPU_DTYPE, data_list)
@@ -286,6 +291,55 @@ class ShapeErrChecker(BaseAlgorithm):
             if npu_shape != bench_shape:
                 api_data.set_result(data_list, self.result_level)
                 api_data.set_err_msg(data_list, self.err_msg)
+
+
+class VerlShapeErrChecker(BaseAlgorithm):
+    """
+    适用于verl真实数据模式，训推一致比对，对shape做squeeze处理
+    一个 API 或模块的 shape 不一致，标记为 error
+    """
+
+    def __init__(self):
+        self.result_level = ResultLevel.ERROR
+        self.err_msg = f'{self.result_level.value}: The shape of NPU and Bench are inconsistent.'
+
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+        data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
+        if not data_lists:
+            return
+        for data_list in data_lists:
+            # not match
+            npu_name = api_data.get_data_by_header(CompareConst.NPU_NAME, data_list)
+            bench_name = api_data.get_data_by_header(CompareConst.BENCH_NAME, data_list)
+            if npu_name == CompareConst.N_A or bench_name == CompareConst.N_A:
+                continue
+
+            # 跳过聚合op比较
+            if 'qkv' in bench_name or 'gate_up' in bench_name:
+                continue
+
+            npu_shape = api_data.get_data_by_header(CompareConst.NPU_SHAPE, data_list)
+            bench_shape = api_data.get_data_by_header(CompareConst.BENCH_SHAPE, data_list)
+
+            if npu_shape is None or bench_shape is None:
+                continue
+
+            npu_shape = self.squeeze_shape_str(npu_shape)
+            bench_shape = self.squeeze_shape_str(bench_shape)
+
+            if npu_shape != bench_shape:
+                api_data.set_result(data_list, self.result_level)
+                api_data.set_err_msg(data_list, self.err_msg)
+
+    @staticmethod
+    def squeeze_shape_str(s: str) -> str:
+        """
+        输入:  "[1,217,1,896]"
+        输出:  "[217,896]"
+        """
+        parts = s.strip("[]").split(",")
+        parts = [p.strip() for p in parts if p.strip() != "1"]
+        return "[" + ",".join(parts) + "]"
 
 
 class RelativeWarnChecker(BaseAlgorithm):
@@ -361,3 +415,5 @@ STATISTICS_CHECKERS = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChec
 MD5_CHECKERS = [CRC32ErrChecker]
 STATISTICS_CHECKERS_PARALLEL_MERGE = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChecker,
                                       ParametersErrChecker, DTypeErrChecker, RelativeWarnChecker]
+VERL_TENSOR_CHECKERS = [InfNanErrChecker, OneThousandthErrChecker, ParametersErrChecker,
+                        DTypeErrChecker, VerlShapeErrChecker, CosineWarnChecker]

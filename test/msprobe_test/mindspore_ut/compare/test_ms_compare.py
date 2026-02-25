@@ -217,12 +217,24 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(result)
 
     def test_read_real_data_ms(self):
-        n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'numpy_data.npy', False)
+        data_path_dict = {
+            "npu_dir": base_dir1,
+            "bench_dir": base_dir1,
+            "npu_data_name": "numpy_data.npy",
+            "bench_data_name": "numpy_data.npy"
+        }
+        n_value, b_value = read_real_data(data_path_dict, False, '')
         self.assertTrue(np.array_equal(n_value, np.array([1, 2, 3])))
         self.assertTrue(np.array_equal(b_value, np.array([1, 2, 3])))
 
     def test_read_real_data_cross_frame(self):
-        n_value, b_value = read_real_data(base_dir1, 'numpy_data.npy', base_dir1, 'torch_data.pt', True)
+        data_path_dict = {
+            "npu_dir": base_dir1,
+            "bench_dir": base_dir1,
+            "npu_data_name": "numpy_data.npy",
+            "bench_data_name": "torch_data.pt"
+        }
+        n_value, b_value = read_real_data(data_path_dict, True, '')
         self.assertTrue(np.array_equal(n_value, np.array([1, 2, 3])))
         self.assertTrue(np.array_equal(b_value, np.array([2, 3, 4])))
 

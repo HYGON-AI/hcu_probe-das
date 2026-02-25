@@ -20,7 +20,17 @@ from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_ma
 from msprobe.mindspore.compare.utils import read_npy_data, check_cross_framework
 
 
-def read_real_data(npu_dir, npu_data_name, bench_dir, bench_data_name, cross_frame) -> tuple:
+def read_real_data(data_path_dict: dict, cross_frame, backend) -> tuple:
+    """
+    MS 版本：
+    - cross_frame: 是否跨框架
+    - backend: 为了和 PT 版本接口统一保留，不使用
+    """
+    npu_dir = data_path_dict.get("npu_dir")
+    bench_dir = data_path_dict.get("bench_dir")
+    npu_data_name = data_path_dict.get("npu_data_name")
+    bench_data_name = data_path_dict.get("bench_data_name")
+
     n_value = read_npy_data(npu_dir, npu_data_name)
     if cross_frame:
         from msprobe.pytorch.compare.utils import read_pt_data
