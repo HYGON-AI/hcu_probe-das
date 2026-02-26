@@ -133,7 +133,7 @@ dump配置文件为JSON格式的文本文件，各配置参数介绍如下：
 | 参数 | 可选/必选 | 说明 |
 | --- | --------- | --- |
 | task         | 可选 | 指定dump任务，str类型，默认为"tensor"。可选值：<br/> "tensor"：采集op的输入/输出Tensor的真实数据；<br/> "statistics"：采集op的输入/输出Tensor的统计量数据；<br/> "all"：采集op的输入/输出Tensor的真实数据与统计量数据。 |
-| dump_enable  | 可选 | 指定是否允许dump数据，bool类型，默认为false。可选值：<br/> true：允许采集op的输入/输出Tensor的真实数据或统计量数据；<br/> false：允许采集op的输入/输出Tensor的真实数据或统计量数据。 |
+| dump_enable  | 可选 | 指定是否允许dump数据，bool类型，默认为false。可选值：<br/> true：允许采集op的输入/输出Tensor的真实数据或统计量数据；<br/> false：不允许采集op的输入/输出Tensor的真实数据或统计量数据。 |
 | exec_range   | 可选 | 指定需dump数据的op执行轮次范围，str类型，默认为"0,0"。可选值：<br/> "all"：dump op所有执行轮次的精度数据；<br/> "none"：op所有执行轮次的精度数据都不dump；<br/> "\<起始轮次\>,\<终止轮次\>"： dump op从起始轮次到终止轮次间的精度数据，包括起始轮次与终止轮次。<br/> **配置示例**："exec_range": "0,2"，表示dump op第1、2、3执行时的精度数据（第N次执行的执行轮次为N-1）。|
 | ids          | 可选 | 指定需dump数据的op的ID，str类型，默认为""，表示dump所有layer级Operation的精度数据。需满足"\<ID1\>,\<ID2\>"格式，指定一个或多个ID。<br/> **配置示例**：<br/> "ids": "0"，表示dump ID为0的op的精度数据；<br/> "ids": "2_1"，表示dump ID为2的op下的ID为1的OP的精度数据；<br/> "ids": "0,2_1"，表示dump ID为0的op以及ID为2的op下的ID为1的OP的精度数据。 |
 | op_name      | 可选 | 指定需dump数据的op的名称，str类型，默认为""，表示dump所有layer级Operation的精度数据。需满足"\<opName1\>,\<opName1\>"格式，指定一个或多个op名称。<br/> **配置示例**：<br/> "op_name": "word"，表示dump名称以"word"开头的op的精度数据（不区分大小写）。 |
