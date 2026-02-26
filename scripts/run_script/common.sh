@@ -1,6 +1,6 @@
 #!/bin/bash
 INSTALL_INFO_KEY_ARRAY=("UserName" "UserGroup" "Install_Path_Param")
-MODULE_NAME="Ascend-mindstudio-accucmp"
+MODULE_NAME="mindstudio-accucmp"
 LEVEL_ERROR="ERROR"
 LEVEL_WARN="WARNING"
 LEVEL_INFO="INFO"
@@ -347,22 +347,6 @@ function get_relative_path() {
     local _relative_to_path=$1
     local _des_path=$2
     echo $(realpath --relative-to=$_relative_to_path $_des_path)
-}
-
-function register_uninstall() {
-    local _install_path=$1
-    chmod u+w ${_install_path}"/cann_uninstall.sh"
-    sed -i "/^exit /i uninstall_package \"share\/info\/${MODULE_NAME}\/script\"" ${_install_path}"/cann_uninstall.sh"
-    chmod u-w ${_install_path}"/cann_uninstall.sh"
-}
-
-function unregister_uninstall() {
-    local _install_path=$1
-    if [ -f ${_install_path}"/cann_uninstall.sh" ]; then
-        chmod u+w ${_install_path}"/cann_uninstall.sh"
-        remove_uninstall_package ${_install_path}"/cann_uninstall.sh"
-        chmod u-w ${_install_path}"/cann_uninstall.sh"
-    fi
 }
 
 # 删除uninstall.sh文件，如果已经没有uninstall_package调用

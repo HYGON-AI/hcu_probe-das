@@ -61,6 +61,7 @@ MAIN_SCRIPT=main_msaccucmp.sh
 COMMON_SCRIPT=common.sh
 INSTALL_SCRIPT=install.sh
 UTILS_SCRIPT=utils.sh
+UNINSTALL_SCRIPT=uninstall.sh
 
 CMP_RUN_NAME="mindstudio-accucmp"
 
@@ -88,6 +89,7 @@ function create_temp_dir() {
     # run install scripts
     copy_script ${MAIN_SCRIPT} ${temp_dir}
     copy_script ${COMMON_SCRIPT} ${temp_dir}
+    copy_script ${UNINSTALL_SCRIPT} ${temp_dir}
 }
 
 # copy script
@@ -144,6 +146,7 @@ function check_file_exist() {
 
     check_package ${temp_dir}/${MAIN_SCRIPT} ${PKG_LIMIT_SIZE}
     check_package ${temp_dir}/${COMMON_SCRIPT} ${PKG_LIMIT_SIZE}
+    check_package ${temp_dir}/${UNINSTALL_SCRIPT} ${PKG_LIMIT_SIZE}
 
 }
 
