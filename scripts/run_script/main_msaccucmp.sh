@@ -26,12 +26,12 @@ error() {
 
 # 创建安装目录
 create_install_dir() {
-    info "创建安装目录: $INSTALL_DIR"
+    info "Creating install directory: $INSTALL_DIR"
 
     # 尝试创建目录
     if ! mkdir -p "$INSTALL_DIR"; then
-        error "目录创建失败: $INSTALL_DIR"
-        error "请检查是否有足够的权限，或手动创建该目录"
+        error "Failed to create directory: $INSTALL_DIR"
+        error "Please check if you have sufficient permissions, or create the directory manually"
         exit 1
     fi
 }
@@ -82,16 +82,16 @@ main_install() {
 
     if [[ "$SILENT_MODE" != "true" ]]; then
         echo "========================================="
-        echo "  Ascend-mindstudio-accucmp 安装程序"
+        echo "  mindstudio-accucmp Installer"
         echo "========================================="
-        echo "安装目录: $INSTALL_DIR"
+        echo "Install directory: $INSTALL_DIR"
         echo ""
     fi
 
     # 创建安装目录
     create_install_dir
 
-    info "正在安装文件..."
+    info "Installing files..."
 
     # 复制文件到安装目录
     if [[ "$SUDO_USED" == "true" ]]; then
@@ -100,26 +100,158 @@ main_install() {
         cp -r "$PWD"/msaccucmp/* "$INSTALL_DIR"/
     fi
 
-    info "安装完成！"
-    info "安装目录: $INSTALL_DIR"
+    info "Installation completed!"
+    info "Install directory: $INSTALL_DIR"
+    
+    # 注册卸载脚本
+    register_uninstall
 }
 
 
 function get_install_path() {
     if [ -z "${input_install_path}" ]; then
         local _install_path
-        _install_path="/usr/local/Ascend/operator_cmp/compare"
+        _install_path="/usr/local/Ascend/tools/operator_cmp/compare"
     else
-        _install_path="${input_install_path}/operator_cmp/compare"
+        _install_path="${input_install_path}/tools/operator_cmp/compare"
     fi
     install_path=$(convert_install_path "${_install_path}")
     echo "${install_path}"
 }
 
+# 注册卸载脚本
+register_uninstall() {
+    info "Registering uninstall script..."
+    local _install_path="$INSTALL_DIR"
+    local _info_dir="${_install_path}/../../../share/info/operator_cmp"
+    local _script_dir="${SHELL_DIR}"
+    local _uninstall_source="${_script_dir}/uninstall.sh"
+    local _cann_uninstall="${_install_path}/../../../cann_uninstall.sh"
+ 
+    # 如果存在cann_uninstall.sh，则执行sed命令
+    if [ -f "${_cann_uninstall}" ]; then
+        sed -i "/^exit /i uninstall_package \"share/info/operator_cmp\"" "${_cann_uninstall}"
+    fi
+    
+    # 检查父目录是否存在和权限
+    local _parent_dir=$(dirname "${_info_dir}")
+    info "Checking parent directory: ${_parent_dir}"
+    if [ ! -d "${_parent_dir}" ]; then
+        error "Parent directory does not exist: ${_parent_dir}"
+        error "Please ensure the installation directory structure is correct"
+        return 1
+    fi
+    
+    if [ ! -w "${_parent_dir}" ]; then
+        error "No write permission to parent directory: ${_parent_dir}"
+        error "Current user: $(whoami)"
+        error "Please run with appropriate permissions"
+        return 1
+    fi
+    
+    # 创建目录
+    info "Creating directory: ${_info_dir}"
+    mkdir -p "${_info_dir}" 2>&1
+    local _mkdir_result=$?
+    if [ ${_mkdir_result} -ne 0 ]; then
+        error "Failed to create directory: ${_info_dir}"
+        error "Parent directory: ${_parent_dir}"
+        error "Parent directory writable: $([ -w "${_parent_dir}" ] && echo "yes" || echo "no")"
+        error "mkdir exit code: ${_mkdir_result}"
+        return 1
+    fi
+    
+    # 验证目录是否创建成功
+    if [ ! -d "${_info_dir}" ]; then
+        error "Directory was not created: ${_info_dir}"
+        return 1
+    fi
+    
+    if [ ! -w "${_info_dir}" ]; then
+        error "Directory exists but is not writable: ${_info_dir}"
+        return 1
+    fi
+    
+    # 拷贝uninstall.sh
+    if [ -f "${_uninstall_source}" ]; then
+        info "Copying uninstall script from ${_uninstall_source} to ${_info_dir}/uninstall.sh"
+        cp "${_uninstall_source}" "${_info_dir}/uninstall.sh" 2>&1
+        local _cp_result=$?
+        if [ ${_cp_result} -ne 0 ]; then
+            error "Failed to copy uninstall script"
+            error "Source: ${_uninstall_source}"
+            error "Destination: ${_info_dir}/uninstall.sh"
+            error "Destination directory writable: $([ -w "${_info_dir}" ] && echo "yes" || echo "no")"
+            error "cp exit code: ${_cp_result}"
+            return 1
+        fi
+        chmod +x "${_info_dir}/uninstall.sh" 2>/dev/null || true
+        info "Uninstall script registered successfully"
+    else
+        warn "Uninstall script not found: ${_uninstall_source}"
+        return 1
+    fi
+    
+    return 0
+}
+
+# 主卸载函数
+main_uninstall() {
+    # 获取operator_cmp目录路径
+    OPERATOR_CMP_DIR=$(get_install_path)
+    local _install_path="$INSTALL_DIR"
+    local _cann_uninstall="${_install_path}/../../../cann_uninstall.sh"
+    
+    
+    if [[ "$SILENT_MODE" != "true" ]]; then
+        echo "========================================="
+        echo "  mindstudio-accucmp Uninstaller"
+        echo "========================================="
+        echo "Target directory: $OPERATOR_CMP_DIR"
+        echo ""
+    fi
+    
+    # 检查目录是否存在
+    if [[ ! -d "$OPERATOR_CMP_DIR" ]]; then
+        warn "Directory does not exist: $OPERATOR_CMP_DIR"
+        warn "Nothing to uninstall"
+        return 0
+    fi
+    
+    # 检查写权限
+    if [[ ! -w "$(dirname "$OPERATOR_CMP_DIR")" ]]; then
+        error "No permission to delete $OPERATOR_CMP_DIR"
+        error "Current user: $(whoami)"
+        error "Please run uninstall with a user that has permissions"
+        error "or manually delete: rm -rf $OPERATOR_CMP_DIR"
+        exit 1
+    fi
+    
+    info "Uninstalling mindstudio-accucmp..."
+    info "Removing directory: $OPERATOR_CMP_DIR"
+    
+    # 删除operator_cmp目录
+    if rm -rf "$OPERATOR_CMP_DIR"; then
+        info "mindstudio-accucmp has been successfully removed"
+        return 0
+    else
+        error "Deletion failed, please check permissions"
+        exit 1
+    fi
+
+    sed -i "/uninstall_package "share/info/operator_cmp"/d" "${_cann_uninstall}"
+}
+
 # 主函数
 main() {
-    # 执行安装
-    main_install
+    # 根据标志决定执行安装还是卸载
+    if [[ "$uninstall_flag" == "y" ]]; then
+        # 执行卸载
+        main_uninstall
+    else
+        # 执行安装
+        main_install
+    fi
 
     # 清理（makeself 会自动清理临时目录）
     exit 0
@@ -151,7 +283,7 @@ else
         log_and_print $LEVEL_ERROR "Run package path is invalid: $run_path"
         exit 1
     fi
-    # 确保 run_path 是绝对路径
+    # Ensure run_path is an absolute path
     if [[ ! "${run_path}" =~ ^/ ]]; then
         run_path="$(cd "${run_path}" && pwd)"
     fi
