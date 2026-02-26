@@ -86,14 +86,36 @@ const StackInfoComponent = (props: NodeDetailInfo): React.JSX.Element => {
 
   const handleCopy = (e: MouseEvent, text: string): void => {
     e.stopPropagation();
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        messageApi.success(t('nodeInfoPanel.copySuccessful'));
-      })
-      .catch((err) => {
-        messageApi.error(`${t('nodeInfoPanel.copyFailed')}${err}`);
-      });
+    const clipboard = navigator.clipboard;
+    if (clipboard) {
+      clipboard
+        .writeText(text)
+        .then(() => {
+          messageApi.success(t('nodeInfoPanel.copySuccessful'));
+        })
+        .catch((err) => {
+          messageApi.error(`${t('nodeInfoPanel.copyFailed')}${err}`);
+        });
+    } else {
+      fallbackCopy(text);
+    }
+  };
+
+  // fallback to execCommand if clipboard API is not supported
+  const fallbackCopy = (text: string) => {
+    // 创建临时 textarea 进行复制
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.style.cssText = 'position: fixed; top: -9999px; left: -9999px; opacity: 0;';
+    tempTextArea.value = text;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    if (document.execCommand('copy')) {
+      messageApi.success(t('nodeInfoPanel.copySuccessful'));
+    } else {
+      messageApi.error(t('nodeInfoPanel.copyFailedBroswer'));
+    }
+    // 移除临时 textarea
+    document.body.removeChild(tempTextArea);
   };
 
   return (

@@ -206,6 +206,8 @@ export const resources = {
       nodeInfoPanel: {
         copySuccessful: 'Copy successful!',
         copyFailed: 'Copy failed: ',
+        copyFailedBroswer:
+          'Your browser does not support copying to the clipboard. Please use the keyboard (Ctrl + C) instead.',
         stackInfo: 'StackInfo',
         parallelMergedInfo: 'ParallelMergedInfo',
         debug: 'Debug: ',
@@ -422,6 +424,7 @@ export const resources = {
       nodeInfoPanel: {
         copySuccessful: '复制成功！',
         copyFailed: '复制失败：',
+        copyFailedBroswer: '当前浏览器不支持复制，请使用Ctrl + C 复制',
         stackInfo: '堆栈信息',
         parallelMergedInfo: '数据并行合并详情',
         debug: '调试侧：',
