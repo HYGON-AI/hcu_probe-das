@@ -31,16 +31,15 @@ validate_install_dir() {
     fi
     
     # 构建完整的模块目录路径
-    INSTALL_MODULE_DIR="$base_dir/tools/"
+    INSTALL_MODULE_DIR="$base_dir/tools/operator_cmp"
     
     info "Checking for operator_cmp at: $INSTALL_MODULE_DIR"
     
-    # 检查模块目录是否存在
+    # 检查模块目录是否存在，如果不存在则跳过
     if [[ ! -d "$INSTALL_MODULE_DIR" ]]; then
-        error "operator_cmp not found at: $INSTALL_MODULE_DIR"
-        error "Base directory: $base_dir"
-        error "Expected path: $base_dir/tools/"
-        exit 1
+        warn "operator_cmp not found at: $INSTALL_MODULE_DIR"
+        warn "Skipping uninstall as directory does not exist"
+        return 2  # 返回2表示目录不存在，需要跳过
     fi
     
     return 0
@@ -89,7 +88,21 @@ main() {
     local _cann_uninstall="${_install_dir}/cann_uninstall.sh"
     
     # 验证安装目录
-    if ! validate_install_dir "${_install_dir}"; then
+    validate_install_dir "${_install_dir}"
+    local _validate_result=$?
+    
+    # 如果目录不存在，直接跳过卸载
+    if [ ${_validate_result} -eq 2 ]; then
+        info "Nothing to uninstall, exiting"
+        rm -rf "${_install_dir}/share/info/operator_cmp"
+        if [ -f "${_cann_uninstall}" ]; then
+            sed -i "/uninstall_package \"share\/info\/operator_cmp\"/d" "${_cann_uninstall}"
+        fi
+        exit 0
+    fi
+    
+    # 如果验证失败（其他错误），退出
+    if [ ${_validate_result} -ne 0 ]; then
         exit 1
     fi
 
@@ -105,7 +118,11 @@ main() {
         error "Error occurred during uninstall"
         exit 1
     fi
-    sed -i "/uninstall_package "share/info/operator_cmp"/d" "${_cann_uninstall}"
+    rm -rf "${_install_dir}/share/info/operator_cmp"
+    # 如果存在cann_uninstall.sh，则删除对应的uninstall_package行
+    if [ -f "${_cann_uninstall}" ]; then
+        sed -i "/uninstall_package \"share\/info\/operator_cmp\"/d" "${_cann_uninstall}"
+    fi
 }
 
 # 执行主函数
