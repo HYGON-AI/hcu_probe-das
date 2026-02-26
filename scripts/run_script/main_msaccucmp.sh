@@ -239,7 +239,9 @@ main_uninstall() {
         exit 1
     fi
 
-    sed -i "/uninstall_package "share/info/operator_cmp"/d" "${_cann_uninstall}"
+    if [ -f "${_cann_uninstall}" ]; then
+        sed -i "/uninstall_package \"share\/info\/operator_cmp\"/d" "${_cann_uninstall}"
+    fi
 }
 
 # 主函数
