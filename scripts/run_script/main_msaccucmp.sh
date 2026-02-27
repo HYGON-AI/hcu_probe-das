@@ -28,11 +28,18 @@ error() {
 create_install_dir() {
     info "Creating install directory: $INSTALL_DIR"
 
-    # 尝试创建目录
-    if ! mkdir -p "$INSTALL_DIR"; then
+    # 创建目录并直接设置权限为777
+    if ! mkdir -p -m 777 "$INSTALL_DIR"; then
         error "Failed to create directory: $INSTALL_DIR"
         error "Please check if you have sufficient permissions, or create the directory manually"
         exit 1
+    fi
+    
+    # 设置目录权限为777
+    chmod 777 "$INSTALL_DIR"
+    info "Set directory permissions to 777: $INSTALL_DIR"
+    if [ $? -ne 0 ]; then
+        warn "Failed to set directory permissions to 777: $INSTALL_DIR"
     fi
 }
 
@@ -99,7 +106,13 @@ main_install() {
     else
         cp -r "$PWD"/msaccucmp/* "$INSTALL_DIR"/
     fi
-
+    
+    # 安装完成后，将目录权限改回安全权限（750）
+    chmod 750 "$INSTALL_DIR"
+    if [ $? -ne 0 ]; then
+        warn "Failed to set directory permissions to 750: $INSTALL_DIR"
+    fi
+    info "Set directory permissions to 750: $INSTALL_DIR"
     info "Installation completed!"
     info "Install directory: $INSTALL_DIR"
     
