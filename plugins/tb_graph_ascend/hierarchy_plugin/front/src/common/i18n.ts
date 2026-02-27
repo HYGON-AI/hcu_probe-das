@@ -51,6 +51,7 @@ export const resources = {
         nodeMatching: 'Node Matching',
         nodeSearch: 'Node Search',
         dumpVisualization: 'Dump Data Visualization Conversion',
+        switchTheme: 'Switch Theme',
         switchLanguage: 'Switch Language',
       },
 
@@ -275,6 +276,7 @@ export const resources = {
         nodeMatching: '节点匹配',
         nodeSearch: '节点搜索',
         dumpVisualization: 'Dump数据可视化转化',
+        switchTheme: '切换主题',
         switchLanguage: '语言切换',
       },
 
