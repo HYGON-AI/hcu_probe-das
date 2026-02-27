@@ -36,7 +36,7 @@ create_install_dir() {
     fi
     
     # 设置目录权限为777
-    chmod 777 "$INSTALL_DIR"
+    chmod -R 777 "$INSTALL_DIR"
     info "Set directory permissions to 777: $INSTALL_DIR"
     if [ $? -ne 0 ]; then
         warn "Failed to set directory permissions to 777: $INSTALL_DIR"
@@ -108,7 +108,7 @@ main_install() {
     fi
     
     # 安装完成后，将目录权限改回安全权限（750）
-    chmod 750 "$INSTALL_DIR"
+    chmod -R 750 "$INSTALL_DIR"
     if [ $? -ne 0 ]; then
         warn "Failed to set directory permissions to 750: $INSTALL_DIR"
     fi
