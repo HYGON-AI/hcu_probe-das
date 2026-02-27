@@ -127,6 +127,7 @@ register_uninstall() {
     local _script_dir="${SHELL_DIR}"
     local _uninstall_source="${_script_dir}/uninstall.sh"
     local _cann_uninstall="${_install_path}/../../../cann_uninstall.sh"
+    local _version_source="${_script_dir}/version.info"
  
     # 如果存在cann_uninstall.sh，则执行sed命令
     if [ -f "${_cann_uninstall}" ]; then
@@ -172,6 +173,28 @@ register_uninstall() {
         return 1
     fi
     
+    # 拷贝version.info
+    if [ -f "${_version_source}" ]; then
+        info "Copying version info from ${_version_source} to ${_info_dir}/version.info"
+        cp "${_version_source}" "${_info_dir}/version.info" 2>&1
+        local _cp_result=$?
+        if [ ${_cp_result} -ne 0 ]; then
+            error "Failed to copy version info"
+            error "Source: ${_version_source}"
+            error "Destination: ${_info_dir}/version.info"
+            error "Destination directory writable: $([ -w "${_info_dir}" ] && echo "yes" || echo "no")"
+            error "cp exit code: ${_cp_result}"
+            return 1
+        fi
+        info "Version info registered successfully"
+    else
+        warn "Version info not found: ${_version_source}"
+        warn "Script directory: ${_script_dir}"
+        warn "Current working directory: $(pwd)"
+        warn "Script path (\$0): $0"
+        return 1
+    fi
+
     # 拷贝uninstall.sh
     if [ -f "${_uninstall_source}" ]; then
         info "Copying uninstall script from ${_uninstall_source} to ${_info_dir}/uninstall.sh"
