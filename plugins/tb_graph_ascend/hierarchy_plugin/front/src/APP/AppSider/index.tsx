@@ -24,6 +24,7 @@ import {
   SearchOutlined,
   ApartmentOutlined,
   SunOutlined,
+  MoonOutlined,
   TranslationOutlined,
 } from '@ant-design/icons';
 
@@ -36,11 +37,12 @@ import useGraphStore from '../../store/useGraphStore';
 import { useEffect } from 'react';
 
 interface AppSiderProps {
+  themeType: 'light' | 'dark';
   toggleTheme: () => void;
   toggleLanguage: () => void;
 }
 
-const AppSider = ({ toggleTheme, toggleLanguage }: AppSiderProps) => {
+const AppSider = ({ themeType, toggleTheme, toggleLanguage }: AppSiderProps) => {
   const { t } = useTranslation();
   const { currentTab, setCurrentTab, setCurrentPage } = useGlobalStore();
   const isSingleGraph = useGraphStore((state) => state.isSingleGraph);
@@ -121,15 +123,17 @@ const AppSider = ({ toggleTheme, toggleLanguage }: AppSiderProps) => {
           }}
         />
       </Tooltip>
-      <Button
-        className={styles.siderButton}
-        data-testid="themeSiderButton"
-        shape="circle"
-        onClick={toggleTheme}
-        variant="text"
-      >
-        <SunOutlined />
-      </Button>
+      <Tooltip placement="right" title={t('sider.switchTheme')}>
+        <Button
+          className={styles.siderButton}
+          data-testid="themeSiderButton"
+          shape="circle"
+          onClick={toggleTheme}
+          variant="text"
+        >
+          {themeType === 'light' ? <SunOutlined /> : <MoonOutlined />}
+        </Button>
+      </Tooltip>
 
       <Tooltip placement="right" title={t('sider.switchLanguage')}>
         <Button className={styles.siderButton} shape="circle" onClick={toggleLanguage} variant="text">

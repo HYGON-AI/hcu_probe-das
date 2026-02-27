@@ -95,7 +95,7 @@ const App = () => {
       {contextHolder}
       <Layout>
         <Sider width={44} className={styles.sider}>
-          <AppSider toggleTheme={toggleTheme} toggleLanguage={toggleLanguage} />
+          <AppSider themeType={themeType} toggleTheme={toggleTheme} toggleLanguage={toggleLanguage} />
         </Sider>
         <Content className={styles.content}>
           <AppContent />
