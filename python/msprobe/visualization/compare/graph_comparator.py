@@ -152,7 +152,7 @@ class GraphComparator:
             if self.pbar_info and self.pbar_info.progress_dict is not None:
                 self.pbar_info.set_continue_monitor(True)
 
-        compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
+        compare_data_dict = {row.iloc[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             compare_result_list = get_real_api_data_list(node, compare_data_dict)
             api_indicator = get_api_indicator_info(self.ma.compare_mode, compare_result_list)
