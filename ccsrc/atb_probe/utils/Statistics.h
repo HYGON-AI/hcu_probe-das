@@ -71,7 +71,7 @@ public:
         maxValue_ = std::max(maxValue_, value);
         minValue_ = std::min(minValue_, value);
         sumValue_ += value;
-        sumOfSquares_ += value * value;
+        sumOfSquares_ += static_cast<double>(value) * value;
         ++count_;
     }
 
