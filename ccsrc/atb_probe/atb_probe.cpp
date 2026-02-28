@@ -803,14 +803,14 @@ static void ReportTensorStats(std::string &statsFilePath, const std::string &sta
 void CheckAndWriteFile(std::shared_ptr<FileSystem::BinFile> binFile, const std::string &binFilePath,
                        const std::string &statsInfo, std::string &statsFilePath)
 {
+    if (!statsInfo.empty()) {
+        ReportTensorStats(statsFilePath, statsInfo);
+    }
+
     if (binFile->HasAttr("format")) {
         binFile->Write(binFilePath);
         AIT_LOG_DEBUG("Direct write to " + binFilePath);
         AIT_LOG_DEBUG("Saving tensor: success.");
-    }
-
-    if (!statsInfo.empty()) {
-        ReportTensorStats(statsFilePath, statsInfo);
     }
 }
 
