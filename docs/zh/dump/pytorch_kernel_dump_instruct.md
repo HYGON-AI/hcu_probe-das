@@ -20,8 +20,10 @@
 
 ## kernel dump配置说明
 
-使用kernel dump时，task需要配置为tensor，list必须填写一个API名称，kernel dump目前每个step只支持采集一个API的数据。</br>
-API名称填写参考L1 dump结果文件dump.json中的API名称，命名格式为：`{api_type}.{api_name}.{API调用次数}.{forward/backward}`。</br>
+使用kernel dump时，task需要配置为tensor，list必须填写一个API名称，kernel dump目前每个step只支持采集一个API的数据。
+
+API名称填写参考L1 dump结果文件dump.json中的API名称，命名格式为：`{api_type}.{api_name}.{API调用次数}.{forward/backward}`。
+
 配置示例如下：
 
 ```json
@@ -59,9 +61,10 @@ The kernel dump does not support the {api_name} API.
 其中{api_name}是对应的API名称。
 
 ### 输出文件说明
+
 kernel级数据采集成功后，会在指定的dump_path目录下生成如下文件：
 
-```
+```ColdFusion
 ├── /home/data_dump/
 │   ├── step0
 │   │   ├── 20241201103000    # 日期时间格式，表示2024-12-01 10:30:00

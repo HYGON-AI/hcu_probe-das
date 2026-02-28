@@ -4,8 +4,6 @@
 
 aclgraph_dump 提供 `acl_save` 接口，适用于aclgraph场景，可以将张量保存为 `.pt` 文件。
 
-
-
 ## 使用前准备
 
 **环境准备**
@@ -78,7 +76,7 @@ acl_save(x: torch.Tensor, path: str) -> torch.Tensor
 
 ### 使用示例
 
-#### 1. 训练/推理过程中的单点保存
+#### 1. 推理过程中的单点保存
 
 ```python
 from msprobe.pytorch import acl_save
@@ -96,8 +94,6 @@ for step in range(3):
 ```
 
 会生成：`./dump/act_0.pt`、`./dump/act_1.pt`、`./dump/act_2.pt`。
-
-
 
 ## 输出说明
 

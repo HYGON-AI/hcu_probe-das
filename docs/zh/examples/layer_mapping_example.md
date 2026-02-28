@@ -1,6 +1,7 @@
 # 模型分级可视化如何配置layer mapping映射文件
 
 ## 使用场景
+
 同框架跨套件比对（例如PyTorch DeepSpeed vs Megatron），或者跨框架比对（例如PyTorch vs MindSpore），**由于代码实现的差异，导致一些模型层级和层级命名有所不同无法进行匹配**，需要进行layer层名称映射，才能够比对。
 
 ## 模块命名说明
@@ -53,9 +54,11 @@
 | Module.module.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0 | Module.module.module.decoder.layers.0.TransformerLayer.forward.0 | 父层级有差异，本层级NPU和GPU都叫layers，无差异                        |
 
 ### 构建layer_mapping配置文件
+
 准备一个命名为mapping.yaml文件，建立**module_name**的映射关系
 
 #### 顶层模块映射
+
 NPU和GPU侧的模块Module.module.Float16Module.forward.0和Module.model.FloatModule.forward.0处于图的顶层，需要进行如下配置：
 
 ![top_layer.png](../figures/visualization/top_layer.png)
@@ -66,6 +69,7 @@ TopLayer:
 ```
 
 #### 其他模块映射
+
 配置module下的子模块，虽然两边的class_name不同（NPU侧为GPTModel，GPU侧为GPT2Model），**但是仅需取NPU侧也就是左边图的class_name进行配置，无需关心右边图的class_name叫什么**。
 
 **这里涉及到跨层级的配置，NPU多了一层language_model层**，将language_model作为embedding层、rotary_pos_emb层和encoder层的前缀，进行如下配置：
@@ -78,6 +82,7 @@ GPTModel:
     language_model.rotary_pos_emb: rotary_pos_emb
     language_model.encoder: decoder
 ```
+
 然后看Module.module.module.language_model.encoder.ParallelTransformer.forward.0层下的子模块：
 
 此层下的若干个层，NPU和GPU的层名都叫layers，**当前层名称相同，则不用进行配置**。
@@ -85,7 +90,8 @@ GPTModel:
 ### 查看效果
 
 执行命令，指定-lm：
-```
+
+```bash
 msprobe graph_visualize -i ./compare.json -o ./output -lm ./mapping.yaml
 ```
 

@@ -1,6 +1,7 @@
 # Checkpoint比对
 
 ## 简介
+
 在模型训练过程中或结束后，可能保存一些检查点文件（checkpoint，简称ckpt）记录当前模型、优化器等训练状态。
 
 Checkpoint比对（ckpt Compare，Checkpoint Compare）可比较两个不同的checkpoint，评估模型相似度。
@@ -12,6 +13,7 @@ Checkpoint比对（ckpt Compare，Checkpoint Compare）可比较两个不同的c
 安装msProbe工具，详情请参见《[msProbe安装指南](msprobe_install_guide.md)》。
 
 ## Checkpoint比对功能介绍
+
 **功能说明**
 
 比较两个不同的ckpt。
@@ -23,7 +25,7 @@ Checkpoint比对（ckpt Compare，Checkpoint Compare）可比较两个不同的c
 
 **命令格式**
 
-```
+```bash
 msprobe config_check --compare <ckpt_path1> <ckpt_path2> [-o <output_path.json>]
 ```
 
@@ -55,9 +57,9 @@ directory_name/
 
 **使用示例**
 
-
 执行比对操作，示例命令如下：
-```
+
+```bash
 msprobe config_check --compare ckpt_path1 ckpt_path2 -o output_path.json
 ```
 
@@ -68,6 +70,7 @@ msprobe config_check --compare ckpt_path1 ckpt_path2 -o output_path.json
 ## 输出结果文件说明
 
 Checkpoint比对结果以json文件输出，内容如下示例：
+
 ```json
 {
     "decoder.layers.0.input_layernorm.weight": {

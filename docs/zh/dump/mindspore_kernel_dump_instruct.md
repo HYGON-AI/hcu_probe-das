@@ -38,7 +38,7 @@
 
 2. **模型脚本**
 
-   在模型脚本中配置工具使能代码，可参考快速入门中[模型脚本](./mindspore_dump_quick_start.md#2-模型脚本)章节。
+   在模型脚本中配置工具使能代码，可参考[快速入门](mindspore_dump_quick_start.md)中的“创建模型脚本”。
 
 3. **运行训练脚本**
 
@@ -56,7 +56,7 @@
    The kernel data of {api_name} is dumped successfully.
    ```
 
-   注意：如果打印该信息后，没有数据生成，参考[FAQ](#FAQ)进行排查。
+   注意：如果打印该信息后，没有数据生成，参考[FAQ](#faq)进行排查。
 
    如果kernel dump遇到不支持的API，会打印以下信息：
 
@@ -67,9 +67,10 @@
    其中{api_name}是对应溢出的 API 名称。
 
 ## dump结果文件说明
+
 kernel dump采集成功后，会在指定的dump_path目录下生成如下文件：
 
-```
+```ColdFusion
 ├── /home/data_dump/
 │   ├── step0
 │   │   ├── 20241201103000    # 日期时间格式，表示2024-12-01 10:30:00

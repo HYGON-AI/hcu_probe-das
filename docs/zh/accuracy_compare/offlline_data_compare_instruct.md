@@ -92,4 +92,3 @@ msprobe compare -m offline_data -tp <target_path> -gp <golden_path> [-fr <fusion
 | MaxRelativeError | 表示最大相对误差。取值范围为0到无穷大，值越接近于0，表明越相近，值越大，表明差距越大。 |
 | MeanRelativeError | 表示平均相对误差。取值范围为0到无穷大，值越接近于0，表明越相近，值越大，表明差距越大。 |
 | CompareFailReason | 算子无法比对的原因。<br><br>若余弦相似度为1，则查看该算子的输入或输出Shape是否为空或全部为1，若为空或全部为1则算子的输入或输出为标量，提示：this tensor is scalar。 |
-

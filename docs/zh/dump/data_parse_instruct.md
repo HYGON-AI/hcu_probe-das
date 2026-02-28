@@ -37,7 +37,6 @@ msprobe parse -d <dump_path> [-t <type>] [-o <output_path>]
 | -t或--type | 可选 | 输出文件类型，支持以下两种格式：<br>&#8226; npy：输出为numpy（.npy）格式文件。<br>&#8226; pt：输出为PyTorch tensor（.pt）格式文件。<br>默认值为pt。 |
 | -o或--output_path | 可选 | 输出文件路径，默认为当前路径下的output文件夹。 |
 
-
 **使用示例（转换单个dump文件）**
 
 ```sh
@@ -45,7 +44,6 @@ msprobe parse -d /path/to/dump_file -o /path/to/output
 ```
 
 **使用示例（转换整个目录下的dump文件）**
-
 
 ```sh
 msprobe parse -d /path/to/dump_file_directory -o /path/to/output

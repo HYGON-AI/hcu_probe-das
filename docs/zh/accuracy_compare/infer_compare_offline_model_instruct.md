@@ -1,6 +1,7 @@
 # 推理离线模型一键式精度比对
 
 ## 简介
+
 离线模型一键式精度比对（推理）功能将推理场景的精度比对做了自动化，适用于ONNX、OM模型，用户输入原始模型、对应的离线模型，输出整网比对的结果。离线模型为通过ATC工具转换的OM模型。<br>
 支持动态shape模型精度比对；支持AIPP(Artificial Intelligence Pre-Processing)数据预处理功能。<br>
 **注意**：请确保ATC工具转换的OM模型与当前运行环境使用的芯片型号一致。
@@ -15,6 +16,7 @@
  ```sh
   msprobe install_deps -m offline [--no_check]
  ```
+
 需要注意的是，--no_check参数，会跳过检查目标网站的证书信息，有一定的安全风险，用户需要谨慎使用并自行承担后果。
 
 **约束**
@@ -30,6 +32,7 @@
 ## 推理离线模型一键式精度比对功能介绍
 
 ### 功能说明
+
 使用命令行工具对离线模型进行一键式比对，只需输入模型，无需提前采集数据，输出比对结果。
 
 ### 注意事项
@@ -60,9 +63,9 @@
 | --onnx_fusion_switch | onnxruntime算子融合开关，默认开启算子融合，如存在onnx dump数据中因算子融合导致缺失的，建议关闭此开关。使用方式：--onnx_fusion_switch False。                                                                                                                                                                        | 否    |
 
 ### 输出说明
+
 比对完成则打屏提示信息msprobe compare ends successfully.
 在配置的输出路径中，生成dump_data文件夹、 input文件夹、model文件夹和.csv后缀的文件，csv文件名称基于时间戳自动生成，格式为：result_{timestamp}.csv。
-
 
 ## 输出结果文件说明
 
@@ -100,4 +103,5 @@
 ```
 
 ### 查看比对结果
+
 请前往[对比结果说明](infer_compare_result.md)

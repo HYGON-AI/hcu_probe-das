@@ -32,7 +32,7 @@ L0、L1、mix级别的dump能力存在盲区，网络中的非API或module的输
 
 #### 配置文件说明
 
-通用配置 （细节详见[通用配置说明](./config_json_introduct.md#11-通用配置) ）：
+通用配置 （细节详见[通用配置说明](./config_json_introduct.md#通用配置) ）：
 
 | 参数       | 解释                                                                                                    | 是否必选 |
 | ---------- | ------------------------------------------------------------------------------------------------------- | -------- |
@@ -47,7 +47,7 @@ L0、L1、mix级别的dump能力存在盲区，网络中的非API或module的输
 
 | 参数         | 解释                                                         | 是否必选 |
 | ------------ | ------------------------------------------------------------ | -------- |
-| summary_mode | 控制 dump 文件输出的模式，str 类型。支持传入"statistics", "md5"。 详细介绍请参见[statistics任务子配置项说明](./config_json_introduct.md#12-task-配置为-statistics)。 | 否       |
+| summary_mode | 控制 dump 文件输出的模式，str 类型。支持传入"statistics", "md5"。 详细介绍请参见[statistics任务子配置项说明](./config_json_introduct.md#task配置为statistics)。 | 否       |
 
 "tensor" 任务无子配置项。
 
@@ -261,7 +261,6 @@ for epoch in range(epochs):
     step()  # 每个epoch后更新step
 ```
 
-
 ## 输出结果
 
 ### 动态图场景（Pytorch&MindSpore）
@@ -286,7 +285,7 @@ for epoch in range(epochs):
 
 结构如下：
 
-```
+```ColdFusion
 ./save_dir/
     ├── step0/
     │   ├── rank0/

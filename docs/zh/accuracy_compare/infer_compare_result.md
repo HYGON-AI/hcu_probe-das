@@ -1,9 +1,8 @@
 # 对比结果说明
 
-
 ## 简介
-本节以非量化昇腾AI处理器运行生成的dump数据与非量化onnx模型npy数据比对为例，介绍对比结果分析步骤，下文中参数说明均以该示例介绍，请根据您的实际情况进行替换。
 
+本节以非量化昇腾AI处理器运行生成的dump数据与非量化onnx模型npy数据比对为例，介绍对比结果分析步骤，下文中参数说明均以该示例介绍，请根据您的实际情况进行替换。
 
 ## 对比输出结果说明
 
@@ -41,13 +40,17 @@
 ```
 
 ## 比对结果文件各字段含义说明
+
 - **比对结果** 在文件 `result_{timestamp}.csv` 中，比对结果的含义与基础精度比对工具完全相同，其中每个字段的含义可参考 《CANN商用版 精度调试工具用户指南》中的“附录 > [完整比对结果参数说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/devtools/modelaccuracy/atlasaccuracy_16_0064.html)”章节。
 
 * 下面简要介绍说明结果信息：
+
   |                  OpType |  NPUDump | DataType | Address | GroundTruth | DataType | TensorIndex|Shape|Overflow|CosineSimilarity|...|MeanRelativeError|CompareFailReason|IsNpuOps|IsOutputNode|IsPrecisionError|
   |------------------------:|---------:|---------:|--------:|------------:|---------:|-----------:|----:|-------:|---------------:|--:|----------------:|----------------:|-------:|-------:|-------:|
   |                      Sub|Sub_26Mul_28| float16 |    NaN |Sub_26,Mul_28|   float32|Sub_26Mul_28:output:0|[1,1,1,108]|NO|      1|...|         0.000364|                 |NO      |NO      |NO      |
+
 如上所示的结果文件中主要关注以下几项:
+
  - [x] [NPUDump]：这个对应om模型中的算子，由于融合规则，可能会对应多个GPU/CPU算子。
  - [x] [DataType]：一共有两个，一个是NPU侧的数据类型，一个是CPU/GPU侧的数据类型，二者有所不同，可能会有精度损失问题。
  - [x] [GroundTruth]：om算子所对应的onnx模型算子。
@@ -71,9 +74,10 @@
   |MaxRelativeError|表示最大相对误差。取值范围为[0, +∞)，值越接近于0，表明越相近，值越大，表明差距越大。|
   |MeanRelativeError|表示平均相对误差。取值范围为[0, +∞)，值越接近于0，表明越相近，值越大，表明差距越大。|
 
-
 ## 比对结果分析
+
 - 精度指标
+
   | 误差对比算法                | 精度正常的参考标准   |
   | ------------------------- | ------ |
   | CosineSimilarity          | > 0.99  |
