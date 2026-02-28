@@ -10,10 +10,13 @@
 conda create -n msprobe python
 conda activate msprobe
 ```
+
 ## 从PyPI安装
-```shell
+
+```bash
 pip install mindstudio-probe --pre
 ```
+
 **目前msProbe工具版本为预发布版本，请在命令行末尾添加`--pre`参数进行安装。**
 
 打印如下信息时，表示msProbe安装成功。
@@ -33,11 +36,13 @@ sha256sum {name}.whl # 验证whl包，若校验码一致，则whl包在下载中
 ```bash
 pip install ./mindstudio_probe-{version}-py3-none-any.whl # 安装whl包
 ```
+
 打印如下信息时，表示msProbe安装成功。
 
 `Successfully installed mindstudio-probe-{version}`
 
-若覆盖安装，请在命令行末尾添加 `--force-reinstall` 参数。  
+若覆盖安装，请在命令行末尾添加 `--force-reinstall` 参数。
+
 上面提供的whl包链接不包含adump、aclgraph_dump和atb_probe功能，如果需要使用这些功能，请参考[编译安装](#编译安装)下载源码编译whl包。
 
 ## 编译安装
@@ -48,7 +53,7 @@ pip install ./mindstudio_probe-{version}-py3-none-any.whl # 安装whl包
 
 **命令格式**
 
-```
+```bash
 python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 ```
 
@@ -63,7 +68,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 
 - 编译安装基础工具包
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -76,7 +81,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
   
 - 编译安装基础工具包和adump模块
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -89,7 +94,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
   
 - 编译安装基础工具包和aclgraph_dump模块
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -102,7 +107,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
   
 - 编译安装基础工具包和分级可视化插件
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -115,7 +120,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 
 - 编译安装基础工具包和趋势可视化插件
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -128,7 +133,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 
 - 编译安装基础工具包，同时编译安装分级可视化和趋势可视化插件
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
   
@@ -141,12 +146,12 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 
 - 编译安装基础工具包和atb_probe模块
 
-  ```
+  ```bash
   git clone https://gitcode.com/Ascend/msprobe.git
   cd msprobe
-
+  
   pip install setuptools wheel
-
+  
   python3 setup.py bdist_wheel --include-mod=atb_probe --no-check
   cd ./dist
   pip install ./mindstudio_probe*.whl
@@ -156,7 +161,7 @@ python3 setup.py bdist_wheel [--include-mod=<include_mode>] [--no-check]
 
 打印如下信息时，表示msProbe安装成功。
 
-```
+```ColdFusion
 Successfully installed mindstudio-probe-{version}
 ```
 
@@ -164,21 +169,21 @@ Successfully installed mindstudio-probe-{version}
 
 执行如下命令卸载msProbe工具。
 
-```
-pip uninstall mindstudio-probe 
+```bash
+pip uninstall mindstudio-probe
 ```
 
 打印如下信息时，表示msProbe卸载成功。
 
-```
+```ColdFusion
 Successfully uninstalled mindstudio-probe-{version}
 ```
 
 ## 升级
 
-msProbe工具不支持直接升级，需要先完成[卸载](#卸载)后再重新[安装](#msProbe工具安装指南)。
+msProbe工具不支持直接升级，需要先完成[卸载](#卸载)后再重新[安装](#msprobe工具安装指南)。
 
-## 查看msprobe工具信息
+## 查看msProbe工具信息
 
 ```bash
 pip show mindstudio-probe
@@ -186,7 +191,7 @@ pip show mindstudio-probe
 
 示例如下：
 
-```bash
+```ColdFusion
 Name: mindstudio-probe
 Version: 26.0.x
 Summary: Ascend MindStudio Probe Utils
@@ -206,12 +211,14 @@ Required-by:
 1. 根据CPU架构和NPU型号选择Toolkit或Kernel，可参见[昇腾社区](https://www.hiascend.cn/developer/download/community/result?module=cann)下的《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_quick.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)》。
 
    运行示例：
+
    ```bash
    Ascend-cann-toolkit_{version}_linux-{arch}.run --full --install-path={cann_path}
    Ascend-cann-kernels_{version}_linux-{arch}.run --install --install-path={cann_path}
    ```
 
 2. 配置环境变量
+
    ```bash
    source {cann_path}/Ascend/ascend-toolkit/set_env.sh
    ```

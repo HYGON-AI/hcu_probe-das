@@ -5,10 +5,10 @@
 `Monitor V2` 是 msProbe 的训练状态轻量化监测工具。用户可以在训练过程中按需采集关键中间量（如模块输入/输出、权重梯度、优化器动量、通信算子统计等），并以 CSV 形式落盘，用于训练稳定性评估与异常定位。
 
 **工具使用流程**
+
 1) 配置需要采集的监测项；
 2) 在训练代码中初始化并按 step 调用一次 `mon.step()`；
 3) 在输出目录查看对应 CSV 结果。
-
 
 **工具适用场景**
 
@@ -18,6 +18,7 @@
 - 当分布式训练出现同步/通信异常时，通过 `cc` 聚合通信算子统计，并结合代码行过滤缩小排查范围。
 
 **推荐启用策略**
+
 - 首先长期启用 `weight_grad` 作为底座监测；随后在问题发生时按需启用 `module` / `cc` ，并通过目标筛选降低开销。
 
 ## 使用前准备
@@ -29,7 +30,7 @@
 **约束**
 
 - PyTorch 场景：`torch >= 2.1`
-- MindSpore 场景：`mindspore >= 2.4.10`（通常要求动态图环境；若项目中使用了 msadapter/mindtorch，请以工程实际为准）
+- MindSpore 场景：`mindspore >= 2.4.10`（通常要求动态图环境；若项目中使用了 MSAdapter/mindtorch，请以工程实际为准）
 - `monitor_v2` 当前仅支持 `format=csv`
 
 **版本范围与限制**
@@ -115,7 +116,6 @@ mon.stop()
 - 若 grad norm 异常：优先启用 `weight_grad`，以 `unreduced/reduced` 将异常划分到反向累积期或 step 前。
 - 若怀疑通信相关：尽量在训练早期实例化并 `start()` `TrainerMonitorV2`，以降低加速库缓存原始通信 API 导致拦截不生效的风险；同时配合 `cc_codeline` 进行过滤。
 
-
 ## 功能介绍
 
 `monitor_v2` 通过配置文件的 `monitors` 字段按需开启子功能。每个子功能独立启停、独立输出，便于按问题场景组合使用。
@@ -134,6 +134,7 @@ mon.stop()
 **使用示例**
 
 以下字段配置仅展示 `monitors.module`；需合并到完整 `monitor_v2_config.json`，见[快速入门 > 准备配置文件](#quickstart-config)。
+
 ```json
 {
   "monitors": {
@@ -206,6 +207,7 @@ mon.stop()
 **使用示例**
 
 以下字段配置仅展示 `monitors.optimizer`；需合并到完整配置，见[快速入门 > 准备配置文件](#quickstart-config)。
+
 ```json
 {
   "monitors": {
@@ -240,6 +242,7 @@ mon.stop()
 **使用示例**
 
 以下字段配置仅展示 `monitors.param`；需合并到完整配置，见[快速入门 > 准备配置文件](#quickstart-config)。
+
 ```json
 {
   "monitors": {
@@ -275,6 +278,7 @@ mon.stop()
 **使用示例**
 
 以下字段配置仅展示 `monitors.cc`；需合并到完整配置，见[快速入门 > 准备配置文件](#quickstart-config)；采集通信统计。
+
 ```json
 {
   "monitors": {
@@ -290,6 +294,7 @@ mon.stop()
 ```
 
 以下字段配置仅展示 `monitors.cc`；需合并到完整配置，见[快速入门 > 准备配置文件](#quickstart-config)；仅打印日志用于筛选 `cc_codeline`。
+
 ```json
 {
   "monitors": {
@@ -309,7 +314,6 @@ mon.stop()
 
 见[cc.csv](#output-cc-csv)。
 
-
 ## 输出结果文件说明
 
 ### 输出目录说明
@@ -320,7 +324,7 @@ mon.stop()
 
 目录结构如下：
 
-```
+```Python
 <output_dir>/
   rank_<rank_id>/
     module_step0-0.csv
@@ -337,6 +341,7 @@ mon.stop()
 ### CSV表头与字段说明
 
 为便于用户直接对比不同监测项的结果，CSV 输出采用统一规则：
+
 - 每行至少包含：`vpp_stage`、`step`
 - 监测模块写入的通用字段通常包含：`module_name`、`scope`（以及部分场景的 `micro_step`）
 - 统计指标按 `ops` 展开为列：`min/max/mean/norm/nans`（只会写入用户配置/启用的指标）
@@ -396,9 +401,10 @@ mon.stop()
 - 功能说明：训练监测编排器；负责加载配置、初始化监测模块，并在每个 step 收集与写出监测结果。
 - 函数原型：
   
-  ```
+  ```Python
   TrainerMonitorV2(config_path: str, fr: Optional[str] = None) -> TrainerMonitorV2
   ```
+
 - 参数说明：
   - `config_path`：配置文件路径（JSON）。
   - `fr`：框架类型，可选（`pytorch` / `mindspore`，也支持 `pt/torch/ms`）；不传则读取配置文件的 `framework` 字段。
@@ -410,9 +416,10 @@ mon.stop()
 - 功能说明：启动监测。根据配置创建并启动 `monitors` 中启用的模块，并建立写出上下文。
 - 函数原型：
   
-  ```
+  ```Python
   TrainerMonitorV2.start(model: Any = None, optimizer: Any = None, **context: Any) -> None
   ```
+
 - 参数说明：
   - `model`：待监测的模型对象（PyTorch `nn.Module` / MindSpore `nn.Cell`；也支持部分场景的模型列表）。
   - `optimizer`：待监测的优化器对象；开启 `weight_grad/optimizer` 时必须提供。
@@ -427,9 +434,10 @@ mon.stop()
 - 功能说明：推进一步训练 step，并触发本 step 的采集与写出（受 `start_step/stop_step/step_interval/collect_times` 控制）。
 - 函数原型：
   
-  ```
+  ```Python
   TrainerMonitorV2.step() -> None
   ```
+
 - 参数说明：无。
 - 返回值说明：无。
 - 调用示例：见[PyTorch场景示例](#quickstart-pytorch)或[MindSpore场景示例](#quickstart-mindspore)。
@@ -439,9 +447,10 @@ mon.stop()
 - 功能说明：停止监测并释放资源（移除监测模块内部注册/拦截，关闭 writer）。
 - 函数原型：
   
-  ```
+  ```Python
   TrainerMonitorV2.stop() -> Non
   ```
+
 - 参数说明：无。
 - 返回值说明：无。
 - 调用示例：见[PyTorch场景示例](#quickstart-pytorch)或[MindSpore场景示例](#quickstart-mindspore)。

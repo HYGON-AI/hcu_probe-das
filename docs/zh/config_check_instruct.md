@@ -28,7 +28,7 @@
 
 5. 结果分析。
 
-   根据[输出结果文件说明](输出结果文件说明)判断比对结果所比对的属性是否都通过检查。
+   根据[输出结果文件说明](#输出结果文件说明)判断比对结果所比对的属性是否都通过检查。
 
 ## 使用前准备
 
@@ -56,7 +56,7 @@
 
 **命令格式**
 
-```
+```bash
 msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 ```
 
@@ -71,19 +71,19 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 - 默认场景
 
-  ```
+  ```bash
   msprobe config_check -d
   ```
 
 - 传入shell脚本
 
-  ```
+  ```bash
   msprobe config_check -d train.sh -o /xx/output_file_path/config_check_pack.zip
   ```
 
 - 传入shell脚本和yaml配置文件
 
-  ```
+  ```Python
   msprobe config_check -d train.sh config.yaml -o /xx/output_file_path/config_check_pack.zip
   ```
 
@@ -106,7 +106,8 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 1. 
    在训练流程执行到的第一个Python脚本开始处添加如下代码：
-   ```
+
+   ```Python
    from msprobe.core.config_check import ConfigChecker
    ConfigChecker.apply_patches(fmk)
    ```
@@ -117,10 +118,11 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 2. 在模型初始化好之后添加如下代码：
 
-   ```
+   ```Python
    from msprobe.core.config_check import ConfigChecker
    ConfigChecker(model=model, shell_path="", output_zip_path="", fmk="")
    ```
+
    ConfigChecker对模型挂上数据采集所需的hook，会在每次模型前向将要被执行的一刻进行数据采集，参数如下：
 
    - **model** (Model)：可选参数，初始化好的模型，默认不会采集权重和数据集。
@@ -131,7 +133,6 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
    采集完成后会得到一个zip包，里面包括各项[影响精度的配置](#简介)。会分rank和step存储，其中step为micro_step。
 
 3. 在另一个环境上执行上述操作，得到另一个zip包。
-
 
 **输出说明**
 
@@ -149,7 +150,7 @@ msprobe config_check -d [<*.sh> <*.yaml>] [-o <output_file_path>]
 
 **命令格式**
 
-```
+```bash
 msprobe config_check -c bench_zip_path cmp_zip_path [-o <output_path>]
 ```
 
@@ -164,7 +165,7 @@ msprobe config_check -c bench_zip_path cmp_zip_path [-o <output_path>]
 
 将两个zip包拷贝到同一个环境下，执行如下命令进行比对：
 
-```
+```bash
 msprobe config_check -c bench_zip_path cmp_zip_path
 ```
 
@@ -175,6 +176,7 @@ msprobe config_check -c bench_zip_path cmp_zip_path
 ## 输出结果文件说明
 
 比对结果输出路径会生成2个目录和1个文件：
+
 - bench：bench_zip_path里打包的数据。
 - cmp：cmp_zip_path里打包的数据。
 - result.xlsx：比对结果。里面会有多个sheet页，其中**summary**总览通过情况，其余页是具体检查项的详情。其中step为micro_step。

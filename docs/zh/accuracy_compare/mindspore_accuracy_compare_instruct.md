@@ -27,9 +27,11 @@ msProbe精度比对工具主要用于如下场景：
 ## 精度比对功能介绍
 
 ### 功能说明
+
 使用命令行工具对精度数据进行比对，输出比对结果。
 
 ### 注意事项
+
 多卡场景仅识别rank目录的数据进行精度比对。
 
 ### 命令格式
@@ -39,6 +41,7 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 ```
 
 ### 参数说明
+
 | 参数名               | 说明                                                                                                                                                                                                                                            | 是否必选 |
 | ----------------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
 | -tp或--target_path | NPU环境下的dump.json路径（单卡场景）或dump目录（多卡场景），str类型。                                                                                                                                                                                                  | 是       |
@@ -57,6 +60,7 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 动态图模式没有填写任何mapping时，按照同框架比对的方式进行比对，比对数据和标杆数据的Cell或API名称需要完全相同才能匹配得上。
 
 ### 使用示例
+
 #### 不同版本下的全量API比对
 
 1. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》完成不同环境下MindSpore静态图精度数据的采集，得到不同框架版本的API dump数据。
@@ -64,10 +68,13 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
 2. 执行如下示例命令进行比对：
 
    单卡场景：
+
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output
    ```
+
    多卡场景(-tp和-gp需填写到step层级，即rank的上一层)：
+
    ```shell
    msprobe compare -tp /target_dump/step0 -gp /golden_dump/step0 -o ./output
    ```
@@ -117,11 +124,12 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
    api_mapping.yaml文件配置请参见[自定义映射文件（api_mapping）](#自定义映射文件api_mapping)。不传入api_mapping.yaml的情况下将按照内置的API映射进行匹配；传入api_mapping.yaml的情况下优先按照api_mapping.yaml的内容进行匹配，api_mapping.yaml中没有涉及的按照内置的API映射进行匹配。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
+
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
 #### 跨框架的cell模块比对
 
@@ -145,11 +153,12 @@ msprobe compare -tp <target_path> -gp <golden_path> [options]
    不传入cell_mapping.yaml的情况下仅将Cell改成Module后进行匹配；传入cell_mapping.yaml的情况下将按照cell_mapping.yaml的内容进行匹配。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
+
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
 #### 跨框架的Layer层比对
 
@@ -168,15 +177,17 @@ layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
    layer_mapping.yaml文件配置请参见[自定义映射文件（layer_mapping）](#自定义映射文件layer_mapping)。
 
    此外，也可以通过data_mapping.yaml文件实现具体参数的匹配，例：
+
    ```shell
    msprobe compare -tp /target_dump/dump.json -gp /golden_dump/dump.json -o ./output -dm data_mapping.yaml
    ```
-   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
+   data_mapping.yaml的写法请参见[自定义映射文件（data_mapping）](#自定义映射文件data_mapping)。
 
 #### 动静态图场景L0混合dump数据比对
 
 1. 参见《[MindSpore场景精度数据采集](../dump/mindspore_data_dump_instruct.md)》，执行dump操作。<br>动态图场景下使用`mindspore.jit`装饰特定Cell或function时，被装饰的部分会被编译成静态图执行。采集的数据文件目录结构示例如下：
+
     ```lua
     ├── graph
     │   ├── step0
@@ -207,10 +218,12 @@ layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
    ```shell
    msprobe compare -tp /target_dump -gp /golden_dump -o ./output
    ```
-- /target_dump表示待比对侧dump文件目录，上面示例中的/target_dump是待比对侧动静态图dump后graph和pynative目录的父目录。
-- /golden_dump表示标杆侧dump文件目录，上面示例中的/golden_dump/target_dump是标杆侧动静态图dump后graph和pynative目录的父目录。
+
+    - /target_dump表示待比对侧dump文件目录，上面示例中的/target_dump是待比对侧动静态图dump后graph和pynative目录的父目录。
+    - /golden_dump表示标杆侧dump文件目录，上面示例中的/golden_dump/target_dump是标杆侧动静态图dump后graph和pynative目录的父目录。
 
 3. 动静态图场景L0混合dump数据比对结果，示例如下：
+
     ```lua
     ├── graph
     │   ├── step0
@@ -223,29 +236,37 @@ layer_mapping可以从Layer层识别整网的API和Cell，简化配置。
 output目录下生成两个graph和pynative两个文件夹，每个文件夹下生成对应step的比对结果。
 
 #### 首差异算子节点识别
+
 参见《[PyTorch场景精度比对-首差异算子节点识别](./pytorch_accuracy_compare_instruct.md#首差异算子节点识别场景)》章节。
 
 ### 输出说明
-比对完成则打屏提示信息msprobe compare ends successfully. <br>
-单卡场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_{timestamp}.xlsx。 <br>
-多卡场景：在配置的输出路径中，生成多个.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.xlsx。 <br>_
-全量kernel比对场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_{rank_id}_{step_id}_{timestamp}.xlsx。
 
-首差异算子节点识别场景: <br>
-完成则打屏Saving json file to disk: /output_path/compare_result_rank{rank_id}_{timestamp}.json和The analyze result is saved in: /output_path/diff_analyze_{timestamp}.json<br>
-在配置的输出路径中，生成多个.json后缀的文件，文件名称基于时间戳自动生成，格式为：compare_result_rank{rank_id}_{timestamp}.json和diff_analyze_{timestamp}.json。
+比对完成则打屏提示信息`msProbe compare ends successfully.`
+
+单卡场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.xlsx。`
+
+多卡场景：在配置的输出路径中，生成多个.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_result_rank{rank_id}_{timestamp}.xlsx。`
+
+全量kernel比对场景：在配置的输出路径中，生成.xlsx后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_result_{rank_id}_{step_id}_{timestamp}.xlsx。`
+
+首差异算子节点识别场景：完成则打屏`Saving json file to disk: /output_path/compare_result_rank{rank_id}_{timestamp}.json`和`The analyze result is saved in: /output_path/diff_analyze_{timestamp}.json`
+
+在配置的输出路径中，生成多个.json后缀的文件，文件名称基于时间戳自动生成，格式为：`compare_result_rank{rank_id}_{timestamp}.json`和`diff_analyze_{timestamp}.json`。
 
 ### 输出结果文件说明
+
 查看比对结果，请详见PyTorch目录下的《[PyTorch场景精度比对-输出结果文件说明](./pytorch_accuracy_compare_instruct.md#输出结果文件说明)》章节。
 
 ## 多卡数据汇总功能介绍
 
 ### 功能说明
-本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。<br>
-使用场景为：<br>
-已完成精度比对，获得多卡精度比对结果，但是通信算子数据分布在多个结果文件中，不利于精度问题的分析。通过此功能，可以汇总多卡通信算子数据，减少问题定位时间。
+
+本功能是将多卡比对场景的比对结果，进行通信算子数据提取和汇总，输出整理好的通信算子多卡比对精度表。
+
+使用场景为：已完成精度比对，获得多卡精度比对结果，但是通信算子数据分布在多个结果文件中，不利于精度问题的分析。通过此功能，可以汇总多卡通信算子数据，减少问题定位时间。
 
 ### 注意事项
+
 - 不支持MD5比对结果。
 - 不支持MindSpore静态图比对结果。
 
@@ -267,7 +288,7 @@ msprobe merge_result -i <input_dir> -o <output_dir> -config <config-path>
 
 以config.yaml文件名为例，配置示例如下：
 
-```
+```yaml
 api:
 - Distributed.all_reduce
 - Distributed.all_gather_into_tensor
@@ -493,6 +514,7 @@ Cell.relu.ReLU.parameters_grad.weight: Module.module.language_model.embedding.wo
 input_args、input_kwargs和output使用统一的命名规则，当值是list类型时，名称后面添加'.{index}'，当值类型是dict类型时，名称后面加'.{key}'，当值类型是具体Tensor或null或空list/dict时，命名结束。
 
 以下面cell的dump文件为例：
+
 ```yaml
 "Cell.network.module.NetworkWithLoss.forward.0": {
   "input_args": [
@@ -589,33 +611,43 @@ input_args、input_kwargs和output使用统一的命名规则，当值是list类
 ]
 }
 ```
+
 初始名称为`Cell.network.module.NetworkWithLoss.forward.0`，`input_args`是`list`，长度为2，按照顺序命名为：
-```
+
+```ColdFusion
 Cell.network.module.NetworkWithLoss.forward.0.input.0
 Cell.network.module.NetworkWithLoss.forward.0.input.1
 ```
+
 第0项后面直接是`Tensor`，命名结束
 第1项后面是`dict`，key包括`y`、`y_mask`、`x_mask`和`data_info`，命名为：
-```
+
+```ColdFusion
 Cell.network.module.NetworkWithLoss.forward.0.input.1.y
 Cell.network.module.NetworkWithLoss.forward.0.input.1.y_mask
 Cell.network.module.NetworkWithLoss.forward.0.input.1.x_mask
 Cell.network.module.NetworkWithLoss.forward.0.input.1.data_info
 ```
+
 `y`后面是`Tensor`，命名结束；`y_mask`后面是`Tensor`，命名结束；`x_mask`后面是`Tensor`，命名结束；`data_info`后面是`dict`，key是`img_hw`，命名为：
-```
+
+```ColdFusion
 Cell.network.module.NetworkWithLoss.forward.0.input.1.data_info.img_hw
 ```
+
 `img_hw`后面是`null`，命名结束。
 
 `input_kwargs`是`dict`，长度为0，命名结束。`output`是`list`，长度为1，按照顺序命名为：
-```
+
+```ColdFusion
 Cell.network.module.NetworkWithLoss.forward.0.output.0
 ```
+
 第0项后面是`Tensor`，命名结束。
 
 综上，生成的op_name为：
-```
+
+```ColdFusion
 Cell.network.module.NetworkWithLoss.forward.0.input.0
 Cell.network.module.NetworkWithLoss.forward.0.input.1.y
 Cell.network.module.NetworkWithLoss.forward.0.input.1.y_mask

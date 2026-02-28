@@ -3,9 +3,10 @@
 - 当调用**PrecisionDebugger**接口执行dump或其他操作时，需要使用[config.json](../../../python/msprobe/config.json)文件；当未指定config.json时，将使用默认配置。
 - msProbe成功安装后，config.json一般位于如下目录：
 
-  ```
+  ```ColdFusion
   /home/xxx/miniconda3/envs/xxx/lib/python3.xx/site-packages/msprobe/
   ```
+
 ## 参数介绍
 
 ### 通用配置
@@ -115,8 +116,8 @@ MindSpore静态图场景下，"level"须为"L2"，且模型编译优化等级（
 | ------------- | -------- | ---------------------- |
 | check_mode    | 可选     | 溢出类型，str类型，仅MindSpore v2.3.0以下版本的静态图场景支持，可选参数：<br/>&#8226; "aicore"：开启AI Core的溢出检测。<br/>&#8226; "atomic"：开启Atomic的溢出检测。<br/>&#8226; "all"：开启算子的溢出检测。<br/>默认值为all。<br/>配置示例："check_mode": "all"。 |
 
-
 ### task配置为structure
+
 structure模式仅采集模型结构，无其他特殊配置。
 
 **配置样例**
@@ -125,6 +126,7 @@ structure模式仅采集模型结构，无其他特殊配置。
  - [MindSpore动态图场景](config_json_examples.md#task配置为structure)
 
 ### task配置为exception_dump
+
 MindSpore动态图场景下，"level"须为"L2"; MindSpore静态图场景下，"level"须为"L2"，且模型编译优化等级（jit_level）须为"O0"或"O1"。
 
 在运行过程中会在指定目录下生成kernel_graph_exception_dump.json的中间文件，该文件包含异常dump的相关设置。

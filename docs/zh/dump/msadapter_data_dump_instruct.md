@@ -246,7 +246,7 @@ dump接口详细介绍请参见[接口介绍](#接口介绍)章节。
 
 完成精度数据采集后，将打印dump数据文件生成路径。
 
-```
+```ColdFusion
 dump.json is at <dump_path>/step<N>
 ```
 
@@ -290,6 +290,7 @@ MSAdapter场景下，dump输出件的目录结构示例如下：
 │   |   ├── ...
 │   ├── step2
 ```
+
 * `rank`：设备ID，每张卡的数据保存在对应的`rank{ID}`目录下。非分布式场景下没有rank ID，目录名称为`proc{pid}`，pid为进程ID。
 
 * `dump_tensor_data`：保存采集到的张量数据。
@@ -625,7 +626,7 @@ msprobe.mindspore.seed_all(seed=1234, mode=False, rm_dropout=False)
 
 **调用示例**
 
-请参见[MSAdapter dump功能介绍](#MSAdapter-dump功能介绍)中的“使用示例”。
+请参见[MSAdapter dump功能介绍](#msadapter-dump功能介绍)中的“使用示例”。
 
 #### msprobe.mindspore.PrecisionDebugger
 
@@ -651,7 +652,7 @@ class msprobe.mindspore.PrecisionDebugger(config_path=None, task=None, dump_path
 
 **调用示例**
 
-请参见[MSAdapter dump功能介绍](#MSAdapter-dump功能介绍)中的“使用示例”。
+请参见[MSAdapter dump功能介绍](#msadapter-dump功能介绍)中的“使用示例”。
 
 #### msprobe.mindspore.PrecisionDebugger.start
 
@@ -681,7 +682,7 @@ PrecisionDebugger.start(model=None, token_range=None)
 
 **调用示例**
 
-请参见[MSAdapter dump功能介绍](#MSAdapter-dump功能介绍)中的“使用示例”。
+请参见[MSAdapter dump功能介绍](#msadapter-dump功能介绍)中的“使用示例”。
 
 #### msprobe.mindspore.PrecisionDebugger.stop
 
@@ -708,7 +709,7 @@ PrecisionDebugger.stop()
 
 **调用示例**
 
-请参见[MSAdapter dump功能介绍](#MSAdapter-dump功能介绍)中的“使用示例”。
+请参见[MSAdapter dump功能介绍](#msadapter-dump功能介绍)中的“使用示例”。
 
 #### msprobe.mindspore.PrecisionDebugger.step
 
@@ -732,7 +733,7 @@ PrecisionDebugger.step()
 
 **调用示例**
 
-请参见[MSAdapter dump功能介绍](#MSAdapter-dump功能介绍)中的“使用示例”。
+请参见[MSAdapter dump功能介绍](#msadapter-dump功能介绍)中的“使用示例”。
 
 ### API支持列表
 

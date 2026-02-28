@@ -31,7 +31,8 @@
        }
    }
    ```
-   以上配置参数详细介绍和使用请参见《[配置文件介绍](./config_json_introduct.md)》和《config.json配置示例》中的“[MindSpore动态图场景](./config_json_examples.md#MindSpore动态图场景)”。
+
+   以上配置参数详细介绍和使用请参见《[配置文件介绍](./config_json_introduct.md)》和《config.json配置示例》中的“[MindSpore动态图场景](./config_json_examples.md#mindspore动态图场景)”。
 
 2. 创建模型脚本。
 
@@ -213,7 +214,7 @@
 
    在`dump_path`参数指定的路径下（本例中为`./output`），会出现如下目录结构，后续精度数据分析操作可使用msProbe工具的精度预检和精度比对等功能，详细流程请参见《[MindStudio Probe](../../../README.md)》。
 
-   ```
+   ```ColdFusion
    output/
    └── step0
        └── proc{pid}
@@ -222,6 +223,3 @@
            └── stack.json                 # 保存API的调用栈
        ......
    ```
-
-   
-

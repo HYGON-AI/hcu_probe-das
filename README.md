@@ -13,7 +13,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 使用msProbe工具前，要求已存在可执行的用户AI应用，其中要求昇腾环境：
 
 - 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
-- 已安装配套版本的CANN Toolkit开发套件包或算子包并配置环境变量，详情请参见《CANN 软件安装指南》中”[选择安装场景](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler&Software=cannToolKit)“章节的”训练&推理&开发调试“场景。
+- 已安装配套版本的CANN Toolkit开发套件包和算子包并配置环境变量，详情请参见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler)》。
 
 ### 工具安装
 
@@ -21,7 +21,7 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 
 ## 快速入门
 
-msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监测及精度比对功能，帮助用户快速上手。详细快速入门可参见《训练场景工具快速入门》中的“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0023.html?framework=pytorch)（PyTorch场景）”或“[模型精度调试](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/msquickstart/atlasquick_train_0006.html?framework=mindspore)（MindSpore场景）。
+msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监测及精度比对功能，帮助用户快速上手。详细快速入门可参见《PyTorch场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/pytorch_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”或《MindSpore场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/mindspore_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”。
 
 ## 工具限制与注意事项
 

@@ -61,7 +61,9 @@ msprobe compare --target_path ${dump_path in GE dump}/msprobe_ge_dump --golden-p
 ## 附录
 
 ### (定向客户提供) 将dump数据转化为指定信息以压缩数据量
+
 - dump过程中生成的数据量可能占用大量磁盘空间，可以在dump过程中启用后台进程，将完整的数据提取为指定的信息。以下参考脚本将数据转化为最大最小值，并删除原数据。
+
   ```py
   #!/bin/env python3
   import os
@@ -127,14 +129,17 @@ msprobe compare --target_path ${dump_path in GE dump}/msprobe_ge_dump --golden-p
   ```
 
 ### 比对结果文件格式
+
 torchair场景下的精度比对结果以CSV文件格式输出，包含以下主要列：
 
 #### 基本信息
+
 - **API Name**: 算子或API名称。
 - **Stack Info**: 堆栈信息，用于定位代码位置。
 - **Data Name**: 数据名称，格式为 [NPU真实数据名，Bench真实数据名]。
 
 #### 真实数据模式指标
+
 当dump数据模式为真实数据时，包含以下指标：
 
 | 指标名称 | 含义 | 正常范围 |
@@ -148,6 +153,7 @@ torchair场景下的精度比对结果以CSV文件格式输出，包含以下主
 | Requires_grad Consistent | 计算梯度是否一致 | True |
 
 #### 统计数据模式指标
+
 当dump数据模式为统计数据时，包含以下指标：
 
 | 指标名称 | 含义 |
@@ -162,6 +168,7 @@ torchair场景下的精度比对结果以CSV文件格式输出，包含以下主
 | NormRelativeErr | 范数相对误差 |
 
 #### MD5模式指标
+
 当dump数据模式为MD5时，包含以下指标：
 
 | 指标名称 | 含义 |
@@ -170,6 +177,7 @@ torchair场景下的精度比对结果以CSV文件格式输出，包含以下主
 | BENCH MD5 | 标杆数据CRC-32值 |
 
 #### 结果判定信息
+
 - **Result**: 比对结果（PASS/FAIL）
 - **Accuracy Reached or Not**: 计算精度是否达标（Yes/No）
 - **Err_message**: 错误信息提示
@@ -177,20 +185,24 @@ torchair场景下的精度比对结果以CSV文件格式输出，包含以下主
 ### 结果判定标准
 
 #### 真实数据模式判定
+
 - **PASS**: Cosine ≥ 0.99且MaxRelativeErr < 0.01
 - **FAIL**: Cosine < 0.99或MaxRelativeErr ≥ 0.01
 
 #### 统计数据模式判定
+
 - **PASS**: 各项差异指标在可接受范围内
 - **FAIL**: 存在显著差异
 
 #### MD5模式判定
+
 - **PASS**: NPU MD5 == BENCH MD5
 - **FAIL**: NPU MD5 != BENCH MD5
 
 ### 颜色标记说明
 
 当开启高亮颜色标记功能时：
+
 - **红色**: 表示精度异常，需要重点关注。
 - **黄色**: 表示精度可疑，需要进一步分析。
 - **绿色**: 表示精度正常。

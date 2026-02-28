@@ -1,6 +1,7 @@
 # 整网首个溢出节点分析
 
 ## 简介
+
 在分析inf、nan的场景下，会采集多个rank下的多个step的dump数据，前面出现的异常会传播到同rank后续的节点，并通过通信算子传播到其他rank的后续节点中，因此如何分析首个nan出现的节点位置尤为重要。
 
 整网首个溢出节点分析（overflow_check）可以对PyTorch的dump数据进行分析，在多卡场景下，检测到每张卡中产生inf/nan的节点。若是经过通信导致的inf/nan，可以分析并找出首个产生inf/nan的rank和节点。
@@ -27,7 +28,7 @@
 
 **命令格式**
 
-```
+```bash
 msprobe overflow_check -i <input_path> -o <output_path>
 ```
 
@@ -47,10 +48,13 @@ msprobe overflow_check -i /xxx/dump/step0 -o ./output
 **输出说明**
 
 当打印如下日志时，分析认为不存在异常节点，不生成分析文件。
-```
+
+```ColdFusion
 Cannot find any anomaly node, no need to generate analyze file.
 ```
+
 存在异常节点时，生成`anomaly_analyze_{timestamp}.json`文件，结构为：
+
 ```json
 {
   "rank_0": [  // 卡号

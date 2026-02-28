@@ -25,7 +25,8 @@ CANN：8.0.RC2
 模型层数：40
 
 配置文件（采样了10层）：
-```
+
+```json
 {  
     "targets": {  
         "language_model.encoder.layers.0": {"input": "tuple[2]:0", "output": "tensor", "input_grad":"tuple[2]:0", "output_grad":"tuple[1]:0"}，

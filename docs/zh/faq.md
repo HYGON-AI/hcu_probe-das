@@ -99,6 +99,7 @@ if __name__ == "__main__":
    - 首先确认API调用是否在采集范围内，即需要在start和stop接口涵盖的范围内。
    - 其次，由于工具只在被调用时才对API进行patch，从而使得数据可以被dump下来。因此当API是被直接import进行调用时，由于该API的地址已经确定，
    工具无法再对其进行patch，故而该API数据无法被dump下来。如下示例，relu将无法被dump：
+
    ```python
    import torch
    from torch import relu    # 此时relu地址已经确定，无法修改
@@ -111,6 +112,7 @@ if __name__ == "__main__":
    x = relu(x)          
    debugger.stop()
    ```
+
    在上述场景中，若希望采集relu数据，只需要将`relu(x)`修改为`torch.relu(x)`即可。
 
 4. 在使用L0 dump时，发现有些module的数据没有采集下来，原因是什么？
@@ -120,6 +122,7 @@ if __name__ == "__main__":
 
 5. 在vllm场景下进行数据dump时，发现报错：`RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cpu and npu:0!`
    - 这是因为工具的debugger实例化早于LLM实例化导致的，解决方法就需要将debugger的实例化移至LLM实例化之后进行，可参考下方示例：
+
    ```python
    from vllm import LLM, SamplingParams
    from msprobe.pytorch import PrecisionDebugger

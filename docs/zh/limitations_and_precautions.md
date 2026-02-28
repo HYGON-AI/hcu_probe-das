@@ -1,4 +1,4 @@
-# msprobe 工具功能模块简介、适用场景和当前版本局限性
+# msProbe 工具功能模块简介、适用场景和当前版本局限性
 
 ## 1 PyTorch框架
 
@@ -8,7 +8,7 @@
 | [离线预检<br/>（api_accuracy_checker）](./accuracy_checker/pytorch_accuracy_checker_instruct.md) | 为网络中每个API创建用例，检验其精度，并根据不同比对算法综合判定API在NPU上的精度是否达标，快速找出精度差异API。 | 1、对模型中所有的API做精度初步排查<br>2、精度排查不受模型累计误差影响 | 1、依赖GPU环境<br>2、不支持通信算子<br>3、仅支持部分融合算子 |
 | [整网比对<br/>（compare）](./accuracy_compare/pytorch_accuracy_compare_instruct.md) | 计算模型整网NPU和标杆设备的精度误差指标，标记精度异常API或Module，助力快速定位精度问题根因。 | 1、整网比对定位精度可疑算子                                  | 1、由于使用整网dump数据，定位的可疑算子受累计误差影响<br>2、当模型规模较大时，比对所需时间较长 |
 | [训练状态监测<br/>（monitor）](./monitor_instruct.md)        | 收集模型训练过程中的激活值、梯度和优化器状态，助力分析计算、通信、优化器各部分异常情况。 | 1、通过监测模块级统计量指标，快速定位异常模块位置，如loss出现nan | 1、仅支持模块级别统计量指标分析<br>2、仅支持megatron、deepspeed框架<br>3、少量增加时间和显存膨胀 |
-| [可视化比对<br/>（visualization） ](./accuracy_compare/pytorch_visualization_instruct.md) | 解析dump的精度数据，还原模型图结构，比对各层级精度数据，助力理解模型结构、分析精度问题。 | 1、整网精度比对定位可疑算子，通过浏览器展示比对结果，支持快速搜索到可疑算子<br>2、支持查看模型层级结果，比对模型层级结构差异 | 1、由于使用整网dump数据，定位的可疑算子受累计误差影响<br>2、当模型规模较大时，比对所需时间较长 |
+| [可视化比对<br/>（visualization）](./accuracy_compare/pytorch_visualization_instruct.md) | 解析dump的精度数据，还原模型图结构，比对各层级精度数据，助力理解模型结构、分析精度问题。 | 1、整网精度比对定位可疑算子，通过浏览器展示比对结果，支持快速搜索到可疑算子<br>2、支持查看模型层级结果，比对模型层级结构差异 | 1、由于使用整网dump数据，定位的可疑算子受累计误差影响<br>2、当模型规模较大时，比对所需时间较长 |
 
 ## 2 MindSpore框架
 
@@ -17,5 +17,5 @@
 | [数据采集 <br/>（dump）](./dump/msadapter_data_dump_instruct.md) | 采集模型训练过程中的API或Cell层级的前反向输入输出数据，包括层次关系、统计值信息、真实数据和调用栈等。 | 1、将模型中训练的API或Cell的前反向输入输出数据保存下来分析 <br> 2、模型出现溢出时，可用于查看哪些API或Cell出现了溢出 | 1、API级数据采集仅支持白名单列表上的API <br>2、当前对inplace操作API或Cell的支持度有限 <br>3、暂不支持参数及参数梯度的采集 |
 | [离线预检 <br/>（api_accuracy_checker）](./accuracy_checker/mindspore_accuracy_checker_instruct.md) | 为网络中每个API创建用例，检验其精度，并根据不同比对算法综合判定API在NPU上的精度是否达标，快速找出精度差异API。 | 1、对模型中所有的API做精度初步排查 <br>2、精度排查不受模型累计误差影响 | 1、仅针对MindSpore.mint API                                  |
 | [整网比对 <br/>（compare）](./accuracy_compare/mindspore_accuracy_compare_instruct.md) | NPU精度数据与标杆数据的比对，支持MindSpore框架内和与PyTorch跨框架的比对，助力快速定位精度异常API或Cell。 | 1、MindSpore同框架静态图比对 <br>2、MindSpore同框架动态图比对 <br>3、MindSpore vs PyTorch跨框架动态图比对 | 1、部分PyTorch的API关联不到MindSpore，需要手动配置映射关系   |
-| [可视化比对 <br/>（visualization） ](./accuracy_compare/mindspore_visualization_instruct.md) | 解析dump的精度数据，还原模型图结构，比对各层级精度数据，助力理解模型结构、分析精度问题。 | 1、整网精度比对定位可疑算子，通过浏览器展示比对结果，支持快速搜索到可疑算子 <br>2、支持查看模型层级结果，比对模型层级结构差异 | 1、由于使用整网dump数据，定位的可疑算子受累计误差影响 <br>2、当模型规模较大时，比对所需时间较长 |
+| [可视化比对 <br/>（visualization）](./accuracy_compare/mindspore_visualization_instruct.md) | 解析dump的精度数据，还原模型图结构，比对各层级精度数据，助力理解模型结构、分析精度问题。 | 1、整网精度比对定位可疑算子，通过浏览器展示比对结果，支持快速搜索到可疑算子 <br>2、支持查看模型层级结果，比对模型层级结构差异 | 1、由于使用整网dump数据，定位的可疑算子受累计误差影响 <br>2、当模型规模较大时，比对所需时间较长 |
 | [训练状态监测 <br/>（monitor）](./monitor_instruct.md)       | 收集模型训练过程中的激活值、梯度和优化器状态，助力分析计算、通信、优化器各部分异常情况。 | 1、通过监测模块级统计量指标，快速定位异常模块位置，如loss出现nan | 1、仅支持模块级别统计量指标分析 <br>2、仅支持megatron、deepspeed框架 <br>3、少量增加时间和显存膨胀 |

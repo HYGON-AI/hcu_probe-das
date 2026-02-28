@@ -12,7 +12,7 @@
 
 采集OM模型数据依赖aisbench包和aclruntime包，用户使用前可通过以下命令安装这两个依赖包。
 
-```
+```bash
  msprobe install_deps -m offline --no_check
 ```
 
@@ -63,13 +63,13 @@ OM模型dump依赖CANN功能，用户可通过环境变量ASCEND_TOOLKIT_HOME修
 
 **使用示例**
 
-```
+```bash
  msprobe offline_dump --model_path /model_path/model.onnx -o /dump_output_path
 ```
 
 或
 
-```
+```bash
  msprobe offline_dump --model_path /model_path/model.om -o /dump_output_path
 ```
 
