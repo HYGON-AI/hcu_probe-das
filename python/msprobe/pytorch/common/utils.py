@@ -46,6 +46,22 @@ if not is_gpu and not torch_without_guard_version:
 
 npu_distributed_api = ['isend', 'irecv']
 
+# =========================
+# 解决 PyTorch 2.6+ 安全反序列化问题
+# =========================
+
+def enable_torch_npu_pickle_compat():
+    try:
+        torch.serialization.add_safe_globals([
+            torch_npu.utils.storage._rebuild_npu_tensor
+        ])
+    except Exception as e:
+        logger.warning(f"Enable torch_npu pickle compatibility failed: {e}")
+
+#  在 torch.load 之前执行
+if not is_gpu:
+    enable_torch_npu_pickle_compat()
+
 
 def parameter_adapter(func):
     def handle_masked_select(input_tensor, indices):
