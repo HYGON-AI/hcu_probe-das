@@ -26,7 +26,7 @@ import numpy as np
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import save_npy
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple, CompareException
+from msprobe.core.common.utils import convert_tuple, CompareException, is_np2
 
 
 @dataclass
@@ -90,7 +90,8 @@ class TensorStatInfo:
 class BaseDataProcessor:
     _recursive_key_stack = []
     builtin_type = (bool, int, float, str, slice, type(Ellipsis))
-    np_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_, np.ndarray)
+    np_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte,
+               np.str_ if is_np2() else np.unicode_, np.ndarray)
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
