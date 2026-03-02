@@ -725,3 +725,8 @@ def check_rank_id(rank_id):
     if not rank_id >= 0:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f"{rank_id} must be greater than or equal to 0.")
+
+
+def is_np2():
+    np_version = tuple(map(int, np.__version__.split('.')[:2]))
+    return np_version >= (2, 0)
