@@ -414,7 +414,7 @@ class TestUtilsMethods(unittest.TestCase):
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', '[2, 2]', '[2, 2]', 'False', 'False',
-             0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 1, 2, 0, 1, 1,
+             '0', '0', '0', '0', '0', '0', '0', '0', 2, 0, 1, 1, 2, 0, 1, 1,
              True, '', '', ['File'], 'input', 'Functional.linear.0.forward'
              ]
         ]
@@ -1322,11 +1322,11 @@ class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
         self.assertIn("MeanRelativeErr", df.columns)
 
         # equal
-        self.assertEqual(df.loc[1, "Mean diff"], 0)
-        self.assertEqual(df.loc[2, "Mean diff"], 0)
+        self.assertEqual(df.loc[1, "Mean diff"], '0')
+        self.assertEqual(df.loc[2, "Mean diff"], '0')
 
         # unequal num × num
-        self.assertEqual(df.loc[0, "Mean diff"], 5.0)
+        self.assertEqual(df.loc[0, "Mean diff"], '5.0')
         self.assertEqual(df.loc[0, "MeanRelativeErr"], "100.0%")
 
     def test_calc_summary_diff_special_types(self):

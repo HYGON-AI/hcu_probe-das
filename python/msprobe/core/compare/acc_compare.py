@@ -138,6 +138,7 @@ class Comparator:
         if self.mode_config.dump_mode == Const.ALL:
             logger.info("Compare real data in progress...")
             compare_real_data = CompareRealData(self.file_reader, self.mode_config, self.cross_frame)
+            result_df = result_df.reset_index(drop=True)
             result_df = compare_real_data.do_multi_process(input_param, result_df)
             logger.info("Compare real data done.")
 
@@ -179,7 +180,14 @@ class Comparator:
             # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
             match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
             bench_columns = [i + '_y' for i in bench_df.columns]
-            match_result.loc[~match.gen_dtype_condition(match_result), bench_columns] = CompareConst.N_A
+            match_result_columns = match_result.columns.tolist()
+            new_bench_columns = []
+            for col in bench_columns:
+                if col in match_result_columns:
+                    new_bench_columns.append(col)
+            for col in new_bench_columns:
+                match_result[col] = match_result[col].astype(object)
+            match_result.loc[~match.gen_dtype_condition(match_result), new_bench_columns] = CompareConst.N_A
 
         # organize compare result table by renaming columns
         if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
@@ -1385,7 +1393,7 @@ class CalcStatsDiff:
         mask_unequal = ~mask_equal
 
         # ---------------------- npu, bench统计量相等 ----------------------
-        result_df.loc[mask_equal, [diff_name, rel_err_name]] = 0
+        result_df.loc[mask_equal, [diff_name, rel_err_name]] = '0'
 
         # ---------------------- npu, bench统计量不相等 ----------------------
         npu_type = self.classify(npu_val)
@@ -1403,8 +1411,14 @@ class CalcStatsDiff:
                 else:
                     diff, rel = rule
 
-                result_df.loc[mask, diff_name] = diff
-                result_df.loc[mask, rel_err_name] = rel
+                if isinstance(diff, str):
+                    result_df.loc[mask, diff_name] = diff
+                else:
+                    result_df.loc[mask, diff_name] = diff.astype(str)
+                if isinstance(rel, str):
+                    result_df.loc[mask, rel_err_name] = rel
+                else:
+                    result_df.loc[mask, rel_err_name] = rel.astype(str)
 
     def calc_accuracy(self, result_df, header):
         # bench name N/A represents no bench data, err_msg adds "No bench data matched."
