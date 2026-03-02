@@ -398,7 +398,9 @@ dump 结果目录结构示例如下：
 │   ├── step2
 ```
 
-* `rank`：设备ID，每张卡的数据保存在对应的`rank{ID}`目录下。非分布式场景下没有rank ID，目录名称为`proc{pid}`，pid为进程ID。
+* `rank`：设备ID，每张卡的数据保存在对应的`rank{ID}`目录下。当训练进程无法获取到`rank`信息时，当前进程的数据保存在`proc{pid}`，pid为进程ID，`proc`的详细介绍如下：
+  * ①在非分布式场景下，如单进程训练或单卡训练中，训练进程没有`rank`信息，此时数据保存在`proc{pid}`，比对和分级可视化功能支持该目录下的数据解析。
+  * ②在大模型训练过程中，可能既存在`rank`目录又存在`proc`目录，原因是一些进程可能仅在CPU上完成一些数据预处理操作，没有`rank`信息，此时目录名称为`proc{pid}`，这部分数据一般不存在精度问题，比对和分级可视化等功能将不会支持该目录下的数据解析。
 * `dump_tensor_data`：保存采集到的张量数据。
 * `dump.json`：保存API或Cell前反向数据的统计量信息。包含dump数据的API名称或Cell名称，各数据的dtype、shape、max、min、mean、L2norm（L2范数，平方根）统计信息以及当配置summary_mode="md5"时的CRC-32数据。具体介绍可参考[dump.json文件说明](#dumpjson文件说明)。
 * `dump_error_info.log`：仅在dump工具报错时拥有此记录日志，用于记录dump错误日志。
