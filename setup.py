@@ -15,7 +15,7 @@
 # -------------------------------------------------------------------------
 
 
-__version__ = '26.0.0-alpha.1'
+__version__ = '26.0.0-alpha.2'
 
 import os
 import platform
@@ -106,8 +106,8 @@ def clean_frontend_build(plugin_name_list):
 INSTALL_REQUIRED = [
     "wheel",
     "einops",
-    "numpy >=1.23.0, < 2.0",
-    "pandas >= 1.3.5, < 2.1",
+    "numpy >= 1.23.0",
+    "pandas >= 1.3.5",
     "pyyaml",
     "tqdm",
     "openpyxl >= 3.0.6",
@@ -163,7 +163,7 @@ if mod_list:
         # 根据业务需求决定是否继续
         # 可选：raise BuildError(f"清理失败: {e}")
         with_tb_graph_ascend = False
-    
+
     # 如果包含trend_analyzer，则构建趋势分析可视化前端
     if "trend_analyzer" in mod_list:
         print("Building trend_analyzer frontend...")
