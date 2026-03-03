@@ -3,11 +3,9 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.core.compare.check import check_dump_json_str, check_json_key_value, valid_key_value, \
-    check_stack_json_str, check_configuration_param
+    check_stack_json_str, check_consistent_param
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.log import logger
-from msprobe.core.compare.acc_compare import ComparisonConfig
-
+from msprobe.core.common.const import Const
 
 # test_check_struct_match
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
@@ -126,3 +124,70 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
+
+
+class TestCheckConsistentParam(unittest.TestCase):
+
+    @patch('msprobe.core.compare.check.logger')
+    def test_consistent_check_false_skip(self, mock_logger):
+        """
+        场景 1: consistent_check 为 False
+        预期：无论 backend 是什么，都不应抛出异常，也不应记录错误日志
+        """
+        # 执行
+        check_consistent_param(consistent_check=False, backend="ANY_BACKEND")
+
+        # 断言：没有抛出异常 (隐式)
+        # 断言：logger.error 没有被调用
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.check.logger')
+    def test_consistent_check_true_valid_fsdp(self, mock_logger):
+        """
+        场景 2: consistent_check 为 True, backend 为 FSDP (合法)
+        预期：不抛出异常，不记录错误日志
+        """
+        # 执行
+        check_consistent_param(consistent_check=True, backend=Const.FSDP)
+
+        # 断言
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.check.logger')
+    def test_consistent_check_true_valid_megatron(self, mock_logger):
+        """
+        场景 3: consistent_check 为 True, backend 为 MEGATRON (合法)
+        预期：不抛出异常，不记录错误日志
+        """
+        # 执行
+        check_consistent_param(consistent_check=True, backend=Const.MEGATRON)
+
+        # 断言
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.check.logger')
+    def test_consistent_check_true_invalid_backend(self, mock_logger):
+        """
+        场景 4: consistent_check 为 True, backend 非法
+        预期：抛出 CompareException，且 logger.error 被调用
+        """
+        invalid_backend = "other"
+
+        # 断言：抛出特定异常
+        with self.assertRaises(CompareException) as context:
+            check_consistent_param(consistent_check=True, backend=invalid_backend)
+
+        # 断言：异常中的错误码正确
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+
+        # 断言：logger.error 被调用了一次
+        mock_logger.error.assert_called_once()
+
+        # 断言：日志内容包含关键信息 (可选，确保日志内容符合预期)
+        call_args = mock_logger.error.call_args[0][0]
+        self.assertIn("consistent_check", call_args)
+        self.assertIn(invalid_backend, call_args)
+
+
+if __name__ == '__main__':
+    unittest.main()

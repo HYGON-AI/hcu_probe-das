@@ -4,7 +4,7 @@ import os
 import shutil
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import tempfile
 from unittest import mock
 
@@ -436,6 +436,11 @@ class TestParseData(unittest.TestCase):
         mode_config = ModeConfig(stack_mode=True)
         self.parser = ParseData(mode_config, "rank0")
 
+        # consistent_check相关parse实例
+        self.mock_mode_config = MagicMock()
+        self.mock_mode_config.consistent_check = True
+        self.parser_consistent_check = ParseData(mode_config=self.mock_mode_config, rank=0)
+
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
@@ -642,14 +647,120 @@ class TestParseData(unittest.TestCase):
         result = self.parser.get_op_no_number("")
         self.assertEqual(result, "")
 
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_1_consistent_check_false(self, mock_logger):
+        """
+        场景 1: consistent_check 为 False
+        预期：无论其他参数如何，直接返回 True
+        """
+        self.mock_mode_config.consistent_check = False
+
+        result = self.parser_consistent_check.should_parse_op(parse_flag=False, data_name="any.name", device="Npu")
+
+        self.assertTrue(result)
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_2_device_is_bench(self, mock_logger):
+        """
+        场景 2: device 为 'Bench'
+        预期：直接返回 True
+        """
+        self.mock_mode_config.consistent_check = True
+
+        result = self.parser_consistent_check.should_parse_op(parse_flag=False, data_name="any.name", device="Bench")
+
+        self.assertTrue(result)
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_3_data_name_length_invalid(self, mock_logger):
+        """
+        场景 3: data_name 分割后长度 < 3
+        预期：记录错误日志，返回 False
+        """
+        self.mock_mode_config.consistent_check = True
+
+        # 构造只有 2 段的数据
+        invalid_data_name = f"part1.part2"
+
+        result = self.parser_consistent_check.should_parse_op(parse_flag=True, data_name=invalid_data_name, device="Npu")
+
+        self.assertFalse(result)
+        mock_logger.error.assert_called_once()
+        # 验证日志内容包含关键信息
+        call_args = mock_logger.error.call_args[0][0]
+        self.assertIn("dump.json", call_args)
+        self.assertIn(invalid_data_name, call_args)
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_4_stop_parse_list_match(self, mock_logger):
+        """
+        场景 4: 命中停止解析列表 (VERL_FSDP_STOP_PARSE_LIST) 且为 backward
+        预期：返回 False
+        """
+        self.mock_mode_config.consistent_check = True
+
+        # 构造数据：third_last 在列表中，second_last 为 'backward'
+        # 格式： "p1.Qwen3Model.backward.suffix" -> split: [p1, Qwen3Model, backward, suffix]
+        # [-3] = Qwen3Model, [-2] = backward
+        data_name = f"prefix1.Qwen3Model.backward.suffix"
+
+        result = self.parser_consistent_check.should_parse_op(parse_flag=True, data_name=data_name, device="Npu")
+
+        self.assertFalse(result)
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_5_embedding_forward_match(self, mock_logger):
+        """
+        场景 5: 命中 Embedding + forward
+        预期：返回 True
+        """
+        self.mock_mode_config.consistent_check = True
+
+        # 构造：third_last='Embedding', second_last='forward'
+        data_name = f"prefix1.Embedding.forward.suffix"
+
+        result = self.parser_consistent_check.should_parse_op(parse_flag=False, data_name=data_name, device="Npu")
+
+        self.assertTrue(result)
+        mock_logger.error.assert_not_called()
+
+    @patch('msprobe.core.compare.acc_compare.logger')
+    def test_case_6_default_return_flag(self, mock_logger):
+        """
+        场景 6: 未命中任何特殊条件
+        预期：返回原始 parse_flag
+        """
+        self.mock_mode_config.consistent_check = True
+
+        # 构造普通数据，不命中 List 也不命中 Embedding
+        data_name = f"prefix1.MatMul.forward.suffix"
+
+        # 测试输入 True
+        result_true = self.parser_consistent_check.should_parse_op(parse_flag=True, data_name=data_name, device="Npu")
+        self.assertTrue(result_true)
+
+        # 测试输入 False
+        result_false = self.parser_consistent_check.should_parse_op(parse_flag=False, data_name=data_name, device="Npu")
+        self.assertFalse(result_false)
+
+        mock_logger.error.assert_not_called()
+
 
 class TestProcessDf(unittest.TestCase):
 
     def setUp(self):
-        mode_config = ModeConfig()
+        self.mode_config = ModeConfig()
         mapping_config = MappingConfig()
         mapping_dict = MappingDict(mapping_config)
-        self.process_df = ProcessDf(mode_config, mapping_config, mapping_dict)
+        self.process_df = ProcessDf(self.mode_config, mapping_config, mapping_dict)
+
+    @staticmethod
+    def _create_test_df(data_dict):
+        """辅助方法：创建测试 DataFrame"""
+        return pd.DataFrame(data_dict)
 
     def test_get_api_name_success(self):
         api_list = ['Functional', 'linear', '0', 'forward', 'input', '0']
@@ -859,8 +970,298 @@ class TestProcessDf(unittest.TestCase):
             "add.1.forward.fp32"
         )
 
+    def test_update_forward_call_head_is_digit(self):
+        """
+        场景 1: forward 调用，head 是数字，需要替换
+        输入：call_direction="1.xxx", direction="forward", forward_call_order="5"
+        预期：call_direction="5.xxx"
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["1.xxx", "2.yyy", "abc.zzz"],
+            Const.DIRECTION: ["forward", "forward", "forward"],
+            Const.FORWARD_CALL_ORDER: ["5", "6", "7"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # 验证 head 是数字的被替换
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "5.xxx")
+        self.assertEqual(result.loc[1, Const.CALL_DIRECTION], "6.yyy")
+        # head 不是数字的保持不变
+        self.assertEqual(result.loc[2, Const.CALL_DIRECTION], "abc.zzz")
+
+    def test_update_forward_call_tail_is_digit(self):
+        """
+        场景 2: forward 调用，tail 是数字，需要替换
+        输入：call_direction="xxx.1", direction="forward", forward_call_order="5"
+        预期：call_direction="xxx.5"
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["xxx.1", "yyy.2", "zzz.abc"],
+            Const.DIRECTION: ["forward", "forward", "forward"],
+            Const.FORWARD_CALL_ORDER: ["5", "6", "7"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # 验证 tail 是数字的被替换
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "xxx.5")
+        self.assertEqual(result.loc[1, Const.CALL_DIRECTION], "yyy.6")
+        # tail 不是数字的保持不变
+        self.assertEqual(result.loc[2, Const.CALL_DIRECTION], "zzz.abc")
+
+    def test_update_forward_call_backward_not_modified(self):
+        """
+        场景 3: backward 调用，不应该被修改
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["1.2", "3.4"],
+            Const.DIRECTION: ["backward", "backward"],
+            Const.FORWARD_CALL_ORDER: ["5", "6"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # backward 调用保持不变
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "1.2")
+        self.assertEqual(result.loc[1, Const.CALL_DIRECTION], "3.4")
+
+    def test_update_forward_call_mixed_directions(self):
+        """
+        场景 4: 混合 forward 和 backward，只有 forward 被修改
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["1.xxx", "2.yyy", "3.zzz", "4.aaa"],
+            Const.DIRECTION: ["forward", "backward", "forward", "backward"],
+            Const.FORWARD_CALL_ORDER: ["5", "6", "7", "8"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # forward 且 head 是数字的被修改
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "5.xxx")
+        # backward 保持不变
+        self.assertEqual(result.loc[1, Const.CALL_DIRECTION], "2.yyy")
+        # forward 且 head 是数字的被修改
+        self.assertEqual(result.loc[2, Const.CALL_DIRECTION], "7.zzz")
+        # backward 保持不变
+        self.assertEqual(result.loc[3, Const.CALL_DIRECTION], "4.aaa")
+
+    def test_update_forward_call_no_digit_in_call_direction(self):
+        """
+        场景 5: forward 调用，但 head 和 tail 都不是数字，不修改
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["abc.def", "xyz.uvw"],
+            Const.DIRECTION: ["forward", "forward"],
+            Const.FORWARD_CALL_ORDER: ["5", "6"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # 没有数字，保持不变
+        self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "abc.def")
+        self.assertEqual(result.loc[1, Const.CALL_DIRECTION], "xyz.uvw")
+
+    def test_update_forward_call_returns_same_dataframe_object(self):
+        """
+        场景 6: 验证返回的是同一个 DataFrame 对象（原地修改）
+        """
+        df = self._create_test_df({
+            Const.CALL_DIRECTION: ["1.xxx"],
+            Const.DIRECTION: ["forward"],
+            Const.FORWARD_CALL_ORDER: ["5"]
+        })
+
+        result = ProcessDf.update_forward_call(df)
+
+        # 验证是同一个对象
+        self.assertIs(result, df)
+
+    def test_get_op_layer_normal_match(self):
+        """
+        场景 1: 正常匹配层数
+        输入：op_no_number = "model.layers.0.attention"
+        预期：layer = 0
+        """
+        df = self._create_test_df({
+            Const.OP_NO_NUMBER: ["model.layers.0.attention", "model.layers.123.mlp"]
+        })
+
+        self.process_df.get_op_layer(df)
+
+        self.assertEqual(df.loc[0, Const.LAYER], 0)
+        self.assertEqual(df.loc[1, Const.LAYER], 123)
+
+    def test_get_op_layer_no_match_default_value(self):
+        """
+        场景 2: 不匹配层数，返回默认值 -1
+        输入：op_no_number = "embedding.weight"
+        预期：layer = -1
+        """
+        df = self._create_test_df({
+            Const.OP_NO_NUMBER: ["embedding.weight", "lm_head.bias"]
+        })
+
+        self.process_df.get_op_layer(df)
+
+        self.assertEqual(df.loc[0, Const.LAYER], -1)
+        self.assertEqual(df.loc[1, Const.LAYER], -1)
+
+    def test_get_op_layer_mixed_match(self):
+        """
+        场景 3: 混合情况，部分匹配部分不匹配
+        """
+        df = self._create_test_df({
+            Const.OP_NO_NUMBER: [
+                "model.layers.0.attention",
+                "embedding.weight",
+                "model.layers.5.mlp"
+            ]
+        })
+
+        self.process_df.get_op_layer(df)
+
+        self.assertEqual(df.loc[0, Const.LAYER], 0)
+        self.assertEqual(df.loc[1, Const.LAYER], -1)
+        self.assertEqual(df.loc[2, Const.LAYER], 5)
+
+    def test_process_module_mapping_infer_engine(self):
+        """
+        场景 1: engine == 'infer'，直接赋值 MODULE_MAPPING = MODULE
+        """
+        df = self._create_test_df({
+            Const.MODULE: ["model.attention", "model.mlp"],
+            Const.MODULE_LEN: [2, 2]
+        })
+
+        self.process_df.process_module_mapping(df, engine='infer')
+
+        # infer 模式下，MODULE_MAPPING 直接等于 MODULE
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.attention")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.mlp")
+
+    def test_process_module_mapping_module_len_1(self):
+        """
+        场景 2: MODULE_LEN == 1，设置默认值（prefix 为空，last = MODULE）
+        """
+        self.mode_config.backend = Const.FSDP
+        df = self._create_test_df({
+            Const.MODULE: ["attention", "mlp"],
+            Const.MODULE_LEN: [1, 1]
+        })
+
+        self.process_df.process_module_mapping(df, engine='train')
+
+        # MODULE_LEN == 1 时，MODULE_MAPPING = MODULE（无 prefix）
+        self.assertEqual(df.loc[0, Const.MODULE_PART_PREFIX], "")
+        self.assertEqual(df.loc[0, Const.MODULE_LAST], "attention")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "attention")
+
+    def test_process_module_mapping_qkv_proj_mapping(self):
+        """
+        场景 3: q_proj/k_proj/v_proj 映射到 qkv_proj
+        """
+        self.mode_config.backend = Const.FSDP
+        df = self._create_test_df({
+            Const.MODULE: ["model.q_proj", "model.k_proj", "model.v_proj"],
+            Const.MODULE_LEN: [2, 2, 2]
+        })
+
+        self.process_df.process_module_mapping(df, engine='train')
+
+        # 验证拆分正确
+        self.assertEqual(df.loc[0, Const.MODULE_PART_PREFIX], "model")
+        self.assertEqual(df.loc[0, Const.MODULE_LAST], "q_proj")
+        # 验证映射后 q_proj -> qkv_proj
+        self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "qkv_proj")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.qkv_proj")
+
+        # k_proj 也映射到 qkv_proj
+        self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "qkv_proj")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.qkv_proj")
+
+        # v_proj 也映射到 qkv_proj
+        self.assertEqual(df.loc[2, Const.MODULE_LAST_MAPPING], "qkv_proj")
+        self.assertEqual(df.loc[2, Const.MODULE_MAPPING], "model.qkv_proj")
+
+    def test_process_module_mapping_gate_up_proj_mapping(self):
+        """
+        场景 4: gate_proj/up_proj 映射到 gate_up_proj
+        """
+        self.mode_config.backend = Const.FSDP
+        df = self._create_test_df({
+            Const.MODULE: ["model.gate_proj", "model.up_proj"],
+            Const.MODULE_LEN: [2, 2]
+        })
+
+        self.process_df.process_module_mapping(df, engine='train')
+
+        # gate_proj -> gate_up_proj
+        self.assertEqual(df.loc[0, Const.MODULE_LAST], "gate_proj")
+        self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "gate_up_proj")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.gate_up_proj")
+
+        # up_proj -> gate_up_proj
+        self.assertEqual(df.loc[1, Const.MODULE_LAST], "up_proj")
+        self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "gate_up_proj")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.gate_up_proj")
+
+    def test_process_module_mapping_no_mapping_fallback(self):
+        """
+        场景 5: 无映射关系的模块，使用原值
+        """
+        self.mode_config.backend = Const.FSDP
+        df = self._create_test_df({
+            Const.MODULE: ["model.attention", "model.mlp", "model.norm"],
+            Const.MODULE_LEN: [2, 2, 2]
+        })
+
+        self.process_df.process_module_mapping(df, engine='train')
+
+        # 无映射时，MODULE_LAST_MAPPING = MODULE_LAST，MODULE_MAPPING 保持原样
+        self.assertEqual(df.loc[0, Const.MODULE_LAST], "attention")
+        self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "attention")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.attention")
+
+        self.assertEqual(df.loc[1, Const.MODULE_LAST], "mlp")
+        self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "mlp")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.mlp")
+
+    @patch.object(ProcessDf, 'get_op_layer')
+    @patch.object(ProcessDf, 'get_op_module_and_class')
+    @patch.object(ProcessDf, 'process_module_mapping')
+    @patch.object(ProcessDf, 'update_forward_call')
+    def test_process_consistent_df_fsdp_backend(self, mock_update_forward, mock_process_mapping,
+                                                mock_get_module, mock_get_layer):
+        self.mode_config.backend = Const.FSDP
+        npu_df = self._create_test_df({Const.OP_NO_NUMBER: ["layers.0.model.attention.Attention"]})
+        bench_df = self._create_test_df({Const.OP_NO_NUMBER: ["layers.0.model.attention.Attention"]})
+
+        result_npu, result_bench = self.process_df.process_consistent_df(npu_df, bench_df)
+
+        # 验证 get_op_layer 被调用 2 次 (npu 和 bench)
+        self.assertEqual(mock_get_layer.call_count, 2)
+        # 验证 get_op_module_and_class 被调用 2 次 (train 和 infer)
+        self.assertEqual(mock_get_module.call_count, 2)
+        # 验证 process_module_mapping 被调用 2 次 (train 和 infer)
+        self.assertEqual(mock_process_mapping.call_count, 2)
+        # 验证 update_forward_call 只调用 1 次 (仅 npu)
+        self.assertEqual(mock_update_forward.call_count, 1)
+
 
 class TestMatch(unittest.TestCase):
+
+    def setUp(self):
+        """初始化测试固件"""
+        self.mode_config = ModeConfig()
+        self.mapping_config = MappingConfig()
+        self.match = Match(self.mode_config, self.mapping_config, cross_frame=None)
+
+    @staticmethod
+    def _create_test_df(data_dict):
+        """辅助方法：创建测试 DataFrame"""
+        return pd.DataFrame(data_dict)
 
     def test_put_unmatched_in_table(self):
         mode_config = ModeConfig()
@@ -1055,6 +1456,98 @@ class TestMatch(unittest.TestCase):
         dtype_o = pd.Series(['Int8', 'Float16', 'torch.bool', 'Complex64', 'unknown'])
         dtype = match.process_cross_frame_dtype(dtype_o)
         self.assertTrue(dtype.equals(pd.Series(['int', 'float', 'bool', 'complex', 'unknown'])))
+
+    def test_dual_monotonic_sort_normal_case(self):
+        """
+        场景 1: 正常情况，两列都能单调递增
+        输入：npu_pos 和 bench_pos 都能同步递增
+        预期：按正确顺序返回
+        """
+        df = self._create_test_df({
+            'npu_pos': [1, 2, 3],
+            'bench_pos': [1, 2, 3],
+            'data': ['a', 'b', 'c']
+        })
+
+        result = Match.dual_monotonic_sort(df, 'npu_pos', 'bench_pos')
+
+        # 验证顺序不变（已经有序）
+        self.assertEqual(result.loc[0, 'data'], 'a')
+        self.assertEqual(result.loc[1, 'data'], 'b')
+        self.assertEqual(result.loc[2, 'data'], 'c')
+
+    def test_dual_monotonic_sort_with_nan(self):
+        """
+        场景 2: 包含 NaN 值，NaN 应该排在最后
+        输入：部分行包含 NaN
+        预期：NaN 行排在最后，非 NaN 行保持单调
+        """
+        df = self._create_test_df({
+            'npu_pos': [1, np.nan, 2],
+            'bench_pos': [1, 2, np.nan],
+            'data': ['a', 'b', 'c']
+        })
+
+        result = Match.dual_monotonic_sort(df, 'npu_pos', 'bench_pos')
+
+        # 验证非 NaN 行在前，NaN 行在后
+        # 第一行应该是 (1, 1)
+        self.assertEqual(result.loc[0, 'npu_pos'], 1)
+        self.assertEqual(result.loc[0, 'bench_pos'], 1)
+        # 最后一行应该包含 NaN
+        self.assertTrue(pd.isna(result.loc[2, 'npu_pos']) or pd.isna(result.loc[2, 'bench_pos']))
+
+    def test_dual_monotonic_sort_conflicting_data(self):
+        """
+        场景 3: 冲突数据，无法同时满足两列单调递增
+        输入：npu_pos 和 bench_pos 顺序冲突
+        预期：抛出 ValueError
+        """
+        df = self._create_test_df({
+            'npu_pos': [1, 2],
+            'bench_pos': [2, 1],  # 与 npu_pos 顺序冲突
+            'data': ['a', 'b']
+        })
+
+        # 验证抛出 ValueError
+        with self.assertRaises(ValueError) as context:
+            Match.dual_monotonic_sort(df, 'npu_pos', 'bench_pos')
+
+        # 验证错误信息包含关键内容
+        self.assertIn("Conflicting", str(context.exception))
+
+    def test_dual_monotonic_sort_empty_dataframe(self):
+        """
+        场景 4: 空 DataFrame，不应报错
+        """
+        df = self._create_test_df({
+            'npu_pos': [],
+            'bench_pos': [],
+            'data': []
+        })
+
+        result = Match.dual_monotonic_sort(df, 'npu_pos', 'bench_pos')
+
+        # 验证返回空 DataFrame
+        self.assertEqual(len(result), 0)
+
+    def test_dual_monotonic_sort_single_row(self):
+        """
+        场景 5: 单行数据，应正常返回
+        """
+        df = self._create_test_df({
+            'npu_pos': [1],
+            'bench_pos': [1],
+            'data': ['a']
+        })
+
+        result = Match.dual_monotonic_sort(df, 'npu_pos', 'bench_pos')
+
+        # 验证单行正常返回
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result.loc[0, 'data'], 'a')
+        self.assertEqual(result.loc[0, 'npu_pos'], 1)
+        self.assertEqual(result.loc[0, 'bench_pos'], 1)
 
 
 class TestCreateTable(unittest.TestCase):
