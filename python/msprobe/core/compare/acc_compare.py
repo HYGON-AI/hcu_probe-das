@@ -559,9 +559,12 @@ class ProcessDf:
         len_1_mask = data_df[Const.MODULE_LEN] == 1
         data_df[Const.MODULE_PART_PREFIX] = ''
         data_df[Const.MODULE_LAST] = data_df[Const.MODULE]
+        data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE]
 
         # 对于 module_len > 1 的行，拆分module为prefix和last_part
         split_columns = data_df.loc[~len_1_mask, Const.MODULE].str.split(Const.SEP, n=1, expand=True)
+        if split_columns.empty:
+            return
         split_columns.columns = [Const.MODULE_PART_PREFIX, Const.MODULE_LAST]  # 设置列名对齐，split分割后默认列名是(0, 1)
         data_df.loc[~len_1_mask, [Const.MODULE_PART_PREFIX, Const.MODULE_LAST]] = split_columns
 
