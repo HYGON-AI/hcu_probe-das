@@ -322,6 +322,7 @@ pt文件保存的前缀和PyTorch对应关系如下：
 | Aten        | torch.ops.aten      |
 | Distributed | torch.distributed   |
 | MindSpeed   | mindspeed.ops       |
+| Triton   | triton       |
 
 ### dump.json文件说明
 

@@ -29,6 +29,7 @@ from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
 from msprobe.pytorch.dump.api_dump.pt_hook_manager import PytorchHookManager
 from msprobe.pytorch.dump.api_dump.register_optimizer_hook import register_optimizer_hook
 from msprobe.pytorch.dump.api_dump.script_wrapper import wrap_script_func, preprocess_func
+from msprobe.pytorch.dump.api_dump import script_wrapper
 
 
 class PytorchService(BaseService):
@@ -57,6 +58,7 @@ class PytorchService(BaseService):
     def _register_api_hook(self):
         preprocess_func()
         super()._register_api_hook()
+        script_wrapper.set_current_service(self)
         wrap_script_func()
         redirect_wait()
 
