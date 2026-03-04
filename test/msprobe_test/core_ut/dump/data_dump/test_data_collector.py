@@ -267,6 +267,7 @@ class TestForwardDataCollect(unittest.TestCase):
         self.data_collector.data_processor = MagicMock()
         self.data_collector.scope = "test_scope"
         self.data_collector.check_scope_and_pid = MagicMock()
+        self.data_collector._should_collect_by_risk_level = MagicMock()
         self.data_collector.set_is_recomputable = MagicMock()
         self.data_collector.handle_data = MagicMock()
         self.data_collector.call_stack_collect = MagicMock()
@@ -282,7 +283,7 @@ class TestForwardDataCollect(unittest.TestCase):
     def test_forward_input_with_scope_pid_check_fail(self):
         self.data_collector.config.task = self.Const.TENSOR
         self.data_collector.check_scope_and_pid.return_value = False
-
+        self.data_collector._should_collect_by_risk_level.return_value = False
         self.data_collector.forward_input_data_collect(
             "test", "module1", 123, "input_output"
         )
@@ -329,6 +330,7 @@ class TestForwardDataCollect(unittest.TestCase):
 
     def test_forward_output_with_scope_check_fail(self):
         self.data_collector.check_scope_and_pid.return_value = False
+        self.data_collector._should_collect_by_risk_level.return_value = False
         self.data_collector.forward_output_data_collect("test", "module", 123, "data")
         self.data_collector.data_processor.analyze_forward_output.assert_not_called()
 
@@ -354,6 +356,7 @@ class TestForwardDataCollect(unittest.TestCase):
 
     def test_forward_with_scope_check_fail(self):
         self.data_collector.check_scope_and_pid.return_value = False
+        self.data_collector._should_collect_by_risk_level.return_value = False
         self.data_collector.forward_data_collect("test", "module", 123, "data")
         self.data_collector.data_processor.analyze_forward.assert_not_called()
 
@@ -388,6 +391,7 @@ class TestBackwardDataCollector(unittest.TestCase):
         self.data_collector.data_processor = MagicMock()
         self.data_collector.scope = "test_scope"
         self.data_collector.check_scope_and_pid = MagicMock(return_value=True)
+        self.data_collector._should_collect_by_risk_level = MagicMock(return_value=True)
         self.data_collector.set_is_recomputable = MagicMock()
         self.data_collector.handle_data = MagicMock()
         self.data_collector.update_construct = MagicMock()
@@ -402,6 +406,7 @@ class TestBackwardDataCollector(unittest.TestCase):
 
     def test_backward_with_scope_check_fail(self):
         self.data_collector.check_scope_and_pid.return_value = False
+        self.data_collector._should_collect_by_risk_level.return_value = False
         self.data_collector.backward_data_collect("test", "module", 123, "data")
         self.data_collector.data_processor.analyze_backward.assert_not_called()
 
@@ -432,6 +437,7 @@ class TestBackwardDataCollector(unittest.TestCase):
 
     def test_backward_output_with_scope_check_fail(self):
         self.data_collector.check_scope_and_pid.return_value = False
+        self.data_collector._should_collect_by_risk_level.return_value = False
         self.data_collector.backward_output_data_collect("test", "module", 123, "data")
         self.data_collector.data_processor.analyze_backward_output.assert_not_called()
 

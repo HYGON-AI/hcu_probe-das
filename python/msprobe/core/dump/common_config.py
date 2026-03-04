@@ -31,6 +31,7 @@ class CommonConfig:
         self.level = json_config.get('level')
         self.async_dump = json_config.get("async_dump", False)
         self.precision = json_config.get("precision", Const.DUMP_PRECISION_LOW)
+        self.risk_level = json_config.get("risk_level", Const.RISK_LEVEL_ALL)
         self._check_config()
 
     def _check_config(self):
@@ -51,6 +52,9 @@ class CommonConfig:
 
         if self.precision not in Const.DUMP_PRECISION_LIST:
             logger.error_log_with_exp("precision is invalid, it should be one of {}".format(Const.DUMP_PRECISION_LIST),
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if self.risk_level and self.risk_level not in Const.RISK_LEVEL_LIST:
+            logger.error_log_with_exp("risk_level is invalid, it should be one of {}".format(Const.RISK_LEVEL_LIST),
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
 
