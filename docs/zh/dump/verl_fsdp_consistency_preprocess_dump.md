@@ -60,6 +60,7 @@
    ```shell
    export DUMP_ON=1
    export PROMPTS_ONLY=1
+   export TORCHDYNAMO_DISABLE=1
    ```
 
 ## verl代码修改
@@ -73,6 +74,8 @@
          self, micro_batch, temperature, calculate_entropy=False
      ) -> tuple[torch.Tensor, torch.Tensor]:
          """..."""
+
++        # _forward_micro_batch方法中修改
 -        response_length = micro_batch["responses"].size(-1)
 +        if "responses" in micro_batch and micro_batch["responses"] is not None:
 +            response_length = micro_batch["responses"].size(-1)
@@ -87,6 +90,7 @@
          # set to eval
          self.actor_module.eval()
 
++        # compute_log_prob方法中修改
 +        compute_prompts_only = int(os.getenv("PROMPTS_ONLY", "0"))
 +        if compute_prompts_only:
 +            if "responses" in data.batch:
@@ -114,7 +118,8 @@
          self.actor_module.train()
  
          temperature = data.meta_info["temperature"]  # temperature must be in the data.meta_info to avoid silent error
- 
+
++        # update_policy方法中修改
 +        compute_prompts_only = int(os.getenv("PROMPTS_ONLY", "0"))
 +        if compute_prompts_only:
 +            if "responses" in data.batch:
@@ -146,7 +151,8 @@
                      # Extract pre-computed rollout correction weights if present
                      # Weights are computed centrally in trainer and added when algorithm.rollout_is=True
                      rollout_is_weights = model_inputs.get("rollout_is_weights", None)
-                     
+
++                    # update_policy方法中修改                     
 +                    if response_mask is None:
 +                        prompt_mask = torch.ones_like(log_prob, dtype=torch.bool)
 +                        response_mask = prompt_mask
@@ -195,7 +201,8 @@
          if self._is_ref and self.config.ref.log_prob_micro_batch_size is not None:
              self.config.ref.log_prob_micro_batch_size //= self.device_mesh.size() // self.ulysses_sequence_parallel_size
              self.config.ref.log_prob_micro_batch_size_per_gpu = self.config.ref.log_prob_micro_batch_size
- 
+
++        # __init__方法中修改
 +        # 实例化PrecisionDebugger
 +        dump_flag = int(os.environ.get("DUMP_ON", 0))  # 设置环境变量DUMP_ON用于快速开关dump功能
 +        if dump_flag:
@@ -213,6 +220,7 @@
          ...
          with self.ulysses_sharding_manager:
              data = data.to("cpu")  # data will to device with each micro batch on actor.update_policy
++            # update_actor方法中修改
 +            if self.debugger:
 +                self.debugger.service.config.dump_path = os.path.join(self.dump_path_prefix, 'update_actor')  # 训练结果保存在update_actor文件夹
 +                self.debugger.start(model=self.actor.actor_module)
@@ -231,6 +239,7 @@
      def generate_sequences(self, prompts: DataProto):
          ...
          with simple_timer("generate_sequences", timing_generate):
++            # generate_sequences方法中修改
 +            if self.debugger:
 +                self.debugger.service.config.dump_path = os.path.join(self.dump_path_prefix, 'generate_sequences')  # 推理结果保存在generate_sequences文件夹
 +                infer_model = self.rollout.inference_engine.llm_engine.model_executor.driver_worker.worker.model_runner.get_model()
