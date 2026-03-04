@@ -16,6 +16,7 @@
 
 import atexit
 import os
+import re
 import threading
 import traceback
 
@@ -34,6 +35,7 @@ def build_data_collector(config):
 class DataCollector:
     tasks_need_tensor_data = [Const.DIFF_CHECK, Const.TENSOR]
     level_without_construct = [Const.LEVEL_L1, Const.LEVEL_L2]
+    _api_name_pattern = re.compile(r'\.\d+\.(forward|backward)$')
 
     def __init__(self, config):
         self.config = config
@@ -63,6 +65,27 @@ class DataCollector:
     @staticmethod
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
+
+    def _should_collect_by_risk_level(self, name):
+        if self.config.level != Const.LEVEL_L1:
+            return True
+        if not hasattr(self.config, 'risk_level') or not self.config.risk_level:
+            return True
+        if self.config.risk_level == Const.RISK_LEVEL_ALL:
+            return True
+        if self.config.framework == Const.PT_FRAMEWORK:
+            from msprobe.pytorch.dump.api_dump.api_risk_level import get_api_risk_level
+            api_name = self._api_name_pattern.sub('', name)
+            api_name = api_name.split(Const.SEP, 1)[-1]
+            api_risk = get_api_risk_level(api_name)
+        
+            if self.config.risk_level == Const.RISK_LEVEL_CORE:
+                return api_risk == Const.RISK_LEVEL_CORE
+            elif self.config.risk_level == Const.RISK_LEVEL_FOCUS:
+                return api_risk != Const.RISK_LEVEL_LOW
+            return True
+        
+        return True
 
     @staticmethod
     def set_is_recomputable(data_info, is_recompute):
@@ -97,7 +120,8 @@ class DataCollector:
 
     def forward_input_data_collect(self, name, module, pid, module_input_output):
         try:
-            if not self.check_scope_and_pid(self.scope, name, pid):
+            if not self.check_scope_and_pid(self.scope, name, pid) and \
+                not self._should_collect_by_risk_level(name):
                 return
 
             data_info = {}
@@ -119,7 +143,8 @@ class DataCollector:
 
     def forward_output_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
 
         data_info = {}
@@ -132,13 +157,15 @@ class DataCollector:
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         self.data_processor.analyze_forward(name, module, module_input_output)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -147,13 +174,15 @@ class DataCollector:
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         self.data_processor.analyze_backward(name, module, module_input_output)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -167,7 +196,8 @@ class DataCollector:
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -176,7 +206,8 @@ class DataCollector:
 
     def backward_output_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid) and \
+            not self._should_collect_by_risk_level(name):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:

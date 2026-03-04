@@ -36,6 +36,7 @@ class DebuggerConfig:
         self.precision = common_config.precision if common_config.precision else Const.DUMP_PRECISION_LOW
         self.diff_nums = task_config.diff_nums if task_config.diff_nums else 1
         self.bench_path = getattr(task_config, "bench_path", None)
+        self.risk_level = common_config.risk_level if common_config.risk_level else Const.RISK_LEVEL_ALL
         self.check()
         self._check_statistics_config(task_config)
 
