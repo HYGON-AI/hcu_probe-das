@@ -14,15 +14,25 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import os
+import threading
 import functools
 import importlib
 import types
+import weakref
 
 import torch
 
 from msprobe.core.common.log import logger
 from msprobe.pytorch.common.utils import torch_version_above_or_equal_2
 from msprobe.pytorch.dump.api_dump.api_register import get_api_register
+from msprobe.core.common.runtime import Runtime
+from msprobe.core.common.utils import ThreadSafe
+from msprobe.core.dump.hook_manager import BaseHookManager
+from msprobe.core.dump.data_dump.data_processor.base import ModuleForwardInputsOutputs
+from msprobe.pytorch.dump.api_dump.hook_module import HOOKModule
+from msprobe.core.common.const import Const
+
 
 if torch_version_above_or_equal_2:
     from torch._dynamo.convert_frame import convert_frame as _orig_convert_frame, Hooks
@@ -137,7 +147,121 @@ def preprocess_func():
         logger.warning(f"Failed to execute _device_constructors. Error Details: {str(e)}")
 
 
+_service_ref = None
+
+def set_current_service(service):
+    """由 PytorchService 在初始化时注入，避免 script_wrapper 反向 import。"""
+    global _service_ref
+    _service_ref = weakref.ref(service)
+
+def get_current_service():
+    return _service_ref() if _service_ref else None
+
+def patch_triton_jitfunction_run():
+    try:
+        from triton.runtime import JITFunction
+    except Exception as e:
+        logger.warning(f"[msprobe] Triton not available, skip patch JITFunction.run: {e}")
+        return
+
+    original_run = getattr(JITFunction, "run", None)
+    if original_run is None:
+        logger.warning("[msprobe] triton.runtime.JITFunction has no attribute 'run', skip patch.")
+        return
+
+    if getattr(original_run, "__msprobe_patched__", False):
+        return
+
+    @functools.wraps(original_run)
+    def wrapped_run(self, *args, **kwargs):
+        # ===== 0) 开关 + 防递归 =====
+        tid = threading.get_ident()
+
+        # 不在运行态，不采集
+        if not Runtime.is_running:
+            return original_run(self, *args, **kwargs)
+
+        # 防止 hook 内部再次触发 hook
+        if BaseHookManager.inner_switch.get(tid, False):
+            return original_run(self, *args, **kwargs)
+
+        service = get_current_service()
+
+        if service is None:
+            return original_run(self, *args, **kwargs)
+
+        data_collector = service.data_collector
+
+        # stop/step 会更新 is_running，但这里再加一道 should_stop_service 判断更稳
+        if getattr(service, "should_stop_service", False):
+            return original_run(self, *args, **kwargs)
+
+        data_collector = service.data_collector
+        pid = os.getpid()
+
+        # ===== 1) 生成 api_name + per-step 计数 =====
+        try:
+            api_name = f"Triton.{self.fn.__qualname__}"
+        except Exception:
+            api_name = str(getattr(self, "fn", "unknown_triton_fn"))
+
+        # ✅ 复用 HOOKModule.module_count（每 step 已经 reset）
+        count = HOOKModule.get_module_count(api_name)
+        HOOKModule.add_module_count(api_name)
+
+        # 命名风格尽量对齐：API + count + forward
+        full_name = f"{api_name}{Const.SEP}{count}{Const.SEP}{Const.FORWARD}"
+
+        # ===== 2) forward_pre: 输入采集（线程安全 + inner_switch）=====
+        with ThreadSafe():
+            BaseHookManager.inner_switch[tid] = True
+            try:
+                data_collector.update_api_or_module_name(full_name)
+                module_io = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
+                data_collector.forward_input_data_collect(full_name, self, pid, module_io)
+            except Exception as e:
+                logger.warning(f"[msprobe] Triton forward_input_data_collect failed: {e}")
+            finally:
+                BaseHookManager.inner_switch[tid] = False
+
+        # ===== 3) 执行原始 triton run =====
+        out = original_run(self, *args, **kwargs)
+
+        # ===== 4) forward_hook: 输出采集 =====
+        with ThreadSafe():
+            BaseHookManager.inner_switch[tid] = True
+            try:
+                data_collector.update_api_or_module_name(full_name)
+                module_io = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=args)
+                data_collector.forward_output_data_collect(full_name, self, pid, module_io)
+            except Exception as e:
+                logger.warning(f"[msprobe] Triton forward_output_data_collect failed: {e}")
+            finally:
+                BaseHookManager.inner_switch[tid] = False
+
+        return out
+
+    wrapped_run.__msprobe_patched__ = True
+    wrapped_run.__msprobe_original__ = original_run
+    setattr(JITFunction, "run", wrapped_run)
+    logger.info("[msprobe] Patched triton.runtime.JITFunction.run successfully.")
+
+def unpatch_triton_jitfunction_run() -> bool:
+    try:
+        from triton.runtime import JITFunction
+    except Exception:
+        return False
+    current = getattr(JITFunction, "run", None)
+    if current is None:
+        return False
+    original = getattr(current, "__msprobe_original__", None)
+    if original is None:
+        return False
+    setattr(JITFunction, "run", original)
+    return True
+
 def wrap_script_func():
     wrap_jit_script_func()
     if torch_version_above_or_equal_2:
         patch_dynamo_compile()
+    patch_triton_jitfunction_run()
