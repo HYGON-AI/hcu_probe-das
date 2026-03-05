@@ -36,20 +36,6 @@ class TestNetCompare_init(unittest.TestCase):
         self.assertIn("python", obj.python_version.lower())
 
 
-class TestNetCompare_execute_command_line(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    @patch("subprocess.Popen")
-    def test_execute_command_line(self, mock_popen, mock_logger):
-        proc_mock = MagicMock()
-        mock_popen.return_value = proc_mock
-
-        cmd = ["echo", "test"]
-        proc = NetCompare.execute_command_line(cmd)
-        mock_logger.info.assert_called_once()
-        mock_popen.assert_called_once_with(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.assertEqual(proc, proc_mock)
-
-
 class TestNetCompare_catch_compare_result(unittest.TestCase):
     @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
     def test_catch_compare_result_num(self, mock_logger):
@@ -140,28 +126,18 @@ class TestCatchCompareResult(unittest.TestCase):
             NetCompare._catch_compare_result(123, True)
 
 
-class TestExecuteCommandLine(unittest.TestCase):
-    @patch('msprobe.infer.offline.compare.msquickcmp.net_compare.net_compare.logger')
-    @patch('subprocess.Popen')
-    def test_execute_command_line(self, mock_popen, mock_logger):
-        mock_process = MagicMock()
-        mock_popen.return_value = mock_process
-        cmd = ['echo', 'hello']
-        ret = NetCompare.execute_command_line(cmd)
-        mock_logger.info.assert_called()
-        mock_popen.assert_called_with(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.assertEqual(ret, mock_process)
-
-
 class TestExecuteMsaccucmpCommand(unittest.TestCase):
-    @patch.object(NetCompare, "execute_command_line")
+
+    @patch('subprocess.Popen')
     @patch.object(NetCompare, "_catch_compare_result")
-    def test_execute_msaccucmp_command(self, mock_catch, mock_exec_cmd):
+    def test_execute_msaccucmp_command(self, mock_catch, mock_popen):
         mock_process = MagicMock()
         mock_process.poll.side_effect = [None, None, 0]
-        mock_process.stdout.readline.side_effect = [b"[INFO]1.23 4.56\n", b"[INFO]Cosine\n", b""]
+        mock_process.stdout.readline.side_effect = ["[INFO]1.23 4.56\n", "[INFO]Cosine\n", ""]
         mock_process.returncode = 0
-        mock_exec_cmd.return_value = mock_process
+        mock_process.stdout.close = MagicMock()
+        mock_process.wait = MagicMock()
+        mock_popen.return_value = mock_process
         mock_catch.side_effect = [
             (["1.23", "4.56"], []),
             ([], ["Cosine"])
@@ -179,7 +155,6 @@ class TestExecuteMsaccucmpCommand(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertEqual(result, ["1.23", "4.56"])
         self.assertEqual(header, ["Cosine"])
-        mock_exec_cmd.assert_called_once_with(["fake", "cmd"])
         self.assertEqual(mock_catch.call_count, 2)
 
 

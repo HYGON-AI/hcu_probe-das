@@ -65,12 +65,6 @@ class NetCompare(object):
             check_file_size_valid(self.golden_json_path, MAX_READ_FILE_SIZE_4G)
 
     @staticmethod
-    def execute_command_line(cmd):
-        logger.info(f"Execute command:{' '.join(cmd)}")
-        process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        return process
-
-    @staticmethod
     def _catch_compare_result(log_line, catch):
         result = []
         header = []
@@ -253,25 +247,35 @@ class NetCompare(object):
         """
         result = []
         header = []
-        process = self.execute_command_line(cmd)
-        while process.poll() is None:
-            line = process.stdout.readline().strip()
-            if line:
-                compare_result, header_result = self._catch_compare_result(line, catch)
-                result = compare_result if compare_result else result
-                header = header_result if header_result else header
-        return process.returncode, result, header
 
-    def _check_msaccucmp_compare_support_args(self, compare_args):
-        check_cmd = [self.python_version, self.msaccucmp_command_file_path, "compare", "-h"]
-        check_cmd = filter_cmd(check_cmd)
-        process = self.execute_command_line(check_cmd)
-        while process.poll() is None:
-            line = process.stdout.readline().strip()
-            if line:
-                line_decode = line.decode(encoding="utf-8")
-                if compare_args in line_decode:
-                    return True
-        else:
-            logger.warning(f'Current version does not support {compare_args} function')
-            return False
+        logger.info(f"Execute command:{' '.join(cmd)}")
+        process = subprocess.Popen(
+            cmd,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        try:
+            # 单个循环即可：逐行读取，直到进程结束 (EOF)
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    # 1. 清理格式
+                    clean_line = line.rstrip()
+
+                    # 2. 打印日志 (实时输出)
+                    logger.raw(clean_line)
+
+                    compare_result, header_result = self._catch_compare_result(clean_line, catch)
+                    # 如果有新结果则更新，否则保留旧值
+                    result = compare_result if compare_result else result
+                    header = header_result if header_result else header
+        finally:
+            # 确保资源释放，避免僵尸进程
+            if process.stdout:
+                process.stdout.close()
+            process.wait()
+
+        return process.returncode, result, header
