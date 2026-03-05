@@ -22,12 +22,17 @@ import './index.less';
 import { useGlobalStore } from '../../store/useGlobalStore';
 import { DIMENSIONS_OPTIONS, HEATMAP_TYPE } from '../../common/constant';
 import SelectWithLabel from '../../components/SelectWithLabel';
-import useController from './useController';
 import type { SelectOptionType } from '../../common/type';
 import type { ControllerProps, ValuesResponseType, ValuesRequestParamsType, TagsResponseType } from './type';
 import { Typography } from 'antd';
-import { color } from 'echarts';
 const { Text } = Typography;
+import useController from './useController';
+
+// 标签选项类型
+interface TagOptionType extends Omit<SelectOptionType, 'label'> {
+  label: React.ReactNode;
+  labelText: string;
+}
 
 const Controller: React.FC = (props: ControllerProps) => {
   const { metrics } = props;
@@ -156,19 +161,36 @@ const Controller: React.FC = (props: ControllerProps) => {
       return;
     }
     if (!isEmpty(result)) {
-      const tagsValueList = (result?.data || []).map(({ category, id, text }) => {
-        return {
-          value: id,
-          label: (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Tooltip title={text}>
-                <Text ellipsis> {text}</Text>
-              </Tooltip>
-              <span style={{ color: '#a5a5a5' }}> {category}</span>
-            </div>
-          ),
-        };
-      });
+      // 生成唯一标识符的辅助函数
+      const generateUniqueValue = (id: string | number, category: string): string => {
+        // 使用更安全的分隔符组合，避免 id 或 category 中包含 '--' 导致的冲突
+        const safeId = id ?? '';
+        const safeCategory = category ?? '';
+        return `${safeId}::${safeCategory}`;
+      };
+
+      const tagsValueList = (result?.data || [])
+        .map(({ category, id, text }) => {
+          // 防御性检查：确保必要字段存在
+          if (id === undefined || id === null || !category) {
+            console.warn('Invalid tag data: missing id or category', { id, category });
+            return null;
+          }
+
+          return {
+            value: generateUniqueValue(id, category), // 使用更安全的唯一标识生成方式
+            labelText: text || '', // 提供默认值避免 undefined
+            label: (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Tooltip title={text}>
+                  <Text ellipsis> {text}</Text>
+                </Tooltip>
+                <span style={{ color: '#a5a5a5' }}> {category}</span>
+              </div>
+            ),
+          };
+        })
+        .filter(Boolean); // 过滤掉无效数据
       setTagsValueList(tagsValueList);
     }
   };
@@ -201,11 +223,12 @@ const Controller: React.FC = (props: ControllerProps) => {
   };
   // 标签选择
   const onSelectTagsChange = (value: string[]) => {
+    const tags = value.map((item) => item.split('::')[0]);
     const params: ValuesRequestParamsType = {
       metric,
       stat,
       dimension,
-      tags: value,
+      tags,
     };
     updateDimensionValueList(params);
     setTags(value);
@@ -252,10 +275,12 @@ const Controller: React.FC = (props: ControllerProps) => {
           options={dimensionValueList}
         />
         <SelectWithLabel
+          mode="multiple"
           className="select-with-label"
           label="选择标签"
           text="选择标签"
-          mode="multiple"
+          showSearch
+          filterOption={(input, option) => (option?.labelText ?? '')?.toLowerCase().includes(input.toLowerCase())}
           value={tags}
           placeholder="请选择标签"
           onChange={onSelectTagsChange}
