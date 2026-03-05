@@ -79,12 +79,30 @@ class TestPrecisionDebugger(unittest.TestCase):
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
         debugger.task = ''
+        debugger._maybe_reload_config = MagicMock()
         debugger.stop()
         debugger.service.stop.assert_called_once()
+        debugger._maybe_reload_config.assert_called_once_with()
 
     def test_step_statistics(self):
+        PrecisionDebugger._instance = None
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
         debugger.task = ''
+        debugger._maybe_reload_config = MagicMock()
         debugger.step()
         debugger.service.step.assert_called_once()
+        debugger._maybe_reload_config.assert_called_once_with()
+
+    def test_start_statistics_with_reload(self):
+        PrecisionDebugger._instance = None
+        with patch.object(BasePrecisionDebugger, "_parse_config_path",
+                          return_value=(self.statistics_common_config, self.statistics_task_config)):
+            debugger = PrecisionDebugger(dump_path="./dump_path")
+        debugger.service = MagicMock()
+        debugger.config = MagicMock()
+        debugger.task = 'statistics'
+        debugger._maybe_reload_config = MagicMock()
+        debugger.start()
+        debugger.service.start.assert_called_once()
+        debugger._maybe_reload_config.assert_called_once_with()

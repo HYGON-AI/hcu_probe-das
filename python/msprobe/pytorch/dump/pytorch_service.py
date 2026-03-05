@@ -41,26 +41,56 @@ class PytorchService(BaseService):
     def _get_current_rank():
         return get_rank_if_initialized()
 
+    def apply_runtime_config(self, config):
+        old_need_api_hook = self._is_need_api_hook
+        old_dump_enabled = self._is_dump_enabled
+        super().apply_runtime_config(config)
+        self._refresh_module_processor()
+        self._sync_api_hook_state(old_need_api_hook, old_dump_enabled)
+
     def reset_status(self):
         self._reset_status()
 
     def _init_specific_components(self):
         self.logger = logger
         self.api_register = get_api_register()
-        self.module_processor = ModuleProcessor(self.data_collector.scope)
+        self._refresh_module_processor()
         self.hook_manager = PytorchHookManager(self.data_collector, self.config)
         self.api_template = ApiTemplate
+
+    def _refresh_module_processor(self):
+        self.module_processor = ModuleProcessor(self.data_collector.scope)
 
     def _register_hook(self):
         if self._is_mix_level:
             register_optimizer_hook(self.data_collector)
 
     def _register_api_hook(self):
+        if not self._is_dump_enabled:
+            if self.api_register is not None and getattr(self.api_register, "all_api_registered", False):
+                self.api_register.restore_all_api()
+            return
         preprocess_func()
         super()._register_api_hook()
         script_wrapper.set_current_service(self)
         wrap_script_func()
         redirect_wait()
+
+    def _sync_api_hook_state(self, old_need_api_hook, old_dump_enabled):
+        if self.api_register is None:
+            return
+        api_registered = getattr(self.api_register, "all_api_registered", False)
+        if not self._is_dump_enabled:
+            if api_registered:
+                self.api_register.restore_all_api()
+            return
+        if not self._is_need_api_hook:
+            if api_registered:
+                self.api_register.restore_all_api()
+            return
+        if old_need_api_hook and old_dump_enabled and api_registered:
+            return
+        self._register_api_hook()
 
     def _register_module_hook(self):
         ModuleProcessor.enable_module_dump = True

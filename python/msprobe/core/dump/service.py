@@ -34,7 +34,7 @@ class BaseService(ABC):
     def __init__(self, config):
         self.bench_dump_iter_dir = None
         self.config = copy.deepcopy(config)
-        self.config.level = getattr(config, 'level_ori', config.level)  # 兼容MindSpore配置
+        self.config.level = getattr(config, 'level_ori', config.level)
         self.model = None
         self.data_collector = build_data_collector(self.config)
         self.current_iter = 0
@@ -51,9 +51,9 @@ class BaseService(ABC):
         self.ori_customer_func = {}
         self.debug_variable_counter = None
         self.current_step_first_debug_save = True
-        self.logger = None  # 子类中注入
-        self.api_register = None  # 子类中注入
-        self.api_template = None  # 子类中注入
+        self.logger = None  # injected in subclass
+        self.api_register = None  # injected in subclass
+        self.api_template = None  # injected in subclass
         self.hook_manager = None  # 子类中注入
         self._init_specific_components()
         self._register_api_hook()
@@ -87,8 +87,13 @@ class BaseService(ABC):
         return self.config.rank and self.current_rank not in self.config.rank
 
     @property
+    def _is_dump_enabled(self):
+        dump_enable = getattr(self.config, "dump_enable", None)
+        return True if dump_enable is None else dump_enable
+
+    @property
     def _need_tensor_data(self):
-        """判断是否需要采集tensor数据"""
+        """Whether tensor data collection is required."""
         return bool(
             self.config.task in self.data_collector.tasks_need_tensor_data or
             (self.config.task == Const.STATISTICS and self.config.tensor_list)
@@ -97,23 +102,26 @@ class BaseService(ABC):
     @property
     @abstractmethod
     def _get_framework_type(self):
-        """获取框架类型"""
+        """Return framework type."""
         pass
 
     @staticmethod
     @abstractmethod
     def _get_current_rank():
-        """获取当前rank_id"""
+        """Return current rank id."""
         pass
 
     @staticmethod
     def _change_jit_switch(status):
-        """修改JitDump开关，mindspore子类重写"""
+        """Toggle JitDump switch. MindSpore subclass overrides."""
         pass
 
     def start(self, model=None, token_range=None, rank_id=None):
-        """通用start模板"""
+        """Common start flow."""
         self._process_iteration()
+        if not self._is_dump_enabled:
+            self._disable_dump_runtime()
+            return
         if self._is_debug_level:
             return
         if model:
@@ -142,6 +150,9 @@ class BaseService(ABC):
 
             if token_range:
                 self._register_infer_count_hook(self.model, token_range)
+        elif self._is_no_dump_rank:
+            Runtime.is_running = False
+            return
         self.logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
         if token_range is None:
             self.primitive_switch = True
@@ -152,7 +163,10 @@ class BaseService(ABC):
         self.logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
-        """通用stop模板"""
+        """Common stop flow."""
+        if not self._is_dump_enabled:
+            self._disable_dump_runtime()
+            return
         if self._is_debug_level or self.should_stop_service:
             return
         if self._is_no_dump_step or self._is_no_dump_rank:
@@ -164,16 +178,13 @@ class BaseService(ABC):
         self._change_jit_switch(False)
         if self._is_l2_level:
             return
-
-        self._process_async_dump()
-        self.data_collector.write_json()
+        self._flush_dump_result()
 
     def step(self):
-        """通用step处理"""
+        """Common step flow."""
         if self.should_stop_service:
             return
-        self._process_async_dump()
-        self.data_collector.write_json()
+        self._flush_dump_result()
         self.current_step_first_debug_save = True
         self.loop += 1
         self._reset_status()
@@ -188,6 +199,8 @@ class BaseService(ABC):
         Return:
             void
         """
+        if not self._is_dump_enabled:
+            return
         if not self._is_debug_level:
             return
         self.current_iter = self.loop + self.init_step
@@ -230,8 +243,13 @@ class BaseService(ABC):
     def build_hook(self, hook_type, name):
         return self.hook_manager.build_hook(hook_type, name)
 
+    def apply_runtime_config(self, config):
+        self._update_config(config)
+        self._refresh_data_collector()
+        self._reset_runtime_for_new_config()
+
     def create_dirs(self):
-        """统一目录创建逻辑"""
+        """Unified directory creation flow."""
         create_directory(self.config.dump_path)
         if Runtime.run_mode == Const.PYNATIVE_GRAPH_MODE:
             self.dump_iter_dir = os.path.join(self.config.dump_path, Const.PYNATIVE_MODE, f"step{self.current_iter}")
@@ -250,17 +268,17 @@ class BaseService(ABC):
 
     @abstractmethod
     def _init_specific_components(self):
-        """初始化框架特定组件"""
+        """Initialize framework-specific components."""
         pass
 
     @abstractmethod
     def _register_hook(self):
-        """注册hook函数"""
+        """Register hooks."""
         pass
 
     @abstractmethod
     def _register_module_hook(self):
-        """注册模块级别的hook函数"""
+        """Register module-level hooks."""
 
     def _need_stop_service(self):
         if self.should_stop_service:
@@ -286,9 +304,9 @@ class BaseService(ABC):
 
     def _register_infer_count_hook(self, root_model, token_range):
         """
-        通过root_model执行的轮次来判断当前在第几个token
-        param root_model: 需要采集的推理模型
-        param token_range: [start, end], 采集infer的token循环范围，左右皆包含在内
+        Determine token index by model forward count.
+        param root_model: model for inference collection.
+        param token_range: [start, end], both inclusive.
         return: None
         """
 
@@ -308,7 +326,7 @@ class BaseService(ABC):
                     f"Current token id: {self.cur_token_id}, exceed token_range, early stop dump infer token.")
             self.cur_token_id += 1
 
-        # 此处root_model可以保证为 Module/Cell类型 或 [Module/Cell]类型
+        # root_model is guaranteed to be Module/Cell or [Module/Cell]
         if root_model and isinstance(root_model, list):
             root_model = root_model[0]
             self.logger.warning("Infer model can only input one to support token_range, choose the first one.")
@@ -354,19 +372,48 @@ class BaseService(ABC):
         self.data_collector.initialize_json_file(self._get_framework_type)
 
     def _process_iteration(self):
-        """处理迭代计数"""
+        """Update iteration counters."""
         self.current_iter = self.loop + self.init_step
         self.data_collector.update_iter(self.current_iter)
         Runtime.current_iter = self.current_iter
 
     def _process_async_dump(self):
-        """处理异步dump逻辑"""
+        """Process async dump."""
         if self.config.async_dump and self.config.task in [Const.STATISTICS, Const.TENSOR]:
             self.data_collector.data_processor.dump_async_data()
 
+    def _flush_dump_result(self):
+        if not self._is_dump_enabled:
+            return
+        self._process_async_dump()
+        self.data_collector.write_json()
+
+    def _update_config(self, config):
+        self.config = copy.deepcopy(config)
+        self.config.level = getattr(config, 'level_ori', config.level)
+
+    def _refresh_data_collector(self):
+        self.data_collector = build_data_collector(self.config)
+        if self.hook_manager is not None:
+            self.hook_manager.config = self.config
+            self.hook_manager.data_collector = self.data_collector
+
+    def _disable_dump_runtime(self):
+        Runtime.is_running = False
+        self.primitive_switch = False
+        self._change_jit_switch(False)
+
+    def _reset_runtime_for_new_config(self):
+        self._disable_dump_runtime()
+        self.should_stop_service = False
+        self.current_step_first_debug_save = True
+        self.debug_variable_counter = None
+        self.cur_token_id = 0
+
     def _reset_status(self):
-        """通用状态重置"""
+        """Reset common runtime status."""
         self.data_collector.reset_status()
         self.hook_manager.reset_status()
         if self._is_l2_level:
             self.data_collector.data_processor.reset_status()
+
