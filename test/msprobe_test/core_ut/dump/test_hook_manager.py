@@ -78,6 +78,7 @@ class TestBaseHookManager(unittest.TestCase):
     def setUp(self):
         self.mock_data_collector = MagicMock()
         self.mock_config = MagicMock()
+        self.mock_config.level = Const.LEVEL_MIX
         self.mock_config.data_mode = ["all"]
         self.manager = self.MockBaseHookManager(
             self.mock_data_collector,
