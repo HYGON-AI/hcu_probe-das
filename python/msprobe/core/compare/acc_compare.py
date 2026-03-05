@@ -37,7 +37,7 @@ from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.diff_analyze.first_diff_analyze import FirstDiffAnalyze
 from msprobe.core.compare.indicator_analysis.calculator import calculate_excel_result_df
 from msprobe.core.compare.stats_diff_calc import ValType, ALL_TYPES
-from msprobe.core.compare.verl.mapping import FSDP_MODULE_MAP
+from msprobe.core.compare.verl.mapping import FSDP_MODULE_MAP, MEGATRON_MODULE_MAP
 
 
 @dataclass
@@ -144,7 +144,7 @@ class Comparator:
 
         # calculate Indicators
         logger.info("Calculating comparison indicators in progress...")
-        calculate_excel_result_df(result_df, self.mode_config.dump_mode, self.mode_config.consistent_check)
+        calculate_excel_result_df(result_df, self.mode_config.dump_mode, self.mode_config.backend, self.mode_config.consistent_check)
         result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
         logger.info("Comparison indicators calculation done.")
 
@@ -162,7 +162,7 @@ class Comparator:
         # create new columns for compare op_name and shape
         # process npu_df's COMPARE_KEY whether same or different framework
         process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
-        if self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP:
+        if self.mode_config.consistent_check and (self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
             npu_df, bench_df = process_df.process_consistent_df(npu_df, bench_df)
         else:
             # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
@@ -175,7 +175,7 @@ class Comparator:
         # match npu and bench, match_result contains both npu_info and bench_info
         match = Match(self.mode_config, self.mapping_config, self.cross_frame)
         match_result = match.match_api_infos(npu_df, bench_df)
-        if not (self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP):
+        if not (self.mode_config.consistent_check and (self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON)):
             # 比对主逻辑，训推一致性另外单独处理
             # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
             match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
@@ -404,13 +404,17 @@ class ParseData:
             return False  # 确保在长度不符合时返回 False
 
         # 提取操作名的相关部分
-        third_last = op_name_splits[-3]
-        second_last = op_name_splits[-2]
+        # 模块/子模块名
+        module_name = op_name_splits[-3]
+        # 前向/反向
+        direction_name = op_name_splits[-2]
 
         # 根据操作名调整解析标志
-        if third_last in CompareConst.VERL_FSDP_STOP_PARSE_LIST and second_last == 'backward':
+        if module_name in CompareConst.VERL_STOP_PARSE_RULES.get(
+                self.mode_config.backend) and direction_name == Const.BACKWARD:
             return False
-        elif third_last == 'Embedding' and second_last == 'forward':
+        elif module_name in CompareConst.VERL_BEGIN_PARSE_RULES.get(
+                self.mode_config.backend) and direction_name == Const.FORWARD:
             return True
 
         return parse_flag
@@ -522,15 +526,18 @@ class ProcessDf:
         data_df[Const.LAYER] = data_df[Const.OP_NO_NUMBER].str.extract(layer_pattern).fillna(-1).astype(int)
 
     @staticmethod
-    def get_op_module_and_class(data_df, engine: str):
+    def get_op_module_and_class(data_df, engine: str, backend: str):
         """
         根据module_class列处理获取module和class
         """
         if engine == 'train':
-            train_fsdp_pattern = '_fsdp_wrapped_module.'
-            data_df[Const.MODULE_CLASS] = data_df[Const.OP_NO_NUMBER].str.split(train_fsdp_pattern).str[-1]
+            if backend == Const.FSDP:
+                train_op_pattern = '_fsdp_wrapped_module.'
+            elif backend == Const.MEGATRON:
+                train_op_pattern = r'^.*layers\.\d+\.'
+            data_df[Const.MODULE_CLASS] = data_df[Const.OP_NO_NUMBER].str.split(train_op_pattern).str[-1]
             # 处理非layer层
-            data_df[Const.MODULE_CLASS] = data_df[Const.MODULE_CLASS].str.replace(r'^model\.', '', regex=True)
+            data_df[Const.MODULE_CLASS] = data_df[Const.MODULE_CLASS].str.replace(r'^.*module.module\.', '', regex=True)
         elif engine == 'infer':
             infer_layer_pattern = r'^.*layers\.\d+\.'
             data_df[Const.MODULE_CLASS] = data_df[Const.OP_NO_NUMBER].str.replace(infer_layer_pattern, '', regex=True)
@@ -547,14 +554,14 @@ class ProcessDf:
         data_df[Const.CLASS] = split_result[1].fillna(data_df[Const.MODULE_CLASS])  # 如果没有拆分点，class为原始字符串
         data_df[Const.MODULE_LEN] = data_df[Const.MODULE].str.split(Const.SEP).str.len()
 
-    def process_module_mapping(self, data_df, engine: str):
+    def process_module_mapping(self, data_df, engine: str, backend: str):
         """
-        仅映射训练数据，推理数据直接赋值
+        fsdp:仅映射训练数据，推理数据直接赋值
+        megatron:训练数据和推理数据均涉及映射
         """
-        if engine == 'infer':
-            data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE]
+        if engine == 'infer' and backend == Const.FSDP:
+            data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE].apply(lambda x: str(x).split(Const.SEP)[-1] if pd.notna(x) and Const.SEP in str(x) else x)
             return
-
         # 直接为module_len == 1分配默认值
         len_1_mask = data_df[Const.MODULE_LEN] == 1
         data_df[Const.MODULE_PART_PREFIX] = ''
@@ -572,16 +579,19 @@ class ProcessDf:
         mapping = {}
         if self.mode_config.backend == Const.FSDP:
             mapping = FSDP_MODULE_MAP
+        elif self.mode_config.backend == Const.MEGATRON:
+            mapping = MEGATRON_MODULE_MAP
         last_part_mapped = data_df[Const.MODULE_LAST].map(mapping)
         data_df[Const.MODULE_LAST_MAPPING] = last_part_mapped.fillna(data_df[Const.MODULE_LAST])
 
         # 拼接prefix和映射后的last_part
         data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE_LAST_MAPPING]
-        data_df.loc[~len_1_mask, Const.MODULE_MAPPING] = (
-            data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
-            Const.SEP +
-            data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
-        )
+        if self.mode_config.backend == Const.FSDP:
+            data_df.loc[~len_1_mask, Const.MODULE_MAPPING] = (
+                data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
+                Const.SEP +
+                data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
+            )
 
     def process_compare_key_and_shape(self, npu_df, bench_df):
         npu_df = self.assign_npu_df_compare_key(npu_df, bench_df)
@@ -735,14 +745,13 @@ class ProcessDf:
         return self.mapping_dict.data_mapping_dict.get(npu_op_name, npu_op_name)
 
     def process_consistent_df(self, npu_df, bench_df):
-        if self.mode_config.backend == Const.FSDP:
-            self.get_op_layer(npu_df)
-            self.get_op_layer(bench_df)
-            self.get_op_module_and_class(npu_df, engine='train')
-            self.get_op_module_and_class(bench_df, engine='infer')
-            self.process_module_mapping(npu_df, engine='train')
-            self.process_module_mapping(bench_df, engine='infer')
-            self.update_forward_call(npu_df)
+        self.get_op_layer(npu_df)
+        self.get_op_layer(bench_df)
+        self.get_op_module_and_class(npu_df, engine='train', backend=self.mode_config.backend)
+        self.get_op_module_and_class(bench_df, engine='infer', backend=self.mode_config.backend)
+        self.process_module_mapping(npu_df, engine='train', backend=self.mode_config.backend)
+        self.process_module_mapping(bench_df, engine='infer', backend=self.mode_config.backend)
+        self.update_forward_call(npu_df)
         return npu_df, bench_df
 
 
@@ -907,7 +916,8 @@ class Match:
             match_result = self.process_fuzzy_match(npu_df, bench_df)
 
         # 非fsdp后端暂无layer、class、module_mapping等列，因此增加后端限制
-        elif self.mode_config.consistent_check and self.mode_config.backend == Const.FSDP:
+        elif self.mode_config.consistent_check and (
+                    self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
             match_result = self.consistent_match(npu_df, bench_df)
         else:
             match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY], how='outer')
@@ -948,29 +958,51 @@ class Match:
         matched_df.loc[npu_unmatched_mask, 'summary_x'] = CompareConst.N_A
         matched_df.loc[bench_unmatched_mask, 'summary_y'] = CompareConst.N_A
 
-        na_rows = matched_df[matched_df['op_name_y'].isna()]
-        agg_rows = matched_df[matched_df['op_name_y'].notna()]
-        na_rows.fillna(CompareConst.N_A, inplace=True)
-        agg_rows.fillna(CompareConst.N_A, inplace=True)
-
         # 2. 根据推理测op_name聚合
-        # 初始化聚合字典，默认所有列用 'first'  聚合
-        agg_dict = {col: 'first' for col in agg_rows.columns}
-        # 对 op_name_x 使用自定义聚合方法
-        agg_dict['op_name_x'] = lambda x: ';\n'.join(x)
-        agg_dict['dtype_x'] = lambda x: ';'.join(x)
-        agg_dict['shape_x'] = lambda x: ';'.join(x)
-        agg_dict['summary_x'] = lambda x: ';'.join(x)  # 统计量先按字符串聚合，后续再拆提取
-        if self.mode_config.dump_mode == Const.ALL:
-            agg_dict['data_name_x'] = lambda x: ';'.join(x)  # 真实数据模式还需要对tensor名进行聚合拼接
+        if self.mode_config.backend == Const.FSDP:
+            na_rows = matched_df[matched_df['op_name_y'].isna()]
+            agg_rows = matched_df[matched_df['op_name_y'].notna()]
+            na_rows.fillna(CompareConst.N_A, inplace=True)
+            agg_rows.fillna(CompareConst.N_A, inplace=True)
+            # 初始化聚合字典，默认所有列用 'first'  聚合
+            agg_dict = {col: 'first' for col in agg_rows.columns}
+            # 对 op_name_x 使用自定义聚合方法
+            agg_dict['op_name_x'] = lambda x: ';\n'.join(x)
+            agg_dict['dtype_x'] = lambda x: ';'.join(x)
+            agg_dict['shape_x'] = lambda x: ';'.join(x)
+            agg_dict['summary_x'] = lambda x: ';'.join(x)  # 统计量先按字符串聚合，后续再拆提取
+
+            if self.mode_config.dump_mode == Const.ALL:
+                agg_dict['data_name_x'] = lambda x: ';'.join(x)  # 真实数据模式还需要对tensor名进行聚合拼接
+            agg_result = agg_rows.groupby('op_name_y', as_index=False, sort=False).agg(agg_dict)
+        elif self.mode_config.backend == Const.MEGATRON:
+            na_rows = matched_df[matched_df['op_name_x'].isna()]
+            agg_rows = matched_df[matched_df['op_name_x'].notna()]
+            na_rows.fillna(CompareConst.N_A, inplace=True)
+            agg_rows.fillna(CompareConst.N_A, inplace=True)
+            # 初始化聚合字典，默认所有列用 'first'  聚合
+            agg_dict = {col: 'first' for col in agg_rows.columns}
+            # 对 op_name_x 使用自定义聚合方法
+            agg_dict['op_name_y'] = lambda x: ';\n'.join(x)
+            agg_dict['dtype_y'] = lambda x: ';'.join(x)
+            agg_dict['shape_y'] = lambda x: ';'.join(x)
+            agg_dict['summary_y'] = lambda x: ';'.join(x)  # 统计量先按字符串聚合，后续再拆提取
+
+            if self.mode_config.dump_mode == Const.ALL:
+                agg_dict['data_name_y'] = lambda x: ';'.join(x)  # 真实数据模式还需要对tensor名进行聚合拼接
         # 根据推理测op_name聚合，聚合连接符为；
-        agg_result = agg_rows.groupby('op_name_y', as_index=False, sort=False).agg(agg_dict)
+            agg_result = agg_rows.groupby('op_name_x', as_index=False, sort=False).agg(agg_dict)
 
         match_result = pd.concat([agg_result, na_rows])
 
         # 3. 调整op顺序
-        match_result['npu_pos'] = match_result['op_name_x'].str.split(';', n=1).str[0].map(npu_rank)
-        match_result['bench_pos'] = match_result['op_name_y'].map(bench_rank)
+        if self.mode_config.backend == Const.FSDP:
+            match_result['npu_pos'] = match_result['op_name_x'].str.split(';', n=1).str[0].map(npu_rank)
+            match_result['bench_pos'] = match_result['op_name_y'].map(bench_rank)
+        elif self.mode_config.backend == Const.MEGATRON:
+            match_result['bench_pos'] = match_result['op_name_y'].str.split(';', n=1).str[0].map(bench_rank)
+            match_result['npu_pos'] = match_result['op_name_x'].map(npu_rank)
+
         match_result = self.dual_monotonic_sort(match_result, 'npu_pos', 'bench_pos')
         match_result.drop(columns=['npu_pos', 'bench_pos'], inplace=True)
 
@@ -1396,7 +1428,7 @@ class CalcStatsDiff:
         mask_unequal = ~mask_equal
 
         # ---------------------- npu, bench统计量相等 ----------------------
-        result_df.loc[mask_equal, [diff_name, rel_err_name]] = '0'
+        result_df.loc[mask_equal, [diff_name, rel_err_name]] = 0
 
         # ---------------------- npu, bench统计量不相等 ----------------------
         npu_type = self.classify(npu_val)
@@ -1414,14 +1446,8 @@ class CalcStatsDiff:
                 else:
                     diff, rel = rule
 
-                if isinstance(diff, str):
-                    result_df.loc[mask, diff_name] = diff
-                else:
-                    result_df.loc[mask, diff_name] = diff.astype(str)
-                if isinstance(rel, str):
-                    result_df.loc[mask, rel_err_name] = rel
-                else:
-                    result_df.loc[mask, rel_err_name] = rel.astype(str)
+                result_df.loc[mask, diff_name] = diff
+                result_df.loc[mask, rel_err_name] = rel
 
     def calc_accuracy(self, result_df, header):
         # bench name N/A represents no bench data, err_msg adds "No bench data matched."

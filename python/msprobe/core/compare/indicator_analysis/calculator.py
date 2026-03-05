@@ -29,10 +29,11 @@ from msprobe.core.compare.indicator_analysis.api_data import ApiData
 class ApiIndicatorCalculator:
     RANK_SUFFIX_PATTERN = re.compile(r'_rank\d+$')
 
-    def __init__(self, mode, parallel_merge=False, consistent_check=False):
+    def __init__(self, mode, backend, parallel_merge=False, consistent_check=False):
         self.mode = mode
         self.parallel_merge = parallel_merge
         self.consistent_check = consistent_check
+        self.backend = backend
         self.all_ignore_set = {'empty', 'empty_like', 'numpy', 'to', '__setitem__', 'empty_with_format',
                                'new_empty_strided', 'new_empty', 'empty_strided'}
         self.input_ignore_set = {'_reduce_scatter_base', '_all_gather_base', 'all_to_all_single', 'batch_isend_irecv'}
@@ -90,7 +91,7 @@ class ApiIndicatorCalculator:
 
         ignore_info = self.get_api_ignore_info(api_data)
 
-        self.execute_all(api_data, ignore_info)
+        self.execute_all(api_data, ignore_info, self.backend)
 
         return self.get_api_indicator_and_msg(api_data)
 
@@ -101,10 +102,10 @@ class ApiIndicatorCalculator:
             raise TypeError(msg)
         self.algorithms.append(algorithm)
 
-    def execute_all(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def execute_all(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         for algorithm in self.algorithms:
             try:
-                algorithm.run(api_data, ignore_info)
+                algorithm.run(api_data, ignore_info, backend)
             except Exception as e:
                 msg = f'Run algorithm failed.'
                 logger.error(msg)
@@ -127,7 +128,7 @@ class ApiIndicatorCalculator:
                 self.add_algorithm(checker())
 
 
-def calculate_excel_result_df(result_df, mode, consistent_check=False, chunk_size=1000):
+def calculate_excel_result_df(result_df, mode, backend, consistent_check=False, chunk_size=1000):
     """
     仅适用于excel比对场景，得到表格每行数据的精度比对指标（pass/warning/error）
 
@@ -138,7 +139,7 @@ def calculate_excel_result_df(result_df, mode, consistent_check=False, chunk_siz
         chunk_size: 分块赋值参数，默认1000，把 result 分成小块，逐块赋值给 result_df，这样每次只占用小块内存，避免内存峰值过高
     """
     result_dict = divide_result_df(result_df)
-    calculator = ApiIndicatorCalculator(mode, consistent_check=consistent_check)
+    calculator = ApiIndicatorCalculator(mode, backend, consistent_check=consistent_check)
     calculated_result_lists = []
     for data_lists in result_dict.values():
         calculator.calculate(data_lists)

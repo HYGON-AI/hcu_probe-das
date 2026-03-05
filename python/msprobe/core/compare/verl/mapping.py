@@ -21,3 +21,15 @@ FSDP_MODULE_MAP = {
     "gate_proj": "gate_up_proj",
     "up_proj": "gate_up_proj"  # 这两个模块映射到 gate_up_proj
 }
+
+MEGATRON_MODULE_MAP = {
+    "word_embeddings": "embed_tokens",
+    "self_attention": "self_attn",
+    "linear_qkv": "qkv_proj",
+    "q_layernorm": "q_norm",
+    "k_layernorm": "k_norm",
+    "core_attention": "attn",
+    "linear_proj": "o_proj",
+    "linear_fc1": "gate_up_proj",
+    "linear_fc2": "down_proj"
+}
