@@ -247,6 +247,7 @@
              output = self.rollout.generate_sequences(prompts=prompts)
 +            if self.debugger:
 +                self.debugger.stop()
++                self.debugger.service._reset_status()
  
          if self._is_actor:
              loop.run_until_complete(self.trainer_mode())
