@@ -14,9 +14,9 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
-from msprobe.core.common.exceptions import DistributedNotInitializedError
+import torch
+
 from msprobe.core.common.log import BaseLogger
-from msprobe.pytorch.common.utils import get_rank_if_initialized
 
 
 class PyTorchLogger(BaseLogger):
@@ -24,9 +24,9 @@ class PyTorchLogger(BaseLogger):
         super().__init__()
 
     def get_rank(self):
-        try:
-            current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
+        if torch.distributed.is_initialized():
+            current_rank = torch.distributed.get_rank()
+        else:
             current_rank = None
         return current_rank
 
