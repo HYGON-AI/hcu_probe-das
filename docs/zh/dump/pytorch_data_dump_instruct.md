@@ -249,6 +249,67 @@ debugger.stop()
 debugger.step()
 ```
 
+#### seed_all基础使用示例
+
+```Python
+import torch
+from msprobe.pytorch import seed_all
+
+# seed_all仅固定随机种子和开启确定性计算。
+seed_all(seed=1234, mode=True)
+num1 = torch.mean(torch.randn(2,2))
+print(num1)  # tensor(-0.0866)
+num2 = torch.mean(torch.randn(2,2))
+print(num2)  # tensor(0.2038)
+```
+上述脚本重复执行多次，每次执行结果num1和num2是能对应的，但该脚本内执行两次相同的随机性API，生成的结果是不一样的，即num1不等于num2。
+
+```Python
+import torch
+from msprobe.pytorch import seed_all
+
+# seed_all固定随机种子和开启确定性计算，并开启随机数固定增强功能。
+seed_all(seed=1234, mode=True, is_enhanced=True)
+num1 = torch.mean(torch.randn(2,2))
+print(num1)  # tensor(-0.0866)
+num2 = torch.mean(torch.randn(2,2))
+print(num2)  # tensor(-0.0866)
+```
+上述脚本中执行两次相同的随机性API，生成的结果能完全相同，即使该脚本多次重复执行也能确保两个值完全相同。
+
+#### random_save基础使用示例
+
+```Python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+# 导入工具寻找随机性API的接口，网络中的随机性API会被保存在output路径下。
+from msprobe.pytorch import random_save
+random_save(output_path="./output")
+
+
+# 定义网络
+class ModuleOP(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.linear = nn.Linear(in_features=8, out_features=4)
+
+    def forward(self, x):
+        x1 = self.linear(x)
+        r1 = F.relu(x1)
+        return r1
+
+
+if __name__ == "__main__":
+    model = ModuleOP()
+
+    x = torch.randn(10, 8)
+    out = model(x)
+    loss = out.sum()
+    loss.backward()
+```
+
 ### 输出说明
 
 完成精度数据采集后，将打印dump数据文件生成路径dump_path，如下所示：
@@ -629,7 +690,7 @@ debugger = PrecisionDebugger(config_path=None, task=None, dump_path=None, level=
 
 **调用示例**
 
-请参见[使用示例](#使用示例)。
+请参见[dump采集基础示例](#dump采集基础示例)。
 
 #### start
 
@@ -667,7 +728,7 @@ debugger.start(model=None, token_range=None, rank_id=None)
 
 **调用示例**
 
-请参见[使用示例](#使用示例)。
+请参见[dump采集基础示例](#dump采集基础示例)。
 
 #### stop
 
@@ -694,7 +755,7 @@ debugger.stop()
 
 **调用示例**
 
-请参见[使用示例](#使用示例)。
+请参见[dump采集基础示例](#dump采集基础示例)。
 
 #### step
 
@@ -715,7 +776,7 @@ debugger.step()
 
 **调用示例**
 
-请参见[使用示例](#使用示例)。
+请参见[dump采集基础示例](#dump采集基础示例)。
 
 #### module_dump
 
@@ -874,12 +935,12 @@ debugger.restore_custom_api(module, api_name)
 
 **功能说明**
 
-对于网络中随机性的固定和确定性计算，msProbe工具提供了seed_all接口用于固定网络中的随机性和开启确定性计算。
+用于控制模型网络中的随机性，支持固定随机种子以及启用确定性计算，以确保实验的可复现性。
 
 **函数原型**
 
 ```python
-seed_all(seed=1234, mode=False, rm_dropout=False)
+seed_all(seed=1234, mode=False, rm_dropout=False, is_enhanced=False)
 ```
 
 **参数说明**
@@ -889,6 +950,7 @@ seed_all(seed=1234, mode=False, rm_dropout=False)
 - rm_dropout：控制dropout失效的开关。可配置True或False，默认为False，非必选。参数示例：rm_dropout=True。
   该参数设置为True后，工具会自动将`torch.nn.functional.dropout`、`torch.nn.functional.dropout2d`、`torch.nn.functional.dropout3d`、`torch.nn.Dropout`、`torch.nn.Dropout2d`、`torch.nn.Dropout3d`
   的接口参数p置为0，以避免因随机dropout造成的网络随机性。注意：通过rm_dropout控制dropout失效需要在初始化dropout实例前调用才能生效。
+- is_enhanced：增强随机性固定的开关。可配置True或False，默认为False，非必选。参数示例：is_enhanced=True。开启该功能后，将进一步固定PyTorch、NumPy以及Python内置随机数生成器的状态。在同一个进程或不同进程中多次执行相同的随机性API，每次生成的随机值都完全相同。这有助于在更复杂的随机场景下实现严格的可复现性。
 
 **返回值说明**
 
@@ -896,7 +958,7 @@ seed_all(seed=1234, mode=False, rm_dropout=False)
 
 **调用示例**
 
-请参见[使用示例](#使用示例)。
+请参见[dump采集基础示例](#dump采集基础示例)和[seed_all基础使用示例](#seed_all基础使用示例)。
 
 **其他说明**
 
@@ -941,3 +1003,40 @@ train_loader = torch.utils.data.DataLoader(
     num_workers=num_workers
 )
 ```
+
+### random_save
+
+**功能说明**
+
+寻找模型脚本中所有随机性API的调用位置，并将结果输出到csv表格，帮助用户快速定位模型中的随机数生成点。
+
+**函数原型**
+
+```python
+random_save(output_path="./output")
+```
+
+**参数说明**
+
+- output_path：指定随机性API的保存路径。可选参数，str类型，默认值为"./output"，即默认保存在当前路径的output目录下。参数示例：output_path="./output"。
+
+**返回值说明**
+
+无
+
+**调用示例**
+
+请参见[random_save基础使用示例](#random_save基础使用示例)。
+
+**输出说明**
+
+模型脚本执行完成后，在指定的output_path路径下生成csv文件，若执行的进程能获取到rank信息，则结果文件名称为`random_rank{id}_{timestamp}.csv`，否则为`random_proc{pid}_{timestamp}.csv`。
+
+csv结果文件内容介绍如下：
+
+![random_save](../figures/random_save.png)
+
+| 参数       | 说明              |
+|----------|-----------------|
+| api_name | 模型脚本中随机性API的名称。 |
+| stack    | 随机性API对应的堆栈信息。  |

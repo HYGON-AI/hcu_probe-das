@@ -14,10 +14,9 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
-import os
-import random
-import stat
 import inspect
+import os
+import stat
 from functools import wraps
 
 import numpy as np
@@ -25,11 +24,15 @@ import torch
 import torch.distributed as dist
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
-                                            check_file_or_directory_path, check_path_before_create, FileOpen)
+from msprobe.core.common.file_utils import (
+    FileCheckConst,
+    change_mode,
+    check_file_or_directory_path,
+    check_path_before_create
+)
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_seed_all, is_save_variable_valid
-from packaging import version
+from msprobe.pytorch.reproducibility.random_reproducibility import set_reproducibility
 
 try:
     import torch_npu
@@ -164,31 +167,11 @@ def remove_dropout():
         F.dropout3d = function_dropout3d
 
 
-def seed_all(seed=1234, mode=False, rm_dropout=False):
+def seed_all(seed=1234, mode=False, rm_dropout=False, is_enhanced=False):
     check_seed_all(seed, mode, rm_dropout)
-    try:
-        random.seed(seed)
-        os.environ['PYTHONHASHSEED'] = str(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        cuda_version = torch.version.cuda
-        if cuda_version is not None and version.parse(cuda_version) >= version.parse("10.2"):
-            os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-        os.environ['HCCL_DETERMINISTIC'] = str(mode)
-        torch.use_deterministic_algorithms(mode)
-        if is_gpu:
-            torch.cuda.manual_seed_all(seed)
-            torch.cuda.manual_seed(seed)
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.enable = False
-            torch.backends.cudnn.benchmark = False
-        else:
-            torch_npu.npu.manual_seed_all(seed)
-            torch_npu.npu.manual_seed(seed)
-        if rm_dropout:
-            remove_dropout()
-    except Exception as e:
-        logger.error(f"There is an unexpected error while determinating randomness. {e}")
+    set_reproducibility(seed=seed, is_deterministic=mode, is_enhanced=is_enhanced)
+    if rm_dropout:
+        remove_dropout()
 
 
 class Const:

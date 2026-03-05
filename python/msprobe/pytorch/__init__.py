@@ -17,6 +17,7 @@
 import torch
 
 from msprobe.pytorch.dump.debugger.precision_debugger import PrecisionDebugger, module_dump, module_dump_end
+from msprobe.pytorch.reproducibility.random_reproducibility import random_save
 from .common.utils import seed_all
 from .torchair_dump import set_fx_dump_config, set_ge_dump_config
 
