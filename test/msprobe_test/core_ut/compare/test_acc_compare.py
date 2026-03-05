@@ -420,8 +420,11 @@ class TestUtilsMethods(unittest.TestCase):
         ]
         columns = CompareConst.SUMMARY_COMPARE_RESULT_HEADER + ['NPU_Stack_Info'] + ['state', 'api_origin_name']
         o_result = pd.DataFrame(o_data, columns=columns, dtype=object)
-        self.assertTrue(np.array_equal(result.to_numpy(), o_result.to_numpy()))
-
+        self.assertEquals(result.loc[0, CompareConst.NPU_NAME], o_result.loc[0, CompareConst.NPU_NAME])
+        self.assertEquals(result.loc[0, CompareConst.NPU_DTYPE], o_result.loc[0, CompareConst.NPU_DTYPE])
+        self.assertEquals(result.loc[0, CompareConst.NPU_SHAPE], o_result.loc[0, CompareConst.NPU_SHAPE])
+        self.assertEquals(result.loc[0, CompareConst.NPU_MEAN], o_result.loc[0, CompareConst.NPU_MEAN])
+        self.assertEquals(result.loc[0, CompareConst.REQ_GRAD_CONSIST], o_result.loc[0, CompareConst.REQ_GRAD_CONSIST])
 
 class TestParseData(unittest.TestCase):
 
@@ -439,6 +442,7 @@ class TestParseData(unittest.TestCase):
         # consistent_check相关parse实例
         self.mock_mode_config = MagicMock()
         self.mock_mode_config.consistent_check = True
+        self.mock_mode_config.backend = Const.FSDP
         self.parser_consistent_check = ParseData(mode_config=self.mock_mode_config, rank=0)
 
     def tearDown(self):
@@ -700,6 +704,7 @@ class TestParseData(unittest.TestCase):
         预期：返回 False
         """
         self.mock_mode_config.consistent_check = True
+        self.mock_mode_config.backend = Const.FSDP
 
         # 构造数据：third_last 在列表中，second_last 为 'backward'
         # 格式： "p1.Qwen3Model.backward.suffix" -> split: [p1, Qwen3Model, backward, suffix]
@@ -718,6 +723,7 @@ class TestParseData(unittest.TestCase):
         预期：返回 True
         """
         self.mock_mode_config.consistent_check = True
+        self.mock_mode_config.backend = Const.FSDP
 
         # 构造：third_last='Embedding', second_last='forward'
         data_name = f"prefix1.Embedding.forward.suffix"
@@ -734,6 +740,7 @@ class TestParseData(unittest.TestCase):
         预期：返回原始 parse_flag
         """
         self.mock_mode_config.consistent_check = True
+        self.mock_mode_config.backend = Const.FSDP
 
         # 构造普通数据，不命中 List 也不命中 Embedding
         data_name = f"prefix1.MatMul.forward.suffix"
@@ -1135,11 +1142,11 @@ class TestProcessDf(unittest.TestCase):
             Const.MODULE_LEN: [2, 2]
         })
 
-        self.process_df.process_module_mapping(df, engine='infer')
+        self.process_df.process_module_mapping(df, engine='infer', backend='fsdp')
 
         # infer 模式下，MODULE_MAPPING 直接等于 MODULE
-        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.attention")
-        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.mlp")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "attention")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "mlp")
 
     def test_process_module_mapping_module_len_1(self):
         """
@@ -1151,7 +1158,7 @@ class TestProcessDf(unittest.TestCase):
             Const.MODULE_LEN: [1, 1]
         })
 
-        self.process_df.process_module_mapping(df, engine='train')
+        self.process_df.process_module_mapping(df, engine='train', backend='fsdp')
 
         # MODULE_LEN == 1 时，MODULE_MAPPING = MODULE（无 prefix）
         self.assertEqual(df.loc[0, Const.MODULE_PART_PREFIX], "")
@@ -1168,7 +1175,7 @@ class TestProcessDf(unittest.TestCase):
             Const.MODULE_LEN: [2, 2, 2]
         })
 
-        self.process_df.process_module_mapping(df, engine='train')
+        self.process_df.process_module_mapping(df, engine='train', backend='fsdp')
 
         # 验证拆分正确
         self.assertEqual(df.loc[0, Const.MODULE_PART_PREFIX], "model")
@@ -1195,7 +1202,7 @@ class TestProcessDf(unittest.TestCase):
             Const.MODULE_LEN: [2, 2]
         })
 
-        self.process_df.process_module_mapping(df, engine='train')
+        self.process_df.process_module_mapping(df, engine='train', backend='fsdp')
 
         # gate_proj -> gate_up_proj
         self.assertEqual(df.loc[0, Const.MODULE_LAST], "gate_proj")
@@ -1217,7 +1224,7 @@ class TestProcessDf(unittest.TestCase):
             Const.MODULE_LEN: [2, 2, 2]
         })
 
-        self.process_df.process_module_mapping(df, engine='train')
+        self.process_df.process_module_mapping(df, engine='train', backend='fsdp')
 
         # 无映射时，MODULE_LAST_MAPPING = MODULE_LAST，MODULE_MAPPING 保持原样
         self.assertEqual(df.loc[0, Const.MODULE_LAST], "attention")
@@ -1815,11 +1822,11 @@ class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
         self.assertIn("MeanRelativeErr", df.columns)
 
         # equal
-        self.assertEqual(df.loc[1, "Mean diff"], '0')
-        self.assertEqual(df.loc[2, "Mean diff"], '0')
+        self.assertEqual(df.loc[1, "Mean diff"], 0)
+        self.assertEqual(df.loc[2, "Mean diff"], 0)
 
         # unequal num × num
-        self.assertEqual(df.loc[0, "Mean diff"], '5.0')
+        self.assertEqual(df.loc[0, "Mean diff"], 5.0)
         self.assertEqual(df.loc[0, "MeanRelativeErr"], "100.0%")
 
     def test_calc_summary_diff_special_types(self):

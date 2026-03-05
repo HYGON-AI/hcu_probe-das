@@ -19,18 +19,19 @@ from abc import ABC, abstractmethod
 from msprobe.core.compare.indicator_analysis.api_data import ApiData
 from msprobe.core.compare.indicator_analysis.utils import is_inf_or_nan, str2float, ResultLevel, IgnoreInfo, \
     get_data_list_by_ignore_info
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, Const
 
 
 class BaseAlgorithm(ABC):
     """比对算法基类"""
 
     @abstractmethod
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         """
         算法执行接口
         :param api_data: 结构化的 API 数据
         :param ignore_info: 当前 API 数据需要忽略的指标信息
+        :param backend:当前模型训练后端标识（veRL训推一致需要）
         """
         pass
 
@@ -46,7 +47,7 @@ class InfNanErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: There is nan/inf/-inf in the maximum or minimum value of NPU.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -80,7 +81,7 @@ class RelativeErrChecker(BaseAlgorithm):
         self.err_msg = (f'{self.result_level.value}: The {CompareConst.NORM_RELATIVE_ERR} of output '
                         f'is greater than {self.out_threshold}.')
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         if ignore_info in [IgnoreInfo.ALL_IGNORE, IgnoreInfo.INPUT_IGNORE]:
             return
 
@@ -108,7 +109,7 @@ class OneThousandthErrChecker(BaseAlgorithm):
         self.err_msg = (f'{self.result_level.value}: The input/parameters of '
                         f'One Thousandth Err Ratio > 0.9 while the output < 0.6.')
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         if ignore_info in [IgnoreInfo.ALL_IGNORE, IgnoreInfo.INPUT_IGNORE]:
             return
         if not api_data.output_data:
@@ -132,7 +133,7 @@ class RequiresGradErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The Required_Grad of NPU and Bench are inconsistent'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -164,7 +165,7 @@ class ParametersErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The scalar parameters of NPU and Bench are inconsistent.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         if ignore_info in [IgnoreInfo.ALL_IGNORE, IgnoreInfo.INPUT_IGNORE]:
             return
 
@@ -206,7 +207,7 @@ class CRC32ErrChecker(BaseAlgorithm):
         self.warn_level = ResultLevel.WARNING
         self.warn_msg = f'{self.warn_level.value}: The parameter of NPU does not match the bench.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -235,7 +236,7 @@ class DTypeErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The dtype of NPU and Bench are inconsistent.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -272,7 +273,7 @@ class ShapeErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The shape of NPU and Bench are inconsistent.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -303,7 +304,7 @@ class VerlShapeErrChecker(BaseAlgorithm):
         self.result_level = ResultLevel.ERROR
         self.err_msg = f'{self.result_level.value}: The shape of NPU and Bench are inconsistent.'
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         data_lists = get_data_list_by_ignore_info(api_data, ignore_info)
         if not data_lists:
             return
@@ -315,8 +316,9 @@ class VerlShapeErrChecker(BaseAlgorithm):
                 continue
 
             # 跳过聚合op比较
-            if 'qkv' in bench_name or 'gate_up' in bench_name:
-                continue
+            if backend == Const.FSDP:
+                if 'qkv' in bench_name or 'gate_up' in bench_name:
+                    continue
 
             npu_shape = api_data.get_data_by_header(CompareConst.NPU_SHAPE, data_list)
             bench_shape = api_data.get_data_by_header(CompareConst.BENCH_SHAPE, data_list)
@@ -326,6 +328,15 @@ class VerlShapeErrChecker(BaseAlgorithm):
 
             npu_shape = self.squeeze_shape_str(npu_shape)
             bench_shape = self.squeeze_shape_str(bench_shape)
+
+            if backend == Const.MEGATRON:
+                if len(npu_shape.strip("[]").split(",")) == 3 and (len(npu_shape.strip("[]").split(",")) != len(bench_shape.strip("[]").split(","))):
+                    parts = npu_shape.strip("[]").split(",")
+                    dim0 = int(parts[0].strip())
+                    dim1 = int(parts[1].strip())
+                    dim2 = int(parts[2].strip())
+                    # 合并后两维
+                    npu_shape = f"[{dim0},{dim1 * dim2}]"
 
             if npu_shape != bench_shape:
                 api_data.set_result(data_list, self.result_level)
@@ -355,7 +366,7 @@ class RelativeWarnChecker(BaseAlgorithm):
         self.err_msg = (f'{self.result_level.value}: The norm relative error of output '
                         f'is {self.threshold} times that of input.')
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         if ignore_info in [IgnoreInfo.ALL_IGNORE, IgnoreInfo.INPUT_IGNORE]:
             return
 
@@ -393,7 +404,7 @@ class CosineWarnChecker(BaseAlgorithm):
         self.err_msg = (f'{self.result_level.value}: The input/parameters of Cosine > {self.input_threshold}, '
                         f'and input/parameters - output > {self.output_threshold}')
 
-    def run(self, api_data: ApiData, ignore_info: IgnoreInfo):
+    def run(self, api_data: ApiData, ignore_info: IgnoreInfo, backend: str):
         if ignore_info in [IgnoreInfo.ALL_IGNORE, IgnoreInfo.INPUT_IGNORE]:
             return
 

@@ -766,11 +766,20 @@ class CompareConst:
     DATA_SHAPE = 'Data Shape'
     TENSOR_PATH = "tensor_path"
 
-    VERL_FSDP_STOP_PARSE_LIST = ['Qwen2Model', 'Qwen3Model', 'Qwen3MoeModel']
-    BACKEND_CAT_RULES = {
-        'fsdp': lambda op_name: '.q_proj.' in op_name or '.gate_proj.' in op_name
+    VERL_STOP_PARSE_RULES = {
+        'fsdp': ['Qwen2Model', 'Qwen3Model', 'Qwen3MoeModel'],
+        'megatron': ['GPTModel']
     }
 
+    VERL_BEGIN_PARSE_RULES = {
+        'fsdp': 'Embedding',
+        'megatron': 'VocabParallelEmbedding'
+    }
+
+    BACKEND_CAT_RULES = {
+        'fsdp': lambda op_name: '.q_proj.' in op_name or '.gate_proj.' in op_name,
+        'megatron': lambda op_name: '.gate_up_proj.' in op_name
+    }
 
 class FileCheckConst:
     """
