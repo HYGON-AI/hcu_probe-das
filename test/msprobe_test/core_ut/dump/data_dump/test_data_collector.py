@@ -445,3 +445,155 @@ class TestBackwardDataCollector(unittest.TestCase):
         mock_data = {"key": "value"}
         self.data_collector.data_processor.analyze_backward_output.return_value = mock_data
         self.data_collector.backward_output_data_collect("test", "module", 123, "data")
+
+
+class TestShouldCollectByRiskLevel(unittest.TestCase):
+    """测试 _should_collect_by_risk_level 方法"""
+    
+    def setUp(self):
+        mock_json_data = {
+            "dump_path": "./test_risk_dump",
+        }
+        with patch("msprobe.pytorch.dump.pt_config.load_json", return_value=mock_json_data):
+            common_config, task_config = parse_json_config("./config.json", Const.STATISTICS)
+        config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./test_risk_dump", "L1")
+        self.data_collector = DataCollector(config)
+        self.data_collector.config.framework = Const.PT_FRAMEWORK
+
+    def test_not_l1_level(self):
+        """测试非L1级别时，不进行风险等级判断，返回True"""
+        self.data_collector.config.level = "L0"
+        result = self.data_collector._should_collect_by_risk_level("Functional.conv2d.0.forward")
+        self.assertTrue(result)
+
+    def test_no_risk_level_config(self):
+        """测试未配置risk_level时，返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        if hasattr(self.data_collector.config, 'risk_level'):
+            delattr(self.data_collector.config, 'risk_level')
+        result = self.data_collector._should_collect_by_risk_level("Functional.conv2d.0.forward")
+        self.assertTrue(result)
+
+    def test_risk_level_all(self):
+        """测试risk_level为ALL时，返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_ALL
+        result = self.data_collector._should_collect_by_risk_level("Functional.conv2d.0.forward")
+        self.assertTrue(result)
+
+    def test_risk_level_core_with_core_api(self):
+        """测试CORE级别，高风险API返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        # matmul 是高风险API
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Functional.matmul.0.forward")
+            self.assertTrue(result)
+            mock_get.assert_called_once_with("matmul")
+
+    def test_risk_level_core_with_low_risk_api(self):
+        """测试CORE级别，低风险API返回False"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        # reshape 是低风险API
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_LOW
+            result = self.data_collector._should_collect_by_risk_level("Tensor.reshape.0.forward")
+            self.assertFalse(result)
+            mock_get.assert_called_once_with("reshape")
+
+    def test_risk_level_focus_with_core_api(self):
+        """测试FOCUS级别，高风险API返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_FOCUS
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Functional.matmul.0.forward")
+            self.assertTrue(result)
+
+    def test_risk_level_focus_with_focus_api(self):
+        """测试FOCUS级别，中等风险API返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_FOCUS
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_FOCUS
+            result = self.data_collector._should_collect_by_risk_level("Functional.unknown_api.0.forward")
+            self.assertTrue(result)
+
+    def test_risk_level_focus_with_low_risk_api(self):
+        """测试FOCUS级别，低风险API返回False"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_FOCUS
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_LOW
+            result = self.data_collector._should_collect_by_risk_level("Tensor.reshape.0.forward")
+            self.assertFalse(result)
+
+    def test_backward_direction(self):
+        """测试backward方向的API"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Functional.matmul.0.backward")
+            self.assertTrue(result)
+            mock_get.assert_called_once_with("matmul")
+
+    def test_api_name_with_dots(self):
+        """测试API名称中包含点的情况，如 linalg.matmul"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Functional.linalg.matmul.0.forward")
+            self.assertTrue(result)
+            # 验证提取的api_name是 linalg.matmul（包含点）
+            mock_get.assert_called_once_with("linalg.matmul")
+
+    def test_api_name_extraction_simple(self):
+        """测试简单API名称的提取：Functional.conv2d.0.forward -> conv2d"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Functional.conv2d.0.forward")
+            self.assertTrue(result)
+            mock_get.assert_called_once_with("conv2d")
+
+    def test_api_name_extraction_tensor_prefix(self):
+        """测试Tensor前缀的API名称提取：Tensor.matmul.1.forward -> matmul"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Tensor.matmul.1.forward")
+            self.assertTrue(result)
+            mock_get.assert_called_once_with("matmul")
+
+    def test_api_name_extraction_distributed_prefix(self):
+        """测试Distributed前缀的API名称提取：Distributed.all_reduce.0.forward -> all_reduce"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_CORE
+            result = self.data_collector._should_collect_by_risk_level("Distributed.all_reduce.0.forward")
+            self.assertTrue(result)
+            mock_get.assert_called_once_with("all_reduce")
+
+    def test_non_pytorch_framework(self):
+        """测试非PyTorch框架时，返回True"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        self.data_collector.config.framework = "mindspore"
+        result = self.data_collector._should_collect_by_risk_level("Functional.conv2d.0.forward")
+        self.assertTrue(result)
+
+    def test_risk_level_core_with_focus_api(self):
+        """测试CORE级别，中等风险API返回False"""
+        self.data_collector.config.level = Const.LEVEL_L1
+        self.data_collector.config.risk_level = Const.RISK_LEVEL_CORE
+        with patch('msprobe.pytorch.dump.api_dump.api_risk_level.get_api_risk_level') as mock_get:
+            mock_get.return_value = Const.RISK_LEVEL_FOCUS
+            result = self.data_collector._should_collect_by_risk_level("Functional.unknown_api.0.forward")
+            self.assertFalse(result)
