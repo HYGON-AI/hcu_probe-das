@@ -93,6 +93,8 @@ if __name__ == "__main__":
 
 更多接口介绍请参见[接口介绍](#接口介绍)章节。
 
+`PrecisionDebugger`提供dump动态启停能力，通过配置文件中的`dump_enable`字段进行控制：在同一训练/推理任务中可按需动态开启或关闭dump。详细说明请参见[config.json介绍](./config_json_introduct.md)中的`dump_enable`参数说明。
+
 ### 使用示例
 
 #### dump采集基础示例

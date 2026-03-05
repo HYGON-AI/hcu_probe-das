@@ -77,6 +77,24 @@
 }
 ```
 
+### dump_enable动态控制示例
+
+```json
+{
+    "task": "statistics",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "dump_enable": false,
+    "statistics": {
+        "summary_mode": "statistics"
+    }
+}
+```
+
+> 说明：`dump_enable`仅在需要动态开关dump时配置。运行中可将`dump_enable`从`false`改为`true`（或反向修改）实现动态开关，json中其他字段修改也能生效。
+
 ## MindSpore静态图场景
 
 ### task配置为statistics

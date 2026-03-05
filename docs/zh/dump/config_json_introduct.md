@@ -21,6 +21,7 @@
 | step              | 可选     | 指定采集某个step的数据，list[Union[int, str]]类型。默认未配置，表示采集所有step数据。采集特定step时，须指定为训练脚本中存在的step，可逐个配置，也可以指定范围。<br/>配置示例："step": [0, 1 , 2, "4-6"]。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | level             | 可选 | dump级别，str类型，根据不同级别采集不同数据。可选参数：<br/>&#8226; "L0"：dump模块级精度数据，使用背景详细介绍请参见[模块级精度数据dump说明](#模块级精度数据dump说明)。<br/>&#8226; "L1"：dump API级精度数据，默认值，仅PyTorch、MSAdapter以及MindSpore动态图场景支持。<br/>&#8226; "L2"：dump kernel级精度数据，PyTorch场景详细介绍见[PyTorch场景kernel精度数据采集](./pytorch_kernel_dump_instruct.md)；MindSpore动态图场景详细介绍请参见[MindSpore动态图场景kernel精度数据采集](./mindspore_kernel_dump_instruct.md)；MindSpore静态图场景详细介绍请参见《MindSpore场景精度数据采集》中的 ["静态图场景精度数据采集功能介绍"](./mindspore_data_dump_instruct.md#静态图场景精度数据采集功能介绍)小节。<br/>&#8226; "mix"：dump module模块级和API级精度数据，即"L0"+"L1"，仅PyTorch、MSAdapter以及MindSpore动态图场景支持。<br/>&#8226; "debug"：单点保存功能，详细介绍请参见[单点保存工具](./debugger_save_instruct.md)。<br/>配置示例："level": "L1"。 |
 | async_dump        | 可选     | 异步dump开关，bool类型，支持task为tensor或statistics模式，level支持L0、L1、mix、debug模式。可选参数true（开启）或false（关闭），默认为false。<br/>配置为true后开启异步dump，即采集的精度数据会在当前step训练结束后统一落盘，训练过程中工具不触发同步操作。<br/>由于使用该模式有**显存溢出**的风险，当task配置为tensor时，即真实数据的异步dump模式，必须配置[list](#task配置为tensor)参数，指定需要dump的tensor 。<br/>该模式下，summary_mode不支持md5值，也不支持复数类型tensor的统计量计算。                                                                                                                                                                                                                                                                                                |
+| dump_enable       | 可选     | dump功能开关，用于控制PrecisionDebugger dump的启动和停止，bool类型。可选参数：<br/>&#8226; true：允许执行dump采集。<br/>&#8226; false：关闭dump采集。<br/>该参数支持动态启停，即在dump任务运行过程中，可以随时启动和停止dump进程。<br/>默认未配置，表示不对dump数据进行控制，按照静态配置dump数据。<br/>更多配置说明请参见：[dump_enable参数配置说明](#dump_enable参数配置说明)。<br/>配置示例："dump_enable": true。 |
 | precision         | 可选     | 控制统计值计算所用精度，str类型，可选值["high", "low"]，默认值为"low"。选择"high"时，统计量使用float32进行计算，会增加device内存占用，精度更高，但在处理较大数值时可能会导致**显存溢出**；为"low"时使用与原始数据相同的类型进行计算，device内存占用较少。<br/>支持Pytorch、MindSpore动态图和MindSpore静态图O0/O1场景。<br/>支持task配置为statistics或tensor，level配置为L0，L1，mix，debug。                                                                                                                                                                                                                                                                                                                                                                                             |
 | risk_level        | 可选     | API风险级别过滤，str类型，仅PyTorch场景且level配置为L1时生效。可选参数：<br/>&#8226; "ALL"：dump所有API的数据，默认值。<br/>&#8226; "CORE"：仅dump核心（高风险，易出现精度问题）API的数据，包括融合计算、通信、精密计算等。<br/>&#8226; "FOCUS"：dump核心API和关注API的数据，排除低风险API（如reshape、transpose、permute、to、view等形状变换类API）。<br/>配置示例："risk_level": "CORE"。                                                                                                                                                                                                                                                                                                                                                                                             |
 
@@ -140,6 +141,15 @@ MindSpore动态图场景下，"level"须为"L2"; MindSpore静态图场景下，"
  - [MindSpore静态图场景](config_json_examples.md#task配置为exception_dump)
 
 ## 附录
+
+### dump_enable参数配置说明
+
+- `dump_enable`用于控制`PrecisionDebugger`的dump动态启停能力：取值为`true`时执行dump采集，取值为`false`时关闭dump采集。建议仅在需要动态控制采集时配置该参数，初始值设为`false`。
+- PyTorch场景下，当`PrecisionDebugger`初始化时配置了该字段，工具会在执行过程中自动读取`config_path`并刷新配置。
+- 推荐流程：常规训练/推理阶段保持关闭；需要定位问题时改为开启采集；完成定位后再关闭，以减少对业务流程的干扰。
+- `vllm`场景下，如果有`level`切换的需要，建议先设置`level`的初始值为`L0`，这样能保证后续的`level`可以任意切换；如果`level`的初始值不是`L0`可能会导致切换`level`失败。
+
+  配置示例："dump_enable": true。
 
 ### list参数配置说明
 
