@@ -80,11 +80,13 @@ class ModuleBackwardOutputs:
 
 
 class TensorStatInfo:
-    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None):
+    def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None, check_sum=None):
         self.max = max_val
         self.min = min_val
         self.mean = mean_val
         self.norm = norm_val
+        self.check_sum = check_sum
+
 
 
 class BaseDataProcessor:

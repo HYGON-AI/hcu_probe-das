@@ -83,17 +83,24 @@ class DataWriter:
                         idx = value
                     else:
                         return
-                    stat_values = stat_result[idx] if idx < len(stat_result) else [None] * 4
+                    stat_values = stat_result[idx] if idx < len(stat_result) else [None] * 5
+                    check_sum = stat_values[4] if len(stat_values) > 4 else None
+                    summary_mode = getattr(getattr(self, "config", None), "summary_mode", None)
 
                     new_entries = {
                         Const.TYPE: data["type"],
                         Const.DTYPE: data["dtype"],
                         Const.SHAPE: data["shape"],
-                        Const.MAX: stat_values[0],
-                        Const.MIN: stat_values[1],
-                        Const.MEAN: stat_values[2],
-                        Const.NORM: stat_values[3],
                     }
+                    if summary_mode == Const.XOR_CHECKSUM:
+                        new_entries[Const.CHECK_SUM] = check_sum
+                    else:
+                        new_entries.update({
+                            Const.MAX: stat_values[0],
+                            Const.MIN: stat_values[1],
+                            Const.MEAN: stat_values[2],
+                            Const.NORM: stat_values[3],
+                        })
                     if Const.MS_FRAMEWORK in data["type"]:
                         layout = data.get("layout", None)
                         if layout:
@@ -323,13 +330,19 @@ class DataWriter:
         """
         if not self.stat_stack_list:
             return []
-        result = [
-            [
-                x.item() if hasattr(x, "item") else x
-                for x in stat_values
-            ]
-            for stat_values in self.stat_stack_list
-        ]
+        def _resolve_stat_value(x, pos):
+            if isinstance(x, concurrent.futures.Future):
+                try:
+                    x = x.result()
+                except Exception as e:
+                    logger.warning(f"Failed to resolve async tensor stat value with error info: {e}.")
+                    return None
+            x = x.item() if hasattr(x, "item") else x
+            if pos == 4 and isinstance(x, int):
+                return f"0x{(x & ((1 << 64) - 1)):016x}"
+            return x
+
+        result = [[_resolve_stat_value(x, i) for i, x in enumerate(stat_values)] for stat_values in self.stat_stack_list]
         self.stat_stack_list = []
         return result
 

@@ -56,6 +56,26 @@ except ImportError:
     is_gpu = True
 
 
+def xor_checksum(a: torch.Tensor) -> torch.Tensor:
+    bytes_tensor = a.view(torch.uint8).flatten()
+    numel = bytes_tensor.numel()
+    if numel == 0:
+        return torch.zeros((), dtype=torch.int64, device=a.device)
+
+    if numel % 8 != 0:
+        bytes_tensor = torch.nn.functional.pad(bytes_tensor, (0, 8 - numel % 8), "constant", 0)
+    words = bytes_tensor.view(torch.int64)
+    numel = words.numel()
+
+    while numel > 1:
+        if numel % 2 != 0:
+            words = torch.nn.functional.pad(words, (0, 1), "constant", 0)
+        words = words.view(2, -1)
+        words = torch.bitwise_xor(words[0, :], words[1, :])
+        numel = words.numel()
+    return words[0]
+
+
 class TensorHandler:
     def __init__(self):
         self.has_dtensor = hasattr(dist, "tensor") and hasattr(dist.tensor, "DTensor")
@@ -358,6 +378,15 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_clone = data.detach()
         if not data_clone.numel() or not data_clone.data_ptr():
             return tensor_stat
+
+        if self.config.summary_mode == Const.XOR_CHECKSUM:
+            try:
+                checksum_data = data_clone if data_clone.is_contiguous() else data_clone.contiguous()
+                tensor_stat.check_sum = xor_checksum(checksum_data)
+            except Exception as e:
+                logger.warning(f"Failed to calculate tensor checksum with error info: {e}.")
+            return tensor_stat
+
         if torch.is_complex(data_clone):
             if async_dump:
                 logger.warning("Async dump do not support complex data!")
@@ -435,7 +464,8 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.max,
             tensor_stat.min,
             tensor_stat.mean,
-            tensor_stat.norm
+            tensor_stat.norm,
+            tensor_stat.check_sum
         ]
         placeholder_index = self.data_writer.append_stat_to_buffer(stat_values)
 
