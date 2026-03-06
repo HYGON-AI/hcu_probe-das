@@ -77,8 +77,9 @@ class Const:
     SUMMARY = "summary"
     MD5 = "md5"
     HASH = "hash"
+    XOR_CHECKSUM = "xor"
     VALUE = "value"
-    SUMMARY_MODE = ["statistics", "md5"]
+    SUMMARY_MODE = ["statistics", "md5", "xor"]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -255,6 +256,7 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+    CHECK_SUM = 'check_sum'
     DATA_NAME = 'data_name'
     STATE = 'state'
     REQ_GRAD = 'requires_grad'
