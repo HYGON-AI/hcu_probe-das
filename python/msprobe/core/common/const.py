@@ -290,6 +290,7 @@ class Const:
     FAKE_TENSOR_TYPE = "torch._subclasses.fake_tensor.FakeTensor"
     AC_TENSOR_TYPE = "torch.distributed._functional_collectives.AsyncCollectiveTensor"
     NESTED_TENSOR_TYPE = "torch.nested._internal.nested_tensor.NestedTensor"
+    BATCHED_TENSOR_TYPE = "BatchedTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
 

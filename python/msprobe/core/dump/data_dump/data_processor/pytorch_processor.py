@@ -99,6 +99,12 @@ class TensorHandler:
             return PtConst.HIFLOAT8_TYPE
         return str(tensor.dtype)
 
+    @staticmethod
+    def is_batchedtensor(tensor):
+        if hasattr(torch._C, "_functorch") and hasattr(torch._C._functorch, "is_batchedtensor"):
+            return torch._C._functorch.is_batchedtensor(tensor)
+        return False
+
     def is_dtensor(self, tensor):
         return self.has_dtensor and isinstance(tensor, dist.tensor.DTensor)
 
@@ -131,6 +137,8 @@ class TensorHandler:
                 f"Casting to float for processing."
             )
             tensor = tensor.detach().float()
+        if self.is_batchedtensor(tensor):
+            return torch._C._functorch.get_unwrapped(tensor)
         return tensor
 
     def get_tensor_type(self, tensor):
@@ -142,6 +150,8 @@ class TensorHandler:
             return Const.AC_TENSOR_TYPE
         if self.is_nested_tensor(tensor):
             return Const.NESTED_TENSOR_TYPE
+        if self.is_batchedtensor(tensor):
+            return Const.BATCHED_TENSOR_TYPE
         return Const.TENSOR_TYPE
 
     def get_dtensor_info(self, tensor):
