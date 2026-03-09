@@ -64,7 +64,7 @@ def _pre_scan_single_rank(
     use_micro_step: bool
 ) -> Dict[str, Any]:
     """Pre-scan files for a single rank to collect metadata"""
-    min_step = 0
+    min_step = None
     max_step = 0
     micro_step_dict = defaultdict(int)  # 记录step下的micro_step数量, micro_step最大值
     metric_stats = defaultdict(set)
@@ -102,7 +102,7 @@ def _pre_scan_single_rank(
                 micro_step = Data2DBConst.DEFAULT_INT_VALUE
             else:
                 # 整体的step范围
-                min_step = min(min_step or step, step)
+                min_step = step if min_step is None else min(min_step, step)
                 max_step = max(max_step, step)
 
             # 记录target
