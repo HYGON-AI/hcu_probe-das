@@ -31,6 +31,7 @@ class CommonConfig:
         self.level = json_config.get('level')
         # None means "static mode": keep startup config forever and skip dynamic enable feature.
         self.dump_enable = json_config.get("dump_enable")
+        self.extra_info = json_config.get("extra_info", True)
         self.async_dump = json_config.get("async_dump", False)
         self.precision = json_config.get("precision", Const.DUMP_PRECISION_LOW)
         self.risk_level = json_config.get("risk_level", Const.RISK_LEVEL_ALL)
@@ -48,6 +49,9 @@ class CommonConfig:
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.dump_enable is not None and not isinstance(self.dump_enable, bool):
             logger.error_log_with_exp("dump_enable is invalid, it should be a boolean",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if not isinstance(self.extra_info, bool):
+            logger.error_log_with_exp("extra_info is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if not isinstance(self.async_dump, bool):
             logger.error_log_with_exp("async_dump is invalid, it should be a boolean",

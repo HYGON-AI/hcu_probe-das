@@ -52,6 +52,9 @@ class DataWriter:
         self.crc32_stack_list = []
         self.data_updated = False
 
+    def _is_extra_info_enabled(self):
+        return getattr(getattr(self, "config", None), "extra_info", True)
+
     @recursion_depth_decorator("JsonWriter: DataWriter._replace_crc32_placeholders")
     def _replace_crc32_placeholders(self, data, crc32_results):
         """
@@ -163,9 +166,9 @@ class DataWriter:
             kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
             self.cache_data = kwargs
             save_json(self.dump_file_path, self.cache_data, indent=1)
-        if not self.cache_stack:
+        if self._is_extra_info_enabled() and not self.cache_stack:
             save_json(self.stack_file_path, self.cache_stack, indent=1)
-        if not self.cache_construct:
+        if self._is_extra_info_enabled() and not self.cache_construct:
             save_json(self.construct_file_path, self.cache_construct, indent=1)
 
     def update_dump_paths(self, dump_path_aggregation):
@@ -264,6 +267,8 @@ class DataWriter:
                 dump_data.update(new_data)
 
     def update_stack(self, name, stack_data):
+        if not self._is_extra_info_enabled():
+            return
         with lock:
             self.data_updated = True
             api_list = self.cache_stack.get(stack_data)
@@ -273,6 +278,8 @@ class DataWriter:
                 api_list.append(name)
 
     def update_construct(self, new_data):
+        if not self._is_extra_info_enabled():
+            return
         with lock:
             self.data_updated = True
             self.cache_construct.update(new_data)
@@ -369,9 +376,9 @@ class DataWriter:
 
             if self.cache_data:
                 self.write_data_json(self.dump_file_path)
-            if self.cache_stack:
+            if self._is_extra_info_enabled() and self.cache_stack:
                 self.write_stack_info_json(self.stack_file_path)
-            if self.cache_construct:
+            if self._is_extra_info_enabled() and self.cache_construct:
                 self.write_construct_info_json(self.construct_file_path)
             if self.cache_debug:
                 self.write_debug_info_json(self.debug_file_path)

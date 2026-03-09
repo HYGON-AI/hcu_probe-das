@@ -4,6 +4,7 @@
     "rank": [],  
     "step": [],  
     "level": "L1",
+    "extra_info": true,
     "async_dump": false,
     "statistics": {
         "scope": [],
