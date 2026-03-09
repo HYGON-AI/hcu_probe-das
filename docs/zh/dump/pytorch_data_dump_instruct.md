@@ -364,8 +364,8 @@ dump.json is at ./dump_path/step*
   * ②在大模型训练过程中，可能既存在`rank`目录又存在`proc`目录，原因是一些进程可能仅在CPU上完成一些数据预处理操作，没有`rank`信息，此时目录名称为`proc{pid}`，这部分数据一般不存在精度问题，比对、分级可视化和溢出检测等功能将不会支持该目录下的数据解析。
 * `dump_tensor_data`：保存采集到的张量数据。
 * `dump.json`：保存API或Module前反向数据的统计量信息。包含dump数据的API名称或Module名称，各数据的dtype、
-  shape、max、min、mean、L2norm（L2范数，平方根）统计信息以及当配置summary_mode="md5"
-  时的CRC-32数据。具体介绍可参考[dump.json文件说明](#dumpjson文件说明)。
+  shape、max、min、mean、L2norm（L2范数，平方根）统计信息，以及根据`summary_mode`
+  配置输出的校验值（`md5`对应CRC-32字段`md5`，`xor`对应XOR校验字段`check_sum`）。具体介绍可参考[dump.json文件说明](#dumpjson文件说明)。
 * `dump_error_info.log`：仅在dump工具报错时拥有此记录日志，用于记录dump错误日志。
 * `stack.json`：API/Module的调用栈信息。
 * `construct.json`：分层分级结构，level为L1时，construct.json内容为空。
