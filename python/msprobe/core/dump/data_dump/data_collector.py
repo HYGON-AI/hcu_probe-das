@@ -55,6 +55,10 @@ class DataCollector:
         return self.data_writer.dump_tensor_data_dir
 
     @property
+    def _collect_extra_info(self):
+        return getattr(self.config, "extra_info", True)
+
+    @property
     def dump_file_path(self):
         return self.data_writer.dump_file_path
 
@@ -114,6 +118,8 @@ class DataCollector:
         self.data_writer.update_data(data_info)
 
     def call_stack_collect(self, data_info, name):
+        if not self._collect_extra_info:
+            return
         stack_info, is_recompute = self.data_processor.analyze_api_call_stack(name)
         self.data_writer.update_stack(name, stack_info)
         self.set_is_recomputable(data_info, is_recompute)
@@ -215,6 +221,8 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
+        if not self._collect_extra_info:
+            return
         if self.config.level not in DataCollector.level_without_construct:
             if self.optimizer_status in [Const.OPTIMIZER, Const.CLIP_GRAD]:
                 if self.optimizer_status_first_start[self.optimizer_status]:

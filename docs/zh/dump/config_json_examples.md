@@ -14,6 +14,7 @@
     "step": [],
     "level": "L1",
     "async_dump": false,
+    "extra_info": true,
 
     "statistics": {
         "scope": [], 

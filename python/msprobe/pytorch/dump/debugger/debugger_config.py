@@ -28,6 +28,7 @@ class DebuggerConfig:
         self.step = common_config.step if common_config.step else []
         common_dump_enable = getattr(common_config, "dump_enable", None)
         self.dump_enable = common_dump_enable if isinstance(common_dump_enable, bool) else None
+        self.extra_info = getattr(common_config, "extra_info", True)
         self.level = level or common_config.level or Const.LEVEL_L1
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
