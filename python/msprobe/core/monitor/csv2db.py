@@ -239,6 +239,7 @@ def _pre_scan(config: CSV2DBConfig, monitor_db: MonitorDB):
         "max_rank": max_rank,
         **metric_stats_agg
     }
+    monitor_db.init_schema()
     monitor_db.insert_dimensions(targets)
     monitor_db.init_global_stats_data(global_stats)
     monitor_db.create_trend_data(
@@ -334,7 +335,6 @@ def process_single_rank(
 def import_data(config: CSV2DBConfig) -> bool:
     """Main method to import data into database"""
     monitor_db = MonitorDB(config.db_file)
-    monitor_db.init_schema()
 
     tasks, metric_id_dict, target_dict, micro_step_prefix = _pre_scan(
         config, monitor_db)
@@ -368,5 +368,7 @@ def import_data(config: CSV2DBConfig) -> bool:
                 except Exception as e:
                     logger.error(f"Failed to process batch of Rank {rank}: {e}")
                     all_succeeded = False
-
-    return all_succeeded
+    if not all_succeeded:
+        logger.warning("Some files failed to import data. Please check the log for details.")
+        
+    return True

@@ -76,6 +76,7 @@ class TestPreScanFunctions(unittest.TestCase):
 
         self.assertEqual(sorted([rank for rank, _ in result[0]]), [0, 2])
 
+        mock_db.init_schema.assert_called_once()
         mock_db.insert_dimensions.assert_called_once()
         mock_db.init_global_stats_data.assert_called_once()
         mock_db.create_trend_data.assert_called_once()
@@ -151,5 +152,4 @@ class TestImportData(unittest.TestCase):
         config = CSV2DBConfig(target_output_dirs=data_dirs, db_file="./trend.db")
         import_data(config)
 
-        mock_db.init_schema.assert_called_once()
         mock_pre_scan.assert_called_once()
