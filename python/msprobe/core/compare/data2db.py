@@ -33,9 +33,11 @@ from msprobe.core.dump.dump2db.dump2db import scan_files as dump_scan_files
 from msprobe.core.monitor.utils import get_target_output_dir
 
 
-def validate_micro_step(micro_step) -> None:
-    if not isinstance(micro_step, bool):
-        raise TypeError('micro_step must be bool.')
+def validate_micro_step(micro_step) -> bool:
+    """转换micro_step参数为布尔值
+    """
+    # 命令行已限制只能输入'(T)true'或'(F)false'，直接转换
+    return micro_step.lower() == 'true'
 
 
 def validate_process_num(process_num: int) -> None:
@@ -84,7 +86,7 @@ class DBImporter:
         create_directory(self.db_path)
 
         # Validate flags
-        validate_micro_step(self.micro_step)
+        self.micro_step = validate_micro_step(self.micro_step)
         validate_process_num(self.process_num)
 
         # Validate format
@@ -143,8 +145,9 @@ class DBImporter:
             micro_step=self.micro_step
         )
 
-        monitor_import_data(config=config)
-        logger.info(f"Monitor data import completed. DB: {monitor_db_file}")
+        success = monitor_import_data(config=config)
+        if success:
+            logger.info(f"Monitor data import completed. DB: {monitor_db_file}")
 
     def import_data(self) -> None:
         """主导入方法"""
@@ -185,7 +188,7 @@ def _data2db_service_parser(parser):
         help='Path to optional JSON mapping file'
     )
     parser.add_argument(
-        '--micro_step', type=lambda x: x.lower() == 'true', default=True,
+        '--micro_step', type=str, choices=['true', 'false', 'True', 'False'], default='true',
         help='Use micro-step counting (default: true)'
     )
     parser.add_argument(
