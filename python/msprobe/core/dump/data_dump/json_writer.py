@@ -96,7 +96,7 @@ class DataWriter:
                         Const.SHAPE: data["shape"],
                     }
                     if summary_mode == Const.XOR_CHECKSUM:
-                        new_entries[Const.CHECK_SUM] = check_sum
+                        new_entries[Const.MD5] = check_sum
                     else:
                         new_entries.update({
                             Const.MAX: stat_values[0],

@@ -256,7 +256,6 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
-    CHECK_SUM = 'check_sum'
     DATA_NAME = 'data_name'
     STATE = 'state'
     REQ_GRAD = 'requires_grad'
