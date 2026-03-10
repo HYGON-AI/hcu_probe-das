@@ -175,10 +175,12 @@ class BaseHookManager(ABC):
 
     def _should_execute_hook(self, hook_type, tid, is_forward=True):
         is_api_hook = hook_type == Const.API
-        if is_api_hook and self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
-            return False
-        if hook_type == Const.MODULE and self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L0]:
-            return False
+        is_dynamic_enable_mode = getattr(self.config, "dump_enable", None) is not None
+        if is_dynamic_enable_mode:
+            if is_api_hook and self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
+                return False
+            if hook_type == Const.MODULE and self.config.level not in [Const.LEVEL_MIX, Const.LEVEL_L0]:
+                return False
         if self.is_child_process():
             return False
         if BaseHookManager.inner_switch[tid]:
