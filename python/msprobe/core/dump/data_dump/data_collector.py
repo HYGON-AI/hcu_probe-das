@@ -70,6 +70,18 @@ class DataCollector:
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
 
+    def should_collect(self, name, pid):
+        """
+        判断是否应该采集数据
+        - 当 risk_level 为 ALL 时：只采集 list 或 scope 的内容
+        - 当 risk_level 为 CORE 或 FOCUS 时：采集本身 core/focus 的内容 + list 或 scope 中指定的内容
+        """
+        # 如果 risk_level 为 ALL，只检查 scope/list
+        if hasattr(self.config, 'risk_level') and self.config.risk_level == Const.RISK_LEVEL_ALL:
+            return self.check_scope_and_pid(self.scope, name, pid)
+        # 如果 risk_level 为 CORE 或 FOCUS，检查 scope/list 或 risk_level
+        return self.check_scope_and_pid(self.scope, name, pid) or self._should_collect_by_risk_level(name)
+
     def _should_collect_by_risk_level(self, name):
         if self.config.level != Const.LEVEL_L1:
             return True
@@ -126,8 +138,7 @@ class DataCollector:
 
     def forward_input_data_collect(self, name, module, pid, module_input_output):
         try:
-            if not self.check_scope_and_pid(self.scope, name, pid) and \
-                not self._should_collect_by_risk_level(name):
+            if not self.should_collect(name, pid):
                 return
 
             data_info = {}
@@ -149,8 +160,7 @@ class DataCollector:
 
     def forward_output_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
 
         data_info = {}
@@ -163,15 +173,13 @@ class DataCollector:
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         self.data_processor.analyze_forward(name, module, module_input_output)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -180,15 +188,13 @@ class DataCollector:
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect_only_tensor(self, name, module, pid, module_input_output):
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         self.data_processor.analyze_backward(name, module, module_input_output)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -202,8 +208,7 @@ class DataCollector:
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
@@ -212,8 +217,7 @@ class DataCollector:
 
     def backward_output_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
-        if not self.check_scope_and_pid(self.scope, name, pid) and \
-            not self._should_collect_by_risk_level(name):
+        if not self.should_collect(name, pid):
             return
         data_info = {}
         if self.config.task != Const.STRUCTURE:
