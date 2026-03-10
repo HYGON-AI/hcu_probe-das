@@ -37,8 +37,6 @@ validate_install_dir() {
     
     # 检查模块目录是否存在，如果不存在则跳过
     if [[ ! -d "$INSTALL_MODULE_DIR" ]]; then
-        warn "operator_cmp not found at: $INSTALL_MODULE_DIR"
-        warn "Skipping uninstall as directory does not exist"
         return 2  # 返回2表示目录不存在，需要跳过
     fi
     
