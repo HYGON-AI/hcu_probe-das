@@ -40,12 +40,13 @@ class ToyModel(torch.nn.Module):
     def forward(self, x):
         y = self.linear(x)
         # 保存中间张量
-        acl_save(y, "./dump/linear_out.pt")
+        acl_save(x, "./dump/linear_out.pt")
         return y
 
 if __name__ == "__main__":
-    model = ToyModel().npu()
-    x = torch.randn(2, 8, device="npu")
+    model = ToyMode()
+    x = torch.randn(2, 8)
+    x.to("npu:4")
     out = model(x)
 ```
 
@@ -68,7 +69,7 @@ acl_save(x: torch.Tensor, path: str) -> torch.Tensor
 | 参数名 | 类型 | 说明 | 是否必选 |
 | --- | --- | --- | --- |
 | x | torch.Tensor | 待保存的张量 | 必选 |
-| path | str | 保存路径（支持相对/绝对路径），实际落盘文件名会在该路径的文件名基础上追加序号 | 必选 |
+| path | str | 保存路径（支持相对/绝对路径），str类型。实际落盘文件名会在该路径的文件名基础上追加序号，格式为 `{base}_{seq}.pt`。例如传入 `./dump/act.pt`，实际落盘为 `./dump/act_0.pt`、`./dump/act_1.pt`（其中父目录`./dump/`须为已存在的目录文件夹）。| 必选 |
 
 **返回值**
 
@@ -100,10 +101,6 @@ for step in range(3):
 ### dump 结果文件介绍
 
 调用 `acl_save` 后，会在 `path` 指定目录下生成 `.pt` 文件。
-
-> [!NOTE]  说明
->
-> 文件名会在传入的 `path` 基础上自动追加递增序号，格式为 `{base}_{seq}.pt`。例如传入 `./dump/act.pt`，实际落盘为 `./dump/act_0.pt`、`./dump/act_1.pt`。
 
 ### 数据解析
 
