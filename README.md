@@ -15,6 +15,14 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 - 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
 - 已安装配套版本的CANN Toolkit开发套件包和算子包并配置环境变量，详情请参见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler)》。
 
+### 版本说明
+
+|  版本   |支持PyTorch版本|支持MindSpore版本|支持Python版本|支持CANN版本|
+|:-----:|:--:|:--:|:--:|:--:|
+| 26.0.0(在研版本) |2.1/2.2/2.5/2.6/2.7/2.8/2.9|2.4.0/2.5.0/2.6.0/2.7.1|3.8-3.12|大于等于 CANN 8.3.RC1|
+| 26.0.0-alpha.2 |2.1/2.2/2.5/2.6/2.7/2.8/2.9|2.4.0/2.5.0/2.6.0/2.7.1|3.8-3.12|大于等于 CANN 8.3.RC1|
+| 26.0.0-alpha.1 |2.1/2.2/2.5/2.6/2.7/2.8|2.4.0/2.5.0/2.6.0/2.7.1|3.8-3.11|大于等于 CANN 8.3.RC1|
+
 ### 工具安装
 
 安装msProbe工具，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
