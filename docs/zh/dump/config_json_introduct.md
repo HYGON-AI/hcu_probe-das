@@ -150,7 +150,7 @@ MindSpore动态图场景下，"level"须为"L2"; MindSpore静态图场景下，"
 - 推荐流程：常规训练/推理阶段保持关闭；需要定位问题时改为开启采集；完成定位后再关闭，以减少对业务流程的干扰。
 - `vllm`场景下，如果有`level`切换的需要，建议先设置`level`的初始值为`L0`，这样能保证后续的`level`可以任意切换；如果`level`的初始值不是`L0`可能会导致切换`level`失败。
 
-  配置示例："dump_enable": true。
+**配置样例**：[dump_enable动态控制示例](config_json_examples.md#dump_enable动态控制示例)
 
 ### list参数配置说明
 

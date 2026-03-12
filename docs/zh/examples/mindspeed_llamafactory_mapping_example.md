@@ -85,7 +85,7 @@ msprobe graph_visualize -tp ./target_path -gp ./golden_path -o ./output_path -lm
 
 在基于MindSpeed和LLamaFactory框架的模型比对场景中，**-lm参数是必填的**，-lm参数所需的layer_mapping.yaml如何配置将在下面的章节进行介绍。
 
-模型分级可视化比对完成后，可通过tensorboard需安装[tb_graph_ascend插件](../accuracy_compare/tb_graph_ascend.md)）启动端口，在浏览器页面查看模型结构和精度比对结果，请参考[分级可视化构图比对-启动TensorBoard](../accuracy_compare/pytorch_visualization_instruct.md#启动tensorboard)和[分级可视化构图比对-浏览器查看](../accuracy_compare/pytorch_visualization_instruct.md#浏览器查看)。
+模型分级可视化比对完成后，可通过tensorboard需安装tb_graph_ascend插件启动端口，在浏览器页面查看模型结构和精度比对结果，请参考[分级可视化构图比对-启动TensorBoard](../accuracy_compare/pytorch_visualization_instruct.md#启动tensorboard)和[分级可视化构图比对-浏览器查看](../accuracy_compare/pytorch_visualization_instruct.md#浏览器查看)。
 
 ### layer_mapping映射文件配置
 

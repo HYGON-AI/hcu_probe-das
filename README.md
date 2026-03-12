@@ -45,7 +45,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 - msProbe建议执行用户与安装用户保持一致，如果使用root执行，请自行关注root高权限触及的安全风险。
 
-
 ## 功能介绍
 
 ### vLLM推理场景
@@ -63,6 +62,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
    请参考[分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)或[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)。
 
 #### aclgraph图模式
+
 1. [数据采集](docs/zh/dump/aclgraph_dump_instruct.md)
 
    通过acl_save接口完成精度数据采集操作。
@@ -105,7 +105,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将ATB dump的精度数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
 
-
 ### 离线模型推理场景
 
 1. [数据采集](docs/zh/dump/infer_offline_dump_instruct.md)
@@ -122,7 +121,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 4. [数据转换](docs/zh/dump/data_parse_instruct.md)
 
    将离线模型的dump数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
-
 
 ### PyTorch训练场景
 
@@ -164,7 +162,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
 
-
 ### MindSpore训练场景
 
 1. [训练前配置检查](docs/zh/config_check_instruct.md)
@@ -197,7 +194,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    溢出检测用于采集溢出API或模块的精度数据，而溢出解析则是通过对溢出数据的分析，进一步判断是否为正常溢出。
 
-   推荐直接使用[数据采集](#数据采集-1)功能采集统计量信息，检测溢出问题，具体请参见。
+   推荐直接使用数据采集功能采集统计量信息，检测溢出问题，具体请参见[数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)。
 
 8. [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
 
@@ -206,7 +203,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 9. [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
 
    将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
-
 
 ### MSAdapter场景
 
@@ -220,7 +216,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
    训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
 
-
 ## 补充材料
 
 - [PyTorch场景的精度数据采集基线报告](docs/zh/baseline/pytorch_data_dump_perf_baseline.md)
@@ -230,7 +225,6 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 - [MindSpore场景的精度数据采集基线报告](docs/zh/baseline/mindspore_data_dump_perf_baseline.md)
 
 - [训练状态监测工具标准性能基线报告](docs/zh/baseline/monitor_perf_baseline.md)
-
 
 ## FAQ
 

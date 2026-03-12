@@ -33,30 +33,30 @@ setup.py # 安装配置
 ## 安装指南
 
 1. 克隆项目仓库
-   git clone https://gitcode.com/Ascend/msprobe.git
+   git clone <https://gitcode.com/Ascend/msprobe.git>
 
 2. 进入目录 `plugins/tb_graph_ascend` 下
 
-```bash
-// 进入前端目录
-cd plugins/tb_graph_ascend/monvis_plugin/fe
-// 安装前端依赖
-npm install --force
-// Windows系统
-npm run buildWin
-// Linux系统
-npm run buildLinux
-// 进入根目录
-cd plugins/tb_graph_ascend
-// 本地安装
-pip install -e .
-```
+   ```bash
+   // 进入前端目录
+   cd plugins/tb_graph_ascend/monvis_plugin/fe
+   // 安装前端依赖
+   npm install --force
+   // Windows系统
+   npm run buildWin
+   // Linux系统
+   npm run buildLinux
+   // 进入根目录
+   cd plugins/tb_graph_ascend
+   // 本地安装
+   pip install -e .
+   ```
 
 3. 插件安装后会被 TensorBoard 自动识别
 
 ## TensorBoard 使用
 
-1. 启动服务：
+启动服务：
 
 ```bash
 tensorboard --logdir=./db --port=6008
@@ -64,6 +64,6 @@ tensorboard --logdir=./db --port=6008
 
 访问路径：
 
-浏览器打开 http://localhost:6008
+浏览器打开 <http://localhost:6008>
 
 选择顶部导航栏的 MonVis 标签页
