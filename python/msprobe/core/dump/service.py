@@ -311,6 +311,8 @@ class BaseService(ABC):
         """
 
         def infer_hook(model, args):
+            if self.should_stop_service:
+                return
             if self.cur_token_id == token_range[0]:
                 Runtime.is_running = True
                 self.primitive_switch = True
