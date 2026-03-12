@@ -566,7 +566,7 @@ export MONITOR_OUTPUT_DIR=/xxx/output_dir
   监测结果写入csv文件中，可以通过`ndigits`字段设置小数位数。  
   表头为 vpp_stage | name | step | micro_step(optional) | *ops |。 
   仅在激活值监测的输出文件中包含micor_step。
-  激活值监测的name为<module_name>.\<input or output>, 其他任务的name为<param_name>
+  激活值监测的name为`<module_name>.<input or output>`, 其他任务的name为`<param_name>`。
 
 - **api** 
   监测结果不落盘，在训练过程中可以通过`generate_wgrad_metrics`、`generate_xy_metrics`等接口获取，使用方式参考[公开接口](#公开接口) 。

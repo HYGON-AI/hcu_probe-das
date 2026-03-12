@@ -3,6 +3,7 @@
 感谢您考虑为 MindStudio Probe（msProbe）做出贡献！我们欢迎任何形式的贡献，包括错误修复、功能增强、文档改进等，甚至只是反馈。无论您是经验丰富的开发者还是第一次参与开源项目，您的帮助都是非常宝贵的。
 
 您可以通过多种方式支持本项目：
+
 - 通过[Issues](https://gitcode.com/Ascend/msprobe/issues)反馈问题。
 - 建议或实现新功能。
 - 改进或扩展文档。
@@ -12,6 +13,7 @@
 ## 寻找可贡献的问题
 
 想要开始贡献？可以查看以下类型的问题：
+
 - [Good first issues](https://gitcode.com/Ascend/msprobe/issues?categorysearch=%255B%257B%22field%22:%22order_by_sort%22,%22value%22:%22created_at_desc%22,%22label%22:%22%E6%9C%80%E8%BF%91%E5%88%9B%E5%BB%BA%22%257D,%257B%22field%22:%22labels%22,%22value%22:%255B%257B%22id%22:22797,%22name%22:%22good-first-issue%22%257D%255D,%22label%22:%22good-first-issue%22%257D%255D&state=opened&order_by=created_at&sort=desc&scope=all&page=1)
 
 此外，您可以通过查看[Issues列表](https://gitcode.com/Ascend/msprobe/issues)了解项目的发展计划和路线图。
@@ -30,7 +32,7 @@
 
 2. 将Fork到个人仓的代码克隆到本地进行代码开发
 
-   ```
+   ```text
    git clone https://gitcode.com/<your-username>/msprobe.git
    cd msprobe
    ```
@@ -51,7 +53,7 @@
 
 6. 提交Pull Request
 
-   请参见[提交Pull Request流程](#提交Pull-Request流程)。
+   请参见[提交Pull Request流程](#提交pull-request流程)。
 
 ### 代码规范
 
@@ -188,7 +190,7 @@ bash run_text.sh
 
 提交信息应该清晰地描述更改的内容和原因：
 
-```
+```text
 <type>: <subject>
 
 <body>
@@ -208,7 +210,7 @@ bash run_text.sh
 
 示例：
 
-```
+```text
 feat：添加内存使用分析功能
 
 - 实现内存数据采集模块

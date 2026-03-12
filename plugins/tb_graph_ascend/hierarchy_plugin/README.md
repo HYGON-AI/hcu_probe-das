@@ -15,10 +15,13 @@
 #### 2.1 pip 安装（推荐）
 
 - 现本插件已经上传到 pypi 社区，用户可在 python 环境下直接通过以下 pip 指令进行安装：
+
   ```
   pip install tb-graph-ascend
   ```
+
 - 也可在 pypi 社区上下载离线 whl 包，传输到无法访问公网的环境上离线安装使用。访问[下载链接](https://pypi.org/project/tb-graph-ascend/#files)选择 whl 包进行下载，之后便可使用指令安装（此处{version}为 whl 包实际版本）
+
   ```
   pip install tb-graph_ascend_{version}-py3-none-any.whl
   ```
@@ -47,16 +50,20 @@
    **注意**: 此步骤需要安装 [Node.js](https://nodejs.org/zh-cn/download) 环境
 
 4. 回到上级目录直接安装:
+
    ```
    cd ../
    python setup.py develop
    ```
 
 - 或： 构建 whl 包安装 用户应确保在安全的环境下进行whl包的构建
+
   ```
   python secure_build.py
   ```
+
   在 `plugins/tensorboard-plugins/tb_graph_ascend/dist` 目录下取出 whl 包，使用以下指令安装（此处{version}为 whl 包实际版本）
+
   ```
   pip install tb-graph_ascend_{version}-py3-none-any.whl
   ```
@@ -95,7 +102,7 @@ tensorboard --logdir out_path --bind_all --port [可选，端口号]
 
 ubuntu 是机器地址，6008 是端口号。
 
-**注意，ubuntu 需要替换为真实的服务器地址，例如真实的服务器地址为 10.123.456.78，则需要在浏览器窗口输入http://10.123.456.78:6008**
+**注意，ubuntu 需要替换为真实的服务器地址，例如真实的服务器地址为 10.123.456.78，则需要在浏览器窗口输入<http://10.123.456.78:6008>**
 
 ### 4.2 不可直连的服务器
 
@@ -111,7 +118,7 @@ ubuntu 是机器地址，6008 是端口号。
 tensorboard --logdir out_path --bind_all --port 6008[可选，端口号]
 ```
 
-最后，在浏览器窗口输入http://10.123.456.78:6008
+最后，在浏览器窗口输入<http://10.123.456.78:6008>
 
 **注意，如果当前服务器开启了防火墙，则此方法无效，需要关闭防火墙，或者尝试后续方法**
 

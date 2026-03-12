@@ -264,6 +264,7 @@ print(num1)  # tensor(-0.0866)
 num2 = torch.mean(torch.randn(2,2))
 print(num2)  # tensor(0.2038)
 ```
+
 上述脚本重复执行多次，每次执行结果num1和num2是能对应的，但该脚本内执行两次相同的随机性API，生成的结果是不一样的，即num1不等于num2。
 
 ```Python
@@ -277,6 +278,7 @@ print(num1)  # tensor(-0.0866)
 num2 = torch.mean(torch.randn(2,2))
 print(num2)  # tensor(-0.0866)
 ```
+
 上述脚本中执行两次相同的随机性API，生成的结果能完全相同，即使该脚本多次重复执行也能确保两个值完全相同。
 
 #### random_save基础使用示例
