@@ -73,17 +73,16 @@ class DataCollector:
     def should_collect(self, name, pid):
         """
         判断是否应该采集数据
-        - 当 risk_level 为 ALL 时：只采集 list 或 scope 的内容
-        - 当 risk_level 为 CORE 或 FOCUS 时：采集本身 core/focus 的内容 + list 或 scope 中指定的内容
+        - 如果配置了scope或list，则按照scope或list匹配
+        - 如果没有配置scope或list，则按照风险等级dump
         """
-        # 如果 risk_level 为 ALL，只检查 scope/list
-        if hasattr(self.config, 'risk_level') and self.config.risk_level == Const.RISK_LEVEL_ALL:
+        if self.scope:
             return self.check_scope_and_pid(self.scope, name, pid)
-        # 如果 risk_level 为 CORE 或 FOCUS，检查 scope/list 或 risk_level
-        return self.check_scope_and_pid(self.scope, name, pid) or self._should_collect_by_risk_level(name)
+        else:
+            return self._should_collect_by_risk_level(name)
 
     def _should_collect_by_risk_level(self, name):
-        if self.config.level != Const.LEVEL_L1:
+        if self.config.level not in [Const.LEVEL_L1, Const.LEVEL_MIX]:
             return True
         if not hasattr(self.config, 'risk_level') or not self.config.risk_level:
             return True
@@ -91,10 +90,12 @@ class DataCollector:
             return True
         if self.config.framework == Const.PT_FRAMEWORK:
             from msprobe.pytorch.dump.api_dump.api_risk_level import get_api_risk_level
-            api_name = self._api_name_pattern.sub('', name)
-            api_name = api_name.split(Const.SEP, 1)[-1]
+            api_name = self._api_name_pattern.sub('', name).split(Const.SEP, 1)
+            prefix = api_name[0]
+            if prefix in Const.MODULE_PREFIX:
+                return True
+            api_name = api_name[-1]
             api_risk = get_api_risk_level(api_name)
-        
             if self.config.risk_level == Const.RISK_LEVEL_CORE:
                 return api_risk == Const.RISK_LEVEL_CORE
             elif self.config.risk_level == Const.RISK_LEVEL_FOCUS:
