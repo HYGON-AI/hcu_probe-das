@@ -118,7 +118,8 @@ INSTALL_REQUIRED = [
     "onnx >= 1.14.0",
     "onnxruntime >= 1.14.1, != 1.16.0",
     "skl2onnx >= 1.14.1",
-    "setuptools <= 81.0.0"
+    "setuptools <= 81.0.0",
+    "pytz"
 ]
 
 if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
