@@ -58,6 +58,10 @@ class ComparisonConfig:
 
 
 class Comparator:
+    NPU_PARSE_ORDER = "npu_parse_order"
+    BENCH_PARSE_ORDER = "bench_parse_order"
+    COMPARE_ORDER = "compare_order"
+
     def __init__(self, file_reader, mode_config: ModeConfig, mapping_config: MappingConfig, is_cross_framework=False):
         self.file_reader = file_reader
         self.mode_config = mode_config
@@ -144,7 +148,8 @@ class Comparator:
 
         # calculate Indicators
         logger.info("Calculating comparison indicators in progress...")
-        calculate_excel_result_df(result_df, self.mode_config.dump_mode, self.mode_config.backend, self.mode_config.consistent_check)
+        calculate_excel_result_df(result_df, self.mode_config.dump_mode, self.mode_config.backend,
+                                  self.mode_config.consistent_check)
         result_df.drop(columns=['state', 'api_origin_name'], inplace=True)  # 删除中间数据，两列不落盘
         logger.info("Comparison indicators calculation done.")
 
@@ -158,11 +163,14 @@ class Comparator:
     def compare_statistics(self, npu_df, bench_df):
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        npu_df[self.NPU_PARSE_ORDER] = range(len(npu_df))
+        bench_df[self.BENCH_PARSE_ORDER] = range(len(bench_df))
 
         # create new columns for compare op_name and shape
         # process npu_df's COMPARE_KEY whether same or different framework
         process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
-        if self.mode_config.consistent_check and (self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
+        if self.mode_config.consistent_check and (
+                self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
             npu_df, bench_df = process_df.process_consistent_df(npu_df, bench_df)
         else:
             # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
@@ -175,8 +183,9 @@ class Comparator:
         # match npu and bench, match_result contains both npu_info and bench_info
         match = Match(self.mode_config, self.mapping_config, self.cross_frame)
         match_result = match.match_api_infos(npu_df, bench_df)
-        if not (self.mode_config.consistent_check and (self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON)):
+        if not self.mode_config.consistent_check:
             # 比对主逻辑，训推一致性另外单独处理
+            match_result = self.restore_dump_order(match_result)
             # 筛选出npu_name存在的行并填充筛选出行中的缺失值为N/A
             match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
             bench_columns = [i + '_y' for i in bench_df.columns]
@@ -192,12 +201,39 @@ class Comparator:
         # organize compare result table by renaming columns
         if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
             self.mode_config.dump_mode = Const.SUMMARY
+        match_result.drop(columns=[self.NPU_PARSE_ORDER, self.BENCH_PARSE_ORDER], inplace=True, errors='ignore')
         create_table = CreateTable(self.mode_config)
         result_df, header = create_table.make_result_df(match_result)
 
         # calculate statistics diff
         calc_stats_diff = CalcStatsDiff(self.mode_config)
         return calc_stats_diff.calc_accuracy(result_df, header)
+
+    def restore_dump_order(self, match_result):
+        if match_result.empty:
+            return match_result
+
+        # 检查是否包含 NPU_PARSE_ORDER 列
+        has_npu_order = self.NPU_PARSE_ORDER in match_result.columns
+        has_bench_order = self.BENCH_PARSE_ORDER in match_result.columns
+
+        # 如果没有相关列，则直接返回原始数据
+        if not has_npu_order and not has_bench_order:
+            return match_result
+
+        if has_npu_order:
+            match_result[self.NPU_PARSE_ORDER] = pd.to_numeric(match_result[self.NPU_PARSE_ORDER], errors='coerce')
+
+        # 使用 COMPARE_ORDER 临时列进行排序
+        if has_npu_order:
+            match_result[self.COMPARE_ORDER] = match_result[self.NPU_PARSE_ORDER]
+        else:
+            match_result[self.COMPARE_ORDER] = np.nan
+
+        match_result = match_result.sort_values(by=self.COMPARE_ORDER, na_position="last", kind="stable").reset_index(
+            drop=True)
+        match_result.drop(columns=[self.COMPARE_ORDER], inplace=True, errors='ignore')
+        return match_result
 
 
 class ParseData:
@@ -560,7 +596,8 @@ class ProcessDf:
         megatron:训练数据和推理数据均涉及映射
         """
         if engine == 'infer' and backend == Const.FSDP:
-            data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE].apply(lambda x: str(x).split(Const.SEP)[-1] if pd.notna(x) and Const.SEP in str(x) else x)
+            data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE].apply(
+                lambda x: str(x).split(Const.SEP)[-1] if pd.notna(x) and Const.SEP in str(x) else x)
             return
         # 直接为module_len == 1分配默认值
         len_1_mask = data_df[Const.MODULE_LEN] == 1
@@ -588,9 +625,9 @@ class ProcessDf:
         data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE_LAST_MAPPING]
         if self.mode_config.backend == Const.FSDP:
             data_df.loc[~len_1_mask, Const.MODULE_MAPPING] = (
-                data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
-                Const.SEP +
-                data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
+                    data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
+                    Const.SEP +
+                    data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
             )
 
     def process_compare_key_and_shape(self, npu_df, bench_df):
@@ -917,7 +954,7 @@ class Match:
 
         # 非fsdp后端暂无layer、class、module_mapping等列，因此增加后端限制
         elif self.mode_config.consistent_check and (
-                    self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
+                self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
             match_result = self.consistent_match(npu_df, bench_df)
         else:
             match_result = pd.merge(npu_df, bench_df, on=[CompareConst.CMP_KEY], how='outer')
@@ -990,7 +1027,7 @@ class Match:
 
             if self.mode_config.dump_mode == Const.ALL:
                 agg_dict['data_name_y'] = lambda x: ';'.join(x)  # 真实数据模式还需要对tensor名进行聚合拼接
-        # 根据推理测op_name聚合，聚合连接符为；
+            # 根据推理测op_name聚合，聚合连接符为；
             agg_result = agg_rows.groupby('op_name_x', as_index=False, sort=False).agg(agg_dict)
 
         match_result = pd.concat([agg_result, na_rows])
