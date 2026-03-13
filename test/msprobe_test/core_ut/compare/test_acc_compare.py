@@ -1182,15 +1182,15 @@ class TestProcessDf(unittest.TestCase):
         self.assertEqual(df.loc[0, Const.MODULE_LAST], "q_proj")
         # 验证映射后 q_proj -> qkv_proj
         self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "qkv_proj")
-        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.qkv_proj")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "qkv_proj")
 
         # k_proj 也映射到 qkv_proj
         self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "qkv_proj")
-        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.qkv_proj")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "qkv_proj")
 
         # v_proj 也映射到 qkv_proj
         self.assertEqual(df.loc[2, Const.MODULE_LAST_MAPPING], "qkv_proj")
-        self.assertEqual(df.loc[2, Const.MODULE_MAPPING], "model.qkv_proj")
+        self.assertEqual(df.loc[2, Const.MODULE_MAPPING], "qkv_proj")
 
     def test_process_module_mapping_gate_up_proj_mapping(self):
         """
@@ -1207,12 +1207,12 @@ class TestProcessDf(unittest.TestCase):
         # gate_proj -> gate_up_proj
         self.assertEqual(df.loc[0, Const.MODULE_LAST], "gate_proj")
         self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "gate_up_proj")
-        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.gate_up_proj")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "gate_up_proj")
 
         # up_proj -> gate_up_proj
         self.assertEqual(df.loc[1, Const.MODULE_LAST], "up_proj")
         self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "gate_up_proj")
-        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.gate_up_proj")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "gate_up_proj")
 
     def test_process_module_mapping_no_mapping_fallback(self):
         """
@@ -1229,11 +1229,11 @@ class TestProcessDf(unittest.TestCase):
         # 无映射时，MODULE_LAST_MAPPING = MODULE_LAST，MODULE_MAPPING 保持原样
         self.assertEqual(df.loc[0, Const.MODULE_LAST], "attention")
         self.assertEqual(df.loc[0, Const.MODULE_LAST_MAPPING], "attention")
-        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "model.attention")
+        self.assertEqual(df.loc[0, Const.MODULE_MAPPING], "attention")
 
         self.assertEqual(df.loc[1, Const.MODULE_LAST], "mlp")
         self.assertEqual(df.loc[1, Const.MODULE_LAST_MAPPING], "mlp")
-        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "model.mlp")
+        self.assertEqual(df.loc[1, Const.MODULE_MAPPING], "mlp")
 
     @patch.object(ProcessDf, 'get_op_layer')
     @patch.object(ProcessDf, 'get_op_module_and_class')

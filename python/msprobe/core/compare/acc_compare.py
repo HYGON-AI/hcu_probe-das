@@ -623,12 +623,6 @@ class ProcessDf:
 
         # 拼接prefix和映射后的last_part
         data_df[Const.MODULE_MAPPING] = data_df[Const.MODULE_LAST_MAPPING]
-        if self.mode_config.backend == Const.FSDP:
-            data_df.loc[~len_1_mask, Const.MODULE_MAPPING] = (
-                    data_df.loc[~len_1_mask, Const.MODULE_PART_PREFIX] +
-                    Const.SEP +
-                    data_df.loc[~len_1_mask, Const.MODULE_LAST_MAPPING]
-            )
 
     def process_compare_key_and_shape(self, npu_df, bench_df):
         npu_df = self.assign_npu_df_compare_key(npu_df, bench_df)
