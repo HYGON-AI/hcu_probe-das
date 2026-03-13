@@ -260,8 +260,81 @@ def unpatch_triton_jitfunction_run() -> bool:
     setattr(JITFunction, "run", original)
     return True
 
+
+def adapt_megatron_distributed_mappings():
+    """
+    megatron框架定义的变量dist_all_gather_func和dist_reduce_scatter_func会随着import链路初始化，指向msprobe工具patch前的dist接口
+
+    源码示例:
+    -------------------------------------------------------------------------------------------------------------
+    import ...
+    from ... import ...
+    if is_torch_min_version("1.13.0"):
+        dist_all_gather_func = torch.distributed.all_gather_into_tensor
+        dist_reduce_scatter_func = torch.distributed.reduce_scatter_tensor
+    else:
+        dist_all_gather_func = torch.distributed._all_gather_base
+        dist_reduce_scatter_func = torch.distributed._reduce_scatter_base
+
+    # 此时dist_all_gather_func和dist_reduce_scatter_func已初始化完成，指向msprobe工具patch前的dist接口
+    ... ...
+
+    dist_all_gather_func(...)
+    dist_reduce_scatter_func(...) # 实际调用msprobe工具patch前的dist接口，无法dump数据
+    -------------------------------------------------------------------------------------------------------------
+
+    本函数将megatron涉及的模块变量dist_all_gather_func和dist_reduce_scatter_func重新指向msprobe工具patch后的dist接口，
+    避免dist接口无法dump
+    """
+
+    # 到megatron core_v0.12.1版本共有6个模块涉及
+    megatron_module_path = [
+        "megatron.core.tensor_parallel.mappings",
+        "megatron.core.tensor_parallel.utils",
+        "megatron.core.tensor_parallel.layers",
+        "megatron.core.distributed.param_and_grad_buffer",
+        "megatron.core.utils",
+        "megatron.core.timers",
+    ]
+
+    def adapt_single_module(module):
+        """适配单个模块中的分布式函数映射"""
+        # 更新all_gather函数映射
+        all_gather_func = getattr(module, "dist_all_gather_func", None)
+        if all_gather_func:
+            if str(all_gather_func).startswith('<function all_gather_into_tensor'):
+                module.dist_all_gather_func = torch.distributed.all_gather_into_tensor
+            elif str(all_gather_func).startswith('<function _all_gather_base'):
+                module.dist_all_gather_func = torch.distributed._all_gather_base
+
+        # 更新reduce_scatter函数映射
+        reduce_scatter_func = getattr(module, "dist_reduce_scatter_func", None)
+        if reduce_scatter_func:
+            if str(reduce_scatter_func).startswith('<function reduce_scatter_tensor'):
+                module.dist_reduce_scatter_func = torch.distributed.reduce_scatter_tensor
+            elif str(reduce_scatter_func).startswith('<function _reduce_scatter_base'):
+                module.dist_reduce_scatter_func = torch.distributed._reduce_scatter_base
+
+    try:
+        import megatron
+    except ImportError:
+        return
+
+    for module_path in megatron_module_path:
+        try:
+            megatron_module = importlib.import_module(module_path)
+            adapt_single_module(megatron_module)
+        except ImportError:
+            logger.warning(f'Import {module_path} failed, skip mapping.')
+            continue
+        except Exception as e:
+            logger.warning(f'An unexpected error occurred in the function "adapt_megatron_distributed_mappings", '
+                           f'skip mapping: {e}')
+            continue
+
 def wrap_script_func():
     wrap_jit_script_func()
     if torch_version_above_or_equal_2:
         patch_dynamo_compile()
     patch_triton_jitfunction_run()
+    adapt_megatron_distributed_mappings()
