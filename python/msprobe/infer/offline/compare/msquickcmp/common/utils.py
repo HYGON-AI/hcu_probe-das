@@ -322,7 +322,7 @@ def get_dump_data_path(dump_dir, is_net_output=False, model_name=None):
     """
     dump_data_path = None
     file_is_exist = False
-    dump_data_dir = None
+    dump_data_dir_list = []
     for i in os.listdir(dump_dir):
         if not (os.path.isdir(os.path.join(dump_dir, i))):
             continue
@@ -330,21 +330,23 @@ def get_dump_data_path(dump_dir, is_net_output=False, model_name=None):
         if is_net_output:
             if not i.isdigit():
                 dump_data_dir = os.path.join(dump_dir, i)
+                dump_data_dir_list.append(dump_data_dir)
                 break
         # Contains the dump file directory, whose name is a pure digital timestamp
         elif i.isdigit():
             dump_data_dir = os.path.join(dump_dir, i)
-            break
+            dump_data_dir_list.append(dump_data_dir)
 
-    if not dump_data_dir:
+    if not dump_data_dir_list:
         logger.error(f"The directory \"{dump_dir}\" does not contain dump data")
         raise AccuracyCompareException(ACCURACY_COMPARISON_NO_DUMP_FILE_ERROR)
 
     dump_data_path_list = []
-    for dir_path, _, files in os.walk(dump_data_dir):
-        if files and not any(file.startswith("aclnn") for file in files):
-            dump_data_path_list.append(dir_path)
-            file_is_exist = True
+    for candidate_dump_data_dir in dump_data_dir_list:
+        for dir_path, _, files in os.walk(candidate_dump_data_dir):
+            if files and not any(file.startswith("aclnn") for file in files):
+                dump_data_path_list.append(dir_path)
+                file_is_exist = True
 
     if len(dump_data_path_list) > 1:
         # find the model name directory
