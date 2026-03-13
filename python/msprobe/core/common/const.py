@@ -783,6 +783,12 @@ class CompareConst:
         'megatron': lambda op_name: '.gate_up_proj.' in op_name
     }
 
+    # 因pandas版本特性导致乱序加的排序列
+    NPU_PARSE_ORDER = "npu_parse_order"
+    BENCH_PARSE_ORDER = "bench_parse_order"
+    COMPARE_ORDER = "compare_order"
+
+
 class FileCheckConst:
     """
     Class for file check const

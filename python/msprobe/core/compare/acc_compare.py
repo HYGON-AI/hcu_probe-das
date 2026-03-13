@@ -58,9 +58,6 @@ class ComparisonConfig:
 
 
 class Comparator:
-    NPU_PARSE_ORDER = "npu_parse_order"
-    BENCH_PARSE_ORDER = "bench_parse_order"
-    COMPARE_ORDER = "compare_order"
 
     def __init__(self, file_reader, mode_config: ModeConfig, mapping_config: MappingConfig, is_cross_framework=False):
         self.file_reader = file_reader
@@ -68,6 +65,35 @@ class Comparator:
         self.mapping_config = mapping_config
         self.cross_frame = is_cross_framework
         self.mapping_dict = MappingDict(mapping_config)
+
+    @staticmethod
+    def restore_dump_order(match_result):
+        if match_result.empty:
+            return match_result
+
+        # 检查是否包含 NPU_PARSE_ORDER 列
+        has_npu_order = CompareConst.NPU_PARSE_ORDER in match_result.columns
+        has_bench_order = CompareConst.BENCH_PARSE_ORDER in match_result.columns
+
+        # 如果没有相关列，则直接返回原始数据
+        if not has_npu_order and not has_bench_order:
+            return match_result
+
+        if has_npu_order:
+            match_result[CompareConst.NPU_PARSE_ORDER] = pd.to_numeric(match_result[CompareConst.NPU_PARSE_ORDER],
+                                                                       errors='coerce')
+
+        # 使用 COMPARE_ORDER 临时列进行排序
+        if has_npu_order:
+            match_result[CompareConst.COMPARE_ORDER] = match_result[CompareConst.NPU_PARSE_ORDER]
+        else:
+            match_result[CompareConst.COMPARE_ORDER] = np.nan
+
+        match_result = match_result.sort_values(by=CompareConst.COMPARE_ORDER, na_position="last",
+                                                kind="stable").reset_index(
+            drop=True)
+        match_result.drop(columns=[CompareConst.COMPARE_ORDER], inplace=True, errors='ignore')
+        return match_result
 
     def process_output_file(self, output_path, suffix, compared_file_type):
         file_name_prefix_mapping = {
@@ -163,14 +189,13 @@ class Comparator:
     def compare_statistics(self, npu_df, bench_df):
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
-        npu_df[self.NPU_PARSE_ORDER] = range(len(npu_df))
-        bench_df[self.BENCH_PARSE_ORDER] = range(len(bench_df))
+        npu_df[CompareConst.NPU_PARSE_ORDER] = range(len(npu_df))
+        bench_df[CompareConst.BENCH_PARSE_ORDER] = range(len(bench_df))
 
         # create new columns for compare op_name and shape
         # process npu_df's COMPARE_KEY whether same or different framework
         process_df = ProcessDf(self.mode_config, self.mapping_config, self.mapping_dict)
-        if self.mode_config.consistent_check and (
-                self.mode_config.backend == Const.FSDP or self.mode_config.backend == Const.MEGATRON):
+        if self.mode_config.consistent_check:
             npu_df, bench_df = process_df.process_consistent_df(npu_df, bench_df)
         else:
             # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
@@ -201,39 +226,14 @@ class Comparator:
         # organize compare result table by renaming columns
         if self.mode_config.dump_mode == Const.ALL and self.mode_config.first_diff_analyze:
             self.mode_config.dump_mode = Const.SUMMARY
-        match_result.drop(columns=[self.NPU_PARSE_ORDER, self.BENCH_PARSE_ORDER], inplace=True, errors='ignore')
+        match_result.drop(columns=[CompareConst.NPU_PARSE_ORDER, CompareConst.BENCH_PARSE_ORDER], inplace=True,
+                          errors='ignore')
         create_table = CreateTable(self.mode_config)
         result_df, header = create_table.make_result_df(match_result)
 
         # calculate statistics diff
         calc_stats_diff = CalcStatsDiff(self.mode_config)
         return calc_stats_diff.calc_accuracy(result_df, header)
-
-    def restore_dump_order(self, match_result):
-        if match_result.empty:
-            return match_result
-
-        # 检查是否包含 NPU_PARSE_ORDER 列
-        has_npu_order = self.NPU_PARSE_ORDER in match_result.columns
-        has_bench_order = self.BENCH_PARSE_ORDER in match_result.columns
-
-        # 如果没有相关列，则直接返回原始数据
-        if not has_npu_order and not has_bench_order:
-            return match_result
-
-        if has_npu_order:
-            match_result[self.NPU_PARSE_ORDER] = pd.to_numeric(match_result[self.NPU_PARSE_ORDER], errors='coerce')
-
-        # 使用 COMPARE_ORDER 临时列进行排序
-        if has_npu_order:
-            match_result[self.COMPARE_ORDER] = match_result[self.NPU_PARSE_ORDER]
-        else:
-            match_result[self.COMPARE_ORDER] = np.nan
-
-        match_result = match_result.sort_values(by=self.COMPARE_ORDER, na_position="last", kind="stable").reset_index(
-            drop=True)
-        match_result.drop(columns=[self.COMPARE_ORDER], inplace=True, errors='ignore')
-        return match_result
 
 
 class ParseData:
@@ -946,10 +946,16 @@ class Match:
             match_result = match_result.sort_values(CompareConst.OP_NAME_X).reset_index(drop=True)
             match_result[CompareConst.OP_NAME_X] = match_result[CompareConst.OP_NAME_X].astype('object')
         elif self.mode_config.fuzzy_match:
-            drop_list = [Const.DIRECTION, Const.CALL_DIRECTION, Const.OP_NO_NUMBER, Const.FORWARD_CALL_ORDER,
-                         Const.BACKWARD_CALL_ORDER, Const.SUFFIX]
-            npu_df.drop(columns=drop_list, inplace=True)
-            bench_df.drop(columns=drop_list, inplace=True)
+            common_drop_list = [Const.DIRECTION, Const.CALL_DIRECTION, Const.OP_NO_NUMBER, Const.FORWARD_CALL_ORDER,
+                                Const.BACKWARD_CALL_ORDER, Const.SUFFIX]
+            npu_drop_list = common_drop_list + (
+                [CompareConst.NPU_PARSE_ORDER] if CompareConst.NPU_PARSE_ORDER in npu_df.columns else []
+            )
+            bench_drop_list = common_drop_list + (
+                [CompareConst.BENCH_PARSE_ORDER] if CompareConst.BENCH_PARSE_ORDER in bench_df.columns else []
+            )
+            npu_df.drop(columns=npu_drop_list, inplace=True, errors="ignore")
+            bench_df.drop(columns=bench_drop_list, inplace=True, errors="ignore")
             match_result = self.process_fuzzy_match(npu_df, bench_df)
 
         # 非fsdp后端暂无layer、class、module_mapping等列，因此增加后端限制
