@@ -4,16 +4,39 @@
 
 MindStudio Probe（MindStudio精度调试工具，msProbe）是针对昇腾提供的全场景精度工具链，专为模型开发的精度调试环节设计，可显著提升用户定位模型精度问题的效率。
 
-msProbe主要包括精度数据采集（dump）、精度预检、训练状态监测和精度比对等功能，这些功能侧重不同的训练或推理场景，可以帮助定位模型训练或推理中的精度问题。
+## 未来规划
+
+未来规划会刷新在[MindStudio Probe Roadmap](https://gitcode.com/Ascend/msprobe/issues/27)中，欢迎访问msProbe最新规划动态。
+
+## 社区会议
+
+MindStudio Probe系列TC及SIG会议安排请查看[Ascend会议中心](https://meeting.ascend.osinfra.cn/)。
+
+## 最新消息
+
+[2025.12.31]：MindStudio Probe精度调试工具全面开源。
+
+## 目录结构
+
+关键目录如下，详细介绍参见[项目目录](./docs/zh/dir_structure.md)。
+
+```
+MindStudio-probe
+├── csrc                         # C/C++源码目录
+├── cmake                        # 存放解析C化部分cmake文件
+├── docs                         # 文档目录
+├── examples                     # 工具配置样例存放目录
+├── output                       # 交付件生成目录
+├── plugins                      # 插件类代码总入口
+├── python                       # Python源码目录
+├── scripts                      # 存放安装卸载升级脚本
+├── test                         # 测试代码目录
+├── setup.py                     # 端到端打包构建脚本
+├── README.md                    # 整体仓代码说明
+└── LICENSE                      # LICENSE文件
+```
 
 ## 环境部署
-
-### 环境和依赖
-
-使用msProbe工具前，要求已存在可执行的用户AI应用，其中要求昇腾环境：
-
-- 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
-- 已安装配套版本的CANN Toolkit开发套件包和算子包并配置环境变量，详情请参见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler)》。
 
 ### 版本说明
 
@@ -31,190 +54,44 @@ msProbe主要包括精度数据采集（dump）、精度预检、训练状态监
 
 msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监测及精度比对功能，帮助用户快速上手。详细快速入门可参见《PyTorch场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/pytorch_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”或《MindSpore场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/mindspore_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”。
 
-## 工具限制与注意事项
-
-- 工具读写的所有路径，如`config_path`、`dump_path`等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。
-
-- 出于安全性及权限最小化角度考虑，本工具不应使用root等高权限账户，建议使用普通用户权限安装执行。
-
-- 使用本工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
-
-- 用户须自行保证使用最小权限原则，如给工具输入的文件要求other用户不可写，在一些对安全要求更严格的功能场景下还需确保输入的文件group用户不可写。
-
-- 使用工具前，建议先浏览[工具功能模块简介、适用场景和当前版本局限性](docs/zh/limitations_and_precautions.md)，了解功能特性。
-
-- msProbe建议执行用户与安装用户保持一致，如果使用root执行，请自行关注root高权限触及的安全风险。
-
 ## 功能介绍
 
-### vLLM推理场景
-
-#### eager模式
-
-1. [数据采集](https://docs.vllm.ai/projects/ascend/zh-cn/latest/developer_guide/performance_and_debug/msprobe_guide.html)
-
-   完成msProbe精度数据采集操作。
-
-2. 数据比对
-   
-   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
-
-   请参考[分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)或[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)。
-
-#### aclgraph图模式
-
-1. [数据采集](docs/zh/dump/aclgraph_dump_instruct.md)
-
-   通过acl_save接口完成精度数据采集操作。
-
-#### torchair图模式
-
-1. [数据采集](docs/zh/dump/torchair_dump_instruct.md)
-
-   通过set_ge_dump_config接口完成精度数据采集操作。
-
-2. [精度比对](docs/zh/accuracy_compare/torchair_compare_instruct.md)
-
-   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
-
-### SGLang推理场景
-
-#### eager模式
-
-1. [数据采集](docs/zh/dump/sglang_eager_dump_instruct.md)
-
-   完成msProbe精度数据采集操作。
-
-2. 数据比对
-   
-   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
-
-   请参考[分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)或[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)。
-
-### ATB推理场景
-
-1. [数据采集](docs/zh/dump/atb_data_dump_instruct.md)
-
-   通过在ATB模型运行前，加载ATB dump模块的方式，实现对ATB模型运行过程中的精度数据的采集。
-
-2. [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)
-
-   将ATB dump的精度数据进行精度比对，进而定位精度问题。
-
-3. [数据转换](docs/zh/dump/data_parse_instruct.md)
-
-   将ATB dump的精度数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
-
-### 离线模型推理场景
-
-1. [数据采集](docs/zh/dump/infer_offline_dump_instruct.md)
-
-   完成msProbe精度数据采集操作。
-
-2. [精度比对](docs/zh/accuracy_compare/infer_compare_offline_model_instruct.md)
-
-   提供一键式离线模型比对功能，仅需输入模型即可完成比对，无需提前采集数据，快速输出结果。
-
-3. [离线模型数据精度比对](docs/zh/accuracy_compare/offlline_data_compare_instruct.md)
-   提供离线模型数据比对功能，输入离线模型的dump数据进行精度比对。
-
-4. [数据转换](docs/zh/dump/data_parse_instruct.md)
-
-   将离线模型的dump数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件。
-
-### PyTorch训练场景
-
-1. [训练前配置检查](docs/zh/config_check_instruct.md)
-
-   训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异。
-
-2. [数据采集](docs/zh/dump/pytorch_data_dump_instruct.md)
-
-   通过config.json配置，完成msProbe精度数据采集操作。
-
-   config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
-
-3. [精度预检](docs/zh/accuracy_checker/pytorch_accuracy_checker_instruct.md)
-
-   在昇腾NPU上扫描训练模型中的所有API，给出精度情况的诊断和分析。
-
-4. [分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)
-
-   将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
-
-5. [精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)
-
-   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
-
-6. [训练状态监测](docs/zh/monitor_instruct.md)
-
-   收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况。
-
-7. [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
-
-   训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
-
-8. [整网首个溢出节点分析](docs/zh/overflow_check/overflow_check_instruct.md)
-
-   多rank场景下通过dump数据找到首个出现Nan或Inf的节点。
-
-9. [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
-
-   将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
-
-### MindSpore训练场景
-
-1. [训练前配置检查](docs/zh/config_check_instruct.md)
-
-   训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异。
-
-2. [数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)
-
-   通过config.json配置，完成msProbe精度数据采集操作。
-
-   config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
-
-3. [精度预检](docs/zh/accuracy_checker/mindspore_accuracy_checker_instruct.md)
-
-   在昇腾NPU上扫描训练模型中的所有API，给出精度情况的诊断和分析。
-
-4. [分级可视化构图比对](docs/zh/accuracy_compare/mindspore_visualization_instruct.md)
-
-   将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
-
-5. [精度比对](docs/zh/accuracy_compare/mindspore_accuracy_compare_instruct.md)
-
-   将msProbe工具dump的精度数据进行精度比对，进而定位精度问题。
-
-6. [训练状态监测](docs/zh/monitor_instruct.md)
-
-   收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况。
-
-7. [溢出检测与解析](docs/zh/overflow_check/mindspore_overflow_check_instruct.md)
-
-   溢出检测用于采集溢出API或模块的精度数据，而溢出解析则是通过对溢出数据的分析，进一步判断是否为正常溢出。
-
-   推荐直接使用数据采集功能采集统计量信息，检测溢出问题，具体请参见[数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)。
-
-8. [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
-
-   训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
-
-9. [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)
-
-   将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化，方便用户从整体的趋势分布观测精度数据。
-
-### MSAdapter场景
-
-1. [数据采集](docs/zh/dump/msadapter_data_dump_instruct.md)
-
-   通过config.json配置，完成msProbe精度数据采集操作。
-
-   config.json配置文件详细介绍请参见[配置文件介绍](docs/zh/dump/config_json_introduct.md)和[config.json配置样例](docs/zh/dump/config_json_examples.md)。
-
-2. [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)
-
-   训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度。
+| 使用场景            |  子模式/细分场景   | 功能项          | 功能说明                                                                                          | 参考文档                                                                                                                                                               |
+|-----------------|:-----------:|--------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **vLLM推理**      |   eager模式   | 数据采集         | 完成msProbe精度数据采集操作                                                                             | [数据采集](https://docs.vllm.ai/projects/ascend/zh-cn/latest/developer_guide/performance_and_debug/msprobe_guide.html)                                                 |
+|                 |             | 数据比对         | 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题<br/>请参考分级可视化构图比对或精度比对                                      | [分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)<br>[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)                   |
+|                 | aclgraph图模式 | 数据采集         | 通过acl_save接口完成精度数据采集操作                                                                        | [数据采集](docs/zh/dump/aclgraph_dump_instruct.md)                                                                                                                     |
+|                 | torchair图模式 | 数据采集         | 通过set_ge_dump_config接口完成精度数据采集操作                                                              | [数据采集](docs/zh/dump/torchair_dump_instruct.md)                                                                                                                     |
+|                 |             | 精度比对         | 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题                                                            | [精度比对](docs/zh/accuracy_compare/torchair_compare_instruct.md)                                                                                                      |
+| **SGLang推理**    |   eager模式   | 数据采集         | 完成msProbe精度数据采集操作                                                                             | [数据采集](docs/zh/dump/sglang_eager_dump_instruct.md)                                                                                                                 |
+|                 |             | 数据比对         | 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题                                                            | [分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)<br>[精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)                   |
+| **ATB推理**       |      -      | 数据采集         | 通过在ATB模型运行前，加载ATB dump模块的方式，实现对ATB模型运行过程中的精度数据的采集                                             | [数据采集](docs/zh/dump/atb_data_dump_instruct.md)                                                                                                                     |
+|                 |             | 精度比对         | 将ATB dump的精度数据进行精度比对，进而定位精度问题                                                                 | [精度比对](docs/zh/accuracy_compare/atb_data_compare_instruct.md)                                                                                                      |
+|                 |             | 数据转换         | 将ATB dump的精度数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件                                          | [数据转换](docs/zh/dump/data_parse_instruct.md)                                                                                                                        |
+| **离线模型推理**      |      -      | 数据采集         | 完成msProbe精度数据采集操作                                                                             | [数据采集](docs/zh/dump/infer_offline_dump_instruct.md)                                                                                                                |
+|                 |             | 精度比对         | 提供一键式离线模型比对功能，仅需输入模型即可完成比对，无需提前采集数据，快速输出结果                                                    | [精度比对](docs/zh/accuracy_compare/infer_compare_offline_model_instruct.md)                                                                                           |
+|                 |             | 离线模型数据精度比对   | 提供离线模型数据比对功能，输入离线模型的dump数据进行精度比对                                                              | [离线模型数据精度比对](docs/zh/accuracy_compare/offlline_data_compare_instruct.md)                                                                                           |
+|                 |             | 数据转换         | 将离线模型的dump数据转换为numpy（.npy）或PyTorch tensor（.pt）格式文件                                            | [数据转换](docs/zh/dump/data_parse_instruct.md)                                                                                                                        |
+| **PyTorch训练**   |      -      | 训练前配置检查      | 训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异                                                                | [训练前配置检查](docs/zh/config_check_instruct.md)                                                                                                                        |
+|                 |             | 数据采集         | 通过config.json配置，完成msProbe精度数据采集操作<br/>config.json配置文件详细介绍请参见配置文件介绍和config.json配置样例            | [数据采集](docs/zh/dump/pytorch_data_dump_instruct.md)<br>[配置文件介绍](docs/zh/dump/config_json_introduct.md)<br>[config.json配置样例](docs/zh/dump/config_json_examples.md)   |
+|                 |             | 精度预检         | 在昇腾NPU上扫描训练模型中的所有API，给出精度情况的诊断和分析                                                             | [精度预检](docs/zh/accuracy_checker/pytorch_accuracy_checker_instruct.md)                                                                                              |
+|                 |             | 分级可视化构图比对    | 将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对                                               | [分级可视化构图比对](docs/zh/accuracy_compare/pytorch_visualization_instruct.md)                                                                                            |
+|                 |             | 精度比对         | 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题                                                            | [精度比对](docs/zh/accuracy_compare/pytorch_accuracy_compare_instruct.md)                                                                                              |
+|                 |             | 训练状态监测       | 收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况                                  | [训练状态监测](docs/zh/monitor_instruct.md)                                                                                                                              |
+|                 |             | checkpoint比对 | 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度                                                           | [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)                                                                                                             |
+|                 |             | 整网首个溢出节点分析   | 多rank场景下通过dump数据找到首个出现Nan或Inf的节点                                                              | [整网首个溢出节点分析](docs/zh/overflow_check/overflow_check_instruct.md)                                                                                                    |
+|                 |             | 趋势可视化        | 将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化                                       | [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)                                                                                                  |
+| **MindSpore训练** |      -      | 训练前配置检查      | 训练前或精度比对前，对比两个环境下可能影响训练精度的配置差异                                                                | [训练前配置检查](docs/zh/config_check_instruct.md)                                                                                                                        |
+|                 |             | 数据采集         | 通过config.json配置，完成msProbe精度数据采集操作<br/>config.json配置文件详细介绍请参见配置文件介绍和config.json配置样例            | [数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)<br>[配置文件介绍](docs/zh/dump/config_json_introduct.md)<br>[config.json配置样例](docs/zh/dump/config_json_examples.md) |
+|                 |             | 精度预检         | 在昇腾NPU上扫描训练模型中的所有API，给出精度情况的诊断和分析                                                             | [精度预检](docs/zh/accuracy_checker/mindspore_accuracy_checker_instruct.md)                                                                                            |
+|                 |             | 分级可视化构图比对    | 将msProbe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对                                               | [分级可视化构图比对](docs/zh/accuracy_compare/mindspore_visualization_instruct.md)                                                                                          |
+|                 |             | 精度比对         | 将msProbe工具dump的精度数据进行精度比对，进而定位精度问题                                                            | [精度比对](docs/zh/accuracy_compare/mindspore_accuracy_compare_instruct.md)                                                                                            |
+|                 |             | 训练状态监测       | 收集和聚合模型训练过程中的网络层，优化器，通信算子的中间值，帮助诊断模型训练过程中计算，通信，优化器各部分出现的异常情况                                  | [训练状态监测](docs/zh/monitor_instruct.md)                                                                                                                              |
+|                 |             | 溢出检测与解析      | 溢出检测用于采集溢出API或模块的精度数据，而溢出解析则是通过对溢出数据的分析，进一步判断是否为正常溢出<br/>推荐直接使用数据采集功能采集统计量信息，检测溢出问题，具体请参见数据采集 | [溢出检测与解析](docs/zh/overflow_check/mindspore_overflow_check_instruct.md)<br>[数据采集](docs/zh/dump/mindspore_data_dump_instruct.md)                                     |
+|                 |             | checkpoint比对 | 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度                                                           | [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)                                                                                                             |
+|                 |             | 趋势可视化        | 将msProbe工具数据采集或训练状态监测的统计量数据从迭代步数、节点rank和张量目标三个维度进行趋势可视化                                       | [趋势可视化](docs/zh/accuracy_compare/trend_visualization_instruct.md)                                                                                                  |
+| **MSAdapter场景** |      -      | 数据采集         | 通过config.json配置，完成msProbe精度数据采集操作<br/>config.json配置文件详细介绍请参见配置文件介绍和config.json配置样例            | [数据采集](docs/zh/dump/msadapter_data_dump_instruct.md)<br>[配置文件介绍](docs/zh/dump/config_json_introduct.md)<br>[config.json配置样例](docs/zh/dump/config_json_examples.md) |
+|                 |             | checkpoint比对 | 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度                                                           | [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)                                                                                                             |
 
 ## 补充材料
 
