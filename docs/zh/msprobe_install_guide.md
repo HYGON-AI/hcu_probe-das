@@ -1,5 +1,12 @@
 # msProbe工具安装指南
 
+## 环境和依赖
+
+使用msProbe工具前，要求已存在可执行的用户AI应用，其中要求昇腾环境：
+
+- 可正常运行用户AI应用，详细设备型号请参见《[昇腾产品形态说明](https://www.hiascend.com/document/detail/zh/AscendFAQ/ProduTech/productform/hardwaredesc_0001.html)》。
+- 已安装配套版本的CANN Toolkit开发套件包和算子包并配置环境变量，详情请参见《[CANN 软件安装指南](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=local&OS=openEuler)》。
+
 ## 安装说明
 
 本文主要介绍msProbe工具的安装。当前支持**从PyPI安装、下载whl包安装和编译安装**三种方式。
@@ -10,6 +17,18 @@
 conda create -n msprobe python
 conda activate msprobe
 ```
+
+## 工具限制与注意事项
+
+- 工具读写的所有路径，如`config_path`、`dump_path`等，只允许包含大小写字母、数字、下划线、斜杠、点和短横线。
+
+- 出于安全性及权限最小化角度考虑，本工具不应使用root等高权限账户，建议使用普通用户权限安装执行。
+
+- 使用本工具前请确保执行用户的umask值大于等于0027，否则可能会导致工具生成的精度数据文件和目录权限过大。
+
+- 用户须自行保证使用最小权限原则，如给工具输入的文件要求other用户不可写，在一些对安全要求更严格的功能场景下还需确保输入的文件group用户不可写。
+
+- msProbe建议执行用户与安装用户保持一致，如果使用root执行，请自行关注root高权限触及的安全风险。
 
 ## 从PyPI安装
 
