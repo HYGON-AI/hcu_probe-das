@@ -364,7 +364,7 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
                 kwargs_params[key] = gen_atten_mask(value, convert_type, real_data_path)
             else:
                 kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
-        elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
+        elif value.get('type') in TENSOR_DATA_LIST or (value.get('type') is not None and value.get('type').startswith("numpy")):
             kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
