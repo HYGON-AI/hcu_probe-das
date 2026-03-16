@@ -201,7 +201,7 @@ def patch_triton_jitfunction_run():
 
         # ===== 1) 生成 api_name + per-step 计数 =====
         try:
-            api_name = f"Triton.{self.fn.__qualname__}"
+            api_name = f"Triton.{self.fn.__name__}"
         except Exception:
             api_name = str(getattr(self, "fn", "unknown_triton_fn"))
 
