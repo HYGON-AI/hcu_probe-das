@@ -121,17 +121,29 @@ class ApiWrapper:
                 api_template = api_templates[index]
                 index += 1
                 for api_name in self.api_names.get(framework, {}).get(api_type, []):
-                    ori_api = None
+                    ori_apis = []
+                    api_source = {}
                     for module in api_modules[0]:
-                        ori_api = ori_api or _get_attr(module, api_name)
-                    if callable(ori_api):
-                        wrapped_functions[api_name] = self.wrap_api_func(
-                            api_name,
-                            ori_api,
-                            name_prefix,
-                            hook_build_func,
-                            api_template
-                        )
+                        existed = False
+                        for api in ori_apis:
+                            if api == _get_attr(module, api_name):
+                                existed = True
+                                api_source[api].append(module)
+                        if not existed:
+                            api_source[_get_attr(module, api_name)] = [module]
+                            ori_apis.append(_get_attr(module, api_name))
+                    
+                    wrapped_functions[api_name] = []
+                    for ori_api in ori_apis:
+                        if callable(ori_api):
+                            wrapped_api = self.wrap_api_func(
+                                api_name,
+                                ori_api,
+                                name_prefix,
+                                hook_build_func,
+                                api_template
+                            )
+                            wrapped_functions[api_name].append((api_source.get(ori_api, []), wrapped_api))
                 wrapped_functions_in_framework[api_type] = wrapped_functions
             self.wrapped_api_functions[framework] = wrapped_functions_in_framework
         return self.wrapped_api_functions
@@ -184,22 +196,24 @@ class ApiRegistry:
     @staticmethod
     def store_ori_attr(ori_api_groups, api_list, api_ori_attr):
         for api in api_list:
-            ori_api = None
+            ori_api = []
             for ori_api_group in ori_api_groups:
-                ori_api = ori_api or _get_attr(ori_api_group, api)
+                ori_api.append(([ori_api_group], _get_attr(ori_api_group, api)))
             api_ori_attr[api] = ori_api
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):
-        for api, api_attr in attr_dict.items():
-            if Const.SEP in api:
-                sub_module_name, sub_op = api.rsplit(Const.SEP, 1)
-                sub_module = getattr(api_group, sub_module_name, None)
-                if sub_module is not None:
-                    setattr(sub_module, sub_op, api_attr)
-            else:
-                setattr(api_group, api, api_attr)
-
+        for api, api_attrs in attr_dict.items():
+            for module, api_attr in api_attrs:
+                if api_group in module:
+                    if Const.SEP in api:
+                        sub_module_name, sub_op = api.rsplit(Const.SEP, 1)
+                        sub_module = getattr(api_group, sub_module_name, None)
+                        if sub_module is not None:
+                            setattr(sub_module, sub_op, api_attr)
+                    else:
+                        setattr(api_group, api, api_attr)
+ 
     @staticmethod
     def register_custom_api(module, api_name, api_prefix, hook_build_func, api_template):
         def wrap_api_func(api_name, api_func, prefix, hook_build_func, api_template):

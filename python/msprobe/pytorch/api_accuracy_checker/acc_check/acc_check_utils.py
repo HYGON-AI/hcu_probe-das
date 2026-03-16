@@ -125,7 +125,8 @@ def exec_api(exec_params):
     api_register.initialize_hook(None)
     api_func_type = list(prefix_map.keys())[list(prefix_map.values()).index(api_type)]
     api_func = api_register.ori_api_attr.get(Const.PT_FRAMEWORK + Const.SEP + api_func_type, {}).get(api_name)
-
+    # ori_api_attr 存的是 list of ([module], callable)，需取出可调用对象
+    api_func = api_func[0][1]
     torch_api = ApiTemplate(api_name, api_func, api_type, None, need_hook=False, device=device)
     if is_autocast:
         with autocast(dtype=autocast_dtype):
