@@ -167,7 +167,7 @@ class TestCompareRealData(unittest.TestCase):
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
-                                  'unsupported', "Dump file: ['Functional.linear.0.forward.input.0.pt', 'Functional.linear.0.forward.input.0.pt'] not found or read failed."])
+                                  'unsupported', "Dump file: Functional.linear.0.forward.input.0.pt or Functional.linear.0.forward.input.0.pt not found or read failed."])
 
         generate_pt(base_dir)
         result = compare_real_data.compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)

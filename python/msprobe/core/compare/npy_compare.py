@@ -16,12 +16,26 @@
 
 
 import abc
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, format_value
+
+
+@dataclass
+class CompareResult:
+    """
+    对比流程中的中间结果对象
+    用于在不同阶段之间传递数据与状态。
+    """
+    n_value: Any
+    b_value: Any
+    error_flag: bool = False
+    err_msg: str = ""
 
 
 def handle_inf_nan(n_value, b_value):
@@ -52,47 +66,6 @@ def handle_inf_nan(n_value, b_value):
         else:
             return CompareConst.NAN, CompareConst.NAN
     return n_value, b_value
-
-
-def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
-    """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag和error_msg"""
-    err_msg = ""
-    if error_flag:
-        err_msg = f"Dump file: {error_file} not found or read failed."
-        return CompareConst.READ_NONE, CompareConst.READ_NONE, error_flag, err_msg
-
-    if n_value.size == 0:  # 判断读取到的数据是否为空
-        err_msg = "This is empty data, can not compare."
-        error_flag = True
-        return CompareConst.NONE, CompareConst.NONE, error_flag, err_msg
-    if not n_value.shape:  # 判断数据是否为0维张量
-        err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', '{CompareConst.EUC_DIST}', "
-                   f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and '{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. ")
-        error_flag = False  # 0-d tensor 最大绝对误差、最大相对误差仍然支持计算，因此error_flag设置为False，不做统一处理
-        return n_value, b_value, error_flag, err_msg
-    if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
-        err_msg = "Shape of NPU and bench tensor do not match. Skipped."
-        error_flag = True
-        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, error_flag, err_msg
-
-    try:
-        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
-    except CompareException:
-        logger.error('Numpy data is unreadable, please check!')
-        err_msg = "Data is unreadable."
-        error_flag = True
-        return CompareConst.UNREADABLE, CompareConst.UNREADABLE, error_flag, err_msg
-    if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
-        err_msg = "The position of inf or nan in NPU and bench Tensor do not match."
-        error_flag = True
-        return CompareConst.NAN, CompareConst.NAN, error_flag, err_msg
-
-    if n_value.dtype != b_value.dtype:  # 判断数据的dtype是否一致
-        err_msg = "Dtype of NPU and bench tensor do not match."
-        error_flag = False
-        return n_value, b_value, error_flag, err_msg
-
-    return n_value, b_value, error_flag, err_msg
 
 
 def reshape_value(n_value, b_value):
@@ -314,3 +287,136 @@ def compare_ops_apply(n_value, b_value, error_flag, err_msg):
         result_list.append(result)
         err_msg += msg
     return result_list, err_msg
+
+
+class ValidateTensor:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def _check_empty(result):
+        """
+        检查 tensor 是否为空
+        """
+        n_value = result.n_value
+
+        if n_value.size == 0:
+            return CompareResult(
+                CompareConst.NONE,
+                CompareConst.NONE,
+                True,
+                "This is empty data, can not compare."
+            )
+
+        return result
+
+    @staticmethod
+    def _check_scalar(result):
+        """
+        检查是否为 0 维 tensor
+        """
+        n_value = result.n_value
+        b_value = result.b_value
+
+        if not n_value.shape:
+            msg = (
+                f"This is type of 0-d tensor, can not calculate "
+                f"'{CompareConst.COSINE}', '{CompareConst.EUC_DIST}', "
+                f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and "
+                f"'{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. "
+            )
+            return CompareResult(n_value, b_value, False, msg)
+
+        return result
+
+    @staticmethod
+    def _check_shape(result):
+        """
+        检查 NPU 与 Bench tensor 的 shape 是否一致
+        """
+        n_value = result.n_value
+        b_value = result.b_value
+
+        if n_value.shape != b_value.shape:
+            return CompareResult(
+                CompareConst.SHAPE_UNMATCH,
+                CompareConst.SHAPE_UNMATCH,
+                True,
+                "Shape of NPU and bench tensor do not match. Skipped."
+            )
+
+        return result
+
+    @staticmethod
+    def _check_nan_inf(result):
+        """
+        检查 tensor 中的 nan / inf
+        """
+        n_value = result.n_value
+        b_value = result.b_value
+
+        try:
+            n_value, b_value = handle_inf_nan(n_value, b_value)
+        except CompareException:
+            logger.error("Numpy data is unreadable.")
+
+            return CompareResult(
+                CompareConst.UNREADABLE,
+                CompareConst.UNREADABLE,
+                True,
+                "Data is unreadable."
+            )
+
+        if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
+            return CompareResult(
+                CompareConst.NAN,
+                CompareConst.NAN,
+                True,
+                "The position of inf or nan in NPU and bench Tensor do not match."
+            )
+
+        return result
+
+    @staticmethod
+    def _check_dtype(result):
+        """
+        检查 tensor 的 dtype 是否一致
+        """
+        n_value = result.n_value
+        b_value = result.b_value
+
+        if n_value.dtype != b_value.dtype:
+            return CompareResult(
+                n_value,
+                b_value,
+                False,
+                "Dtype of NPU and bench tensor do not match."
+            )
+
+        return result
+
+    def check_tensor(self, result):
+        """
+        对 tensor 进行合法性校验
+        通过规则链依次执行各个校验规则，
+        一旦某个规则返回错误结果，则立即返回。
+
+        参数:
+            result (CompareResult): 包含 NPU 与 Bench tensor 数据
+        返回:
+            CompareResult: 校验后的结果
+        """
+        validators = [
+            self._check_empty,
+            self._check_scalar,
+            self._check_shape,
+            self._check_nan_inf,
+            self._check_dtype
+        ]
+
+        for validator in validators:
+            result = validator(result)
+            if result.err_msg:
+                return result
+
+        return result

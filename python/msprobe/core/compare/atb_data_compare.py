@@ -38,7 +38,7 @@ from msprobe.core.common.file_utils import (
     get_file_content_bytes
 )
 from msprobe.core.common.log import logger
-from msprobe.core.compare.npy_compare import get_error_flag_and_msg, compare_ops_apply
+from msprobe.core.compare.npy_compare import CompareResult, ValidateTensor, compare_ops_apply
 
 
 MIN_ROW_COUNT_OF_CSV = 2
@@ -331,7 +331,13 @@ def compare_single_tensor(golden_tensor, target_tensor):
         target_tensor = target_tensor.to(torch.float32)
     target_value = target_tensor.numpy()
 
-    target_value, golden_value, error_flag, _ = get_error_flag_and_msg(target_value, golden_value)
+    compare_input = CompareResult(target_value, golden_value)
+    validate_tensor = ValidateTensor()
+    checked_result = validate_tensor.check_tensor(compare_input)
+    target_value = checked_result.n_value
+    golden_value = checked_result.b_value
+    error_flag = checked_result.error_flag
+
     if error_flag:
         return result_list
 

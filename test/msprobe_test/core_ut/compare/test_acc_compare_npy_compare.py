@@ -20,7 +20,7 @@ import numpy as np
 from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst
-from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, get_error_flag_and_msg, \
+from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, \
     npy_data_check, statistics_data_check, get_relative_err, GetCosineSimilarity, GetMaxAbsErr, GetMaxRelativeErr, \
     GetErrRatio, error_value_process, compare_ops_apply, GetEuclideanDistance
 
@@ -70,88 +70,6 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertTrue(np.array_equal(a, np.array([1, 2, 0, 4])))
         self.assertTrue(np.array_equal(b, np.array([1, 2, 0, 4])))
-
-    def test_get_error_flag_and_msg_normal(self):
-        n_value_0 = np.array([1, 2, 3, 4])
-        b_value_0 = np.array([1, 2, 3, 4])
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value_0, b_value_0, error_flag=error_flag)
-
-        self.assertTrue(np.array_equal(n_value, n_value_0))
-        self.assertTrue(np.array_equal(b_value, b_value_0))
-        self.assertFalse(error_flag)
-        self.assertEqual(err_msg, "")
-
-    def test_get_error_flag_and_msg_read_none(self):
-        n_value = np.array([1, 2, np.inf, 4])
-        b_value = np.array([1, 2, 3, 4])
-        error_flag = True
-        error_file = 'fake file'
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag, error_file=error_file)
-
-        self.assertEqual(n_value, CompareConst.READ_NONE)
-        self.assertEqual(b_value, CompareConst.READ_NONE)
-        self.assertTrue(error_flag)
-        self.assertEqual(err_msg, "Dump file: fake file not found or read failed.")
-
-    def test_get_error_flag_and_msg_none(self):
-        n_value = np.array([])
-        b_value = np.array([1, 2, 3, 4, 5])
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
-
-        self.assertEqual(n_value, CompareConst.NONE)
-        self.assertEqual(b_value, CompareConst.NONE)
-        self.assertTrue(error_flag)
-        self.assertEqual(err_msg, "This is empty data, can not compare.")
-
-    def test_get_error_flag_and_0d_tensor(self):
-        n_value = np.array(1)
-        b_value = np.array(1)
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
-
-        self.assertFalse(error_flag)
-        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', 'EucDist', "
-                                  "'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
-
-    def test_get_error_flag_and_msg_shape_unmatch(self):
-        n_value = np.array([1, 2, 3, 4])
-        b_value = np.array([1, 2, 3, 4, 5])
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
-
-        self.assertEqual(n_value, CompareConst.SHAPE_UNMATCH)
-        self.assertEqual(b_value, CompareConst.SHAPE_UNMATCH)
-        self.assertTrue(error_flag)
-        self.assertEqual(err_msg, "Shape of NPU and bench tensor do not match. Skipped.")
-
-    def test_get_error_flag_and_msg_nan(self):
-        n_value = np.array([1.0, 2.0, np.inf, 4.0])
-        b_value = np.array([1.0, 2.0, 3.0, 4.0])
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
-
-        self.assertEqual(n_value, CompareConst.NAN)
-        self.assertEqual(b_value, CompareConst.NAN)
-        self.assertTrue(error_flag)
-        self.assertEqual(err_msg, "The position of inf or nan in NPU and bench Tensor do not match.")
-
-    def test_get_error_flag_and_msg_diff_dtype(self):
-        n_value = np.array([1, 2, 3, 4])
-        b_value = np.array([1.0, 2.0, 3.0, 4.0])
-        error_flag = False
-
-        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
-
-        self.assertFalse(error_flag)
-        self.assertEqual(err_msg, "Dtype of NPU and bench tensor do not match.")
 
     def test_reshape_value_normal(self):
         n_value = np.array([[1, 2], [3, 4]])

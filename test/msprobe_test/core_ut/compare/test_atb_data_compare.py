@@ -225,21 +225,38 @@ class TestAtbDataCompareFunctions(TestCase):
         golden_tensor = torch.tensor([0.0])
         target_tensor = torch.tensor([0.0])
 
-        with patch('msprobe.core.compare.atb_data_compare.get_error_flag_and_msg', return_value=(0, 0, True, '')):
+        mock_check_result = MagicMock()  # 创建一个 mock 对象来模拟 check_tensor 的返回值 (checked_result)
+
+        with patch('msprobe.core.compare.atb_data_compare.ValidateTensor') as MockValidateTensor:
+            mock_instance = MockValidateTensor.return_value
+            mock_instance.check_tensor.return_value = mock_check_result
+            mock_check_result.n_value = 0
+            mock_check_result.b_value = 0
+            mock_check_result.error_flag = True
             ret = compare_single_tensor(golden_tensor, target_tensor)
             self.assertEqual(ret, default_ret)
 
-        with patch('msprobe.core.compare.atb_data_compare.get_error_flag_and_msg', return_value=(0, 0, False, '')), \
+        with patch('msprobe.core.compare.atb_data_compare.ValidateTensor') as MockValidateTensor, \
              patch('msprobe.core.compare.atb_data_compare.compare_ops_apply',
                    return_value=(['Cosine', CompareConst.NAN], False)):
+            mock_instance = MockValidateTensor.return_value
+            mock_instance.check_tensor.return_value = mock_check_result
+            mock_check_result.n_value = 0
+            mock_check_result.b_value = 0
+            mock_check_result.error_flag = False
             ret = compare_single_tensor(golden_tensor, target_tensor)
             self.assertEqual(ret, ['Cosine', CompareConst.N_A])
 
         golden_tensor = torch.tensor([0.0], dtype=torch.bfloat16)
         target_tensor = torch.tensor([0.0], dtype=torch.bfloat16)
-        with patch('msprobe.core.compare.atb_data_compare.get_error_flag_and_msg', return_value=(0, 0, False, '')), \
-             patch('msprobe.core.compare.atb_data_compare.compare_ops_apply',
-                   return_value=(['Cosine', CompareConst.NAN], False)):
+        with patch('msprobe.core.compare.atb_data_compare.ValidateTensor') as MockValidateTensor, \
+            patch('msprobe.core.compare.atb_data_compare.compare_ops_apply',
+                return_value=(['Cosine', CompareConst.NAN], False)):
+            mock_instance = MockValidateTensor.return_value
+            mock_instance.check_tensor.return_value = mock_check_result
+            mock_check_result.n_value = 0
+            mock_check_result.b_value = 0
+            mock_check_result.error_flag = False
             ret = compare_single_tensor(golden_tensor, target_tensor)
             self.assertEqual(ret, ['Cosine', CompareConst.N_A])
 

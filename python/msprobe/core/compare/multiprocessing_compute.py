@@ -25,7 +25,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
+from msprobe.core.compare.npy_compare import CompareResult, ValidateTensor, compare_ops_apply
 from msprobe.core.compare.config import ModeConfig
 
 
@@ -155,60 +155,118 @@ class CompareRealData:
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
         """
-        :param npu_op_name: excel中的NPU_Name，例如：MintFunctional.conv2d.0.forward.input.3.0
-        :param bench_op_name: excel中的Bench_Name，例如：Functional.conv2d.0.forward.input.3.0
-        :param op_name_mapping_dict: op_name和npy或pt文件的映射关系
-        :param input_param: npu_path/bench_path/stack_path等参数
-        :return: result_list，包含余弦相似度、最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率和错误信息
-        用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、欧式距离
-        最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息
+        按算子进行数据对比的主流程函数
+
+        整体流程：
+            1. 根据算子名定位 dump 文件
+            2. 读取 tensor 数据
+            3. 校验 tensor 数据合法性
+
+        参数:
+            npu_op_name (str): NPU 侧算子名称
+            bench_op_name (str): Bench 侧算子名称
+            op_name_mapping_dict (dict): 算子名称到 dump 文件名的映射关系
+            input_param: npu_path/bench_path等参数
+        返回:
+            list:
+                对比结果列表，包含：余弦相似度、欧式距离、最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率、错误信息
         """
-        relative_err, error_flag, err_msg = None, False, None
+        dump_result = self.locate_dump_file(npu_op_name, bench_op_name, op_name_mapping_dict)
+        if dump_result.err_msg:
+            return self.build_result(dump_result, npu_op_name, bench_op_name)
 
-        data_name_pair = op_name_mapping_dict.get(str(npu_op_name) + str(bench_op_name))
-        npu_data_name = data_name_pair[0]
-        bench_data_name = data_name_pair[1]
+        read_result = self.read_tensor(dump_result, input_param)
+        if read_result.err_msg:
+            return self.build_result(read_result, npu_op_name, bench_op_name)
 
-        error_file = data_name_pair
+        validate_tensor = ValidateTensor()
+        validate_result = validate_tensor.check_tensor(read_result)
+        return self.build_result(validate_result, npu_op_name, bench_op_name)
 
-        if str(npu_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有npu真实数据
-            n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True
-            err_msg = "NPU does not have data file."
-        elif str(bench_data_name) == CompareConst.NO_REAL_DATA_FLAG:  # 没有bench真实数据
-            n_value, b_value, error_flag = CompareConst.NO_REAL_DATA, CompareConst.NO_REAL_DATA, True
-            err_msg = "Bench does not have data file."
-        elif (str(npu_data_name) == CompareConst.N_A) ^ (str(bench_data_name) == CompareConst.N_A):  # 没匹配一侧单独N/A
-            n_value, b_value, error_flag = CompareConst.API_UNMATCH, CompareConst.API_UNMATCH, True
-            err_msg = "Bench api/module unmatched."
-        else:
-            npu_dir = input_param.get(CompareConst.NPU_DUMP_DATA_DIR)
-            bench_dir = input_param.get(CompareConst.BENCH_DUMP_DATA_DIR)
-            data_path_dict = {
-                "npu_dir": npu_dir,
-                "npu_data_name": npu_data_name,
-                "bench_dir": bench_dir,
-                "bench_data_name": bench_data_name
-            }
-            try:
-                # pt中file_reader为pt_compare.py的read_real_data
-                # ms中file_reader为ms_compare.py的read_real_data
-                n_value, b_value = self.file_reader(data_path_dict, self.cross_frame, self.mode_config.backend)
-            except IOError as error:
-                error_file = error.filename
-                n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
-                error_flag = True
-            except (FileCheckException, CompareException):
-                error_file = data_name_pair
-                n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
-                error_flag = True
+    @staticmethod
+    def locate_dump_file(npu_op_name, bench_op_name, mapping_dict):
+        """
+        根据算子名称查找对应的 dump 文件名
 
-        # 通过n_value, b_value同时得到错误标志和错误信息
-        if not err_msg:
-            n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag,
-                                                                           error_file=error_file)
+        返回:
+            CompareResult: 包含 dump 文件名或错误信息的结果对象
+        """
+        data_name_pair = mapping_dict.get(str(npu_op_name) + str(bench_op_name))
+        npu_data_name, bench_data_name = data_name_pair
 
-        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
+        if str(npu_data_name) == CompareConst.NO_REAL_DATA_FLAG:
+            return CompareResult(
+                CompareConst.NO_REAL_DATA,
+                CompareConst.NO_REAL_DATA,
+                True,
+                "NPU does not have data file."
+            )
 
+        if str(bench_data_name) == CompareConst.NO_REAL_DATA_FLAG:
+            return CompareResult(
+                CompareConst.NO_REAL_DATA,
+                CompareConst.NO_REAL_DATA,
+                True,
+                "Bench does not have data file."
+            )
+
+        if (str(npu_data_name) == CompareConst.N_A) ^ (str(bench_data_name) == CompareConst.N_A):
+            return CompareResult(
+                CompareConst.API_UNMATCH,
+                CompareConst.API_UNMATCH,
+                True,
+                "Bench api/module unmatched."
+            )
+
+        return CompareResult(npu_data_name, bench_data_name, False, "")
+
+    def read_tensor(self, dump_result, input_param):
+        """
+        从 dump 文件中读取 tensor 数据
+
+        参数:
+            dump_result (CompareResult): 上一步定位到的 dump 文件名
+        返回:
+            CompareResult: 返回读取到的 tensor 数据或错误信息
+        """
+        data_path_dict = {
+            "npu_dir": input_param.get(CompareConst.NPU_DUMP_DATA_DIR),
+            "npu_data_name": dump_result.n_value,
+            "bench_dir": input_param.get(CompareConst.BENCH_DUMP_DATA_DIR),
+            "bench_data_name": dump_result.b_value
+        }
+
+        try:
+            n_value, b_value = self.file_reader(data_path_dict, self.cross_frame, self.mode_config.backend)
+            return CompareResult(n_value, b_value, False, "")
+
+        except IOError as error:
+            return CompareResult(
+                CompareConst.READ_NONE,
+                CompareConst.READ_NONE,
+                True,
+                f"Dump file: {error.filename} not found or read failed."
+            )
+
+        except (FileCheckException, CompareException):
+            return CompareResult(
+                CompareConst.READ_NONE,
+                CompareConst.READ_NONE,
+                True,
+                f"Dump file: {dump_result.n_value} or {dump_result.b_value} not found or read failed."
+            )
+
+    def build_result(self, result, npu_op_name, bench_op_name):
+        """
+        构建最终的对比结果
+        负责调用指标计算函数，并补充模糊匹配提示信息。
+        """
+        result_list, err_msg = compare_ops_apply(
+            result.n_value,
+            result.b_value,
+            result.error_flag,
+            result.err_msg
+        )
         if self.mode_config.fuzzy_match and npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
