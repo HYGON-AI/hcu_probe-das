@@ -242,31 +242,42 @@ class ParseData:
         self.rank = rank
 
     @staticmethod
-    def get_direction_and_call_direction(data_name):
+    def split_data_name_components(data_name):
+        """
+        解析 data_name，返回：
+            op_no_number
+            call_direction
+            direction
+
+        支持格式：
+            1. op_no_number + forward/backward/数字组合（api级别数字在前，模块级别数字在后）
+            2. op_no_number + parameters_grad
+        """
         parts = data_name.split(Const.SEP)
-        if len(parts) < 2:
-            return None, None
+        if not parts:
+            return '', '', ''
 
         last = parts[-1]
-        second_last = parts[-2]
+        second_last = parts[-2] if len(parts) >= 2 else ''
 
-        # direction 判断
-        if Const.BACKWARD in (last, second_last):
-            direction = Const.BACKWARD
-        elif Const.FORWARD in (last, second_last):
-            direction = Const.FORWARD
-        else:
-            return None, None
+        # parameters_grad
+        if Const.PARAMS_GRAD in (last, second_last):
+            return (
+                Const.SEP.join(parts[:-1]) if len(parts) > 1 else '',
+                Const.PARAMS_GRAD,
+                Const.PARAMS_GRAD
+            )
 
-        # call_direction 永远取最后两个
-        call_direction = Const.SEP.join((second_last, last))
+        # forward / backward
+        for direction in (Const.FORWARD, Const.BACKWARD):
+            if direction in (last, second_last):
+                return (
+                    Const.SEP.join(parts[:-2]) if len(parts) > 2 else '',
+                    Const.SEP.join((second_last, last)),
+                    direction
+                )
 
-        return direction, call_direction
-
-    @staticmethod
-    def get_op_no_number(data_name):
-        parts = data_name.split(Const.SEP)
-        return Const.SEP.join(parts[:-2]) if len(parts) > 2 else ''
+        return '', '', ''
 
     def parse(self, file_list):
         npu_json_path, bench_json_path, stack_json_path = file_list
@@ -338,12 +349,10 @@ class ParseData:
                 progress_bar.update(1)
                 continue
 
-            op_no_number = self.get_op_no_number(data_name)
-            if op_no_number == '':
+            op_no_number, call_direction, direction = self.split_data_name_components(data_name)
+            if not op_no_number:
                 progress_bar.update(1)
                 continue
-
-            direction, call_direction = self.get_direction_and_call_direction(data_name)
 
             forward_call_order = op_forward_count.get(op_no_number, 0)
             backward_call_order = op_backward_count.get(op_no_number, 0)

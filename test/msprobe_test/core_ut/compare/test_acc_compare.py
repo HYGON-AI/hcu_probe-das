@@ -426,6 +426,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEquals(result.loc[0, CompareConst.NPU_MEAN], o_result.loc[0, CompareConst.NPU_MEAN])
         self.assertEquals(result.loc[0, CompareConst.REQ_GRAD_CONSIST], o_result.loc[0, CompareConst.REQ_GRAD_CONSIST])
 
+
 class TestParseData(unittest.TestCase):
 
     def setUp(self):
@@ -585,71 +586,51 @@ class TestParseData(unittest.TestCase):
         ]
         self.assertEqual(merge_list, target_merge_list)
 
-    def test_get_direction_and_call_direction_backward_at_last(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "conv.1.backward"
-        )
-        self.assertEqual(direction, Const.BACKWARD)
-        self.assertEqual(call_direction, "1.backward")
+    def test_split_data_name_components_parameters_grad(self):
+        """场景：仅有 parameters_grad"""
+        op, call_dir, direction = self.parser.split_data_name_components("model.parameters_grad")
+        self.assertEqual(op, 'model')
+        self.assertEqual(call_dir, 'parameters_grad')
+        self.assertEqual(direction, 'parameters_grad')
 
-    def test_get_direction_and_call_direction_backward_at_second_last(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "conv.backward.1"
-        )
-        self.assertEqual(direction, Const.BACKWARD)
-        self.assertEqual(call_direction, "backward.1")
+    def test_split_data_name_components_forward_after_number(self):
+        """场景：...数字.forward (API 级别数字在前)"""
+        # 输入：op.123.forward
+        # 期望：op_no='op', call_dir='123.forward', dir='forward'
+        op, call_dir, direction = self.parser.split_data_name_components("op.123.forward")
+        self.assertEqual(op, 'op')
+        self.assertEqual(call_dir, '123.forward')
+        self.assertEqual(direction, 'forward')
 
-    def test_get_direction_and_call_direction_forward_at_last(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "matmul.2.forward"
-        )
-        self.assertEqual(direction, Const.FORWARD)
-        self.assertEqual(call_direction, "2.forward")
+    def test_split_data_name_components_backward_after_number(self):
+        """场景：...数字.backward"""
+        op, call_dir, direction = self.parser.split_data_name_components("module.99.backward")
+        self.assertEqual(op, 'module')
+        self.assertEqual(call_dir, '99.backward')
+        self.assertEqual(direction, 'backward')
 
-    def test_get_direction_and_call_direction_forward_at_second_last(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "matmul.forward.2"
-        )
-        self.assertEqual(direction, Const.FORWARD)
-        self.assertEqual(call_direction, "forward.2")
+    def test_split_data_name_components_forward_before_number(self):
+        """场景：...forward.数字 (模块级别数字在后)"""
+        # 输入：op.forward.1
+        # 期望：op_no='op', call_dir='forward.1', dir='forward'
+        op, call_dir, direction = self.parser.split_data_name_components("op.forward.1")
+        self.assertEqual(op, 'op')
+        self.assertEqual(call_dir, 'forward.1')
+        self.assertEqual(direction, 'forward')
 
-    def test_get_direction_and_call_direction_less_than_two_parts(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "backward"
-        )
-        self.assertEqual((direction, call_direction), (None, None))
+    def test_split_data_name_components_backward_before_number(self):
+        """场景：...backward.数字"""
+        op, call_dir, direction = self.parser.split_data_name_components("api.backward.5")
+        self.assertEqual(op, 'api')
+        self.assertEqual(call_dir, 'backward.5')
+        self.assertEqual(direction, 'backward')
 
-    def test_get_direction_and_call_direction_no_direction_keyword(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "conv.1.2"
-        )
-        self.assertEqual((direction, call_direction), (None, None))
-
-    def test_get_direction_and_call_direction_direction_not_in_last_two(self):
-        direction, call_direction = self.parser.get_direction_and_call_direction(
-            "backward.conv.1"
-        )
-        self.assertEqual((direction, call_direction), (None, None))
-
-    def test_get_op_no_number__three_parts(self):
-        result = self.parser.get_op_no_number("conv.1.forward")
-        self.assertEqual(result, "conv")
-
-    def test_get_op_no_number__more_than_three_parts(self):
-        result = self.parser.get_op_no_number("conv.bn.relu.1.forward")
-        self.assertEqual(result, "conv.bn.relu")
-
-    def test_get_op_no_number__exact_two_parts(self):
-        result = self.parser.get_op_no_number("conv.1")
-        self.assertEqual(result, "")
-
-    def test_get_op_no_number__single_part(self):
-        result = self.parser.get_op_no_number("conv")
-        self.assertEqual(result, "")
-
-    def test_get_op_no_number__empty_string(self):
-        result = self.parser.get_op_no_number("")
-        self.assertEqual(result, "")
+    def test_split_data_name_components_no_match(self):
+        """场景：不匹配任何规则（控制用例）"""
+        op, call_dir, direction = self.parser.split_data_name_components("op.123.gradient")
+        self.assertEqual(op, '')
+        self.assertEqual(call_dir, '')
+        self.assertEqual(direction, '')
 
     @patch('msprobe.core.compare.acc_compare.logger')
     def test_case_1_consistent_check_false(self, mock_logger):
