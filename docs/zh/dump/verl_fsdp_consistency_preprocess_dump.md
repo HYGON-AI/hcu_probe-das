@@ -63,6 +63,13 @@
    export TORCHDYNAMO_DISABLE=1
    ```
 
+4. 保证训练和推理采集的数据在每张卡上是一一对应的。
+    balance_batch: 自动平衡、均分batch数据
+
+   ```shell
+   trainer.balance_batch=False
+   ```
+
 ## verl代码修改
 
 去掉训练输入中的 response，需要修改 verl/workers/actor/dp_actor.py，以 release/v0.6.1 为例，修改处高亮显示如下：

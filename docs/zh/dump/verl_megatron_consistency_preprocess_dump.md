@@ -49,9 +49,7 @@
    ```
 
 2. 保证训练中无pad。
-    use_dynamic_bsz: 自动根据模型大小、显存情况动态调整 batch size
     use_remove_padding: 移除 padding 优化
-    在Megatron中， actor_rollout_ref.actor.use_dynamic_bsz默认为False， 保持默认即可
 
     ```shell
     actor_rollout_ref.model.use_remove_padding=True
@@ -61,11 +59,21 @@
 
    ```shell
    export DUMP_ON=1
+   export PROMPTS_ONLY=1
+   ```
+
+4. 保证训练和推理采集的数据在每张卡上是一一对应的。
+    balance_batch: 自动平衡、均分batch数据
+
+   ```shell
+   trainer.balance_batch=False
    ```
 
 ## verl代码修改
 
-去掉训练输入中的 response，需要修改 verl/workers/actor/megatron_actor.py，以 release/v0.6.1 为例，修改处高亮显示如下：
+去掉训练输入中的 response，需要修改 verl/workers/actor/megatron_actor.py、verl/utils/debug/metrics.py、verl/trainer/ppo/rollout_corr_helper.py，以 release/v0.6.1 为例，修改处高亮显示如下：
+
+verl/workers/actor/megatron_actor.py
 
 ```diff
  ...
@@ -74,7 +82,7 @@
          """..."""
          ...
 +        # 检查是否仅对提示计算 log_probs（不包括响应）
-+        compute_prompts_only = data.meta_info.get("compute_prompts_only", False)
++        compute_prompts_only = int(os.getenv("PROMPTS_ONLY", "0"))
 +        if compute_prompts_only:
 +            # 从 input_ids、attention_mask 和 position_ids 中移除响应部分
 +            if "responses" in data.batch:
@@ -92,7 +100,7 @@
 +                if "response_mask" in data.batch:
 +                    data.batch.pop("response_mask", None)
 
-        def compute_logprobs_fn(output, data, use_dynamic_bsz=False, indices=None):
+         def compute_logprobs_fn(output, data, use_dynamic_bsz=False, indices=None):
 -            response = data["responses"]
 -            response_length = response.size(1)
 -            log_probs = output["log_probs"][:, -response_length - 1 : -1].contiguous()
@@ -103,27 +111,27 @@
 +            else:
 +                # 仅针对提示，返回所有提示 token 的 log_probs（不包括用于下一个 token 预测的最后一个 token）
 +                log_probs = output["log_probs"][:, :-1].contiguous()
-            return {"log_probs": log_probs}
-            ...
-        if recompute_old_log_prob:
--           select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
-+           # 这里默认使用 recompute_old_log_prob。
-+           select_keys = ["input_ids", "attention_mask", "position_ids"]
-+           if "responses" in data.batch:
-+               select_keys.append("responses")
-            batch = data.select(batch_keys=select_keys).batch
-            input_ids = batch["input_ids"]
-            batch_size = input_ids.size(0)
--           response = batch["responses"]
--           response_length = response.size(1)
-+           if "responses" in batch and batch["responses"] is not None:
-+               response = batch["responses"]
-+               response_length = response.size(1)
-+           else:
-+               response = None
-+               response_length = 0
-            with torch.no_grad():
-            ...
+             return {"log_probs": log_probs}
+             ...
+         if recompute_old_log_prob:
+-            select_keys = ["responses", "input_ids", "attention_mask", "position_ids"]
++            # 这里默认使用 recompute_old_log_prob。
++            select_keys = ["input_ids", "attention_mask", "position_ids"]
++            if "responses" in data.batch:
++                select_keys.append("responses")
+             batch = data.select(batch_keys=select_keys).batch
+             input_ids = batch["input_ids"]
+             batch_size = input_ids.size(0)
+-            response = batch["responses"]
+-            response_length = response.size(1)
++            if "responses" in batch and batch["responses"] is not None:
++                response = batch["responses"]
++                response_length = response.size(1)
++            else:
++                response = None
++                response_length = 0
+             with torch.no_grad():
+             ...
 -                    log_probs = torch.empty(
 -                        size=(batch_size, response_length), dtype=torch.float32, device=input_ids.device
 -                    )
@@ -188,28 +196,28 @@
 +                        prompt_mask = torch.ones_like(log_prob, dtype=torch.bool)
 +                        response_mask = prompt_mask
                          ...
-            if calculate_entropy:
--               entropy = output["entropy"][:, -response_length - 1 : -1].contiguous()
--               if not forward_only:
--                   entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
-+               if response_length > 0:
-+                   entropy = output["entropy"][:, -response_length - 1 : -1].contiguous()
-+               else:
-+                   # 仅用于提示：使用除最后一个标记外的所有熵
-+                   entropy = output["entropy"][:, :-1].contiguous() if output["entropy"].size(1) > 0 else output["entropy"]
-+               if not forward_only:
-+                   if response_mask is not None:
-+                       entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
-+                   else:
-+                       entropy_loss = agg_loss(loss_mat=entropy, loss_mask=None, loss_agg_mode=loss_agg_mode)
-                        ...
-                    kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
--                   kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
-+                   if response_mask is not None:
-+                       kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
-+                   else:
-+                       kl_loss = agg_loss(loss_mat=kld, loss_mask=None, loss_agg_mode=self.config.loss_agg_mode)
-                        ...
+             if calculate_entropy:
+-                entropy = output["entropy"][:, -response_length - 1 : -1].contiguous()
+-                if not forward_only:
+-                    entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
++                if response_length > 0:
++                    entropy = output["entropy"][:, -response_length - 1 : -1].contiguous()
++                else:
++                    # 仅用于提示：使用除最后一个标记外的所有熵
++                    entropy = output["entropy"][:, :-1].contiguous() if output["entropy"].size(1) > 0 else output["entropy"]
++                if not forward_only:
++                    if response_mask is not None:
++                        entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
++                    else:
++                        entropy_loss = agg_loss(loss_mat=entropy, loss_mask=None, loss_agg_mode=loss_agg_mode)
+                         ...
+                     kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
+-                    kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
++                    if response_mask is not None:
++                        kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=self.config.loss_agg_mode)
++                    else:
++                        kl_loss = agg_loss(loss_mat=kld, loss_mask=None, loss_agg_mode=self.config.loss_agg_mode)
+                         ...
 
          def forward_step(batch_iter, model, return_schedule_plan: bool = False):
              ...
@@ -240,6 +248,59 @@
 +                if label_mask.size(1) > 0:
 +                    label_mask[:, -1] = False
 
+```
+
+verl/utils/debug/metrics.py
+
+```diff
+ ...
+ def calculate_debug_metrics(data: DataProto) -> dict:
+     """..."""
++        if "rollout_log_probs" not in data.batch:
++            logger.warning("rollout_log_probs not found in batch, skipping debug metrics calculation")
++            return {
++                "training/rollout_probs_diff_valid": 0,
++                "training/rollout_probs_diff_max": 0.0,
++                "training/rollout_probs_diff_mean": 0.0,
++                "training/rollout_probs_diff_std": 0.0,
++                "training/rollout_actor_probs_pearson_corr": 0.0,
++            }
++
++        if "old_log_probs" not in data.batch:
++            logger.warning("old_log_probs not found in batch, skipping debug metrics calculation")
++            return {
++                "training/rollout_probs_diff_valid": 0,
++                "training/rollout_probs_diff_max": 0.0,
++                "training/rollout_probs_diff_mean": 0.0,
++                "training/rollout_probs_diff_std": 0.0,
++                "training/rollout_actor_probs_pearson_corr": 0.0,
++            }
++
++        if "responses" not in data.batch:
++            logger.warning(
++                "responses not found in batch(possibly compute_prompts_only mode), skipping debug metrics calculation")
++            return {
++                "training/rollout_probs_diff_valid": 0,
++                "training/rollout_probs_diff_max": 0.0,
++                "training/rollout_probs_diff_mean": 0.0,
++                "training/rollout_probs_diff_std": 0.0,
++                "training/rollout_actor_probs_pearson_corr": 0.0,
++            }
++
+         rollout_old_log_probs = data.batch["rollout_log_probs"]
+```
+
+verl/trainer/ppo/rollout_corr_helper.py
+
+```diff
+ ...
+ def compute_rollout_correction_and_add_to_batch(
+     batch: DataProto, rollout_corr_config: RolloutCorrectionConfig
+ ) -> tuple[DataProto, dict]:
+     """..."""
++    if int(os.getenv("PROMPTS_ONLY", "0")):
++        return batch, {}
+     rollout_is = rollout_corr_config.get("rollout_is", None)
 ```
 
 ## 数据采集
@@ -284,6 +345,7 @@
 +            output = self.rollout.generate_sequences(prompts=prompts)
 +            if self.debugger:
 +                self.debugger.stop()
++                self.debugger.service._reset_status()
                  ...
 
      @register(dispatch_mode=make_nd_compute_dataproto_dispatch_fn(mesh_name="actor"))
