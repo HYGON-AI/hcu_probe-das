@@ -103,11 +103,13 @@ class BaseDataProcessor:
         self.api_info_struct = {}
         self.stack_info_struct = {}
         self.current_api_or_module_name = None
+        self.current_ignore_rules = {Const.FORWARD: None, Const.BACKWARD: None}
         self.api_data_category = None
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
         self.save_name = None
+        self.ignore_rules = self._load_builtin_ignore_rules()
         if hasattr(config, "data_mode"):
             self.allowed_data_mode = self._get_allowed_data_mode(config.data_mode)
 
@@ -268,6 +270,125 @@ class BaseDataProcessor:
                 allowed_data_mode += [Const.INPUT, Const.OUTPUT]
         return allowed_data_mode
 
+    def _load_builtin_ignore_rules(self):
+        return {}
+
+    @staticmethod
+    def _normalize_ignore_rules(ignore_rules):
+        if not isinstance(ignore_rules, dict):
+            return {Const.FORWARD: {}, Const.BACKWARD: {}}
+        normalized_rules = {Const.FORWARD: {}, Const.BACKWARD: {}}
+        for stage_name, rules in ignore_rules.items():
+            if stage_name not in normalized_rules or not isinstance(rules, dict):
+                continue
+            normalized_stage_rules = {}
+            for prefix_name, prefix_rules in rules.items():
+                if not isinstance(prefix_name, str) or not isinstance(prefix_rules, dict):
+                    continue
+                normalized_prefix_rules = {}
+                for api_name, value in prefix_rules.items():
+                    if not isinstance(api_name, str):
+                        continue
+                    normalized_prefix_rules[api_name] = BaseDataProcessor._normalize_ignore_rule_value(value)
+                if normalized_prefix_rules:
+                    normalized_stage_rules[prefix_name] = normalized_prefix_rules
+            normalized_rules[stage_name] = normalized_stage_rules
+        return normalized_rules
+
+    @staticmethod
+    def _normalize_ignore_rule_value(value):
+        normalized_rule = {
+            "ignore_input_all": False,
+            "ignore_output_all": False,
+            "ignore_input_indices": set(),
+            "ignore_output_indices": set()
+        }
+        if not isinstance(value, dict):
+            return normalized_rule
+
+        for io_type, key_all, key_indices in (
+            (Const.INPUT, "ignore_input_all", "ignore_input_indices"),
+            (Const.OUTPUT, "ignore_output_all", "ignore_output_indices")
+        ):
+            io_value = value.get(io_type)
+            if io_value == Const.ALL:
+                normalized_rule[key_all] = True
+                continue
+            if not isinstance(io_value, list):
+                continue
+            normalized_rule[key_indices].update(
+                index for index in io_value if isinstance(index, int) and index >= 0
+            )
+        return normalized_rule
+
+    @staticmethod
+    def _parse_ignore_key(full_name):
+        if not full_name:
+            return None
+
+        # API name format in dump:
+        # 1) <Prefix>.<Api>.<CallId>.<Stage>  (main path)
+        # 2) <Prefix>.<Api>.<Stage>          (fallback)
+        parts = full_name.split(Const.SEP)
+        if len(parts) < 2:
+            return None
+
+        if parts[-1] in (Const.FORWARD, Const.BACKWARD):
+            if len(parts) >= 3 and parts[-2].isdigit():
+                base_parts = parts[:-2]
+            else:
+                base_parts = parts[:-1]
+        elif len(parts) >= 3 and parts[-2] in (Const.FORWARD, Const.BACKWARD) and parts[-1].isdigit():
+            base_parts = parts[:-2]
+        else:
+            base_parts = parts
+
+        if len(base_parts) < 2:
+            return None
+
+        prefix_name = base_parts[0]
+        api_name = Const.SEP.join(base_parts[1:])
+        return prefix_name, api_name
+
+    def _resolve_ignore_rule(self, api_or_module_name, stage):
+        parsed_key = self._parse_ignore_key(api_or_module_name)
+        if not parsed_key:
+            return None
+        prefix_name, api_name = parsed_key
+        return self.ignore_rules.get(stage, {}).get(prefix_name, {}).get(api_name)
+
+    def _get_ignore_rule(self, stage):
+        return self.current_ignore_rules.get(stage)
+
+    def _apply_ignore_rules(self, data, stage, io_type):
+        ignore_rule = self._get_ignore_rule(stage)
+        if not ignore_rule:
+            return data
+        ignore_all = ignore_rule["ignore_input_all"] if io_type == Const.INPUT else ignore_rule["ignore_output_all"]
+        ignore_indices = ignore_rule["ignore_input_indices"] if io_type == Const.INPUT \
+            else ignore_rule["ignore_output_indices"]
+        if ignore_all:
+            if isinstance(data, tuple):
+                return tuple(None for _ in data)
+            if isinstance(data, list):
+                return [None for _ in data]
+            return None
+        if not ignore_indices or not isinstance(data, (list, tuple)):
+            return data
+
+        masked_data = list(data)
+        hit_indices = []
+        for index in ignore_indices:
+            if 0 <= index < len(masked_data):
+                masked_data[index] = None
+                hit_indices.append(index)
+
+        if hit_indices:
+            logger.debug(f"Ignore rules matched for {self.current_api_or_module_name}: "
+                         f"{stage}.{io_type}.{','.join(str(idx) for idx in sorted(hit_indices))}")
+
+        return tuple(masked_data) if isinstance(data, tuple) else masked_data
+
     @classmethod
     def get_special_types(cls):
         return cls.builtin_type + cls.np_type
@@ -341,6 +462,10 @@ class BaseDataProcessor:
     def update_api_or_module_name(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
+            self.current_ignore_rules = {
+                Const.FORWARD: self._resolve_ignore_rule(api_or_module_name, Const.FORWARD),
+                Const.BACKWARD: self._resolve_ignore_rule(api_or_module_name, Const.BACKWARD)
+            }
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """
@@ -364,7 +489,9 @@ class BaseDataProcessor:
         if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT):
             api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
-            args_info_list = self.analyze_element(module_input_output.args_tuple)
+            args_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.args_tuple, Const.FORWARD, Const.INPUT)
+            )
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
             self.api_data_category = Const.KWARGS
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
@@ -380,7 +507,9 @@ class BaseDataProcessor:
         if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
             api_info_struct[name] = {}
             self.api_data_category = Const.OUTPUT
-            output_info_list = self.analyze_element(module_input_output.output_tuple)
+            output_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.output_tuple, Const.FORWARD, Const.OUTPUT)
+            )
             api_info_struct[name][Const.OUTPUT] = output_info_list
 
         return api_info_struct
@@ -391,7 +520,9 @@ class BaseDataProcessor:
         if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT):
             api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
-            args_info_list = self.analyze_element(module_input_output.args_tuple)
+            args_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.args_tuple, Const.FORWARD, Const.INPUT)
+            )
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
             self.api_data_category = Const.KWARGS
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
@@ -401,7 +532,9 @@ class BaseDataProcessor:
         if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
             api_info_struct[name] = api_info_struct.get(name, {})
             self.api_data_category = Const.OUTPUT
-            output_info_list = self.analyze_element(module_input_output.output_tuple)
+            output_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.output_tuple, Const.FORWARD, Const.OUTPUT)
+            )
             api_info_struct[name][Const.OUTPUT] = output_info_list
 
         if name in api_info_struct and hasattr(module_input_output, Const.PARAMS):
@@ -416,12 +549,14 @@ class BaseDataProcessor:
             api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
             input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            input_info_list = self._apply_ignore_rules(input_info_list, Const.BACKWARD, Const.INPUT)
             api_info_struct[name][Const.INPUT] = input_info_list
 
         if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
             api_info_struct[name] = api_info_struct.get(name, {})
             self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
+            output_info_list = self._apply_ignore_rules(output_info_list, Const.BACKWARD, Const.OUTPUT)
             api_info_struct[name][Const.OUTPUT] = output_info_list
 
         return api_info_struct
@@ -434,6 +569,7 @@ class BaseDataProcessor:
             self.api_data_category = Const.INPUT
 
             input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            input_info_list = self._apply_ignore_rules(input_info_list, Const.BACKWARD, Const.INPUT)
             api_info_struct[name][Const.INPUT] = input_info_list
         return api_info_struct
 
@@ -445,6 +581,7 @@ class BaseDataProcessor:
             self.api_data_category = Const.OUTPUT
 
             output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
+            output_info_list = self._apply_ignore_rules(output_info_list, Const.BACKWARD, Const.OUTPUT)
             api_info_struct[name][Const.OUTPUT] = output_info_list
         return api_info_struct
 

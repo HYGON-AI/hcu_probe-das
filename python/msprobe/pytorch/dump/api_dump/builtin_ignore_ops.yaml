@@ -1,0 +1,25 @@
+Distributed:
+  recv:
+    input: [0]
+  irecv:
+    input: [0]
+  all_gather:
+    input: [0]
+  gather:
+    input: [1]
+  scatter:
+    input: [0]
+  reduce_scatter:
+    input: [0]
+  _reduce_scatter_base:
+    input: [0]
+  _all_gather_base:
+    input: [0]
+  all_to_all_single:
+    input: [0]
+  all_to_all:
+    input: [0]
+  all_gather_into_tensor:
+    input: [0]
+  reduce_scatter_tensor:
+    input: [0]

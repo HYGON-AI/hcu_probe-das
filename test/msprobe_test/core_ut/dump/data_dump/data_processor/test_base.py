@@ -23,6 +23,7 @@ from unittest.mock import patch, MagicMock
 
 import numpy as np
 
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.dump.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs, \
     TensorStatInfo, BaseDataProcessor
@@ -201,8 +202,34 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertEqual(self.processor.current_iter, 5)
 
     def test_update_api_or_module_name(self):
-        self.processor.update_api_or_module_name("new_api")
-        self.assertEqual(self.processor.current_api_or_module_name, "new_api")
+        self.processor.ignore_rules = self.processor._normalize_ignore_rules({
+            "forward": {
+                "torch": {
+                    "distributed.all_gather_into_tensor": {
+                        "input": [1]
+                    }
+                }
+            }
+        })
+        api_name = "torch.distributed.all_gather_into_tensor.0.forward"
+        self.processor.update_api_or_module_name(api_name)
+        self.assertEqual(self.processor.current_api_or_module_name, api_name)
+        self.assertIsNotNone(self.processor.current_ignore_rules.get(Const.FORWARD))
+
+    def test_apply_ignore_rules(self):
+        self.processor.ignore_rules = self.processor._normalize_ignore_rules({
+            "forward": {
+                "torch": {
+                    "distributed.all_gather_into_tensor": {
+                        "input": [2],
+                        "output": [1]
+                    }
+                }
+            }
+        })
+        self.processor.update_api_or_module_name("torch.distributed.all_gather_into_tensor.0.forward")
+        self.assertEqual(self.processor._apply_ignore_rules([1, 2, 3, 4], Const.FORWARD, Const.INPUT), [1, 2, None, 4])
+        self.assertEqual(self.processor._apply_ignore_rules((5, 6, 7), Const.FORWARD, Const.OUTPUT), (5, None, 7))
 
     def test_is_dump_for_data_mode(self):
         self.config.data_mode = ["all"]
@@ -270,6 +297,54 @@ class TestBaseDataProcessor(unittest.TestCase):
             }
         }
         self.assertEqual(result, expected)
+
+    @patch.object(BaseDataProcessor, 'analyze_element')
+    def test_analyze_forward_with_builtin_ignore_rules(self, mock_analyze_element):
+        mock_analyze_element.side_effect = lambda args: args
+        self.processor.ignore_rules = self.processor._normalize_ignore_rules({
+            "forward": {
+                "torch": {
+                    "distributed.all_gather_into_tensor": {
+                        "input": [1],
+                        "output": [0]
+                    }
+                }
+            }
+        })
+        self.processor.update_api_or_module_name("torch.distributed.all_gather_into_tensor.0.forward")
+        module_io = ModuleForwardInputsOutputs(args=(1, 2, 3), kwargs={'a': 3}, output=(4, 5))
+        self.config.data_mode = ["all"]
+        result = self.processor.analyze_forward("test_forward", None, module_io)
+        expected = {
+            "test_forward": {
+                "input_args": (1, None, 3),
+                "input_kwargs": {'a': 3},
+                "output": (None, 5)
+            }
+        }
+        self.assertEqual(result, expected)
+
+    def test_apply_ignore_rules_with_ignore_all(self):
+        self.processor.ignore_rules = self.processor._normalize_ignore_rules({
+            "forward": {
+                "torch": {
+                    "distributed.recv": {
+                        "input": "all",
+                        "output": "all"
+                    }
+                }
+            },
+            "backward": {
+                "torch": {
+                    "distributed.reduce_scatter_tensor": {
+                        "input": "all"
+                    }
+                }
+            }
+        })
+        self.processor.update_api_or_module_name("torch.distributed.recv.0.forward")
+        self.assertEqual(self.processor._apply_ignore_rules((1, 2), Const.FORWARD, Const.INPUT), (None, None))
+        self.assertEqual(self.processor._apply_ignore_rules([3, 4], Const.FORWARD, Const.OUTPUT), [None, None])
 
     @patch.object(BaseDataProcessor, 'analyze_element')
     def test_analyze_backward(self, mock_analyze_element):

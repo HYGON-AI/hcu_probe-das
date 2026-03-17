@@ -142,3 +142,4 @@ class TestBaseConfig(TestCase):
             mock_error_log_with_exp.call_args_list[0][0][0],
             f"The element 'test_case_1' of data_mode {self.config.data_mode} is not in {Const.DUMP_DATA_MODE_LIST}."
         )
+

@@ -292,6 +292,7 @@ class Const:
     BATCHED_TENSOR_TYPE = "BatchedTensor"
 
     SUPPORT_API_FILE_NAME = "support_wrap_ops.yaml"
+    BUILTIN_IGNORE_API_FILE_NAME = "builtin_ignore_ops.yaml"
 
     API_ATTR_LIST = ["__name__", "default"]
 

@@ -217,7 +217,7 @@ class BaseHookManager(ABC):
                     kwargs = module.msprobe_input_kwargs.get(tid, {}) if hasattr(module, 'msprobe_input_kwargs') else {}
                 BaseHookManager.inner_switch[tid] = True
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-
+                
                 args = self._register_backward_hook(module, full_backward_name, args)
                 with self._no_grad_context():
                     self.data_collector.update_api_or_module_name(full_forward_name)

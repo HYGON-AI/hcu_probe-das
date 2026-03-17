@@ -28,7 +28,7 @@ import torch
 from torch import distributed as dist
 from torch.distributed.distributed_c10d import _get_default_group
 
-from msprobe.core.common.file_utils import FileOpen, load_json
+from msprobe.core.common.file_utils import FileOpen, load_json, load_yaml
 from msprobe.core.common.const import Const
 from msprobe.core.common.decorator import recursion_depth_decorator
 from msprobe.core.common.exceptions import MsprobeException
@@ -215,6 +215,21 @@ class PytorchDataProcessor(BaseDataProcessor):
         self._async_dump_cache = {}
         self.tensor_handler = TensorHandler()
         self._crc_executor = ThreadPoolExecutor(max_workers=os.cpu_count() // 2)
+
+    def _load_builtin_ignore_rules(self):
+        yaml_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "..",
+            "..",
+            "..",
+            "..",
+            "pytorch",
+            "dump",
+            "api_dump",
+            Const.BUILTIN_IGNORE_API_FILE_NAME
+        )
+        raw_rules = load_yaml(os.path.realpath(yaml_path)) or {}
+        return self._normalize_ignore_rules({Const.FORWARD: raw_rules})
 
     @staticmethod
     def get_md5_for_tensor(x):
