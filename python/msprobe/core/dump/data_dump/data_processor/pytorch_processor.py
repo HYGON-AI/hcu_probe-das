@@ -57,6 +57,8 @@ except ImportError:
 
 
 def xor_checksum(a: torch.Tensor) -> torch.Tensor:
+    if a.dim() == 0:
+        return a.clone()
     bytes_tensor = a.view(torch.uint8).flatten()
     numel = bytes_tensor.numel()
     if numel == 0:
