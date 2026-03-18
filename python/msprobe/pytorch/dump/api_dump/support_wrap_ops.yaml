@@ -836,8 +836,6 @@ torch:
   - embedding
   - embedding_bag
   - embedding_renorm_
-  - empty
-  - empty_like
   - eq
   - equal
   - erf
@@ -1019,7 +1017,6 @@ torch:
   - normal
   - not_equal
   - nuclear_norm
-  - ones_like
   - outer
   - pairwise_distance
   - pdist
@@ -1293,7 +1290,6 @@ aten:
   - _fft_c2c
   - heaviside_
   - sigmoid_backward
-  - zeros_like
   - as_strided_scatter
   - trace
   - _assert_async
@@ -1409,7 +1405,6 @@ aten:
   - addmv
   - _foreach_sqrt_
   - huber_loss_backward
-  - empty_like
   - softshrink
   - subtract_
   - bitwise_left_shift_
@@ -1939,7 +1934,6 @@ aten:
   - lt_
   - grid_sampler_3d
   - max_unpool2d
-  - ones_like
   - soft_margin_loss_backward
   - _fused_moving_avg_obs_fq_helper
   - isnan
