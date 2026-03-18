@@ -30,6 +30,7 @@ MEGATRON_MODULE_MAP = {
     "k_layernorm": "k_norm",
     "core_attention": "attn",
     "linear_proj": "o_proj",
+    "router": "gate",
     "linear_fc1": "gate_up_proj",
     "linear_fc2": "down_proj"
 }
