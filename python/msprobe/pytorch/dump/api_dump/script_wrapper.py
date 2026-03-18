@@ -109,9 +109,25 @@ def patch_dynamo_compile():
 
         try:
             result = original(*args, **kwargs)
-        except Exception:
-            logger.warning("[msprobe] _compile execution failed (returning None)")
+
+        except Exception as e:
+            logger.warning("[msprobe] _compile execution failed")
+            # 当 PyTorch >= 2.7 msprobe 不支持 Dynamo
+            if "Dynamo" in str(e) or "Unsupported" in str(e):
+                raise RuntimeError(
+                    "\n[msprobe ERROR]\n"
+                    "Detected TorchDynamo execution.\n\n"
+                    "msprobe is NOT compatible with TorchDynamo when PyTorch >= 2.7.\n"
+                    "Please disable Dynamo before using msprobe.\n\n"
+                    "Suggested solutions:\n"
+                    "1. Disable torch.compile\n"
+                    "2. Set environment variable:\n"
+                    "   export TORCHDYNAMO_DISABLE=1\n"
+                    "3. Or run model without compile mode\n"
+                ) from e
+
             result = None
+            raise
         finally:
             try:
                 reg = get_api_register()
