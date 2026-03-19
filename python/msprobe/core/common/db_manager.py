@@ -32,25 +32,40 @@ def check_identifier_safety(name):
         raise ValueError(f"Invalid SQL identifier: {name}, potential SQL injection risk!")
 
 
-def _db_operation(func):
-    """数据库操作装饰器，自动管理连接"""
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        conn, curs = None, None
-        try:
-            conn, curs = self._get_connection()
-            result = func(self, conn, curs, *args, **kwargs)
-            return result  # 显式返回正常结果
-            
-        except sqlite3.Error as err:
-            logger.error(f"Database operation failed: {err}")
-            if conn:
-                conn.rollback()
-            return None  # 显式返回错误情况下的None
-            
-        finally:
-            self._release_connection(conn, curs)
-    return wrapper
+def _db_operation(operation_name: str = ""):
+    """数据库操作装饰器，自动管理连接，并记录 SQL 上下文"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            conn, curs = None, None
+            # 清除上一次的 SQL 记录
+            if hasattr(self, '_last_sql'):
+                delattr(self, '_last_sql')
+            if hasattr(self, '_last_params'):
+                delattr(self, '_last_params')
+                
+            try:
+                conn, curs = self._get_connection()
+                result = func(self, conn, curs, *args, **kwargs)
+                return result
+            except sqlite3.Error as err:
+                op = operation_name or func.__name__
+                # 获取 SQL 上下文（如果存在）
+                sql_info = getattr(self, '_last_sql', 'N/A')
+                params_info = getattr(self, '_last_params', 'N/A')
+                
+                logger.error(
+                    f"Database operation failed | operation={op} | "
+                    f"db_path={getattr(self, 'db_path', 'unknown')} | "
+                    f"sql={sql_info} | params={params_info} | error={err}"
+                )
+                if conn:
+                    conn.rollback()
+                return None
+            finally:
+                self._release_connection(conn, curs)
+        return wrapper
+    return decorator
 
 
 class DBManager:
@@ -86,7 +101,7 @@ class DBManager:
                 where_sql = " WHERE " + " AND ".join(where_clauses)
         return where_sql, tuple(where_values)
 
-    @_db_operation
+    @_db_operation("insert_data")
     def insert_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str, data: List[Tuple], key_list: List[str] = None) -> int:
         """
@@ -120,7 +135,8 @@ class DBManager:
             sql = f"INSERT OR IGNORE INTO {table_name} ({keys}) VALUES ({placeholders})"
         else:
             sql = f"INSERT OR IGNORE INTO {table_name} VALUES ({placeholders})"
-
+        self._last_sql = sql
+        self._last_params = f"batch_count={len(data)}, first_row_sample={data[0] if data else None}"
         inserted_rows = 0
         for i in range(0, len(data), batch_size):
             batch = data[i:i + batch_size]
@@ -130,7 +146,7 @@ class DBManager:
         conn.commit()
         return inserted_rows
 
-    @_db_operation
+    @_db_operation("select_data")
     def select_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str,
                     columns: List[str] = None,
@@ -155,12 +171,15 @@ class DBManager:
         cols = ", ".join(columns)
         sql = f"SELECT {cols} FROM {table_name}"
 
-        where_sql, where_parems = self._get_where_sql(where)
-        curs.execute(sql + where_sql, where_parems)
+        where_sql, where_params = self._get_where_sql(where)
+        # 设置 SQL 上下文
+        self._last_sql = sql
+        self._last_params = where_params
+        curs.execute(sql + where_sql, where_params)
 
         return [dict(row) for row in curs.fetchall()]
 
-    @_db_operation
+    @_db_operation("update_data")
     def update_data(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     table_name: str, updates: Dict[str, Any],
                     where: dict = None) -> int:
@@ -185,13 +204,14 @@ class DBManager:
 
         params = tuple(updates.values())
 
-        where_sql, where_parems = self._get_where_sql(where)
-
-        curs.execute(sql + where_sql, params + where_parems)
+        where_sql, where_params = self._get_where_sql(where)
+        self._last_sql = sql
+        self._last_params = where_params
+        curs.execute(sql + where_sql, params + where_params)
         conn.commit()
         return curs.rowcount
 
-    @_db_operation
+    @_db_operation("execute_sql")
     def execute_sql(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                     sql: str, params: Tuple = None) -> List[Dict]:
         """
@@ -200,6 +220,7 @@ class DBManager:
         :param params: 参数
         :return: 查询结果
         """
+        self._last_sql = sql
         curs.execute(sql, params or ())
         if sql.strip().upper().startswith("SELECT"):
             return [dict(row) for row in curs.fetchall()]
@@ -218,7 +239,7 @@ class DBManager:
         )
         return len(result) > 0
 
-    @_db_operation
+    @_db_operation("execute_multi_sql")
     def execute_multi_sql(self, conn: sqlite3.Connection, curs: sqlite3.Cursor,
                           sql_commands: List[str]) -> List[List[Dict]]:
         """
@@ -227,7 +248,9 @@ class DBManager:
         :return: 每个SELECT语句的结果列表
         """
         results = []
-        for sql in sql_commands:
+        for i, sql in enumerate(sql_commands):
+            self._last_sql = sql
+            self._last_params = f"command_index={i}"
             curs.execute(sql)
             if sql.strip().upper().startswith("SELECT"):
                 results.append([dict(row) for row in curs.fetchall()])

@@ -9,8 +9,10 @@ from unittest.mock import patch, MagicMock
 from msprobe.core.common.log import logger
 from msprobe.core.common.db_manager import DBManager, TrendSql
 
+
 def normalize_spaces(text):
     return re.sub(r'\s+', ' ', text)
+
 
 class TestDBManager(unittest.TestCase):
     def setUp(self):
@@ -237,16 +239,198 @@ class TestDBManager(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(len(results[0]), 2)
 
+
+class TestDBOperationDecorator(unittest.TestCase):
+    """测试 _db_operation 装饰器的错误处理能力"""
+
+    def setUp(self):
+        # 创建临时数据库文件
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.db_path = self.temp_db.name
+        self.db_manager = DBManager(self.db_path)
+
+        # 创建测试表
+        self.test_table = "test_table"
+        self.create_test_table()
+
+    def tearDown(self):
+        # 关闭并删除临时数据库文件
+        if hasattr(self, 'temp_db'):
+            self.temp_db.close()
+            if os.path.exists(self.db_path):
+                os.unlink(self.db_path)
+
+    def create_test_table(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS {self.test_table} (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    value INTEGER
+                )
+            """)
+            conn.commit()
+
     @patch.object(logger, 'error')
-    def test_db_operation_decorator(self, mock_logger):
-        """测试数据库操作装饰器"""
-        # 模拟一个会失败的操作
-        with patch.object(self.db_manager, '_get_connection',
-                          side_effect=sqlite3.Error("Test error")):
-            result = self.db_manager.select_data(table_name=self.test_table)
-            self.assertIsNone(result)  # 装饰器会捕获异常并返回None
-            mock_logger.assert_called_with(
-                "Database operation failed: Test error")
+    def test_insert_data_table_not_exists(self, mock_logger):
+        """测试 insert_data - 表不存在时装饰器捕获异常"""
+        result = self.db_manager.insert_data(
+            table_name="nonexistent_table_xyz",
+            data=[(1, "test_user", 100)],
+            key_list=["id", "name", "value"]
+        )
+
+        # 装饰器应捕获异常并返回 None
+        self.assertIsNone(result)
+
+        # 应记录错误日志
+        mock_logger.assert_called_once()
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("Database operation failed", log_msg)
+        self.assertIn("operation=insert_data", log_msg)
+        self.assertIn("nonexistent_table_xyz", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_insert_data_sql_context_recorded(self, mock_logger):
+        """测试 insert_data - SQL 上下文被正确记录"""
+        result = self.db_manager.insert_data(
+            table_name="nonexistent_table_abc",
+            data=[(1, "Alice", 100), (2, "Bob", 200)],
+            key_list=["id", "name", "value"]
+        )
+
+        self.assertIsNone(result)
+
+        # 验证日志包含 SQL 语句和参数信息
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("INSERT OR IGNORE INTO nonexistent_table_abc", log_msg)
+        self.assertIn("batch_count=2", log_msg)
+        self.assertIn("first_row_sample=(1", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_select_data_table_not_exists(self, mock_logger):
+        """测试 select_data - 表不存在时装饰器捕获异常"""
+        result = self.db_manager.select_data(
+            table_name="nonexistent_select_table",
+            columns=["id", "name"]
+        )
+
+        self.assertIsNone(result)
+        mock_logger.assert_called_once()
+
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("operation=select_data", log_msg)
+        self.assertIn("nonexistent_select_table", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_select_data_sql_context_recorded(self, mock_logger):
+        """测试 select_data - WHERE 条件被记录"""
+        result = self.db_manager.select_data(
+            table_name="nonexistent_table",
+            columns=["id", "name"],
+            where={"id": 1, "name": "test"}
+        )
+
+        self.assertIsNone(result)
+
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("SELECT id, name FROM nonexistent_table", log_msg)
+        # WHERE 参数应被记录
+        self.assertIn("params=(1, 'test')",
+                      log_msg) or self.assertIn("id", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_update_data_table_not_exists(self, mock_logger):
+        """测试 update_data - 表不存在时装饰器捕获异常"""
+        result = self.db_manager.update_data(
+            table_name="nonexistent_update_table",
+            updates={"name": "new_name", "value": 200},
+            where={"id": 1}
+        )
+
+        self.assertIsNone(result)
+        mock_logger.assert_called_once()
+
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("operation=update_data", log_msg)
+        self.assertIn("UPDATE nonexistent_update_table", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_execute_sql_invalid_syntax(self, mock_logger):
+        """测试 execute_sql - 无效 SQL 语法"""
+        result = self.db_manager.execute_sql("INVALID SQL SYNTAX HERE")
+
+        self.assertIsNone(result)
+        mock_logger.assert_called_once()
+
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("operation=execute_sql", log_msg)
+        self.assertIn("INVALID SQL SYNTAX", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_execute_multi_sql_with_errors(self, mock_logger):
+        """测试 execute_multi_sql - 批量执行包含错误的 SQL"""
+        sql_commands = [
+            "CREATE TABLE IF NOT EXISTS temp_table (id INTEGER)",
+            "INSERT INTO nonexistent_batch_table (id) VALUES (1)",  # 错误
+            "SELECT * FROM another_nonexistent",  # 错误
+        ]
+
+        result = self.db_manager.execute_multi_sql(sql_commands)
+
+        # 装饰器应捕获异常并返回 None（不是空列表）
+        self.assertIsNone(result)
+        mock_logger.assert_called_once()
+
+        log_msg = mock_logger.call_args[0][0]
+        self.assertIn("operation=execute_multi_sql", log_msg)
+        self.assertIn("command_index", log_msg)
+
+    @patch.object(logger, 'error')
+    def test_sql_injection_prevention_in_column_names(self, mock_logger):
+        """测试 SQL 注入防护 - 恶意列名被拦截"""
+        with self.assertRaises(ValueError) as cm:
+            self.db_manager.select_data(
+                table_name=self.test_table,
+                columns=["id", "name; DROP TABLE test_table--"]
+            )
+
+        self.assertIn("Invalid SQL identifier", str(cm.exception))
+
+    @patch.object(logger, 'error')
+    def test_sql_injection_prevention_in_where_keys(self, mock_logger):
+        """测试 SQL 注入防护 - WHERE 子句中的恶意键名被拦截"""
+        with self.assertRaises(ValueError) as cm:
+            self.db_manager.select_data(
+                table_name=self.test_table,
+                columns=["id", "name"],
+                where={"id; DROP TABLE": 1}  # 恶意键名
+            )
+
+        self.assertIn("Invalid SQL identifier", str(cm.exception))
+
+    def test_multiple_concurrent_failures(self):
+        """测试连续多次失败操作，验证装饰器稳定性"""
+        operations = [
+            lambda: self.db_manager.select_data(
+                table_name="nonexistent_1", columns=["id"]),
+            lambda: self.db_manager.insert_data(
+                table_name="nonexistent_2", data=[(1,)], key_list=["id"]),
+            lambda: self.db_manager.update_data(
+                table_name="nonexistent_3", updates={"x": 1}),
+            lambda: self.db_manager.execute_sql("INVALID SQL 1"),
+            lambda: self.db_manager.execute_sql("INVALID SQL 2"),
+        ]
+
+        with patch.object(logger, 'error') as mock_logger:
+            for i, op in enumerate(operations):
+                with self.subTest(operation_index=i):
+                    result = op()
+                    self.assertIsNone(result, f"操作 {i} 应返回 None")
+
+            # 应记录 5 次错误
+            self.assertEqual(mock_logger.call_count, 5)
 
 
 class TestTrendSql(unittest.TestCase):
