@@ -66,6 +66,9 @@ def xor_checksum(a: torch.Tensor) -> torch.Tensor:
 
     if numel % 8 != 0:
         bytes_tensor = torch.nn.functional.pad(bytes_tensor, (0, 8 - numel % 8), "constant", 0)
+    # Zero-copy fast path; only realign via copy when int64 view alignment is invalid.
+    if bytes_tensor.storage_offset() % 8 != 0:
+        bytes_tensor = bytes_tensor.clone()
     words = bytes_tensor.view(torch.int64)
     numel = words.numel()
 
