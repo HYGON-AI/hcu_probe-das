@@ -172,8 +172,8 @@ class ModelParallelismVisualizer:
             self.model_colors = np.vstack(
                 [plt.cm.tab20b(range(20)), plt.cm.tab20c(range(20))])
         else:
-            # 超过20个使用连续色板
-            colormap = plt.cm.get_cmap('viridis')
+            # 超过40个使用连续色板
+            colormap = plt.get_cmap('viridis')
             norm = plt.Normalize(0, num_copies - 1)
             self.model_colors = [colormap(norm(i)) for i in range(num_copies)]
 
