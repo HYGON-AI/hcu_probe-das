@@ -954,7 +954,7 @@ class TestProcessDf(unittest.TestCase):
 
         self.assertEqual(result.loc[0, Const.CALL_DIRECTION], "1.forward")
         self.assertEqual(
-            result.loc[0, CompareConst.OP_NAME_UPDATE],
+            result.loc[0, CompareConst.OP_NAME],
             "add.1.forward.fp32"
         )
 
@@ -1803,8 +1803,8 @@ class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
         self.assertIn("MeanRelativeErr", df.columns)
 
         # equal
-        self.assertEqual(df.loc[1, "Mean diff"], 0)
-        self.assertEqual(df.loc[2, "Mean diff"], 0)
+        self.assertEqual(df.loc[1, "Mean diff"], '0')
+        self.assertEqual(df.loc[2, "Mean diff"], '0')
 
         # unequal num × num
         self.assertEqual(df.loc[0, "Mean diff"], 5.0)

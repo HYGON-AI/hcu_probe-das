@@ -198,9 +198,13 @@ class Comparator:
         if self.mode_config.consistent_check:
             npu_df, bench_df = process_df.process_consistent_df(npu_df, bench_df)
         else:
+            # 统一反向序号重计算和非反向序号重计算，后续cmp_key统一使用op_name_update, 默认保持原始值
+            npu_df[CompareConst.OP_NAME_UPDATE] = npu_df[CompareConst.OP_NAME]
+            bench_df[CompareConst.OP_NAME_UPDATE] = bench_df[CompareConst.OP_NAME]
             # 处理重计算对应的backward的序号。反向重计算序号调整属于精确匹配，与模糊匹配互斥。
             # 训推一致性比对不考虑反向
-            if not self.mode_config.fuzzy_match:
+            # 单点数据不考虑反向序号重计算
+            if not self.mode_config.fuzzy_match and self.mode_config.compared_file_type != Const.DEBUG_JSON_FILE:
                 npu_df = process_df.update_backward_call(npu_df)
                 bench_df = process_df.update_backward_call(bench_df)
             npu_df, bench_df = process_df.process_compare_key_and_shape(npu_df, bench_df)
@@ -241,8 +245,7 @@ class ParseData:
         self.mode_config = mode_config
         self.rank = rank
 
-    @staticmethod
-    def split_data_name_components(data_name):
+    def split_data_name_components(self, data_name):
         """
         解析 data_name，返回：
             op_no_number
@@ -253,6 +256,10 @@ class ParseData:
             1. op_no_number + forward/backward/数字组合（api级别数字在前，模块级别数字在后）
             2. op_no_number + parameters_grad
         """
+        # 如果单点数据比对模式，不做处理，直接返回
+        if self.mode_config.compared_file_type == Const.DEBUG_JSON_FILE:
+            return data_name, data_name, data_name
+
         parts = data_name.split(Const.SEP)
         if not parts:
             return '', '', ''
@@ -551,9 +558,6 @@ class ProcessDf:
         # ===============================
         # Step 3: 初始化 + 局部更新 OP_NAME_UPDATE
         # ===============================
-        # 默认保持原值
-        cmp_df[CompareConst.OP_NAME_UPDATE] = cmp_df[CompareConst.OP_NAME]
-
         # 只更新命中的行
         cmp_df.loc[update_mask, CompareConst.OP_NAME_UPDATE] = (
                 cmp_df.loc[update_mask, Const.OP_NO_NUMBER]
@@ -636,12 +640,7 @@ class ProcessDf:
     def process_compare_key_and_shape(self, npu_df, bench_df):
         npu_df = self.assign_npu_df_compare_key(npu_df, bench_df)
         npu_df[CompareConst.CMP_SHAPE] = npu_df[Const.SHAPE]
-        bench_cmp_key = (
-            bench_df[CompareConst.OP_NAME_UPDATE]
-            if not self.mode_config.fuzzy_match
-            else bench_df[CompareConst.OP_NAME]
-        )
-        bench_df[CompareConst.CMP_KEY] = bench_cmp_key
+        bench_df[CompareConst.CMP_KEY] = bench_df[CompareConst.OP_NAME_UPDATE]
         bench_df[CompareConst.CMP_SHAPE] = bench_df[Const.SHAPE]
         return npu_df, bench_df
 
@@ -667,12 +666,7 @@ class ProcessDf:
         elif self.mapping_config.data_mapping:
             npu_df[CompareConst.CMP_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_data_mapping)
         else:
-            cmp_key = (
-                npu_df[CompareConst.OP_NAME_UPDATE]
-                if not self.mode_config.fuzzy_match
-                else npu_df[CompareConst.OP_NAME]
-            )
-            npu_df[CompareConst.CMP_KEY] = cmp_key
+            npu_df[CompareConst.CMP_KEY] = npu_df[CompareConst.OP_NAME_UPDATE]
         return npu_df
 
     def process_internal_api_mapping(self, npu_op_name):
@@ -953,9 +947,13 @@ class Match:
                                 Const.BACKWARD_CALL_ORDER, Const.SUFFIX]
             npu_drop_list = common_drop_list + (
                 [CompareConst.NPU_PARSE_ORDER] if CompareConst.NPU_PARSE_ORDER in npu_df.columns else []
+            ) + (
+                [CompareConst.OP_NAME_UPDATE] if CompareConst.OP_NAME_UPDATE in npu_df.columns else []
             )
             bench_drop_list = common_drop_list + (
                 [CompareConst.BENCH_PARSE_ORDER] if CompareConst.BENCH_PARSE_ORDER in bench_df.columns else []
+            ) + (
+                [CompareConst.OP_NAME_UPDATE] if CompareConst.OP_NAME_UPDATE in bench_df.columns else []
             )
             npu_df.drop(columns=npu_drop_list, inplace=True, errors="ignore")
             bench_df.drop(columns=bench_drop_list, inplace=True, errors="ignore")
@@ -1474,7 +1472,7 @@ class CalcStatsDiff:
         mask_unequal = ~mask_equal
 
         # ---------------------- npu, bench统计量相等 ----------------------
-        result_df.loc[mask_equal, [diff_name, rel_err_name]] = 0
+        result_df.loc[mask_equal, [diff_name, rel_err_name]] = '0'
 
         # ---------------------- npu, bench统计量不相等 ----------------------
         npu_type = self.classify(npu_val)
