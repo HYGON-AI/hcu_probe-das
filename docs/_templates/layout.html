@@ -1,0 +1,11 @@
+<!-- _templates/layout.html -->
+{% extends "!layout.html" %}
+
+{% block extrahead %}
+{{ super() }}
+<script>
+    window.SPHINX_CONTEXT = {
+        gitcode_url: {{ gitcode_url | tojson if gitcode_url else 'null' }}
+    };
+</script>
+{% endblock %}

@@ -1,4 +1,6 @@
-# 模型计算结果改变原因分析
+# FAQ
+
+## 模型计算结果改变原因分析
 
 **问题现象**
 
@@ -82,7 +84,7 @@ if __name__ == "__main__":
 
 **如果在L0，mix级别采集出现gnorm发生变化，可以尝试将采集级别改为L1，若L1级别gnorm不发生变化，则大概率是hook机制导致的梯度计算结果变化。**
 
-# 数据采集
+## 数据采集
 
 1. dump.json中API或Module统计信息里出现null或None值的原因是什么？
 
@@ -145,7 +147,7 @@ if __name__ == "__main__":
 
 6. 在使用msProbe进行PyTorch框架的数据采集功能时，请注意确认环境变量NPU_ASD_ENABLE=0，即关闭特征值检测功能。由于工具冲突，在该功能开启的情况下可能导致某些API数据采集的缺失。
 
-# 精度预检（PyTorch）
+## 精度预检（PyTorch）
 
 1. 预检工具在dump和acc_check的过程中，是否需要同时开启或关闭jit编译（jit_compile）？
 
@@ -204,11 +206,11 @@ if __name__ == "__main__":
    | `__truediv__`   | /                |
    | `__xor__`       | ^                |
 
-# 精度比对（PyTorch）
+## 精度比对（PyTorch）
 
-## 工具使用
+### 工具使用
 
-### dump指定融合算子
+#### dump指定融合算子
 
 数据采集当前支持融合算子的输入输出，需要在[support_wrap_ops.yaml](../../python/msprobe/pytorch/dump/api_dump/support_wrap_ops.yaml)中添加，比如以下代码段调用的softmax融合算子。
 
@@ -226,7 +228,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
 npu_scaled_masked_softmax融合算子工具已支持dump，本例仅供参考。
 
-## 常见问题
+### 常见问题
 
 1. 在同一个目录多次执行dump会冲突吗？
 
@@ -240,7 +242,7 @@ npu_scaled_masked_softmax融合算子工具已支持dump，本例仅供参考。
 
     答：torch版本和硬件差异属于正常情况。
 
-## 异常情况
+### 异常情况
 
 1. HCCL报错： error code: EI0006。
 
