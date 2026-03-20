@@ -1,4 +1,10 @@
-# MindStudio Probe
+<h1 align="center">MindStudio Probe</h1>
+<div align="center">
+  <p>🚀 <b>昇腾 AI 全场景精度调试利器</b></p>
+  
+[![Docs](https://badgen.net/badge/Docs/readthedocs/green)](https://msprobe.readthedocs.io/zh-cn/latest/)
+  [![License](https://badgen.net/badge/License/MulanPSL-2.0/blue)](https://raw.gitcode.com/Ascend/msprobe/raw/master/LICENSE) [![Version](https://badgen.net/badge/Version/26.0.0-alpha.1/green)](https://gitcode.com/Ascend/msprobe/releases/26.0.0-alpha.1) [![Ascend](https://img.shields.io/badge/Hardware-Ascend-orange.svg)](https://www.hiascend.com/)
+</div>
 
 ## 简介
 
@@ -14,13 +20,15 @@ MindStudio Probe系列TC及SIG会议安排请查看[Ascend会议中心](https://
 
 ## 最新消息
 
+[2026.03.20]：上线[大模型训练精度定位指南](./docs/zh/wiki/train_debug_guide.md)、[大模型推理精度定位指南](./docs/zh/wiki/infer_debug_guide.md)及[常用框架工具使能指南](./docs/zh/wiki/dump_enable_guide.md)
+
 [2025.12.31]：MindStudio Probe精度调试工具全面开源。
 
 ## 目录结构
 
 关键目录如下，详细介绍参见[项目目录](./docs/zh/dir_structure.md)。
 
-```
+```text
 MindStudio-probe
 ├── csrc                         # C/C++源码目录
 ├── cmake                        # 存放解析C化部分cmake文件
