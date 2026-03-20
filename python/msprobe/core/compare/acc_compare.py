@@ -1490,8 +1490,14 @@ class CalcStatsDiff:
                 else:
                     diff, rel = rule
 
-                result_df.loc[mask, diff_name] = diff
-                result_df.loc[mask, rel_err_name] = rel
+                if isinstance(diff, str):
+                    result_df.loc[mask, diff_name] = diff
+                else:
+                    result_df.loc[mask, diff_name] = diff.astype(str)
+                if isinstance(rel, str):
+                    result_df.loc[mask, rel_err_name] = rel
+                else:
+                    result_df.loc[mask, rel_err_name] = rel.astype(str)
 
     def calc_accuracy(self, result_df, header):
         # bench name N/A represents no bench data, err_msg adds "No bench data matched."

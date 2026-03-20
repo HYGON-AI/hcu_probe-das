@@ -1807,7 +1807,7 @@ class TestCalcStatsDiffCalcSummaryDiff(unittest.TestCase):
         self.assertEqual(df.loc[2, "Mean diff"], '0')
 
         # unequal num × num
-        self.assertEqual(df.loc[0, "Mean diff"], 5.0)
+        self.assertEqual(df.loc[0, "Mean diff"], '5.0')
         self.assertEqual(df.loc[0, "MeanRelativeErr"], "100.0%")
 
     def test_calc_summary_diff_special_types(self):
