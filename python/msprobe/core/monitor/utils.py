@@ -286,7 +286,7 @@ def validate_config(config):
     config["step_interval"] = validate_int_arg(config.get("step_interval"), "step_interval",
                                                MonitorConst.DEFAULT_STEP_INTERVAL, MonitorConst.DEFAULT_STEP_INTERVAL)
 
-    squash_name = config.get('squash_name', True)
+    squash_name = config.get('squash_name', False)
     validate_squash_name(squash_name)
 
     time_tags = config.get("append_output", [])

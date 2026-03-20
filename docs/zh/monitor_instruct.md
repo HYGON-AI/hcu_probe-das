@@ -712,7 +712,7 @@ TrainerMon.monitor_gnorm_with_ad(model, grad_acc_steps, optimizer, dp_group, tp_
     "ndigits": 12,
     "step_count_per_record": 1,
     "append_output": [],
-    "squash_name": true
+    "squash_name": false
 }  
 ```
 
@@ -749,4 +749,4 @@ TrainerMon.monitor_gnorm_with_ad(model, grad_acc_steps, optimizer, dp_group, tp_
 | "ndigits"               | 可选     | "format"为"csv"时，设置落盘文件中的小数位数，默认为6。                                                                                                                                                                                                                                                                                                                                              |
 | "step_count_per_record" | 可选     | "format"为"csv"时生效，每个csv记录多少个step的数据，默认为1。                                                                                                                                                                                                                                                                                                                                       |
 | "append_output"         | 可选     | 适用于断点续训场景。多卡场景下生效，指定两个时间戳，将输出续写到这两个时间戳范围间的输出件中，不在范围内的rank不被续写。时间戳应来自原有输出件目录前缀，例如["Dec03_21-34-40", "Dec03_21-34-41"]。默认为[]，不续写。**仅PyTorch场景支持此参数**。                                                                                                                                                                                                                             |
-| "squash_name"           | 可选     | 是否简化参数名/模块名，多模态场景建议关闭，默认为True。                                                                                                                                                                                                                                                                                                                                                  |
+| "squash_name"           | 可选     | 是否简化参数名/模块名，多模态场景建议关闭，默False。                                                                                                                                                                                                                                                                                                                                                   |

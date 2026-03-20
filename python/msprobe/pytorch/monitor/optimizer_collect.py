@@ -134,7 +134,14 @@ class OptimizerMon(object):
                 # Megatron between core_r0.6.0 and core_r0.8.0, this bucket is Bucket.
                 # When megatron is core_r0.9.0, this bucket is _ParamAndGradBucketGroup.
                 # In megatron version core_r0.9.0, func start_grad_sync from Bucket moved to _ParamAndGradBucketGroup.
-                bucket_params_id_list = [id(params) for params in bucket.params]
+                if hasattr(bucket, "params"):
+                    param_attr = bucket.params
+                elif hasattr(bucket, "params_list"):
+                    param_attr = bucket.params_list
+                else:
+                    raise AttributeError(
+                        f"class {bucket.__class__.__name__} has no attribute 'params' or 'params_list', please check!")
+                bucket_params_id_list = [id(params) for params in param_attr]
                 for param, name in monitor.param2name.items():
                     if id(param) not in bucket_params_id_list:
                         continue

@@ -175,7 +175,7 @@ class TrainerMon:
         self.config = load_json(config_file_path)
         validate_config(self.config)
 
-        self.squash_name = self.config.get('squash_name', True)  # 不允许修改防止前后名字对不上
+        self.squash_name = self.config.get('squash_name', False)  # 不允许修改防止前后名字对不上
         local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         self.unique_id = str(uuid.uuid4())[:8]
