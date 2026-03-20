@@ -82,6 +82,7 @@ elif [[ "${extension}" == "git" ]]; then
             rm -rf ${fullname%\.*}
         fi
     fi
+    cd ${path}
     if [ ! -d ${fullname%\.*} ]; then
         if [[ -z "${tag}" ]]; then
             git clone ${url}
