@@ -539,12 +539,6 @@ class TestDirectoryChecks:
         self.test_dir = tmp_path / "test_dir"
         self.test_file = tmp_path / "test_file"
 
-    def test_check_dirpath_permission(self):
-        with patch('msprobe.core.common.file_utils.check_others_writable', return_value=True), \
-                patch('msprobe.core.common.file_utils.logger') as mock_logger:
-            check_dirpath_permission(self.test_dir)
-            assert mock_logger.warning.call_count == 1
-
     def test_check_file_or_directory_path(self):
         with patch('msprobe.core.common.file_utils.FileChecker') as mock_checker:
             mock_checker.return_value.common_check.return_value = None
@@ -828,42 +822,6 @@ class TestSplitZipFilePath:
         zip_path = "path/to/archive.zip"
         result_zip, result_internal = split_zip_file_path(zip_path)
         assert result_internal == "archive.zip"
-
-
-class TestSharedDict:
-    @pytest.fixture(autouse=True)
-    def setup(self):
-        self.shared_dict = None
-
-    def teardown_method(self):
-        """Clean up shared dictionary after each test"""
-        if self.shared_dict is not None:
-            try:
-                self.shared_dict.cleanup()
-            except:
-                pass
-
-    def test_shared_dict_creation_and_basic_operations(self):
-        """Test SharedDict creation and basic operations"""
-        self.shared_dict = SharedDict()
-        self.shared_dict._load_shared_memory()
-
-        # Test setting and getting values
-        self.shared_dict['key1'] = 'value1'
-        self.shared_dict['key2'] = 42
-        self.shared_dict['key3'] = [1, 2, 3]
-
-        assert self.shared_dict.get('key1') == 'value1'
-        assert self.shared_dict.get('key2') == 42
-        assert self.shared_dict.get('key3') == [1, 2, 3]
-
-    def test_destroy_shared_memory(self):
-        """Test SharedDict cleanup"""
-        self.shared_dict = SharedDict()
-        self.shared_dict._load_shared_memory()
-
-        # Test cleanup
-        self.shared_dict.destroy_shared_memory()
 
 
 class TestDeserializationScanner:

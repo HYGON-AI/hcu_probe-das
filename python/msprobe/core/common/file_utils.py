@@ -93,8 +93,6 @@ class FileChecker:
         check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
-        if self.path_type == FileCheckConst.FILE:
-            check_dirpath_permission(self.file_path)
         return self.file_path
 
     def check_path_ability(self):
@@ -152,7 +150,6 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
-            check_dirpath_permission(self.file_path)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
@@ -328,14 +325,6 @@ def check_path_before_create(path):
     if not re.match(FileCheckConst.FILE_PATTERN, path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
-
-
-def check_dirpath_permission(path):
-    path = os.path.realpath(path)
-    dirpath = os.path.dirname(path)
-    if dedup_log('check_dirpath_before_read', dirpath):
-        if check_others_writable(dirpath):
-            logger.warning(f"The directory is writable by others: {dirpath}.")
 
 
 def check_file_or_directory_path(path, isdir=False, is_strict=False, file_suffix=None):
@@ -983,16 +972,6 @@ def split_zip_file_path(zip_file_path):
     return os.path.dirname(zip_file_path), os.path.basename(zip_file_path)
 
 
-def dedup_log(func_name, filter_name):
-    with SharedDict() as shared_dict:
-        exist_names = shared_dict.get(func_name, set())
-        if filter_name in exist_names:
-            return False
-        exist_names.add(filter_name)
-        shared_dict[func_name] = exist_names
-        return True
-
-
 def check_output_dir_path(path):
     path = os.path.realpath(path)
     check_link(path)
@@ -1034,99 +1013,6 @@ def find_proc_dir(base_dir):
             f"No or multiple {Const.PROC} directories were found in the <{base_dir}>. "
             "Expected exactly one."
         )
-
-
-class SharedDict:
-    def __init__(self):
-        self._changed = False
-        self._dict = None
-        self._shm = None
-
-    def __enter__(self):
-        self._load_shared_memory()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        try:
-            if self._changed:
-                data = pickle.dumps(self._dict)
-                global_lock.acquire()
-                try:
-                    self._shm.buf[0:len(data)] = bytearray(data)
-                finally:
-                    global_lock.release()
-            self._shm.close()
-        except FileNotFoundError:
-            name = self.get_shared_memory_name()
-            logger.debug(f'close shared memory {name} failed, shared memory has already been destroyed.')
-
-    def __setitem__(self, key, value):
-        self._dict[key] = value
-        self._changed = True
-
-    def __contains__(self, item):
-        return item in self._dict
-
-    @classmethod
-    def destroy_shared_memory(cls):
-        if is_main_process():
-            name = cls.get_shared_memory_name()
-            try:
-                shm = shared_memory.SharedMemory(create=False, name=name)
-                shm.close()
-                shm.unlink()
-                logger.debug(f'destroy shared memory, name: {name}')
-            except FileNotFoundError:
-                logger.debug(f'destroy shared memory {name} failed, shared memory has already been destroyed.')
-
-    @classmethod
-    def get_shared_memory_name(cls):
-        if is_main_process():
-            return f'shared_memory_{os.getpid()}'
-        return f'shared_memory_{os.getppid()}'
-
-    def get(self, key, default=None):
-        return self._dict.get(key, default)
-
-    def _load_shared_memory(self):
-        name = self.get_shared_memory_name()
-        try:
-            self._shm = shared_memory.SharedMemory(create=False, name=name)
-        except FileNotFoundError:
-            try:
-                # 共享内存空间增加至5M
-                self._shm = shared_memory.SharedMemory(create=True, name=name, size=1024 * 1024 * 5)
-                data = pickle.dumps({})
-                self._shm.buf[0:len(data)] = bytearray(data)
-                logger.debug(f'create shared memory, name: {name}')
-            except FileExistsError:
-                self._shm = shared_memory.SharedMemory(create=False, name=name)
-        self._safe_load()
-
-    def _safe_load(self):
-        with io.BytesIO(self._shm.buf[:]) as buff:
-            try:
-                data = SafeUnpickler(buff).load()
-                if not isinstance(data, dict):
-                    logger.debug(f"Data from shared memory is '{type(data)}' type, expected 'dict'.")
-                    self._dict = {}
-                    self._changed = True
-                else:
-                    self._dict = data
-            except Exception as e:
-                logger.debug(f'shared dict is unreadable, reason: {e}, create new dict.')
-                self._dict = {}
-                self._shm.buf[:] = bytearray(b'\x00' * len(self._shm.buf))  # 清空内存
-                self._changed = True
-
-
-class SafeUnpickler(pickle.Unpickler):
-    WHITELIST = {'builtins': {'str', 'bool', 'int', 'float', 'list', 'set', 'dict'}}
-
-    def find_class(self, module, name):
-        if module in self.WHITELIST and name in self.WHITELIST[module]:
-            return super().find_class(module, name)
-        raise pickle.PicklingError(f'Unpickling {module}.{name} is illegal!')
 
 
 class DeserializationScanner:
@@ -1171,6 +1057,3 @@ class DeserializationScanner:
                     logger.warning(f"Insecure module found: {module}")
                     return False
         return True
-
-
-atexit.register(SharedDict.destroy_shared_memory)
