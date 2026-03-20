@@ -31,6 +31,8 @@ def _load_core_apis_from_yaml():
         for category in dynamic_categories:
             api_list = ops.get(category, [])
             for api in api_list:
+                if Const.SEP in api:
+                    api = api.rsplit(Const.SEP, 1)[-1]
                 core_apis.add(api)
         
         return core_apis
