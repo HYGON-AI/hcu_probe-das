@@ -97,8 +97,17 @@ class ModuleProcessor:
             schedules.forward_step = wrap_megatron_step(schedules.forward_step)
             schedules.backward_step = wrap_megatron_step(schedules.backward_step, is_forward=False)
             for module in list(sys.modules.values()):
-                if module.__name__ == 'schedules':
+                # 1. 安全获取 __name__，如果不存在则设为 None
+                module_name = getattr(module, '__name__', None)
+
+                # 2. 如果名字为 None 或者就是 schedules 本身，跳过
+                if module_name is None or module_name == 'schedules':
                     continue
+
+                # 3. 安全检查是否有 __dict__ (某些 C 扩展可能没有标准的 __dict__)
+                if not hasattr(module, '__dict__'):
+                    continue
+
                 for func in module.__dict__:
                     if id(module.__dict__[func]) == origin_func_id:
                         module.__setattr__(func, schedules.deallocate_output_tensor)
