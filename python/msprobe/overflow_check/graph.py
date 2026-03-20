@@ -106,6 +106,7 @@ class CommunicationNode:
         self.compute_ops = kwargs.get('compute_ops', [])
         self.type = self._resolve_type()
         self.connected = False
+        self._conn_info_cache = None
 
     def add_next(self, node):
         self.next_nodes[node.node_id] = node
@@ -150,7 +151,11 @@ class CommunicationNode:
     def find_connected_nodes(self):
         """
         根据 api/类型/入参/调用次数 确定相连接的node的op_name
+        添加缓存避免重复解析input_kwargs
         """
+        if self._conn_info_cache is not None:
+            return self._conn_info_cache
+        
         tar_api = OverFlowCheckConst.P2P_API_MAPPING.get(self.api, self.api)
         ranks = set()
         for dst in [OverFlowCheckConst.DST, OverFlowCheckConst.DST_GROUP]:
@@ -172,8 +177,13 @@ class CommunicationNode:
         group = self.data.input_kwargs.get('group')
         if group:
             ranks.update(group.get('group_ranks'))
-        return {'ranks': ranks, 'api': f'Distributed.{tar_api}',
-                'type': OverFlowCheckConst.OPPOSITE_DIR.get(self.type, OverFlowCheckConst.LINK)}
+        
+        self._conn_info_cache = {
+            'ranks': ranks, 
+            'api': f'Distributed.{tar_api}',
+            'type': OverFlowCheckConst.OPPOSITE_DIR.get(self.type, OverFlowCheckConst.LINK)
+        }
+        return self._conn_info_cache
 
     def _resolve_type(self):
         for src in [OverFlowCheckConst.SRC, OverFlowCheckConst.SRC_GROUP]:

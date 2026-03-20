@@ -148,6 +148,10 @@ class OverFlowCheck:
         return communication_nodes
 
     def _connect_comm_nodes(self):
+        """
+        连接跨rank的通信节点，建立关联关系
+        """
+        comm_index = self._build_comm_nodes_index()
         searched_ranks = set()
         for rank, nodes in list(self._rank_comm_nodes_dict.items())[:-1]:
             searched_ranks.add(rank)
@@ -156,10 +160,31 @@ class OverFlowCheck:
                 conn_info = cur_node.find_connected_nodes()
                 if not conn_info.get('ranks'):
                     conn_info['ranks'] = self._rank_comm_nodes_dict.keys()
-                if not self._find_connection(conn_info, cur_node, searched_ranks, seen_nodes):
+                if not self._find_connection(conn_info, cur_node, searched_ranks, seen_nodes, comm_index):
                     logger.info(f'Cannot find connected communication node for "{cur_node.node_id}".')
 
-    def _find_connection(self, conn_info, cur_node, searched_ranks, seen_nodes):
+    def _build_comm_nodes_index(self):
+        """
+        构建通信节点索引：{api: {rank: {call_cnt: node}}}
+        时间复杂度：O(R × N)
+        """
+        comm_index = {}
+        for rank, nodes in self._rank_comm_nodes_dict.items():
+            for _, node in nodes.items():
+                api = node.api
+                call_cnt = node.call_cnt
+                if api not in comm_index:
+                    comm_index[api] = {}
+                if rank not in comm_index[api]:
+                    comm_index[api][rank] = {}
+                comm_index[api][rank][call_cnt] = node
+        return comm_index
+
+    def _find_connection(self, conn_info, cur_node, searched_ranks, seen_nodes, comm_index):
+        """
+        使用索引直接查找连接节点
+        时间复杂度：O(1)
+        """
         def connect():
             seen_nodes.add(search_node.node_id)
             if search_node.type == OverFlowCheckConst.DST:
@@ -171,21 +196,25 @@ class OverFlowCheck:
                 cur_node.add_link(search_node)
 
         found = cur_node.connected
-        for connected_rank in conn_info['ranks']:
-            if connected_rank in searched_ranks:
-                continue
-            tar_id_prefix = f'{connected_rank}.{conn_info["api"]}'
-            for search_id, search_node in self._rank_comm_nodes_dict[connected_rank].items():
-                if search_id in seen_nodes:
+        target_api = conn_info['api'].replace('Distributed.', '')
+        
+        if target_api in comm_index:
+            for connected_rank in conn_info['ranks']:
+                if connected_rank in searched_ranks:
                     continue
-                if not (search_id.startswith(tar_id_prefix) and search_node.type == conn_info.get('type')):
-                    continue
-                search_conn_ranks = search_node.find_connected_nodes().get('ranks')
-                if ((not search_conn_ranks and search_node.api not in OverFlowCheckConst.DIRECTED_API) or
-                    cur_node.rank in search_conn_ranks):  # 有些无向通信算子没有填ProcessGroup，默认连接所有rank
-                    connect()
-                    found = True
-                    break
+                if connected_rank in comm_index[target_api]:
+                    target_nodes = comm_index[target_api][connected_rank]
+                    for call_cnt, search_node in target_nodes.items():
+                        if search_node.node_id in seen_nodes:
+                            continue
+                        if search_node.type != conn_info.get('type'):
+                            continue
+                        search_conn_ranks = search_node.find_connected_nodes().get('ranks')
+                        if ((not search_conn_ranks and search_node.api not in OverFlowCheckConst.DIRECTED_API) or
+                            cur_node.rank in search_conn_ranks):
+                            connect()
+                            found = True
+                            break
         return found
 
     def _pruning(self):
