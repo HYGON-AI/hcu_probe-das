@@ -763,10 +763,10 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, step=
 
 **参数说明**
 
-- **config_path** (str)：可选参数，指定dump配置文件路径。参数示例："./config.json"。未配置该路径时，默认使用[config.json](../../../python/msprobe/config.json)文件的默认配置，配置选项含义可见[config.json介绍](./config_json_introduct.md)。
+- **config_path** (str)：可选参数，指定dump配置文件路径。参数示例："./config.json"。静态图场景必须配置该路径；动态图场景可不配置该路径，默认使用[config.json](../../../python/msprobe/config.json)文件的默认配置，配置选项含义可见[config.json介绍](./config_json_introduct.md)。
 - 其他参数均在[config.json](../../../python/msprobe/config.json)文件中可配，详细配置可见[config.json介绍](./config_json_introduct.md)。
 
-此接口的参数均不是必要，且优先级高于[config.json](../../../python/msprobe/config.json)文件中的配置，但可配置的参数相比config.json较少。
+动态图场景下此接口参数均不是必要，且优先级高于[config.json](../../../python/msprobe/config.json)文件中的配置，但可配置的参数相比config.json较少。静态图场景下必须传入 `config_path`。
 
 **返回值说明**
 
