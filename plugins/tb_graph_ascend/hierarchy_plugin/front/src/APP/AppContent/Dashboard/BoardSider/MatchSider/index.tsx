@@ -39,6 +39,7 @@ interface MatchBuildProps {
   benchUnMatchNodes: string[];
   debugUnmatchSelected: string | null;
   benchUnmatchSelected: string | null;
+  setSpinning: (spinning: boolean) => void;
 }
 
 interface MatchCancelProps {
@@ -47,13 +48,14 @@ interface MatchCancelProps {
   benchMatchedNodes: string[];
   debugMatchSelected: string | null;
   benchMatchSelected: string | null;
+  setSpinning: (spinning: boolean) => void;
 }
 
 const Text = Typography.Text;
 
 const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
-  const { t, debugUnmatchNodes, benchUnMatchNodes, debugUnmatchSelected, benchUnmatchSelected } = props;
-  const [desChecked, setDesChecked] = useState<boolean>(true);
+  const { t, debugUnmatchNodes, benchUnMatchNodes, debugUnmatchSelected, benchUnmatchSelected, setSpinning } = props;
+  const [desChecked, setDesChecked] = useState<boolean>(false);
   const messageApi = useGraphStore((state) => state.messageApi);
   const getCurrentMetaData = useGraphStore((state) => state.getCurrentMetaData);
   const setGraphMatchedRelations = useGraphStore((state) => state.setGraphMatchedRelations);
@@ -78,23 +80,31 @@ const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
       metaData: getCurrentMetaData(),
       isMatchChildren: desChecked,
     };
-    const { success, data, error } = await addMatchNodes<MatchResultType>(params);
-    if (success) {
-      if (data) {
-        setGraphMatchedRelations({
-          npuMatchNodes: data.npuMatchNodes,
-          benchMatchNodes: data.benchMatchNodes,
-          npuUnMatchNodes: data.npuUnMatchNodes,
-          benchUnMatchNodes: data.benchUnMatchNodes,
-        });
-        // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
-        document.dispatchEvent(new CustomEvent('updateHierarchyData', { bubbles: true, composed: true }));
-        // 刷新选中节点匹配状态
-        switchMatchedStatus();
-        messageApi.success(t('matchSuccess'));
+    setSpinning(true);
+    try {
+      const { success, data, error } = await addMatchNodes<MatchResultType>(params);
+      // 处理业务逻辑
+      if (success) {
+        if (data) {
+          setGraphMatchedRelations({
+            npuMatchNodes: data.npuMatchNodes,
+            benchMatchNodes: data.benchMatchNodes,
+            npuUnMatchNodes: data.npuUnMatchNodes,
+            benchUnMatchNodes: data.benchUnMatchNodes,
+          });
+          // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
+          document.dispatchEvent(new CustomEvent('updateHierarchyData', { bubbles: true, composed: true }));
+          // 刷新选中节点匹配状态
+          switchMatchedStatus();
+          messageApi.success(t('matchSuccess'));
+        }
+      } else {
+        messageApi.error(error);
       }
-    } else {
-      messageApi.error(error);
+    } catch (err) {
+      messageApi.error(err);
+    } finally {
+      setSpinning(false); // 必关加载
     }
   };
 
@@ -138,8 +148,8 @@ const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
 };
 
 const MatchCancelPanel = (props: MatchCancelProps): JSX.Element => {
-  const { t, debugMatchedNodes, benchMatchedNodes, debugMatchSelected, benchMatchSelected } = props;
-  const [desChecked, setDesChecked] = useState<boolean>(true);
+  const { t, debugMatchedNodes, benchMatchedNodes, debugMatchSelected, benchMatchSelected, setSpinning } = props;
+  const [desChecked, setDesChecked] = useState<boolean>(false);
   const messageApi = useGraphStore((state) => state.messageApi);
   const getCurrentMetaData = useGraphStore((state) => state.getCurrentMetaData);
   const setGraphMatchedRelations = useGraphStore((state) => state.setGraphMatchedRelations);
@@ -159,23 +169,31 @@ const MatchCancelPanel = (props: MatchCancelProps): JSX.Element => {
       metaData: getCurrentMetaData(),
       isUnMatchChildren: desChecked,
     };
-    const { success, data, error } = await deleteMatchNodes<MatchResultType>(params);
-    if (success) {
-      if (data) {
-        setGraphMatchedRelations({
-          npuMatchNodes: data.npuMatchNodes,
-          benchMatchNodes: data.benchMatchNodes,
-          npuUnMatchNodes: data.npuUnMatchNodes,
-          benchUnMatchNodes: data.benchUnMatchNodes,
-        });
-        // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
-        document.dispatchEvent(new CustomEvent('updateHierarchyData', { bubbles: true, composed: true }));
-        // 刷新选中节点匹配状态
-        switchMatchedStatus();
-        messageApi.success(t('unmatchSuccess'));
+    setSpinning(true);
+    try {
+      const { success, data, error } = await deleteMatchNodes<MatchResultType>(params);
+      setSpinning(false);
+      if (success) {
+        if (data) {
+          setGraphMatchedRelations({
+            npuMatchNodes: data.npuMatchNodes,
+            benchMatchNodes: data.benchMatchNodes,
+            npuUnMatchNodes: data.npuUnMatchNodes,
+            benchUnMatchNodes: data.benchUnMatchNodes,
+          });
+          // 更新节点之间的匹配关系,更新匹配精度,节点重新上色
+          document.dispatchEvent(new CustomEvent('updateHierarchyData', { bubbles: true, composed: true }));
+          // 刷新选中节点匹配状态
+          switchMatchedStatus();
+          messageApi.success(t('unmatchSuccess'));
+        }
+      } else {
+        messageApi.error(error);
       }
-    } else {
-      messageApi.error(error);
+    } catch (err) {
+      messageApi.error(err);
+    } finally {
+      setSpinning(false); // 必关加载
     }
   };
   return (
@@ -297,6 +315,7 @@ const MatchSider = (): JSX.Element => {
         <ConfigFilePanel />
         <MatchBuildPanel
           t={t}
+          setSpinning={setSpinning}
           debugUnmatchNodes={graphMatchedRelations.npuUnMatchNodes}
           benchUnMatchNodes={graphMatchedRelations.benchUnMatchNodes}
           debugUnmatchSelected={debugUnmatchedValue}
@@ -304,6 +323,7 @@ const MatchSider = (): JSX.Element => {
         />
         <MatchCancelPanel
           t={t}
+          setSpinning={setSpinning}
           debugMatchedNodes={Object.keys(graphMatchedRelations.npuMatchNodes)}
           benchMatchedNodes={Object.keys(graphMatchedRelations.benchMatchNodes)}
           debugMatchSelected={debugMatchedValue}

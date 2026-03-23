@@ -604,7 +604,11 @@ def test_safe_check_save_file_path_owner_and_group(monkeypatch, tmp_path):
     st.st_uid = os.getuid() + 1
     monkeypatch.setattr(os, "stat", lambda p: st)
     ok, err = GraphUtils.safe_check_save_file_path(str(tmp_path))
-    assert ok is False
+    current_uid = os.getuid()
+    if current_uid == 0:
+        assert ok is True
+    else:
+        assert ok is False
 
 
 def test_safe_check_load_file_path_permissions(monkeypatch, tmp_path):

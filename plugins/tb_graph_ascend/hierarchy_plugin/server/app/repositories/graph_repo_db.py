@@ -230,8 +230,8 @@ class GraphRepoDB(GraphRepo):
                     else:
                         nodes_dict[key] = {}
 
-            npu_nodes = nodes_dict.get("npu", {}) | nodes_dict.get("npu_opposite", {})
-            bench_nodes = nodes_dict.get("bench", {}) | nodes_dict.get("bench_opposite", {})
+            npu_nodes = {**nodes_dict.get("npu", {}), **nodes_dict.get("npu_opposite", {})}
+            bench_nodes = {**nodes_dict.get("bench", {}), **nodes_dict.get("bench_opposite", {})}
             result = self._convert_to_graph_json(npu_nodes, bench_nodes)
             return result
         except Exception as e:
@@ -315,8 +315,8 @@ class GraphRepoDB(GraphRepo):
                         continue
                     cursor = c.execute(query, (step, rank, graph_type, node_name))
                     nodes_dict[key] = self._fetch_and_convert_rows(cursor)
-            npu_nodes = nodes_dict.get("npu", {}) | nodes_dict.get("npu_opposite", {})
-            bench_nodes = nodes_dict.get("bench", {}) | nodes_dict.get("bench_opposite", {})
+            npu_nodes = {**nodes_dict.get("npu", {}), **nodes_dict.get("npu_opposite", {})}
+            bench_nodes = {**nodes_dict.get("bench", {}), **nodes_dict.get("bench_opposite", {})}
             result = self._convert_to_graph_json(npu_nodes, bench_nodes)
             return result
         except Exception as e:
