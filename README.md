@@ -6,25 +6,17 @@
   [![License](https://badgen.net/badge/License/MulanPSL-2.0/blue)](https://raw.gitcode.com/Ascend/msprobe/raw/master/LICENSE) [![Version](https://badgen.net/badge/Version/26.0.0-alpha.1/green)](https://gitcode.com/Ascend/msprobe/releases/26.0.0-alpha.1) [![Ascend](https://img.shields.io/badge/Hardware-Ascend-orange.svg)](https://www.hiascend.com/)
 </div>
 
-## 简介
-
-MindStudio Probe（MindStudio精度调试工具，msProbe）是针对昇腾提供的全场景精度工具链，专为模型开发的精度调试环节设计，可显著提升用户定位模型精度问题的效率。
-
-## 未来规划
-
-未来规划会刷新在[MindStudio Probe Roadmap](https://gitcode.com/Ascend/msprobe/issues/27)中，欢迎访问msProbe最新规划动态。
-
-## 社区会议
-
-MindStudio Probe系列TC及SIG会议安排请查看[Ascend会议中心](https://meeting.ascend.osinfra.cn/)。
-
-## 最新消息
+## 📢 最新消息
 
 [2026.03.20]：上线[大模型训练精度定位指南](./docs/zh/wiki/train_debug_guide.md)、[大模型推理精度定位指南](./docs/zh/wiki/infer_debug_guide.md)及[常用框架工具使能指南](./docs/zh/wiki/dump_enable_guide.md)
 
 [2025.12.31]：MindStudio Probe精度调试工具全面开源。
 
-## 目录结构
+## 📌 简介
+
+MindStudio Probe（MindStudio精度调试工具，msProbe）是针对昇腾提供的全场景精度工具链，专为模型开发的精度调试环节设计，可显著提升用户定位模型精度问题的效率。
+
+## 🔍 目录结构
 
 关键目录如下，详细介绍参见[项目目录](./docs/zh/dir_structure.md)。
 
@@ -44,9 +36,7 @@ MindStudio-probe
 └── LICENSE                      # LICENSE文件
 ```
 
-## 环境部署
-
-### 版本说明
+## 📝 版本说明
 
 |  版本   |支持PyTorch版本|支持MindSpore版本|支持Python版本|支持CANN版本|
 |:-----:|:--:|:--:|:--:|:--:|
@@ -54,15 +44,15 @@ MindStudio-probe
 | 26.0.0-alpha.2 |2.1/2.2/2.5/2.6/2.7/2.8/2.9|2.4.0/2.5.0/2.6.0/2.7.1|3.8-3.12|大于等于 CANN 8.3.RC1|
 | 26.0.0-alpha.1 |2.1/2.2/2.5/2.6/2.7/2.8|2.4.0/2.5.0/2.6.0/2.7.1|3.8-3.11|大于等于 CANN 8.3.RC1|
 
-### 工具安装
+## 🛠️ 环境部署
 
 安装msProbe工具，具体请参见《[msProbe工具安装指南](docs/zh/msprobe_install_guide.md)》。
 
-## 快速入门
+## 🚀 快速入门
 
 msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通过一个可执行样例，串联msProbe工具的训练前配置检查、精度数据采集、精度预检、训练状态监测及精度比对功能，帮助用户快速上手。详细快速入门可参见《PyTorch场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/pytorch_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”或《MindSpore场景msTT工具快速入门》中的“[模型精度调试](https://gitcode.com/Ascend/mstt/blob/master/docs/zh/mindspore_mstt_quick_start.md#%E6%A8%A1%E5%9E%8B%E7%B2%BE%E5%BA%A6%E8%B0%83%E8%AF%95)”。
 
-## 功能介绍
+## 📖 功能介绍
 
 | 使用场景            |  子模式/细分场景   | 功能项          | 功能说明                                                                                          | 参考文档                                                                                                                                                               |
 |-----------------|:-----------:|--------------|-----------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -101,7 +91,7 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 | **MSAdapter场景** |      -      | 数据采集         | 通过config.json配置，完成msProbe精度数据采集操作<br/>config.json配置文件详细介绍请参见配置文件介绍和config.json配置样例            | [数据采集](docs/zh/dump/msadapter_data_dump_instruct.md)<br>[配置文件介绍](docs/zh/dump/config_json_introduct.md)<br>[config.json配置样例](docs/zh/dump/config_json_examples.md) |
 |                 |             | checkpoint比对 | 训练过程中或结束后，比较两个不同的checkpoint，评估模型相似度                                                           | [checkpoint比对](docs/zh/checkpoint_compare_instruct.md)                                                                                                             |
 
-## 补充材料
+## 📚 补充材料
 
 - [PyTorch场景的精度数据采集基线报告](docs/zh/baseline/pytorch_data_dump_perf_baseline.md)
 
@@ -111,41 +101,29 @@ msProbe工具快速入门当前提供在PyTorch和MindSpore训练场景中，通
 
 - [训练状态监测工具标准性能基线报告](docs/zh/baseline/monitor_perf_baseline.md)
 
-## FAQ
+## 💬 FAQ
 
 FAQ汇总了在使用msProbe工具过程中可能遇到的问题，具体请参见[FAQ](docs/zh/faq.md)。
 
-## 贡献指导
+## 📝 相关说明
 
-介绍如何向msProbe反馈问题、需求以及为msProbe贡献的代码开发流程，具体请参见[为MindStudio Probe贡献](CONTRIBUTING.md)。
+- [《贡献指南》](CONTRIBUTING.md)
+- [《安全声明》](./docs/zh/security_statement.md)
+- [《免责声明》](./docs/zh/legal/disclaimer.md)
+- [《License声明》](./docs/zh/legal/license_notice.md)
 
-## 联系我们
+## 💬 建议与交流
+
+欢迎大家为社区做贡献。如果有任何疑问或建议，请提交[Issues](https://gitcode.com/Ascend/msprobe/issues)，我们会尽快回复。感谢您的支持。
+
+- 联系我们
 
 <div>
   <a href="https://raw.gitcode.com/kali20gakki1/Imageshack/raw/main/CDC0BEE2-8F11-477D-BD55-77A15417D7D1_4_5005_c.jpeg">
     <img src="https://img.shields.io/badge/WeChat-07C160?style=for-the-badge&logo=wechat&logoColor=white"></a>
 </div>
 
-## 安全声明
-
-描述msProbe产品的安全加固信息、公网地址信息等内容，具体请参见[安全声明](docs/zh/security_statement.md)。
-
-## 免责声明
-
-- 本工具仅供调试和开发之用，使用者需自行承担使用风险，并理解以下内容：
-  - 数据处理及删除：用户在使用本工具过程中产生的数据属于用户责任范畴。建议用户在使用完毕后及时删除相关数据，以防信息泄露。
-  - 数据保密与传播：使用者了解并同意不得将通过本工具产生的数据随意外发或传播。对于由此产生的信息泄露、数据泄露或其他不良后果，本工具及其开发者概不负责。
-  - 用户输入安全性：用户需自行保证输入的命令行的安全性，并承担因输入不当而导致的任何安全风险或损失。对于由于输入命令行不当所导致的问题，本工具及其开发者概不负责。
-- 免责声明范围：本免责声明适用于所有使用本工具的个人或实体。使用本工具即表示您同意并接受本声明的内容，并愿意承担因使用该功能而产生的风险和责任，如有异议请停止使用本工具。
-- 在使用本工具之前，请谨慎阅读并理解以上免责声明的内容。对于使用本工具所产生的任何问题或疑问，请及时联系开发者。
-
-## License
-
-介绍msProbe产品的使用许可证，具体请参见[LICENSE](LICENSE)文件。
-
-介绍msProbe工具docs目录下的文档适用CC-BY 4.0许可证，具体请参见[LICENSE](docs/LICENSE)文件。
-
-## 致谢
+## 🤝 致谢
 
 msProbe由华为公司的下列部门联合贡献：
 
