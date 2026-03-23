@@ -21,7 +21,10 @@ MultiConvertProcess class. This class mainly involves the process function.
 """
 import os
 import multiprocessing
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from cmp_utils import log
 from cmp_utils.constant.const_manager import ConstManager
 from cmp_utils.file_utils import FileUtils
@@ -77,6 +80,9 @@ class MultiConvertProcess:
         Get max file size
         :return int
         """
+        if psutil is None:
+            log.print_error_log('The psutil is not installed, please install. Example: pip3 install psutil.')
+            raise ImportError
         mem = psutil.virtual_memory()
         available = mem.available
         cpu_count = int((multiprocessing.cpu_count() + 1) / 2)

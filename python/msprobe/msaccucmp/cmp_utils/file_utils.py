@@ -25,7 +25,10 @@ import os
 import re
 import uuid
 import numpy as np
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from cmp_utils import log
 from cmp_utils import utils
@@ -150,6 +153,9 @@ class FileUtils:
         :param array: the numpy array
         :param shape: the array shape (optional, will reshape if provided)
         """
+        if torch is None:
+            log.print_error_log('PyTorch is not installed, cannot save to .pt format')
+            raise ImportError
         try:
             if shape is not None:
                 array = array.reshape(shape)

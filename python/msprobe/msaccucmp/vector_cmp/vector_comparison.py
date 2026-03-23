@@ -26,7 +26,10 @@ import multiprocessing
 import argparse
 import csv
 import time
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from dump_parse import dump, mapping
 from vector_cmp.compare_detail import detail
@@ -332,6 +335,9 @@ class VectorComparison:
         return comparison.compare()
 
     def _get_max_process_num(self) -> int:
+        if psutil is None:
+            log.print_error_log('The psutil is not installed, please install. Example: pip3 install psutil.')
+            raise ImportError
         if self.MULTI_THREAD_MAX_NUM == 1:
             return 1  # Bypassing test code entering `os.listdir`
 
