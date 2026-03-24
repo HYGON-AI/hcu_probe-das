@@ -45,7 +45,6 @@ download_and_install_aclruntime() {
 
     echo "download and install aclruntime"
     PYTHON3_MINI_VERSION=`python3 --version | cut -d'.' -f 2`
-    PYTHON3_MINI_VERSION=`python3 --version | cut -d'.' -f 2`
     if [ "$PYTHON3_MINI_VERSION" = "7" ]; then
         SUB_SUFFIX="m"
     else
@@ -63,7 +62,7 @@ download_and_install_aclruntime() {
         wget -c "${WHL_BASE_URL}${WHL_NAME}"
     fi
 
-    if [ $PYTHON3_MINI_VERSION -gt 11 ]; then
+    if [ $PYTHON3_MINI_VERSION -gt 12 ]; then
         echo "Unsupported python3 version"
         exit 1
     fi
