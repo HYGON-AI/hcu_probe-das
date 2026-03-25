@@ -108,7 +108,7 @@ msprobe compare --target_path ${dump_path in GE dump}/msprobe_ge_dump --golden_p
       while True:
           convert(args.data_path)
           time.sleep(0.5)
-          print("Wmsiting...")
+          print("Waiting...")
   ```
 
   在dump过程中后台执行该脚本，将dump数据转化为info数据，以减少内存占用。
