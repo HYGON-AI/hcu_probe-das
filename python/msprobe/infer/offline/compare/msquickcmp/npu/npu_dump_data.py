@@ -367,7 +367,6 @@ class NpuDumpData(DumpData):
         import aclruntime
 
         options = aclruntime.session_options()
-        Rule.input_file().check(self.target_path, will_raise=True)
         self.target_path = load_file_to_read_common_check(self.target_path)
         aa = aclruntime.InferenceSession(self.target_path, int(self.device), options)
         shape_list = [ii.shape for ii in aa.get_inputs()]
