@@ -13,16 +13,20 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
-
+import json
 import re
+import os
+from typing import List
 
 from msprobe.core.compare.acc_compare import ModeConfig
 from msprobe.core.compare.multiprocessing_compute import CompareRealData
 from msprobe.core.compare.utils import read_op, merge_tensor, get_accuracy, make_result_table
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.compare.indicator_analysis.calculator import calculate_result
+from msprobe.core.common.file_utils import FileChecker, FileCheckConst
+from msprobe.core.common.log import BaseLogger
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
@@ -231,3 +235,293 @@ def get_csv_df(stack_mode, csv_data, compare_mode):
 
     dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
     return make_result_table(csv_data, dump_mode, stack_mode)
+
+
+class MatchedNodeCalculator:
+    """
+    功能：用户在前端选择NPU和Bench节点匹配，前端会查询db数据打包发送到此类，此类进行精度指标的计算，最终返回结果给前端
+    """
+    TENSOR_COMPARE_INDEX = CompareConst.ALL_COMPARE_INDEX + CompareConst.EXTRACT_INDEX
+
+    _RESP_SUCCESS = "success"
+    _RESP_ERROR = "error"
+    _RESP_DATA = "data"
+    _INPUT_INFO = "input_info"
+    _OUTPUT_INFO = "output_info"
+
+    def __init__(self, npu_db_data, bench_db_data):
+        """
+        npu_db_data / bench_db_data: 基于分级可视化构图结果db文件，查询input_data、output_data和dump_data_dir得到的数据
+        """
+        self.npu_db_data = npu_db_data
+        self.bench_db_data = bench_db_data
+        self.framework = None
+        self.is_cross_frame = False
+        self.public_indicators_mapping = {
+            Const.DTYPE: (CompareConst.NPU_DTYPE, CompareConst.BENCH_DTYPE),
+            Const.SHAPE: (CompareConst.NPU_SHAPE, CompareConst.BENCH_SHAPE),
+            Const.REQ_GRAD: (CompareConst.NPU_REQ_GRAD, CompareConst.BENCH_REQ_GRAD),
+            Const.MAX: (CompareConst.NPU_MAX, CompareConst.BENCH_MAX),
+            Const.MIN: (CompareConst.NPU_MIN, CompareConst.BENCH_MIN),
+            Const.MEAN: (CompareConst.NPU_MEAN, CompareConst.BENCH_MEAN),
+            Const.NORM: (CompareConst.NPU_NORM, CompareConst.BENCH_NORM)
+        }
+        self.tensor_indicators_index = {
+            CompareConst.COSINE: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.COSINE),
+            CompareConst.EUC_DIST: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.EUC_DIST),
+            CompareConst.MAX_ABS_ERR: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.MAX_ABS_ERR),
+            CompareConst.MAX_RELATIVE_ERR: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.MAX_RELATIVE_ERR),
+            CompareConst.ONE_THOUSANDTH_ERR_RATIO: CompareConst.COMPARE_RESULT_HEADER.index(
+                CompareConst.ONE_THOUSANDTH_ERR_RATIO),
+            CompareConst.FIVE_THOUSANDTHS_ERR_RATIO: CompareConst.COMPARE_RESULT_HEADER.index(
+                CompareConst.FIVE_THOUSANDTHS_ERR_RATIO)
+        }
+        self.extra_indicators_index = {
+            CompareConst.REQ_GRAD_CONSIST: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.REQ_GRAD_CONSIST),
+            CompareConst.RESULT: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.RESULT),
+            CompareConst.ERROR_MESSAGE: CompareConst.COMPARE_RESULT_HEADER.index(CompareConst.ERROR_MESSAGE)
+        }
+        self.all_tensor_indicators_index = {**self.tensor_indicators_index, **self.extra_indicators_index}
+        self.error_list = []
+        # 记录error日志，用于前端展示
+        BaseLogger.error = self._get_log_msg_wrapper(BaseLogger.error, self.error_list)
+
+    @staticmethod
+    def _safe_convert_shape(shape_str: str):
+        """将字符串shape "[10,3,64,64]" 转换为列表 [10,3,64,64]"""
+        if not shape_str or shape_str == "null":
+            return ""
+        try:
+            return json.loads(shape_str)
+        except json.JSONDecodeError:
+            return ""
+
+    @staticmethod
+    def _safe_convert_float(num_str: str):
+        """将字符串数字转换为float，异常返回空字符串"""
+        if not num_str or num_str == "null":
+            return ""
+        try:
+            return float(num_str)
+        except (ValueError, TypeError):
+            return ""
+
+    @staticmethod
+    def _get_log_msg_wrapper(fn, error_list: list):
+        def decorated(self, msg):
+            error_list.append(msg)
+            return fn(self, msg)
+
+        return decorated
+
+    def get_db_tensor_compare_result(self):
+        """
+        供前端调用，解析前端传入的npu_db_data和bench_db_data，进行tensor比对
+        """
+        self.error_list.clear()
+        try:
+            if not self.framework:
+                npu_framework, bench_framework = self._get_frameworks()
+                self.framework = npu_framework
+                self.is_cross_frame = npu_framework != bench_framework
+
+            result_lists_in = self._compare_db_tensor_node(
+                self.npu_db_data.get('input_data'),
+                self.bench_db_data.get('input_data'),
+                self.npu_db_data.get('dump_data_dir'),
+                self.bench_db_data.get('dump_data_dir')
+            )
+            data_lists_in = self._convert_db_data2data_lists(
+                self.npu_db_data.get('input_data'),
+                self.bench_db_data.get('input_data'),
+                result_lists_in
+            )
+            result_lists_out = self._compare_db_tensor_node(
+                self.npu_db_data.get('output_data'),
+                self.bench_db_data.get('output_data'),
+                self.npu_db_data.get('dump_data_dir'),
+                self.bench_db_data.get('dump_data_dir')
+            )
+            data_lists_out = self._convert_db_data2data_lists(
+                self.npu_db_data.get('output_data'),
+                self.bench_db_data.get('output_data'),
+                result_lists_out
+            )
+            all_data_lists = data_lists_in + data_lists_out
+            result = calculate_result(all_data_lists, Const.ALL)
+
+            input_info = self._parse_data(data_lists_in)
+            output_info = self._parse_data(data_lists_out)
+
+            data = {
+                GraphConst.JSON_INDEX_KEY: GraphConst.COMPARE_INDICATOR_TO_PRECISION_INDEX_MAPPING.get(result, 0),
+                self._INPUT_INFO: input_info,
+                self._OUTPUT_INFO: output_info
+            }
+
+            return self._build_response(success=True, data=data) if not self.error_list else self._build_response(
+                success=False, error=self.error_list, data=data)
+
+        except Exception as e:
+            self.error_list.append(str(e))
+            return self._build_response(success=False, error=self.error_list)
+
+    def _get_frameworks(self):
+        def get_framework(target_path):
+            for filename in os.listdir(target_path):
+                suffix = os.path.splitext(filename)[1].lower()
+                if suffix == ".pt":
+                    return Const.PT_FRAMEWORK
+                elif suffix == ".npy":
+                    return Const.MS_FRAMEWORK
+                return Const.PT_FRAMEWORK
+
+        npu_dump_data_dir = self.npu_db_data.get('dump_data_dir')
+        bench_dump_data_dir = self.bench_db_data.get('dump_data_dir')
+        npu_dump_data_dir = FileChecker(npu_dump_data_dir, FileCheckConst.DIR).common_check()
+        bench_dump_data_dir = FileChecker(bench_dump_data_dir, FileCheckConst.DIR).common_check()
+
+        return get_framework(npu_dump_data_dir), get_framework(bench_dump_data_dir)
+
+    def _compare_tensor(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
+        """
+        进行一对tensor数据的比对，得到Cosine、EucDist等精度比对指标，区分框架
+        """
+        config_dict = {
+            'stack_mode': False,
+            'auto_analyze': True,
+            'fuzzy_match': False,
+            'dump_mode': Const.ALL
+        }
+        mode_config = ModeConfig(**config_dict)
+
+        if self.framework == Const.PT_FRAMEWORK:
+            from msprobe.pytorch.compare.pt_compare import read_real_data
+            return CompareRealData(read_real_data, mode_config, self.is_cross_frame).compare_by_op(npu_op_name,
+                                                                                                   bench_op_name,
+                                                                                                   op_name_mapping_dict,
+                                                                                                   input_param)
+        else:
+            from msprobe.mindspore.compare.ms_compare import read_real_data
+            return CompareRealData(read_real_data, mode_config, self.is_cross_frame).compare_by_op(npu_op_name,
+                                                                                                   bench_op_name,
+                                                                                                   op_name_mapping_dict,
+                                                                                                   input_param)
+
+    def _compare_db_tensor_node(self, npu_data: dict, bench_data: dict, npu_data_dir, bench_data_dir):
+        """
+        解析db node节点，将两个匹配的node节点的输入和输出参数按顺序一一对应，进行tensor比对
+        """
+        result_lists = []
+        for (npu_op_name, npu_value), (bench_op_name, bench_value) in zip(npu_data.items(), bench_data.items()):
+            npu_data_name = npu_value.get('data_name')
+            bench_data_name = bench_value.get('data_name')
+            if not npu_data_name or not bench_data_name:
+                result_lists.append([])
+            else:
+                input_param = {
+                    CompareConst.NPU_DUMP_DATA_DIR: npu_data_dir,
+                    CompareConst.BENCH_DUMP_DATA_DIR: bench_data_dir
+                }
+                op_name_mapping_dict = {
+                    npu_op_name + bench_op_name: [npu_value.get('data_name'), bench_value.get('data_name')]
+                }
+
+                result = self._compare_tensor(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+                result_lists.append(result)
+        return result_lists
+
+    def _convert_db_data2data_lists(self, npu_dict: dict, bench_dict: dict, compare_results: list = None) -> List[List]:
+        """
+        将db里的node数据转换为指标计算需要的List[List]格式
+        并且插入比对结果
+        :return: 最终结果 [ [行1数据], [行2数据], ... ]
+        """
+        header = CompareConst.COMPARE_RESULT_HEADER
+        data_lists = []
+        npu_keys = list(npu_dict.keys())
+        bench_keys = list(bench_dict.keys())
+
+        min_length = min(len(npu_keys), len(bench_keys))
+
+        for idx in range(min_length):
+            row = [""] * len(header)
+            # 按顺序取对应键
+            npu_key = npu_keys[idx]
+            bench_key = bench_keys[idx]
+            npu_data = npu_dict[npu_key]
+            bench_data = bench_dict[bench_key]
+
+            # 填充名称（顺序匹配后，NPU和Bench名称可以不同）
+            row[header.index("NPU Name")] = npu_key
+            row[header.index("Bench Name")] = bench_key
+
+            # 按映射表填充数据
+            for raw_key, (npu_header, bench_header) in self.public_indicators_mapping.items():
+                npu_val_raw = npu_data.get(raw_key, "")
+                bench_val_raw = bench_data.get(raw_key, "")
+
+                # ============== 核心类型转换 ==============
+                if raw_key == "shape":
+                    npu_val = self._safe_convert_shape(npu_val_raw)
+                    bench_val = self._safe_convert_shape(bench_val_raw)
+                elif raw_key in ["Max", "Min", "Mean", "Norm"]:
+                    npu_val = self._safe_convert_float(npu_val_raw)
+                    bench_val = self._safe_convert_float(bench_val_raw)
+                else:
+                    npu_val = npu_val_raw
+                    bench_val = bench_val_raw
+
+                row[header.index(npu_header)] = npu_val
+                row[header.index(bench_header)] = bench_val
+
+            # 填充requires_grad一致性
+            npu_grad = npu_data.get("requires_grad", "")
+            bench_grad = bench_data.get("requires_grad", "")
+            grad_consistent = str(npu_grad == bench_grad) if (npu_grad and bench_grad) else ""
+            row[header.index("Requires_grad Consistent")] = grad_consistent
+
+            # 基于预设索引，插入比对结果到指定位置
+            if compare_results and idx < len(compare_results):
+                calc_result = compare_results[idx]  # 取出当前行的比对结果
+                for res_idx, col_idx in enumerate(list(self.tensor_indicators_index.values())):
+                    if res_idx < len(calc_result):
+                        row[col_idx] = calc_result[res_idx]
+                    else:
+                        row[col_idx] = ""
+
+            data_lists.append(row)
+
+        return data_lists
+
+    def _parse_data(self, data_lists):
+        """
+        封装前端需要的格式
+        data_lists: 最终结果 [ [行1数据], [行2数据], ... ]
+
+        return example:
+        {
+          "Functional.conv2d.0.forward.input.0": {"Cosine": 1.0, "EucDist": 0.0, ...},
+          "Functional.conv2d.0.forward.input.1": {"Cosine": 1.0, "EucDist": 0.0, ...},
+          ...
+        }
+        """
+        indicators_info = {}
+        for data_list in data_lists:
+            if not data_list:
+                continue
+            name = data_list[0]
+            info = {}
+            for indicator, index in self.all_tensor_indicators_index.items():
+                info[indicator] = data_list[index]
+            indicators_info[name] = info
+
+        return indicators_info
+
+    def _build_response(self, success: bool, error: list = None, data: dict = None):
+        data = data or {}
+        return {
+            self._RESP_SUCCESS: success,
+            self._RESP_ERROR: error,
+            self._RESP_DATA: data
+        }
