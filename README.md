@@ -8,6 +8,8 @@
 
 ## 📢 最新消息
 
+[2026.03.28]：[msprobe仓库ADump模块日落下线通知](https://gitcode.com/Ascend/msprobe/discussions/2)
+
 [2026.03.20]：上线[大模型训练精度定位指南](./docs/zh/wiki/train_debug_guide.md)、[大模型推理精度定位指南](./docs/zh/wiki/infer_debug_guide.md)及[常用框架工具使能指南](./docs/zh/wiki/dump_enable_guide.md)
 
 [2025.12.31]：MindStudio Probe精度调试工具全面开源。
