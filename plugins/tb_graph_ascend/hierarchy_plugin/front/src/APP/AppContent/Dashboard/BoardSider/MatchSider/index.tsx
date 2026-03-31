@@ -56,6 +56,7 @@ const Text = Typography.Text;
 const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
   const { t, debugUnmatchNodes, benchUnMatchNodes, debugUnmatchSelected, benchUnmatchSelected, setSpinning } = props;
   const [desChecked, setDesChecked] = useState<boolean>(false);
+  const task = useGraphStore((state) => state.task);
   const messageApi = useGraphStore((state) => state.messageApi);
   const getCurrentMetaData = useGraphStore((state) => state.getCurrentMetaData);
   const setGraphMatchedRelations = useGraphStore((state) => state.setGraphMatchedRelations);
@@ -125,14 +126,15 @@ const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
         selectedValue={benchUnmatchSelected}
         testPrefix="benchUnmatched"
       />
-      <Checkbox
+
+      {task !== 'all' && (<Checkbox
         className={styles.desCheckbox}
         checked={desChecked}
         onChange={onCheck}
         data-testid="matchDesendantCheckbox"
       >
         {t('manageDesendant')}
-      </Checkbox>
+      </Checkbox>)}
       <Button
         color="primary"
         variant="filled"
@@ -150,6 +152,7 @@ const MatchBuildPanel = (props: MatchBuildProps): JSX.Element => {
 const MatchCancelPanel = (props: MatchCancelProps): JSX.Element => {
   const { t, debugMatchedNodes, benchMatchedNodes, debugMatchSelected, benchMatchSelected, setSpinning } = props;
   const [desChecked, setDesChecked] = useState<boolean>(false);
+  const task = useGraphStore((state) => state.task);
   const messageApi = useGraphStore((state) => state.messageApi);
   const getCurrentMetaData = useGraphStore((state) => state.getCurrentMetaData);
   const setGraphMatchedRelations = useGraphStore((state) => state.setGraphMatchedRelations);
@@ -213,14 +216,16 @@ const MatchCancelPanel = (props: MatchCancelProps): JSX.Element => {
         selectedValue={benchMatchSelected}
         testPrefix="benchMatched"
       />
-      <Checkbox
-        className={styles.desCheckbox}
-        checked={desChecked}
-        onChange={onCheck}
-        data-testid="unmatchDesendantCheckbox"
-      >
-        {t('manageDesendant')}
-      </Checkbox>
+      {task !== 'all' && (
+        <Checkbox
+          className={styles.desCheckbox}
+          checked={desChecked}
+          onChange={onCheck}
+          data-testid="unmatchDesendantCheckbox"
+        >
+          {t('manageDesendant')}
+        </Checkbox>)
+      }
       <Button
         color="primary"
         variant="filled"
@@ -237,6 +242,7 @@ const MatchCancelPanel = (props: MatchCancelProps): JSX.Element => {
 
 const MatchSider = (): JSX.Element => {
   const { t } = useTranslation();
+  const task = useGraphStore((state) => state.task);
   const selectedNode = useGraphStore((state) => state.selectedNode);
   const graphMatchedRelations = useGraphStore((state) => state.graphMatchedRelations);
   const messageApi = useGraphStore((state) => state.messageApi);
@@ -312,7 +318,7 @@ const MatchSider = (): JSX.Element => {
   return (
     <div data-testid="matchPanel">
       <Spin spinning={spinning} tip={t('loading')}>
-        <ConfigFilePanel />
+        {task !== 'all' && <ConfigFilePanel />}
         <MatchBuildPanel
           t={t}
           setSpinning={setSpinning}

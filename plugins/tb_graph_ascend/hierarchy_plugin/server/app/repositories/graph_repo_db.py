@@ -200,6 +200,7 @@ class GraphRepoDB(GraphRepo):
                 data_source,
                 input_data,
                 output_data,
+                dump_data_dir,
                 matched_node_link
             FROM tb_nodes
             WHERE step = ? AND rank = ? AND data_source = ? AND node_name = ?
@@ -419,7 +420,7 @@ class GraphRepoDB(GraphRepo):
             SELECT 
                 n.*,
                 d.stack_info 
-            FROM 
+            FROM      
                 tb_nodes n
             JOIN tb_stack d ON n.stack_id = d.id
             WHERE 
@@ -433,7 +434,10 @@ class GraphRepoDB(GraphRepo):
                 cursor = c.execute(query, (step, rank, graph_type, node_name))
                 rows = cursor.fetchall()
             if len(rows) > 0:
-                return self._convert_db_to_object(dict(rows[0]))
+                node_info = self._convert_db_to_object(dict(rows[0]))
+                # 安全删除不需要的字段（避免 KeyError）
+                node_info.pop("dump_data_dir", None)
+                return node_info
             else:
                 return {}
         except Exception as e:
@@ -932,5 +936,6 @@ class GraphRepoDB(GraphRepo):
             "parallel_merge_info": GraphUtils.safe_json_loads(data.get("parallel_merge_info") or "[]"),
             "matched_distributed": GraphUtils.safe_json_loads(data.get("matched_distributed") or "[]"),
             "modified": int(data.get("modified")) if data.get("modified") is not None else 0,
+            "dump_data_dir": data.get("dump_data_dir", ""),
         }
         return object_res

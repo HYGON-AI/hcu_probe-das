@@ -40,7 +40,7 @@ export interface GraphConfigType {
   microSteps: number;
   isSingleGraph: boolean;
   matchedConfigFiles: string[];
-  task: string;
+  task: 'summary' | 'md5' | 'all';
   ranks: number[];
   steps: number[];
 }

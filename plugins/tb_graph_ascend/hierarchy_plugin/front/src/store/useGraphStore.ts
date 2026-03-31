@@ -137,7 +137,7 @@ const useGraphStore = create<GraphStoreType>()((set, get) => ({
   tooltips: '',
   hasOverflow: false,
   isSingleGraph: false,
-  task: '',
+  task: 'summary',
   matchedConfigFilesOptions: [],
 
   stepOptions: [],

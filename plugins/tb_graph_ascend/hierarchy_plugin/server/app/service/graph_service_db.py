@@ -249,7 +249,7 @@ class DbGraphService(GraphServiceStrategy):
                 return {"success": False, "error": GraphUtils.t("rankStepNullError")}
             task = self.config_info.get("task")
             # 根据任务类型计算误差
-            if task == "md5" or task == "summary":
+            if task == "md5" or task == "summary" or task == "all":
                 if is_match_children:
                     graph_data = self.repo.query_node_and_sub_nodes(npu_node_name, bench_node_name, rank, step)
                     match_result = MatchNodesController.process_task_add_child_layer(
@@ -307,7 +307,7 @@ class DbGraphService(GraphServiceStrategy):
             task = self.config_info.get("task")
 
             # 根据任务类型计算误差
-            if task == "md5" or task == "summary":
+            if task == "md5" or task == "summary" or task == "all":
                 if is_unmatch_children:
                     # DB：当前节点及其所有的子节点信息
                     graph_data = self.repo.query_node_and_sub_nodes(npu_node_name, bench_node_name, rank, step)

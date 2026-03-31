@@ -59,7 +59,7 @@ const NodeDetailPanel = (props: IProps): React.JSX.Element => {
       title: item,
       width: 'auto',
       dataIndex: item,
-      render: (text: string) => text || '-',
+      render: (text: string) => text ?? '-',
       onCell: (record: any) => {
         return {
           className: getClassName(record, item),

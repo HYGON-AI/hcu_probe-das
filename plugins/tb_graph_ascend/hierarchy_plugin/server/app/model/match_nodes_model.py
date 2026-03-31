@@ -16,6 +16,8 @@ from ..utils.graph_utils import GraphUtils
 from ..utils.constant import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
 
+from msprobe.visualization.builder.msprobe_adapter import MatchedNodeCalculator
+
 
 class MatchNodesController:
     @staticmethod
@@ -44,6 +46,11 @@ class MatchNodesController:
             opposite_result = MatchNodesController.process_summary_task_add(
                 graph_data, opposite_npu_node_name, opposite_bench_node_name
             )
+        elif task == "all":
+            match_result = MatchNodesController.process_tensor_task_add(graph_data, npu_node_name, bench_node_name)
+            opposite_result = MatchNodesController.process_tensor_task_add(
+                graph_data, opposite_npu_node_name, opposite_bench_node_name
+            )
         else:
             return [
                 {"success": False, "error": GraphUtils.t("taskTypeWrong")},
@@ -61,7 +68,7 @@ class MatchNodesController:
             opposite_result = MatchNodesController.process_md5_task_delete(
                 graph_data, opposite_npu_node_name, opposite_bench_node_name
             )
-        elif task == "summary":
+        elif task == "summary" or task == "all":
             match_result = MatchNodesController.process_summary_task_delete(graph_data, npu_node_name, bench_node_name)
             opposite_result = MatchNodesController.process_summary_task_delete(
                 graph_data, opposite_npu_node_name, opposite_bench_node_name
@@ -246,7 +253,7 @@ class MatchNodesController:
         data = [
             {
                 "node_name": npu_node_name,
-                "matched_node_link": [bench_node_name],
+                "matched_node_link": npu_node_data["matched_node_link"],
                 "precision_index": precision_error,
                 "input_data": npu_node_data.get("input_data"),
                 "output_data": npu_node_data.get("output_data"),
@@ -254,7 +261,7 @@ class MatchNodesController:
             },
             {
                 "node_name": bench_node_name,
-                "matched_node_link": [npu_node_name],
+                "matched_node_link": bench_node_data["matched_node_link"],
                 "precision_index": None,
                 "input_data": bench_node_data.get("input_data"),
                 "output_data": bench_node_data.get("output_data"),
@@ -270,7 +277,7 @@ class MatchNodesController:
         npu_node_data = graph_data.get("NPU", {}).get("node", {}).get(npu_node_name, {})
         bench_node_data = graph_data.get("Bench", {}).get("node", {}).get(bench_node_name, {})
         # 计算统计误差
-        intput_statistical_diff = MatchNodesController.calculate_statistical_diff(
+        input_statistical_diff = MatchNodesController.calculate_statistical_diff(
             npu_node_data.get("input_data"), bench_node_data.get("input_data"), npu_node_name, bench_node_name
         )
         output_statistical_diff = MatchNodesController.calculate_statistical_diff(
@@ -279,7 +286,7 @@ class MatchNodesController:
         # 计算精度误差
         precision_error = MatchNodesController.calculate_max_relative_error(output_statistical_diff)
         # 有一个没有匹配上，则认为匹配失败
-        if not intput_statistical_diff or not output_statistical_diff:
+        if not input_statistical_diff or not output_statistical_diff:
             return {
                 "success": False,
                 "error": f'{npu_node_name, bench_node_name}{GraphUtils.t("ioEmptyError")}',
@@ -296,13 +303,15 @@ class MatchNodesController:
         npu_node_data["matched_node_link"] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
         bench_node_data["matched_node_link"] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
         npu_node_data.setdefault("data", {})["precision_index"] = precision_error
-        MatchNodesController.update_graph_node_data(npu_node_data.get("input_data"), intput_statistical_diff)
-        MatchNodesController.update_graph_node_data(npu_node_data.get("output_data"), output_statistical_diff)
-        # DB: data只有DB会用到
+        MatchNodesController.update_graph_node_data(npu_node_data.get("input_data"), input_statistical_diff, "summary")
+        MatchNodesController.update_graph_node_data(
+            npu_node_data.get("output_data"), output_statistical_diff, "summary"
+        )
+        # DB: data只有DB会用到python setup.py bdist_wheel
         data = [
             {
                 "node_name": npu_node_name,
-                "matched_node_link": [bench_node_name],
+                "matched_node_link": npu_node_data.get("matched_node_link"),
                 "precision_index": precision_error,
                 "input_data": npu_node_data.get("input_data"),
                 "output_data": npu_node_data.get("output_data"),
@@ -310,7 +319,65 @@ class MatchNodesController:
             },
             {
                 "node_name": bench_node_name,
-                "matched_node_link": [npu_node_name],
+                "matched_node_link": bench_node_data.get("matched_node_link"),
+                "precision_index": None,
+                "input_data": bench_node_data.get("input_data"),
+                "output_data": bench_node_data.get("output_data"),
+                "graph_type": BENCH,
+            },
+        ]
+        MatchNodesController.add_config_match_nodes(npu_node_name, bench_node_name)
+
+        return {"success": True, "data": data}
+
+    ## Tensor 任务的手动匹配策略
+    @staticmethod
+    def process_tensor_task_add(graph_data, npu_node_name, bench_node_name):
+        # 节点信息提取
+        npu_node_data = graph_data.get("NPU", {}).get("node", {}).get(npu_node_name, {})
+        bench_node_data = graph_data.get("Bench", {}).get("node", {}).get(bench_node_name, {})
+        # 计算统计误差
+        npu_data = {
+            "input_data": npu_node_data.get("input_data", {}),
+            "output_data": npu_node_data.get("output_data", {}),
+            "dump_data_dir": npu_node_data.get("dump_data_dir", ""),
+        }
+        bench_data = {
+            "input_data": bench_node_data.get("input_data", {}),
+            "output_data": bench_node_data.get("output_data", {}),
+            "dump_data_dir": bench_node_data.get("dump_data_dir", ""),
+        }
+        m = MatchedNodeCalculator(npu_data, bench_data)
+        result = m.get_db_tensor_compare_result()
+        if not result.get("success"):
+            return {"success": False, "error": result.get("error", "")}  # 安全隐患，可能包含绝对路径
+        # 在原始数据上，添加匹配节点，和匹配节点信息
+        # JSON：处理JSON更新
+        npu_graph_data = graph_data.get("NPU", {})
+        bench_graph_data = graph_data.get("Bench", {})
+        npu_node_data["matched_node_link"] = GraphUtils.get_parent_node_list(bench_graph_data, bench_node_name)
+        bench_node_data["matched_node_link"] = GraphUtils.get_parent_node_list(npu_graph_data, npu_node_name)
+        npu_node_data.setdefault("data", {})["precision_index"] = result.get("data", {}).get("precision_index")
+        MatchNodesController.update_graph_node_data(
+            npu_node_data.get("input_data"), result.get("data", {}).get("input_info", {}), "all"
+        )
+        MatchNodesController.update_graph_node_data(
+            npu_node_data.get("output_data"), result.get("data", {}).get("output_info", {}), "all"
+        )
+        print("tensor task add after update", npu_node_data.get("input_data"), npu_node_data.get("output_data"))
+        # DB: data只有DB会用到
+        data = [
+            {
+                "node_name": npu_node_name,
+                "matched_node_link": npu_node_data.get("matched_node_link"),
+                "precision_index": result.get("data", {}).get("precision_index"),
+                "input_data": npu_node_data.get("input_data"),
+                "output_data": npu_node_data.get("output_data"),
+                "graph_type": NPU,
+            },
+            {
+                "node_name": bench_node_name,
+                "matched_node_link": bench_node_data.get("matched_node_link"),
                 "precision_index": None,
                 "input_data": bench_node_data.get("input_data"),
                 "output_data": bench_node_data.get("output_data"),
@@ -372,7 +439,6 @@ class MatchNodesController:
 
     @staticmethod
     def process_summary_task_delete(graph_data, npu_node_name, bench_node_name):
-
         config_data = GraphState.get_global_value("config_data")
         npu_match_nodes_list = config_data.get("npuMatchNodes", {})
         bench_match_nodes_list = config_data.get("benchMatchNodes", {})
@@ -538,16 +604,21 @@ class MatchNodesController:
         return 1
 
     @staticmethod
-    def update_graph_node_data(graph_npu_node_data, statistical_diff):
+    def update_graph_node_data(graph_npu_node_data, statistical_diff, task):
         if not statistical_diff or not graph_npu_node_data:
             return
         for key, diff_values in statistical_diff.items():
-            # 格式化相对误差字段
-            for field in ["MaxRelativeErr", "MinRelativeErr", "NormRelativeErr", "MeanRelativeErr"]:
-                diff_values[field] = GraphUtils.format_relative_err(diff_values.get(field, float("nan")))
-            # 转换 absErr 为 NaN 字符串
-            for field in ["MaxAbsErr", "MinAbsErr", "MeanAbsErr", "NormAbsErr"]:
-                diff_values[field] = GraphUtils.nan_to_str(diff_values.get(field, float("nan")))
+            if task == "summary":
+                # 格式化相对误差字段
+                for field in ["MaxRelativeErr", "MinRelativeErr", "NormRelativeErr", "MeanRelativeErr"]:
+                    diff_values[field] = GraphUtils.format_relative_err(diff_values.get(field, float("nan")))
+                # 转换 absErr 为 NaN 字符串
+                for field in ["MaxAbsErr", "MinAbsErr", "MeanAbsErr", "NormAbsErr"]:
+                    diff_values[field] = GraphUtils.nan_to_str(diff_values.get(field, float("nan")))
+            if task == "tensor":
+                for filed in MatchedNodeCalculator.TENSOR_COMPARE_INDEX:
+                    diff_values[filed] = GraphUtils.nan_to_str(diff_values.get(filed, float("nan")))
+
             if key in graph_npu_node_data:
                 graph_npu_node_data[key].update(diff_values)
             else:
@@ -564,6 +635,6 @@ class MatchNodesController:
             graph_npu_node_data[key] = {
                 sub_key: value
                 for sub_key, value in fild_obj.items()
-                if sub_key not in keys_to_remove
+                if sub_key not in keys_to_remove and sub_key not in MatchedNodeCalculator.TENSOR_COMPARE_INDEX
             }
         return graph_npu_node_data
