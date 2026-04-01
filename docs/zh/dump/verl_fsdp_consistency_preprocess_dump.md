@@ -33,7 +33,7 @@
    
    2. 需保证梯度累计步骤数gac (Gradient Accumulation Steps) = 1
    
-      计算公式为：gac = (train_ppo_mini_batch_size * n_resp_per_prompt) / (train_ppo_micro_batch_size_per_gpu / DP)
+      计算公式为：gac = train_ppo_mini_batch_size * n_resp_per_prompt / train_ppo_micro_batch_size_per_gpu / DP
       - train_ppo_mini_batch_size: 每个 mini batch 的样本数量。
       - n_resp_per_prompt: 每个提示（prompt）下的响应数。
       - train_ppo_micro_batch_size_per_gpu: 每个GPU上处理的 micro batch 大小。
