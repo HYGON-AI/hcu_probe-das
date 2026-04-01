@@ -91,9 +91,7 @@ vllm serve Qwen/Qwen2.5-0.5B-Instruct \
       }
     ```
 
-    config.json配置文件详细介绍请参见[配置文件介绍](./config_json_introduct.md)。
-
-    更多配置样例请参见[config.json配置样例-PyTorch场景](./config_json_examples.md#pytorch场景)。
+    config.json配置文件及配置样例详细介绍请参见[配置文件介绍](./config_json_introduct.md)。
 
 2. vLLM框架中使能msProbe工具
 
@@ -133,7 +131,7 @@ vllm serve Qwen/Qwen2.5-0.5B-Instruct \
           if hasattr(self, "debugger"):
               self.debugger.start(model=self.model)
           ################################ msprobe ################################
-
+  
           try:
               ...
               return output
@@ -161,7 +159,7 @@ vllm serve Qwen/Qwen2.5-0.5B-Instruct \
     ```shell
     #!/bin/bash
     export TORCHDYNAMO_DISABLE=1
-
+    
     vllm serve Qwen/Qwen2.5-0.5B-Instruct \
       --dtype float16 \
       --enforce-eager \
