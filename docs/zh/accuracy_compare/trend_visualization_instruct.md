@@ -34,6 +34,7 @@
 - monitor数据场景（输出格式`format`指定为`csv`）
   - 详细采集方式请参见《[Monitor训练状态轻量化监测工具](../monitor_instruct.md)》。
   
+
 **约束**
 
 - 支持PyTorch框架和MindSpore框架。
@@ -135,8 +136,9 @@ tensorboard --logdir out_path --bind_all
 
    最后，在浏览器窗口输入<http://10.123.456.78:6008。>
 
-   >[!NOTICE]  说明  
-   如果当前服务器开启了防火墙，则此方法无效，需要关闭防火墙，或者尝试后续方法。
+   > [!note] 说明
+   >
+   > 如果当前服务器开启了防火墙，则此方法无效，需要关闭防火墙，或者尝试后续方法。
 
 2. 或者使用vscode连接服务器，在vscode终端输入：
 
