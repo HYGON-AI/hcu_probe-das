@@ -138,7 +138,7 @@ dump类型如何配置见[数据采集配置文件介绍](../dump/config_json_in
 **命令格式**
 
 ```bash
-msprobe graph_visualize -tp <target_path> -gp <target_path> -o <output_path> [-lm] [-oc] [-fm] [-tensor_log] [-progress_log]
+msprobe graph_visualize -tp <target_path> -gp <golden_path> -o <output_path> [-lm] [-oc] [-fm] [-tensor_log] [-progress_log]
 ```
 
 可选字段使用[]表示，变量使用<>表示。
