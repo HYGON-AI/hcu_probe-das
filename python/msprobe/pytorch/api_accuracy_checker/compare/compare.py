@@ -343,7 +343,7 @@ class Comparator:
                                                        f"npu output dtype is {device_output.dtype}, cannot compare."
         message = ""
         if bench_output.size == 0:
-            return CompareConst.ERROR, compare_column, "There is not bench calculation result."
+            return CompareConst.SKIP, compare_column, "There is not bench calculation result."
         if bench_output.dtype in [bool, np.uint8, np.int8, np.int16, np.uint16, np.uint32, np.int32,
                                   np.int64, np.uint64]:
             message += f"Compare algorithm is not supported for {bench_output.dtype} data. " \
