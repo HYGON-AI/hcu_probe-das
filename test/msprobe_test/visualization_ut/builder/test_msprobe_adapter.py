@@ -15,6 +15,7 @@ from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.graph.base_node import BaseNode
 import torch
 from msprobe.core.common.const import Const
+from test.msprobe_test.msaccucmp_ut.test_mscmp_advisor import result
 
 npu_data_in = {
     "Functional.conv2d.0.forward.input.0": {
@@ -281,6 +282,85 @@ bench_data1 = {
     'dump_data_dir': ''
 }
 
+npu_statistics_data = {
+    'input_data': {"Module.bn1.BatchNorm2d.forward.0.input.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                                "shape": "[10, 64, 32, 32]", "Max": "1.526799",
+                                                                "Min": "-1.559762", "Mean": "-0.000263",
+                                                                "Norm": "244.860931", "requires_grad": "True",
+                                                                "data_name": "-1"},
+                   "Module.bn1.BatchNorm2d.forward.0.parameters.weight": {"type": "torch.Tensor",
+                                                                          "dtype": "torch.float32", "shape": "[64]",
+                                                                          "Max": "1.0", "Min": "1.0", "Mean": "1.0",
+                                                                          "Norm": "8.0", "requires_grad": "True",
+                                                                          "data_name": "-1"},
+                   "Module.bn1.BatchNorm2d.forward.0.parameters.bias": {"type": "torch.Tensor",
+                                                                        "dtype": "torch.float32", "shape": "[64]",
+                                                                        "Max": "0.0", "Min": "0.0", "Mean": "0.0",
+                                                                        "Norm": "0.0", "requires_grad": "True",
+                                                                        "data_name": "-1"}}, 'output_data': {
+        "Module.bn1.BatchNorm2d.forward.0.output.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                      "shape": "[10, 64, 32, 32]", "Max": "4.673826",
+                                                      "Min": "-5.146786",
+                                                      "Mean": "4.656613e-11", "Norm": "80.949384",
+                                                      "requires_grad": "True",
+                                                      "data_name": "-1"}}}
+bench_statistics_data = {
+    'input_data': {"Module.bn1.BatchNorm2d.forward.0.input.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                                "shape": "[10, 64, 32, 32]", "Max": "1.526799",
+                                                                "Min": "-1.559762", "Mean": "-0.000263",
+                                                                "Norm": "244.860931", "requires_grad": "True",
+                                                                "data_name": "-1"},
+                   "Module.bn1.BatchNorm2d.forward.0.parameters.weight": {"type": "torch.Tensor",
+                                                                          "dtype": "torch.float32", "shape": "[64]",
+                                                                          "Max": "1.0", "Min": "1.0", "Mean": "1.0",
+                                                                          "Norm": "8.0", "requires_grad": "True",
+                                                                          "data_name": "-1"},
+                   "Module.bn1.BatchNorm2d.forward.0.parameters.bias": {"type": "torch.Tensor",
+                                                                        "dtype": "torch.float32", "shape": "[64]",
+                                                                        "Max": "0.0", "Min": "0.0", "Mean": "0.0",
+                                                                        "Norm": "0.0", "requires_grad": "True",
+                                                                        "data_name": "-1"}},
+    'output_data': {"Module.bn1.BatchNorm2d.forward.0.output.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                                  "shape": "[10, 64, 32, 32]", "Max": "4.673826",
+                                                                  "Min": "-5.146786", "Mean": "4.656613e-11",
+                                                                  "Norm": "809.493835", "requires_grad": "True",
+                                                                  "data_name": "-1"}}}
+
+npu_md5_data = {
+    'input_data': {"Module.conv1.Conv2d.forward.0.input.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                             "shape": "[10, 3, 64, 64]", "Max": "4.350435",
+                                                             "Min": "-4.339223", "Mean": "-0.001572",
+                                                             "Norm": "350.247772", "requires_grad": "False",
+                                                             "md5": "c20541291", "data_name": "-1"},
+                   "Module.conv1.Conv2d.forward.0.parameters.weight": {"type": "torch.Tensor",
+                                                                       "dtype": "torch.float32",
+                                                                       "shape": "[64, 3, 7, 7]", "Max": "0.099308",
+                                                                       "Min": "-0.108559", "Mean": "0.000216",
+                                                                       "Norm": "2.48812", "requires_grad": "True",
+                                                                       "md5": "3321b66e", "data_name": "-1"}},
+    'output_data': {"Module.conv1.Conv2d.forward.0.output.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                               "shape": "[10, 64, 32, 32]", "Max": "1.526799",
+                                                               "Min": "-1.559762", "Mean": "-0.000263",
+                                                               "Norm": "244.860931", "requires_grad": "True",
+                                                               "md5": "1155e5a11", "data_name": "-1"}}}
+bench_md5_data = {
+    'input_data': {"Module.conv1.Conv2d.forward.0.input.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                             "shape": "[10, 3, 64, 64]", "Max": "4.350435",
+                                                             "Min": "-4.339223", "Mean": "-0.001572",
+                                                             "Norm": "350.247772", "requires_grad": "False",
+                                                             "md5": "c2054129", "data_name": "-1"},
+                   "Module.conv1.Conv2d.forward.0.parameters.weight": {"type": "torch.Tensor",
+                                                                       "dtype": "torch.float32",
+                                                                       "shape": "[64, 3, 7, 7]", "Max": "0.099308",
+                                                                       "Min": "-0.108559", "Mean": "0.000216",
+                                                                       "Norm": "2.48812", "requires_grad": "True",
+                                                                       "md5": "3321b66e", "data_name": "-1"}},
+    'output_data': {"Module.conv1.Conv2d.forward.0.output.0": {"type": "torch.Tensor", "dtype": "torch.float32",
+                                                               "shape": "[10, 64, 32, 32]", "Max": "1.526799",
+                                                               "Min": "-1.559762", "Mean": "-0.000263",
+                                                               "Norm": "244.860931", "requires_grad": "True",
+                                                               "md5": "1155e5a1", "data_name": "-1"}}}
+
 
 class TestMsprobeAdapter(unittest.TestCase):
     @patch('msprobe.visualization.builder.msprobe_adapter.set_dump_path')
@@ -444,3 +524,51 @@ class TestMsprobeAdapter(unittest.TestCase):
         tensor_index = ['Cosine', 'EucDist', 'MaxAbsErr', 'MaxRelativeErr', 'One Thousandth Err Ratio',
                         'Five Thousandths Err Ratio', 'Requires_grad Consistent', 'Result', 'Err_message']
         self.assertEqual(MatchedNodeCalculator.TENSOR_COMPARE_INDEX, tensor_index)
+
+    def test_get_db_statistics_compare_result(self):
+        template = {"success": True, "error": None, "data": {"precision_index": 1, "input_info": {
+            "Module.bn1.BatchNorm2d.forward.0.input.0": {"Max diff": 0.0, "Min diff": 0.0, "Mean diff": 0.0,
+                                                         "L2norm diff": 0.0, "MaxRelativeErr": "0.0%",
+                                                         "MinRelativeErr": "0.0%", "MeanRelativeErr": "0.0%",
+                                                         "NormRelativeErr": "0.0%", "Requires_grad Consistent": "True",
+                                                         "Result": "pass", "Err_message": "[]"},
+            "Module.bn1.BatchNorm2d.forward.0.parameters.weight": {"Max diff": 0.0, "Min diff": 0.0, "Mean diff": 0.0,
+                                                                   "L2norm diff": 0.0, "MaxRelativeErr": "0.0%",
+                                                                   "MinRelativeErr": "0.0%", "MeanRelativeErr": "0.0%",
+                                                                   "NormRelativeErr": "0.0%",
+                                                                   "Requires_grad Consistent": "True", "Result": "pass",
+                                                                   "Err_message": "[]"},
+            "Module.bn1.BatchNorm2d.forward.0.parameters.bias": {"Max diff": 0.0, "Min diff": 0.0, "Mean diff": 0.0,
+                                                                 "L2norm diff": 0.0, "MaxRelativeErr": "N/A",
+                                                                 "MinRelativeErr": "N/A", "MeanRelativeErr": "N/A",
+                                                                 "NormRelativeErr": "N/A",
+                                                                 "Requires_grad Consistent": "True", "Result": "pass",
+                                                                 "Err_message": "[]"}}, "output_info": {
+            "Module.bn1.BatchNorm2d.forward.0.output.0": {"Max diff": 0.0, "Min diff": 0.0, "Mean diff": 0.0,
+                                                          "L2norm diff": -728.544451, "MaxRelativeErr": "0.0%",
+                                                          "MinRelativeErr": "0.0%", "MeanRelativeErr": "0.0%",
+                                                          "NormRelativeErr": "89.99999993823302%",
+                                                          "Requires_grad Consistent": "True", "Result": "error",
+                                                          "Err_message": "[\"error: The NormRelativeErr of output is "
+                                                                         "greater than 0.5.\", \"warning: The norm "
+                                                                         "relative error of output is 10 times that "
+                                                                         "of input.\"]"}}}}
+
+        m = MatchedNodeCalculator(npu_statistics_data, bench_statistics_data)
+        result = m.get_db_statistics_compare_result()
+        self.assertEqual(result, template)
+
+    def test_get_db_md5_compare_result(self):
+        template = {"success": True, "error": None, "data": {"precision_index": 1, "input_info": {
+            "Module.conv1.Conv2d.forward.0.input.0": {"Requires_grad Consistent": "True", "Result": "error",
+                                                      "Err_message": "[\"error: The CRC-32 value of NPU differs "
+                                                                     "from that of the bench.\"]"},
+            "Module.conv1.Conv2d.forward.0.parameters.weight": {"Requires_grad Consistent": "True", "Result": "pass",
+                                                                "Err_message": "[]"}}, "output_info": {
+            "Module.conv1.Conv2d.forward.0.output.0": {"Requires_grad Consistent": "True", "Result": "error",
+                                                       "Err_message": "[\"error: The CRC-32 value of NPU differs "
+                                                                      "from that of the bench.\"]"}}}}
+
+        m = MatchedNodeCalculator(npu_md5_data, bench_md5_data)
+        result = m.get_db_md5_compare_result()
+        self.assertEqual(result, template)
