@@ -215,7 +215,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         super().__init__(config, data_writer)
         self.torch_object_key = {
             "device": self.analyze_device_in_kwargs,
-            "dtype": self.analyze_dtype_in_kwargs
+            "dtype": self.analyze_dtype_in_kwargs,
+            "output_dtype": self.analyze_dtype_in_kwargs
         }
         self._async_dump_cache = {}
         self.tensor_handler = TensorHandler()
