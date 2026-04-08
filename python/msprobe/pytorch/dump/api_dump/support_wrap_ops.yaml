@@ -1263,6 +1263,51 @@ torch_npu:
   - _npu_reshape_and_cache
   - _npu_paged_attention
   - npu_moe_gating_top_k
+  - npu_apply_rotary_pos_emb
+  - npu_dynamic_mx_quant
+  - npu_fusion_attention_v2
+  - npu_scatter_pa_kv_cache
+  - npu_grouped_dynamic_mx_quant
+  - npu_fused_matmul
+  - npu_gelu_quant
+  - npu_add_rms_norm_v2
+  - npu_all_gather_quant_mm
+  - npu_quant_mm_reduce_scatter
+  - npu_add_quant_gmm_
+  - gather_pa_kv_cache
+  - npu_attention_update
+  - npu_scatter_pa_cache
+  - npu_quant_reduce_scatter
+  - npu_quant_all_reduce
+  - npu_grouped_matmul_add_
+  - npu_grouped_matmul_swiglu_quant_v2
+  - npu_kronecker_quant
+  - npu_quant_fusion_attention
+  - npu_dynamic_mx_quant_with_dual_axis
+  - npu_grouped_dynamic_block_quant
+  - npu_all_to_all_matmul
+  - npu_matmul_all_to_all
+  - npu_quant_matmul_all_to_all
+  - npu_dynamic_dual_level_mx_quant
+  - npu_transpose_quant_batchmatmul
+  - npu_dual_level_quant_matmul
+  - npu_add_quant_matmul_
+  - npu_all_to_all_quant_matmul
+  - npu_quant_gmm_alltoallv
+  - npu_alltoallv_quant_gmm
+  - npu_mhc_pre
+  - npu_mhc_post
+  - npu_mhc_sinkhorn
+  - npu_dynamic_block_mx_quant
+  - npu_moe_distribute_dispatch_setup
+  - npu_moe_distribute_dispatch_teardown
+  - npu_moe_distribute_combine_setup
+  - npu_moe_distribute_combine_teardown
+  - npu_rms_norm_dynamic_mx_quant
+  - npu_add_rms_norm_dynamic_mx_quant
+  - npu_sparse_lightning_indexer_grad_kl_loss
+  - npu_swiglu_mx_quant
+  - npu_fused_causal_conv1d
 
 aten:
   - signbit
