@@ -1667,4 +1667,4 @@ inf_nan_mode = os.environ.get("INF_NAN_MODE_ENABLE", False)
 print(f"******INF_NAN_MODE is {inf_nan_mode}******")
 ```
 
-注：部分设备上（如910A）可能没有实现这一模式。
+注：部分产品没有实现这一模式，具体请以实际情况为准。
