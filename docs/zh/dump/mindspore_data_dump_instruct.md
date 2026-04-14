@@ -926,7 +926,7 @@ set_init_step(step)
 **函数原型**
 
 ```Python
-debugger.register_custom_api(module, api_name, api_prefix)
+debugger.register_custom_api(module, api, api_prefix)
 ```
 
 **参数说明**
@@ -934,7 +934,7 @@ debugger.register_custom_api(module, api_name, api_prefix)
 以mindspore.ops.matmul API为例。
 
 - **module** (class)：必选参数，API所属的包，即传入mindspore。
-- **api_name** (str)：必选参数，API名称，即传入"matmul"。
+- **api** (str)：必选参数，API名称，即传入"matmul"。
 - **api_prefix** (str)：必选参数，[dump.json](#dumpjson文件说明)中API名称的前缀。
 
 **返回值说明**
@@ -954,7 +954,7 @@ debugger.register_custom_api(module, api_name, api_prefix)
 **函数原型**
 
 ```Python
-debugger.restore_custom_api(module, api_name)
+debugger.restore_custom_api(module, api)
 ```
 
 **参数说明**
@@ -962,7 +962,7 @@ debugger.restore_custom_api(module, api_name)
 以mindspore.ops.matmul API为例。
 
 - **module** (class)：必选参数，API所属的包，即传入mindspore。
-- **api_name** (str)：必选参数，API名称，即传入"matmul"。
+- **api** (str)：必选参数，API名称，即传入"matmul"。
 
 **返回值说明**
 

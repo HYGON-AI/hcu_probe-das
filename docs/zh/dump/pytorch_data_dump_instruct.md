@@ -955,7 +955,7 @@ step：指定的起始step数。
 **函数原型**
 
 ```Python
-debugger.register_custom_api(module, api_name, api_prefix)
+debugger.register_custom_api(module, api, api_prefix)
 ```
 
 **参数说明**
@@ -963,7 +963,7 @@ debugger.register_custom_api(module, api_name, api_prefix)
 以torch.matmul api为例
 
 - module：必选，api所属的包，即传入torch。
-- api_name：必选，api的名称，str类型，即传入"matmul"。
+- api：必选，api的名称，str类型，即传入"matmul"。
 - api_prefix：可选，[dump.json](#dumpjson文件说明)中api名的前缀，默认为包名的字符串格式, 即"torch"。
 
 **返回值说明**
@@ -979,7 +979,7 @@ debugger.register_custom_api(module, api_name, api_prefix)
 +seed_all()
 +debugger = PrecisionDebugger(config_path="./config.json")
 +# 假设自定义算子的调用方式是module_a.compute(args)，注册方式如下。
-+debugger.register_custom_api(module = module_a, api_name = "compute")
++debugger.register_custom_api(module = module_a, api = "compute")
 
  # 模型、损失函数的定义及初始化等操作
  # ...
@@ -1012,7 +1012,7 @@ debugger.register_custom_api(module, api_name, api_prefix)
 **函数原型**
 
 ```Python
-debugger.restore_custom_api(module, api_name)
+debugger.restore_custom_api(module, api)
 ```
 
 **参数说明**
@@ -1020,7 +1020,7 @@ debugger.restore_custom_api(module, api_name)
 以torch.matmul api为例
 
 - module:：必选，api所属的包，即传入torch。
-- api_name：必选，api的名称，str类型，即传入"matmul"。
+- api：必选，api的名称，str类型，即传入"matmul"。
 
 **返回值说明**
 
