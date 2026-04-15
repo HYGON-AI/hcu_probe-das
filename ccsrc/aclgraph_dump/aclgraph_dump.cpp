@@ -21,34 +21,26 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <sstream>
-#include <unordered_set>
-#include <pthread.h>
 #include <torch/torch.h>
 #include <torch/csrc/jit/serialization/pickle.h>
 #include "acl/acl.h"
 #include "acl/acl_rt.h"
 #include "torch_npu/csrc/npu/Stream.h"
 
-using Callback = std::function<void(void)>;
-
-struct ThreadArgs {
-    ThreadArgs(aclrtContext context, bool exitFlag)
-        : context(context), exitFlag(exitFlag) {}
-
-    aclrtContext context;
-    bool exitFlag;
-};
-
-constexpr int processReportTimeout = 1800;
-static ThreadArgs* threadArgs = nullptr;
-static pthread_t threadId = -1;
-static std::unordered_set<aclrtStream> subscribed_stream;
-
 namespace {
 static std::atomic<uint64_t> serial_num{0};
 static constexpr const char* kAclRuntimeInitError =
     "ACL runtime not initialized (no current context). Ensure NPU backend is initialized before calling acl_save.";
+
+struct SaveTaskPayload {
+    SaveTaskPayload(at::Tensor tensor, std::string save_path)
+        : tensor(std::move(tensor)), save_path(std::move(save_path)) {}
+
+    at::Tensor tensor;
+    std::string save_path;
+};
 
 static void check_acl(aclError err, const char* msg) {
     if (err != ACL_ERROR_NONE) {
@@ -105,13 +97,7 @@ static void write_pt_or_throw(const at::Tensor& tensor, const std::string& path)
     }
 }
 
-void AclrtLaunchCallback(void* user_data) {
-    Callback* callback_func = reinterpret_cast<Callback*>(user_data);
-    (*callback_func)();
-    delete callback_func;
-}
-
-static void acl_save_callback(aclrtStream /*stream*/, const at::Tensor& x_dev_c, const std::string& path) {
+static void acl_save_callback(const at::Tensor& x_dev_c, const std::string& path) {
     at::Tensor xc = x_dev_c.is_contiguous() ? x_dev_c : x_dev_c.contiguous();
     auto out = at::empty_like(
         xc,
@@ -140,10 +126,6 @@ static void acl_save_callback(aclrtStream /*stream*/, const at::Tensor& x_dev_c,
 
 }
 
-static aclError launch_blocking_callback(aclrtStream stream, aclrtCallback callback, void* user_data) {
-    return aclrtLaunchCallback(callback, user_data, ACL_CALLBACK_BLOCK, stream);
-}
-
 static at::Tensor copy_to_cpu(const at::Tensor& x) {
     auto out = at::empty_like(
         x,
@@ -166,16 +148,9 @@ static at::Tensor copy_to_cpu(const at::Tensor& x) {
     return x.to(at::kCPU, /*non_blocking=*/false).contiguous();
 }
 
-void* process_callback(void* arg) {
-    ThreadArgs* args = static_cast<ThreadArgs*>(arg);
-    auto ret = aclrtSetCurrentContext(args->context);
-    (void)ret;
-    while (!args->exitFlag) {
-        (void)aclrtProcessReport(processReportTimeout);
-    }
-    delete args;
-    args = nullptr;
-    return nullptr;
+static void acl_save_host_func(void* user_data) {
+    std::unique_ptr<SaveTaskPayload> payload(static_cast<SaveTaskPayload*>(user_data));
+    acl_save_callback(payload->tensor, payload->save_path);
 }
 
 static at::Tensor acl_save_impl(const at::Tensor& x, const std::string& path) {
@@ -189,26 +164,11 @@ static at::Tensor acl_save_impl(const at::Tensor& x, const std::string& path) {
 
     ensure_acl_runtime_initialized();
     auto stream = c10_npu::getCurrentNPUStream().stream();
-    if (subscribed_stream.find(stream) == subscribed_stream.end()) {
-        aclrtContext context;
-        check_acl(aclrtGetCurrentContext(&context), "aclrtGetCurrentContext failed");
-
-        if ((threadArgs == nullptr) || (threadId == -1)) {
-            threadArgs = new ThreadArgs(context, false);
-            pthread_create(&threadId, nullptr, process_callback, threadArgs);
-        }
-        aclrtSubscribeReport(threadId, stream);
-        subscribed_stream.insert(stream);
-    }
-
-    auto callback_func = [stream, x, final_path]() {
-        acl_save_callback(stream, x, final_path);
-    };
-    auto callback_func_ptr = new Callback(callback_func);
-    auto cb_status = launch_blocking_callback(stream, AclrtLaunchCallback, callback_func_ptr);
+    auto* payload = new SaveTaskPayload(x, final_path);
+    auto cb_status = aclrtLaunchHostFunc(stream, acl_save_host_func, payload);
     if (cb_status != ACL_ERROR_NONE) {
-        delete callback_func_ptr;
-        check_acl(cb_status, "aclrtLaunchCallback failed");
+        delete payload;
+        check_acl(cb_status, "aclrtLaunchHostFunc failed");
     }
     return x;
 }
