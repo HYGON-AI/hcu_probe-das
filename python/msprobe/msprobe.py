@@ -34,11 +34,19 @@ from msprobe.core.parse.parse_cli import _parse_parser, parse_cli
 
 
 def main():
+    # 安全声明
+    print(
+        "[security statement] MindStudio Probe is a development-phase tool.\n"
+        "It does not restrict the ownership or permissions of files it processes.\n"
+        "Users are responsible for assigning appropriate ownership and permissions based on their usage scenarios, "
+        "and must ensure that the content of the files handled by the tool is secure and trustworthy.\n"
+    )
+    
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="msprobe(mindstudio probe), [Powered by MindStudio].\n"
                     "A full-process, all-scenario precision tool base on Ascend products.\n"
-                    f"For any issue, refer README.md first",
+                    "For any issue, refer README.md first",
     )
 
     parser.set_defaults(print_help=parser.print_help)
