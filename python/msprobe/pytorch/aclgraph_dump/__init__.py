@@ -20,7 +20,7 @@ import torch_npu
 
 # Import the C++ extension to register TORCH_LIBRARY implementations.
 try:
-    from msprobe.lib import aclgraph_dump_ext  # noqa: F401
+    from msprobe.lib import aclgraph_dump_ext
 except Exception as exc:
     raise RuntimeError(f"Failed to import msprobe.lib.aclgraph_dump_ext: {exc}")
 
@@ -30,6 +30,7 @@ _register_meta()
 
 from torch.fx.node import has_side_effect
 has_side_effect(torch.ops.my_ns.acl_save.default)
+has_side_effect(torch.ops.my_ns.acl_stat.default)
 
 def acl_save(x: torch.Tensor, path: str) -> torch.Tensor:
     """
@@ -42,4 +43,18 @@ def acl_save(x: torch.Tensor, path: str) -> torch.Tensor:
     return torch.ops.my_ns.acl_save(x, path)
 
 
-__all__ = ["acl_save"]
+def acl_stat(x: torch.Tensor, tag: str) -> torch.Tensor:
+    """
+    acl_stat(tensor, tag) -> tensor
+
+    Collect min/max/mean/norm on device, then stash the statistics plus dtype
+    and shape into the host-side dictionary.
+    """
+    return torch.ops.my_ns.acl_stat(x, tag)
+
+
+def get_acl_stat_dict(clear: bool = False):
+    return aclgraph_dump_ext.get_acl_stat_dict(clear)
+
+
+__all__ = ["acl_save", "acl_stat", "get_acl_stat_dict"]

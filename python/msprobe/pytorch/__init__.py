@@ -27,5 +27,7 @@ if torch_version_above_or_equal_2:
 
 try:
     from msprobe.pytorch.aclgraph_dump import acl_save  # noqa: F401
+    from msprobe.pytorch.aclgraph_dumper import AclGraphDumper  # noqa: F401
 except Exception:
     acl_save = None
+    AclGraphDumper = None

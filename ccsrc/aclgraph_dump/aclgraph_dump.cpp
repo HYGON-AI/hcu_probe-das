@@ -16,13 +16,20 @@
 
 #include <torch/extension.h>
 #include <ATen/ATen.h>
+#include <pybind11/pybind11.h>
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <sstream>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 #include <torch/torch.h>
 #include <torch/csrc/jit/serialization/pickle.h>
 #include "acl/acl.h"
@@ -30,7 +37,10 @@
 #include "torch_npu/csrc/npu/Stream.h"
 
 namespace {
+namespace py = pybind11;
+
 static std::atomic<uint64_t> serial_num{0};
+static constexpr const char* kForwardStartMarker = "__msprobe_fwd_start__";
 static constexpr const char* kAclRuntimeInitError =
     "ACL runtime not initialized (no current context). Ensure NPU backend is initialized before calling acl_save.";
 
@@ -41,6 +51,35 @@ struct SaveTaskPayload {
     at::Tensor tensor;
     std::string save_path;
 };
+
+struct StatTaskPayload {
+    StatTaskPayload(at::Tensor stats_tensor, std::string tag,
+                    std::string dtype, std::vector<int64_t> shape)
+        : stats_tensor(std::move(stats_tensor)),
+          tag(std::move(tag)),
+          dtype(std::move(dtype)),
+          shape(std::move(shape)) {}
+
+    at::Tensor stats_tensor;
+    std::string tag;
+    std::string dtype;
+    std::vector<int64_t> shape;
+};
+
+struct StatRecord {
+    std::string dtype;
+    std::vector<int64_t> shape;
+    double min{0.0};
+    double max{0.0};
+    double mean{0.0};
+    double norm{0.0};
+};
+
+static std::mutex g_stats_mutex;
+static std::unordered_map<std::string, uint64_t> g_tag_counter;
+static std::unordered_map<std::string, uint64_t> g_current_forward_idx;
+static std::unordered_map<std::string, StatRecord> g_stat_entries;
+static std::vector<std::string> g_stat_entry_order;
 
 static void check_acl(aclError err, const char* msg) {
     if (err != ACL_ERROR_NONE) {
@@ -62,6 +101,60 @@ static std::string build_final_path(const std::string& path) {
         return oss_name.str();
     }
     return path.substr(0, last_slash + 1) + oss_name.str();
+}
+
+static std::string build_stat_key(const std::string& tag) {
+    if (tag.empty()) {
+        return "__default__";
+    }
+
+    static const std::vector<std::string> io_types = {"input_kwargs", "input", "output"};
+    size_t io_pos = std::string::npos;
+    std::string io_type;
+    for (const auto& candidate : io_types) {
+        const std::string marker = "." + candidate;
+        io_pos = tag.find(marker);
+        if (io_pos != std::string::npos) {
+            io_type = candidate;
+            break;
+        }
+    }
+    if (io_pos == std::string::npos) {
+        return tag;
+    }
+
+    const std::string module_name = tag.substr(0, io_pos);
+    const size_t suffix_pos = io_pos + 1 + io_type.size();
+    std::string suffix = (suffix_pos < tag.size() && tag[suffix_pos] == '.')
+        ? tag.substr(suffix_pos + 1)
+        : "";
+    bool is_forward_start = false;
+    if (!suffix.empty()) {
+        const std::string marker(kForwardStartMarker);
+        if (suffix == marker) {
+            is_forward_start = true;
+            suffix.clear();
+        } else if (suffix.rfind(marker + ".", 0) == 0) {
+            is_forward_start = true;
+            suffix = suffix.substr(marker.size() + 1);
+        }
+    }
+
+    uint64_t call_idx = 0;
+    auto it = g_current_forward_idx.find(module_name);
+    if (is_forward_start || it == g_current_forward_idx.end()) {
+        call_idx = g_tag_counter[module_name]++;
+        g_current_forward_idx[module_name] = call_idx;
+    } else {
+        call_idx = it->second;
+    }
+
+    std::ostringstream oss;
+    oss << module_name << "." << call_idx << ".forward." << io_type;
+    if (!suffix.empty()) {
+        oss << "." << suffix;
+    }
+    return oss.str();
 }
 
 static void ensure_acl_runtime_initialized() {
@@ -95,6 +188,19 @@ static void write_pt_or_throw(const at::Tensor& tensor, const std::string& path)
         oss << "Failed to close file after write: " << path;
         throw std::runtime_error(oss.str());
     }
+}
+
+static std::vector<int64_t> shape_to_vector(const at::Tensor& x) {
+    std::vector<int64_t> shape;
+    shape.reserve(static_cast<size_t>(x.dim()));
+    for (int64_t i = 0; i < x.dim(); ++i) {
+        shape.push_back(x.size(i));
+    }
+    return shape;
+}
+
+static std::string dtype_to_string(const at::Tensor& x) {
+    return std::string(c10::toString(x.scalar_type()));
 }
 
 static void acl_save_callback(const at::Tensor& x_dev_c, const std::string& path) {
@@ -148,9 +254,88 @@ static at::Tensor copy_to_cpu(const at::Tensor& x) {
     return x.to(at::kCPU, /*non_blocking=*/false).contiguous();
 }
 
+static at::Tensor compute_stats_tensor(const at::Tensor& x) {
+    at::Tensor x_stat = x;
+    if (x_stat.numel() == 0) {
+        return at::zeros({4}, x_stat.options().dtype(at::kFloat));
+    }
+    if (x_stat.is_complex()) {
+        x_stat = at::abs(x_stat);
+    }
+    x_stat = x_stat.to(at::kFloat);
+
+    at::Tensor min_t = at::amin(x_stat);
+    at::Tensor max_t = at::amax(x_stat);
+    at::Tensor mean_t = at::mean(x_stat);
+    at::Tensor norm_t = at::norm(x_stat);
+    return at::stack({min_t, max_t, mean_t, norm_t});
+}
+
+static void update_stats_map(const std::string& tag, const std::string& dtype,
+                             const std::vector<int64_t>& shape,
+                             double min_v, double max_v, double mean_v, double norm_v) {
+    std::lock_guard<std::mutex> lock(g_stats_mutex);
+    const std::string key = build_stat_key(tag);
+    auto it = g_stat_entries.find(key);
+    if (it == g_stat_entries.end()) {
+        g_stat_entry_order.push_back(key);
+    }
+    g_stat_entries[key] = StatRecord{dtype, shape, min_v, max_v, mean_v, norm_v};
+}
+
 static void acl_save_host_func(void* user_data) {
     std::unique_ptr<SaveTaskPayload> payload(static_cast<SaveTaskPayload*>(user_data));
     acl_save_callback(payload->tensor, payload->save_path);
+}
+
+static void acl_stat_callback(const at::Tensor& stats_dev, const std::string& tag,
+                              const std::string& dtype, const std::vector<int64_t>& shape) {
+    if (!stats_dev.defined()) {
+        return;
+    }
+
+    at::Tensor stats_c = stats_dev.is_contiguous() ? stats_dev : stats_dev.contiguous();
+    auto out = at::empty_like(
+        stats_c,
+        stats_c.options().device(at::kCPU),
+        at::MemoryFormat::Contiguous);
+    const size_t nbytes =
+        static_cast<size_t>(out.numel()) * static_cast<size_t>(out.element_size());
+    if (nbytes == 0 || out.scalar_type() != at::kFloat || out.numel() < 4) {
+        return;
+    }
+
+    aclmdlRICaptureMode mode = ACL_MODEL_RI_CAPTURE_MODE_RELAXED;
+    aclmdlRICaptureThreadExchangeMode(&mode);
+    auto memcpy_status = aclrtMemcpy(
+        out.data_ptr(),
+        nbytes,
+        stats_c.data_ptr(),
+        nbytes,
+        ACL_MEMCPY_DEVICE_TO_HOST);
+    aclmdlRICaptureThreadExchangeMode(&mode);
+    if (memcpy_status != ACL_ERROR_NONE) {
+        std::cout << "Memcpy failed with error: " << static_cast<int>(memcpy_status) << std::endl;
+        return;
+    }
+
+    const float* p = out.const_data_ptr<float>();
+    update_stats_map(
+        tag, dtype, shape,
+        static_cast<double>(p[0]),
+        static_cast<double>(p[1]),
+        static_cast<double>(p[2]),
+        static_cast<double>(p[3]));
+}
+
+static void acl_stat_host_func(void* user_data) {
+    // aclgraph replay may execute the same callback payload repeatedly, so we
+    // intentionally do not reclaim the payload here.
+    auto* payload = static_cast<StatTaskPayload*>(user_data);
+    if (payload == nullptr) {
+        return;
+    }
+    acl_stat_callback(payload->stats_tensor, payload->tag, payload->dtype, payload->shape);
 }
 
 static at::Tensor acl_save_impl(const at::Tensor& x, const std::string& path) {
@@ -173,28 +358,122 @@ static at::Tensor acl_save_impl(const at::Tensor& x, const std::string& path) {
     return x;
 }
 
+static at::Tensor acl_stat_impl(const at::Tensor& x, const std::string& tag) {
+    if (!x.defined()) {
+        return x;
+    }
+
+    const std::string dtype = dtype_to_string(x);
+    const std::vector<int64_t> shape = shape_to_vector(x);
+    const auto dev_type = x.device().type();
+
+    if (dev_type != at::DeviceType::PrivateUse1) {
+        at::Tensor stats = compute_stats_tensor(copy_to_cpu(x));
+        at::Tensor stats_cpu = stats.to(at::kCPU, /*non_blocking=*/false).contiguous();
+        if (!stats_cpu.defined() || stats_cpu.scalar_type() != at::kFloat || stats_cpu.numel() < 4) {
+            return x;
+        }
+        const float* p = stats_cpu.const_data_ptr<float>();
+        update_stats_map(
+            tag, dtype, shape,
+            static_cast<double>(p[0]),
+            static_cast<double>(p[1]),
+            static_cast<double>(p[2]),
+            static_cast<double>(p[3]));
+        return x;
+    }
+
+    ensure_acl_runtime_initialized();
+    at::Tensor stats_dev = compute_stats_tensor(x);
+    auto stream = c10_npu::getCurrentNPUStream().stream();
+    auto* payload = new StatTaskPayload(stats_dev, tag, dtype, shape);
+    auto cb_status = aclrtLaunchHostFunc(stream, acl_stat_host_func, payload);
+    if (cb_status != ACL_ERROR_NONE) {
+        delete payload;
+        check_acl(cb_status, "aclrtLaunchHostFunc failed");
+    }
+    return x;
+}
+
 static at::Tensor acl_save_meta(const at::Tensor& x, const std::string& /*path*/) {
     return at::empty_like(x, x.options().device(at::kMeta));
+}
+
+static at::Tensor acl_stat_meta(const at::Tensor& x, const std::string& /*tag*/) {
+    return at::empty_like(x, x.options().device(at::kMeta));
+}
+
+static py::dict build_stat_record_dict(const StatRecord& record) {
+    py::dict item;
+    item["min"] = py::none();
+    item["max"] = py::none();
+    item["mean"] = py::none();
+    item["norm"] = py::none();
+    if (std::isfinite(record.min)) {
+        item["min"] = py::float_(record.min);
+    }
+    if (std::isfinite(record.max)) {
+        item["max"] = py::float_(record.max);
+    }
+    if (std::isfinite(record.mean)) {
+        item["mean"] = py::float_(record.mean);
+    }
+    if (std::isfinite(record.norm)) {
+        item["norm"] = py::float_(record.norm);
+    }
+    item["dtype"] = record.dtype;
+
+    py::list shape;
+    for (const auto dim : record.shape) {
+        shape.append(py::int_(dim));
+    }
+    item["shape"] = shape;
+    return item;
+}
+
+static py::dict get_acl_stat_dict_impl(bool clear) {
+    py::dict result;
+    std::lock_guard<std::mutex> lock(g_stats_mutex);
+    for (const auto& key : g_stat_entry_order) {
+        auto it = g_stat_entries.find(key);
+        if (it == g_stat_entries.end()) {
+            continue;
+        }
+        result[py::str(key)] = build_stat_record_dict(it->second);
+    }
+
+    if (clear) {
+        g_stat_entries.clear();
+        g_tag_counter.clear();
+        g_current_forward_idx.clear();
+        g_stat_entry_order.clear();
+    }
+    return result;
 }
 
 } // namespace
 
 TORCH_LIBRARY(my_ns, m) {
     m.def("acl_save(Tensor x, str path) -> Tensor");
+    m.def("acl_stat(Tensor x, str tag) -> Tensor");
 }
 
 TORCH_LIBRARY_IMPL(my_ns, Meta, m) {
     m.impl("acl_save", acl_save_meta);
+    m.impl("acl_stat", acl_stat_meta);
 }
 
 TORCH_LIBRARY_IMPL(my_ns, CPU, m) {
     m.impl("acl_save", acl_save_impl);
+    m.impl("acl_stat", acl_stat_impl);
 }
 
 TORCH_LIBRARY_IMPL(my_ns, PrivateUse1, m) {
     m.impl("acl_save", acl_save_impl);
+    m.impl("acl_stat", acl_stat_impl);
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.doc() = "aclgraph_dump_ext: NPU->CPU memcpy via aclrtMemcpy (+ optional pt dump), Meta+CPU+NPU";
+  m.doc() = "aclgraph_dump_ext: acl_save + acl_stat + host dict access";
+  m.def("get_acl_stat_dict", &get_acl_stat_dict_impl, py::arg("clear") = false);
 }
