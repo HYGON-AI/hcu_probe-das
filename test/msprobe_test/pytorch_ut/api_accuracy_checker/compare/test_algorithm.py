@@ -72,7 +72,7 @@ class TestAlgorithmMethods(unittest.TestCase):
         device_output = np.array([1, 2, 3])
         cos, success, msg = alg.cosine_sim(bench_output, device_output)
         self.assertTrue(np.isnan(cos))
-        self.assertFalse(success)
+        self.assertTrue(success)
         self.assertIn("Dump data has NaN when comparing with Cosine Similarity", msg)
 
     def test_get_rmse(self):

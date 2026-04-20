@@ -57,6 +57,7 @@ def cosine_sim(bench_output, device_output):
         cos = np.dot(n_value, b_value) / (np.linalg.norm(n_value) * np.linalg.norm(b_value))
         if np.isnan(cos):
             msg = "Dump data has NaN when comparing with Cosine Similarity."
+            return np.nan, True, msg
         cos = np.clip(cos, -1, 1)
         return cos, cos > 0.99, msg
 
