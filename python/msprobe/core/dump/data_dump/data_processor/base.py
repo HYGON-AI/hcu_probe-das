@@ -301,7 +301,9 @@ class BaseDataProcessor:
             "ignore_input_all": False,
             "ignore_output_all": False,
             "ignore_input_indices": set(),
-            "ignore_output_indices": set()
+            "ignore_output_indices": set(),
+            "ignore_input_keys": set(),
+            "ignore_output_keys": set()
         }
         if not isinstance(value, dict):
             return normalized_rule
@@ -316,8 +318,9 @@ class BaseDataProcessor:
                 continue
             if not isinstance(io_value, list):
                 continue
-            normalized_rule[key_indices].update(
-                index for index in io_value if isinstance(index, int) and index >= 0
+            normalized_rule[key_indices].update(index for index in io_value if isinstance(index, int) and index >= 0)
+            normalized_rule[f"ignore_{io_type}_keys"].update(
+                key for key in io_value if isinstance(key, str) and key
             )
         return normalized_rule
 
@@ -367,27 +370,40 @@ class BaseDataProcessor:
         ignore_all = ignore_rule["ignore_input_all"] if io_type == Const.INPUT else ignore_rule["ignore_output_all"]
         ignore_indices = ignore_rule["ignore_input_indices"] if io_type == Const.INPUT \
             else ignore_rule["ignore_output_indices"]
+        ignore_keys = ignore_rule["ignore_input_keys"] if io_type == Const.INPUT else ignore_rule["ignore_output_keys"]
         if ignore_all:
             if isinstance(data, tuple):
                 return tuple(None for _ in data)
             if isinstance(data, list):
                 return [None for _ in data]
+            if isinstance(data, dict):
+                return {key: None for key in data}
             return None
-        if not ignore_indices or not isinstance(data, (list, tuple)):
-            return data
 
-        masked_data = list(data)
-        hit_indices = []
-        for index in ignore_indices:
-            if 0 <= index < len(masked_data):
-                masked_data[index] = None
-                hit_indices.append(index)
+        hit_items = []
+        if isinstance(data, (list, tuple)) and ignore_indices:
+            masked_data = list(data)
+            for index in ignore_indices:
+                if 0 <= index < len(masked_data):
+                    masked_data[index] = None
+                    hit_items.append(str(index))
+            if hit_items:
+                logger.debug(f"Ignore rules matched for {self.current_api_or_module_name}: "
+                             f"{stage}.{io_type}.{','.join(sorted(hit_items))}")
+            return tuple(masked_data) if isinstance(data, tuple) else masked_data
 
-        if hit_indices:
-            logger.debug(f"Ignore rules matched for {self.current_api_or_module_name}: "
-                         f"{stage}.{io_type}.{','.join(str(idx) for idx in sorted(hit_indices))}")
+        if isinstance(data, dict) and ignore_keys:
+            masked_data = dict(data)
+            for key in ignore_keys:
+                if key in masked_data:
+                    masked_data[key] = None
+                    hit_items.append(str(key))
+            if hit_items:
+                logger.debug(f"Ignore rules matched for {self.current_api_or_module_name}: "
+                             f"{stage}.{io_type}.{','.join(sorted(hit_items))}")
+            return masked_data
 
-        return tuple(masked_data) if isinstance(data, tuple) else masked_data
+        return data
 
     @classmethod
     def get_special_types(cls):
@@ -494,7 +510,9 @@ class BaseDataProcessor:
             )
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
             self.api_data_category = Const.KWARGS
-            kwargs_info_list = self.analyze_element(module_input_output.kwargs)
+            kwargs_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.kwargs, Const.FORWARD, Const.INPUT)
+            )
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
 
         return api_info_struct
@@ -525,7 +543,9 @@ class BaseDataProcessor:
             )
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
             self.api_data_category = Const.KWARGS
-            kwargs_info_list = self.analyze_element(module_input_output.kwargs)
+            kwargs_info_list = self.analyze_element(
+                self._apply_ignore_rules(module_input_output.kwargs, Const.FORWARD, Const.INPUT)
+            )
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
 
         # check whether data_mode contains forward or output

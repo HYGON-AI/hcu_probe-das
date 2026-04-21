@@ -2,7 +2,9 @@ Distributed:
   recv:
     input: [0]
   irecv:
-    input: [0]
+    input: [0, "tensor"]
+  isend:
+    output: [0]
   all_gather:
     input: [0]
   gather:
@@ -23,3 +25,7 @@ Distributed:
     input: [0]
   reduce_scatter_tensor:
     input: [0]
+
+NPU:
+  npu_fusion_attention:
+    output: [4,5]
