@@ -32,7 +32,7 @@
 ```diff
 + from msprobe.pytorch import AclGraphDumper
 
-+ dumper = AclGraphDumper(dump_path="./L0_dump")
++ dumper = AclGraphDumper(config_path="./config.json")
 + dumper.start(model)
 
 # 正常执行前向
@@ -87,6 +87,18 @@ _ = model(*inputs, **kwargs)
 **函数原型**
 
 ```python
+AclGraphDumper(config_path: str | None = None)
+```
+
+**参数说明**
+
+| 参数名 | 类型 | 说明 | 是否必选 |
+| --- | --- | --- | --- |
+| config_path | str | 配置文件路径。若不传，默认读取 msprobe 包内置 `config.json`。`dump_path` 与 `list` 从该配置文件中读取。 | 否 |
+
+**函数原型**
+
+```python
 AclGraphDumper.start(model: torch.nn.Module) -> None
 ```
 
@@ -129,10 +141,27 @@ acl_save(x: torch.Tensor, path: str) -> torch.Tensor
 
 #### 1. 整网采集
 
+配置文件示例（`config.json`）：
+
+```json
+{
+  "task": "statistics",
+  "dump_path": "./L0_dump",
+  "statistics": {
+    "list": ["linear", "attention"]
+  }
+}
+```
+
+说明：
+
+- `dump_path`：采集结果输出目录。
+- `list`：模块名关键词列表；仅采集包含任一关键词的模块（不区分大小写）。为空时采集整网模块。
+
 ```python
 from msprobe.pytorch import AclGraphDumper
 
-dumper = AclGraphDumper(dump_path="./L0_dump")
+dumper = AclGraphDumper(config_path="./config.json")
 dumper.start(model)
 
 for _ in range(3):

@@ -22,7 +22,7 @@ import torch
 
 from msprobe.pytorch.aclgraph_dump import acl_stat, get_acl_stat_dict
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import create_directory, check_and_get_real_path, save_json
+from msprobe.core.common.file_utils import create_directory, check_and_get_real_path, save_json, load_json
 
 try:
     import torch_npu
@@ -71,12 +71,35 @@ def _is_collectable_tensor(tensor):
 
 
 class AclGraphDumper:
-    def __init__(self, dump_path="./debugger_dump"):
-        self.dump_path = self._validate_dump_path(dump_path)
+    def __init__(self, config_path=None):
+        config_dump_path, config_list = self._load_msprobe_config(config_path)
+        self.dump_path = self._validate_dump_path(config_dump_path)
+        self.list = self._validate_list(config_list)
         self.rank_id = self._resolve_rank_id()
         self.model = None
         self.step_id = 0
         self._running = False
+
+    @staticmethod
+    def _default_config_path():
+        cur_dir = os.path.dirname(os.path.realpath(__file__))
+        return os.path.join(cur_dir, "..", "config.json")
+
+    @staticmethod
+    def _load_msprobe_config(config_path):
+        if config_path is None:
+            config_path = AclGraphDumper._default_config_path()
+        if not isinstance(config_path, str):
+            raise TypeError("config_path must be a string")
+        config_path = check_and_get_real_path(config_path, FileCheckConst.READ_ABLE, must_exist=True)
+        json_config = load_json(config_path)
+        if not isinstance(json_config, dict):
+            raise TypeError("config must be a dict")
+        task = json_config.get("task", Const.STATISTICS)
+        task_config = json_config.get(task, {}) if isinstance(task, str) else {}
+        if not isinstance(task_config, dict):
+            raise TypeError(f"task config for {task} must be a dict")
+        return json_config.get("dump_path"), task_config.get("list", [])
 
     @staticmethod
     def _validate_dump_path(dump_path):
@@ -85,6 +108,17 @@ class AclGraphDumper:
         dump_path = check_and_get_real_path(dump_path, FileCheckConst.WRITE_ABLE, must_exist=False)
         create_directory(dump_path)
         return dump_path
+
+    @staticmethod
+    def _validate_list(keywords):
+        if keywords is None:
+            return []
+        if not isinstance(keywords, list):
+            raise TypeError("list must be a list[str]")
+        for keyword in keywords:
+            if not isinstance(keyword, str):
+                raise TypeError("list must be a list[str]")
+        return keywords
 
     @staticmethod
     def _resolve_rank_id():
@@ -104,6 +138,12 @@ class AclGraphDumper:
 
     def _module_scope(self, module_name):
         return module_name if module_name else "__root__"
+
+    def _should_collect_module(self, module_name):
+        if not self.list:
+            return True
+        module_name = module_name.casefold()
+        return any(keyword.casefold() in module_name for keyword in self.list)
 
     @staticmethod
     def _normalize_dtype(dtype):
@@ -236,6 +276,8 @@ class AclGraphDumper:
         dumper = self
 
         for module_name, module in model.named_modules():
+            if not self._should_collect_module(module_name):
+                continue
             if hasattr(module, "_msprobe_aclgraph_origin_forward"):
                 continue
             origin = module.forward
