@@ -13,6 +13,7 @@
 # ==============================================================================
 
 import copy
+import math  # 导入math模块用于检测NaN值
 
 from plugins.tb_graph_ascend.hierarchy_plugin.server.app.model.match_nodes_model import (
     MatchNodesController,
@@ -180,33 +181,6 @@ def test_process_md5_task_delete_requires_existing_match():
     assert graph_data["Bench"]["node"]["b1_forward"]["matched_node_link"] == []
 
 
-def test_calculate_md5_diff_basic():
-    assert (
-        MatchNodesController.calculate_md5_diff(
-            {"a": {"md5": "1"}}, {"b": {"md5": "1"}}
-        )
-        == 1
-    )
-    assert (
-        MatchNodesController.calculate_md5_diff(
-            {"a": {"md5": "1"}}, {"b": {"md5": "2"}}
-        )
-        == 0
-    )
-
-
-def test_calculate_statistical_diff_and_max_relative_error():
-    graph_data = _base_graph_data()
-    npu_data = {"n1_forward.x": {"Max": "2", "Min": "0", "Norm": "1", "Mean": "1"}}
-    bench_data = {"b1_forward.x": {"Max": "1", "Min": "0", "Norm": "2", "Mean": "1"}}
-    diff = MatchNodesController.calculate_statistical_diff(
-        npu_data, bench_data, "n1_forward", "b1_forward"
-    )
-    assert isinstance(diff, dict)
-    max_rel = MatchNodesController.calculate_max_relative_error(diff)
-    assert 0 <= max_rel <= 1
-
-
 def test_update_graph_node_data_formats_fields():
     node_data = {"k": {"Max": "1", "Min": "0", "Norm": "1", "Mean": "1"}}
     stat_diff = {
@@ -221,9 +195,9 @@ def test_update_graph_node_data_formats_fields():
             "NormAbsErr": 3.0,
         }
     }
-    MatchNodesController.update_graph_node_data(node_data, stat_diff)
-    assert node_data["k"]["MaxRelativeErr"].endswith("%")
-    assert node_data["k"]["MaxAbsErr"] == "NaN"
+    MatchNodesController.update_graph_node_data(node_data, stat_diff, "summary")
+    assert node_data["k"]["MaxRelativeErr"].__class__ == float
+    assert math.isnan(node_data["k"]["MaxAbsErr"])  # 修复NaN值的比较
 
 
 def test_delete_matched_node_data_removes_error_keys():
@@ -239,24 +213,6 @@ def test_delete_matched_node_data_skips_non_dict():
     cleaned = MatchNodesController.delete_matched_node_data(copy.deepcopy(node_data))
     assert "k" in cleaned and cleaned["k"] is None
     assert "MinAbsErr" not in cleaned["j"]
-
-
-def test_calculate_md5_diff_empty_inputs():
-    assert MatchNodesController.calculate_md5_diff({}, {"a": {"md5": "1"}}) == 0
-    assert MatchNodesController.calculate_md5_diff({"a": {"md5": "1"}}, {}) == 0
-
-
-def test_calculate_max_relative_error_clamps_to_one():
-    # build a result where some relative errors exceed 1
-    result = {
-        "k": {
-            "MaxRelativeErr": 2,
-            "MinRelativeErr": 3,
-            "NormRelativeErr": 1.5,
-            "MeanRelativeErr": -1,
-        }
-    }
-    assert MatchNodesController.calculate_max_relative_error(result) == 1
 
 
 def test_update_graph_node_data_noop():

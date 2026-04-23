@@ -15,7 +15,7 @@
  * -------------------------------------------------------------------------
  */
 import { useState } from 'react';
-import { Button, Select, Spin, Tooltip, Typography } from 'antd';
+import { Button, Select, Spin, Tooltip, Typography, Divider } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import useGraphStore from '../../../../../../store/useGraphStore';
@@ -117,6 +117,7 @@ const ConfigFilePanel = (): React.JSX.Element => {
           onChange={onChange}
         />
       </Spin>
+      <Divider />
       <Button
         color="primary"
         variant="filled"

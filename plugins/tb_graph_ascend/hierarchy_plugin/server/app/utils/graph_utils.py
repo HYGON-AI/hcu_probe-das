@@ -245,15 +245,23 @@ class GraphUtils:
     @staticmethod
     def format_relative_err(value):
         """格式化相对误差为百分比，保留四位小数"""
-        if value is None or math.isnan(value):
+        # 先判断是否为有效数字
+        if not isinstance(value, float):
             return "NaN"
-        else:
-            return "{:.4%}".format(value)
+        # 再判断是否为 NaN
+        if math.isnan(value):
+            return "NaN"
+        # 正常数字格式化
+        return "{:.4%}".format(value)
 
     @staticmethod
     def nan_to_str(value):
         """将 NaN 转换为 'NaN' 字符串"""
-        return "NaN" if math.isnan(value) else value
+        # 第一步：先判断是否为数字类型，且是 NaN
+        if isinstance(value, float) and math.isnan(value):
+            return "NaN"
+        # 其他情况（字符串、正常数字、None等）直接返回原值
+        return value
 
     @staticmethod
     def is_relative_to(path, base):
