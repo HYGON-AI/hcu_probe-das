@@ -90,7 +90,6 @@ class TensorStatInfo:
 
 
 class BaseDataProcessor:
-    _recursive_key_stack = []
     builtin_type = (bool, int, float, str, slice, type(Ellipsis))
     np_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte,
                np.str_ if is_np2() else np.unicode_, np.ndarray)
@@ -410,26 +409,28 @@ class BaseDataProcessor:
         return cls.builtin_type + cls.np_type
 
     @classmethod
-    def recursive_apply_transform(cls, args, transform, depth=0) -> Union[dict, list, None]:
+    def recursive_apply_transform(cls, args, transform, depth=0, key_stack=None) -> Union[dict, list, None]:
+        if key_stack is None:
+            key_stack = []
         if depth > Const.DUMP_MAX_DEPTH:
             logger.error(f"The maximum depth of recursive transform, {Const.DUMP_MAX_DEPTH} is reached.")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
-            arg_transform = transform(args, cls._recursive_key_stack)
+            arg_transform = transform(args, key_stack)
             return arg_transform
         elif isinstance(args, tuple) and hasattr(args, '_fields'):
             # namedtuple to dict
             args_dict = {field: getattr(args, field) for field in args._fields}
-            return cls.apply_transform_dict(args_dict, transform, depth)
+            return cls.apply_transform_dict(args_dict, transform, depth, key_stack)
         elif is_dataclass(args):
             # dataclass to dict
             args_dict = {field: getattr(args, field) for field in args.__dataclass_fields__}
-            return cls.apply_transform_dict(args_dict, transform, depth)
+            return cls.apply_transform_dict(args_dict, transform, depth, key_stack)
         elif isinstance(args, (list, tuple)):
-            result_list = cls.apply_transform_list(args, transform, depth)
+            result_list = cls.apply_transform_list(args, transform, depth, key_stack)
             return result_list
         elif isinstance(args, dict):
-            return cls.apply_transform_dict(args, transform, depth)
+            return cls.apply_transform_dict(args, transform, depth, key_stack)
         elif args is not None:
             logger.debug(f"Data type {type(args)} is not supported.")
             return None
@@ -437,21 +438,29 @@ class BaseDataProcessor:
             return None
 
     @classmethod
-    def apply_transform_dict(cls, args, transform, depth):
+    def apply_transform_dict(cls, args, transform, depth, key_stack):
         result_dict = {}
         for k, arg in args.items():
-            cls._recursive_key_stack.append(k)
-            result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
-            cls._recursive_key_stack.pop()
+            key_stack.append(k)
+            try:
+                result_dict[k] = cls.recursive_apply_transform(
+                    arg, transform, depth=depth + 1, key_stack=key_stack
+                )
+            finally:
+                key_stack.pop()
         return result_dict
 
     @classmethod
-    def apply_transform_list(cls, args, transform, depth):
+    def apply_transform_list(cls, args, transform, depth, key_stack):
         result_list = []
         for i, arg in enumerate(args):
-            cls._recursive_key_stack.append(i)
-            result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
-            cls._recursive_key_stack.pop()
+            key_stack.append(i)
+            try:
+                result_list.append(cls.recursive_apply_transform(
+                    arg, transform, depth=depth + 1, key_stack=key_stack
+                ))
+            finally:
+                key_stack.pop()
         return result_list
 
     @classmethod
