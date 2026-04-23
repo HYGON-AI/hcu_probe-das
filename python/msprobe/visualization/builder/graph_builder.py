@@ -14,6 +14,7 @@
 # See the Mulan PSL v2 for more details.
 # -------------------------------------------------------------------------
 
+import os
 import re
 import copy
 from dataclasses import dataclass
@@ -60,7 +61,12 @@ class GraphBuilder:
         GraphBuilder.framework = dump_dict.get("framework", Const.PT_FRAMEWORK)
         stack_dict = load_stack_json(stack_path)
         data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
-        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict,
+        tensor_path = dump_dict.get('dump_data_dir', '')
+        if tensor_path:
+            base_path = os.path.dirname(construct_path)
+            if base_path != os.path.dirname(tensor_path):
+                tensor_path = os.path.join(base_path, Const.DUMP_TENSOR_DATA)
+        graph = Graph(model_name, tensor_path, dump_data=data_dict,
                       micro_step_num=micro_step_dict.get(Const.MEGATRON_MICRO_STEP_NUMBER))
         GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict, pbar_info=pbar_info)
         GraphBuilder._handle_recompute(graph, stack_dict)
