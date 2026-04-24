@@ -411,10 +411,10 @@ class TestMsprobeAdapter(unittest.TestCase):
         data_dict = {'value': 0.123456789, 'value1': None, 'value2': "<class 'str'>", 'value3': 1.123123123123e-11,
                      'value4': torch.inf, 'value5': -1}
         _format_data(data_dict)
-        self.assertEqual(data_dict['value'], '0.123457')
+        self.assertEqual(data_dict['value'], '0.123456789')
         self.assertEqual(data_dict['value1'], 'null')
         self.assertEqual(data_dict['value2'], '<class str>')
-        self.assertEqual(data_dict['value3'], '1.123123e-11')
+        self.assertEqual(data_dict['value3'], '1.123123123123e-11')
         self.assertEqual(data_dict['value4'], 'inf')
         self.assertEqual(data_dict['value5'], '-1')
 

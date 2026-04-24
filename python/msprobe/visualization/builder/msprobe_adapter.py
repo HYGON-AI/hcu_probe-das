@@ -192,9 +192,8 @@ def _format_decimal_string(s):
 
 def _format_data(data_dict):
     """
-    格式化数据，小数保留6位，处理一些异常值
+    格式化数据，处理一些异常值
     """
-    pattern = r'^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)$'
     all_null = False
 
     keys_to_keep = ['type', 'group_ranks', 'group_id', 'data_name']
@@ -210,11 +209,6 @@ def _format_data(data_dict):
             value = _format_decimal_string(value)
         elif value is None or value == ' ':
             value = GraphConst.NULL
-        # 科学计数法1.123123123123e-11，格式化为1.123123e-11
-        elif isinstance(value, float) and len(str(value)) < GraphConst.STR_MAX_LEN and re.match(pattern, str(value)):
-            value = "{:.6e}".format(value)
-        elif isinstance(value, float):
-            value = round(value, GraphConst.ROUND_TH)
         # Inf会走入这里，确保转成Inf。另外给其他不符合预期的类型做兜底方案
         if key != GraphConst.ERROR_KEY:
             # 除了error_key不转str，其他都转str, 避免前端解析错误
