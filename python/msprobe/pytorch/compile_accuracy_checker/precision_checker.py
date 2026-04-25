@@ -88,6 +88,11 @@ class CompareResult:
         )
 
 
+@dataclass
+class _GradSlot:
+    value: Optional[torch.Tensor] = None
+
+
 # ─────────────────────────────────────────────────────────────
 # 内部工具
 # ─────────────────────────────────────────────────────────────
@@ -99,9 +104,62 @@ _IGNORE_ATTR = '_pc_ignored'
 def _to_f32_cpu(x):
     if isinstance(x, torch.Tensor):
         return x.detach().float().cpu()
-    if isinstance(x, (tuple, list)):
-        return [_to_f32_cpu(t) for t in x if isinstance(t, torch.Tensor)]
-    return None
+    if isinstance(x, tuple):
+        return tuple(_to_f32_cpu(t) for t in x)
+    if isinstance(x, list):
+        return [_to_f32_cpu(t) for t in x]
+    return x
+
+
+def _build_grad_slots(x):
+    if isinstance(x, torch.Tensor):
+        return _GradSlot()
+    if isinstance(x, tuple):
+        return tuple(_build_grad_slots(t) for t in x)
+    if isinstance(x, list):
+        return [_build_grad_slots(t) for t in x]
+    return x
+
+
+def _iter_tensor_slots(value, slots):
+    if isinstance(value, torch.Tensor) and isinstance(slots, _GradSlot):
+        yield value, slots
+        return
+    if isinstance(value, tuple) and isinstance(slots, tuple):
+        for item, slot in zip(value, slots):
+            yield from _iter_tensor_slots(item, slot)
+        return
+    if isinstance(value, list) and isinstance(slots, list):
+        for item, slot in zip(value, slots):
+            yield from _iter_tensor_slots(item, slot)
+        return
+
+
+def _materialize_grad_slots(x):
+    if isinstance(x, _GradSlot):
+        return x.value
+    if isinstance(x, tuple):
+        return tuple(_materialize_grad_slots(t) for t in x)
+    if isinstance(x, list):
+        return [_materialize_grad_slots(t) for t in x]
+    return x
+
+
+def _register_tensor_grad_hooks(handles: list, store: _TensorStore,
+                                name: str, key: str, value):
+    entry = store.bwd.setdefault(name, {'grad_input': None, 'grad_output': None})
+    slots = _build_grad_slots(value)
+    entry[key] = slots
+
+    for tensor, slot in _iter_tensor_slots(value, slots):
+        if not tensor.requires_grad:
+            continue
+
+        @torch.compiler.disable
+        def save_grad(grad, out=slot):
+            out.value = _to_f32_cpu(grad)
+
+        handles.append(tensor.register_hook(save_grad))
 
 
 def _cmp_tensor(a: torch.Tensor, b: torch.Tensor) -> TensorDiff:
@@ -123,8 +181,22 @@ def _cmp_list(ea, eb) -> Optional[List[TensorDiff]]:
         return None
     if isinstance(ea, torch.Tensor):
         ea, eb = [ea], [eb]
-    pairs = [(a, b) for a, b in zip(ea, eb) if a is not None and b is not None]
+    pairs = list(_iter_tensor_pairs(ea, eb))
     return [_cmp_tensor(a, b) for a, b in pairs] or None
+
+
+def _iter_tensor_pairs(ea, eb):
+    if isinstance(ea, torch.Tensor) and isinstance(eb, torch.Tensor):
+        yield ea, eb
+        return
+    if isinstance(ea, tuple) and isinstance(eb, tuple):
+        for a, b in zip(ea, eb):
+            yield from _iter_tensor_pairs(a, b)
+        return
+    if isinstance(ea, list) and isinstance(eb, list):
+        for a, b in zip(ea, eb):
+            yield from _iter_tensor_pairs(a, b)
+        return
 
 
 def _normalize_name(name: str) -> str:
@@ -182,19 +254,11 @@ def _register_hooks(model: nn.Module, store: _TensorStore,
             @torch.compiler.disable
             def hook(mod, inp, out):
                 store.fwd_out[n] = _to_f32_cpu(out)
-            return hook
-
-        def make_bwd(n):
-            @torch.compiler.disable
-            def hook(mod, grad_in, grad_out):
-                store.bwd[n] = {
-                    'grad_input':  _to_f32_cpu(grad_in),
-                    'grad_output': _to_f32_cpu(grad_out),
-                }
+                _register_tensor_grad_hooks(handles, store, n, 'grad_input', inp)
+                _register_tensor_grad_hooks(handles, store, n, 'grad_output', out)
             return hook
 
         handles.append(module.register_forward_hook(make_fwd(name)))
-        handles.append(module.register_full_backward_hook(make_bwd(name)))
     return handles
 
 
@@ -873,10 +937,14 @@ class PrecisionChecker:
                     d.fwd_input = _cmp_list(e.fwd_in[name], c.fwd_in[name])
 
             if name in e.bwd and name in c.bwd:
-                d.grad_input  = _cmp_list(e.bwd[name]['grad_input'],
-                                          c.bwd[name]['grad_input'])
-                d.grad_output = _cmp_list(e.bwd[name]['grad_output'],
-                                          c.bwd[name]['grad_output'])
+                d.grad_input  = _cmp_list(
+                    _materialize_grad_slots(e.bwd[name]['grad_input']),
+                    _materialize_grad_slots(c.bwd[name]['grad_input'])
+                )
+                d.grad_output = _cmp_list(
+                    _materialize_grad_slots(e.bwd[name]['grad_output']),
+                    _materialize_grad_slots(c.bwd[name]['grad_output'])
+                )
             elif name in e.bwd and name not in c.bwd:
                 if name in wrapper_names:
                     d.note = d.note or 'SKIP_compiled_wrapper'
