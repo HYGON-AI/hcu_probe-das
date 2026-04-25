@@ -103,31 +103,51 @@ static std::string build_final_path(const std::string& path) {
     return path.substr(0, last_slash + 1) + oss_name.str();
 }
 
+struct IoSegment {
+    size_t pos{std::string::npos};
+    std::string type;
+    std::string suffix;
+};
+
+static IoSegment ParseIoSegmentFromTag(const std::string& tag)
+{
+    static const std::vector<std::string> ioTypes = {"input_kwargs", "input", "output"};
+    IoSegment best;
+
+    for (const auto& ioType : ioTypes) {
+        const std::string midMarker = "." + ioType + ".";
+        const size_t midPos = tag.rfind(midMarker);
+        if (midPos != std::string::npos && (best.pos == std::string::npos || midPos > best.pos)) {
+            best.pos = midPos;
+            best.type = ioType;
+            best.suffix = tag.substr(midPos + midMarker.size());
+        }
+
+        const std::string tailMarker = "." + ioType;
+        const size_t tailPos = tag.rfind(tailMarker);
+        if (tailPos != std::string::npos && tailPos + tailMarker.size() == tag.size() &&
+            (best.pos == std::string::npos || tailPos > best.pos)) {
+            best.pos = tailPos;
+            best.type = ioType;
+            best.suffix.clear();
+        }
+    }
+
+    return best;
+}
+
 static std::string build_stat_key(const std::string& tag) {
     if (tag.empty()) {
         return "__default__";
     }
 
-    static const std::vector<std::string> io_types = {"input_kwargs", "input", "output"};
-    size_t io_pos = std::string::npos;
-    std::string io_type;
-    for (const auto& candidate : io_types) {
-        const std::string marker = "." + candidate;
-        io_pos = tag.find(marker);
-        if (io_pos != std::string::npos) {
-            io_type = candidate;
-            break;
-        }
-    }
-    if (io_pos == std::string::npos) {
+    const IoSegment io = ParseIoSegmentFromTag(tag);
+    if (io.pos == std::string::npos || io.type.empty()) {
         return tag;
     }
 
-    const std::string module_name = tag.substr(0, io_pos);
-    const size_t suffix_pos = io_pos + 1 + io_type.size();
-    std::string suffix = (suffix_pos < tag.size() && tag[suffix_pos] == '.')
-        ? tag.substr(suffix_pos + 1)
-        : "";
+    const std::string module_name = tag.substr(0, io.pos);
+    std::string suffix = io.suffix;
     bool is_forward_start = false;
     if (!suffix.empty()) {
         const std::string marker(kForwardStartMarker);
@@ -150,7 +170,7 @@ static std::string build_stat_key(const std::string& tag) {
     }
 
     std::ostringstream oss;
-    oss << module_name << "." << call_idx << ".forward." << io_type;
+    oss << module_name << "." << call_idx << ".forward." << io.type;
     if (!suffix.empty()) {
         oss << "." << suffix;
     }
