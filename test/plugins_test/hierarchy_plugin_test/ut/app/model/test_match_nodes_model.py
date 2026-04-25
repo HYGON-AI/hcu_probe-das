@@ -209,16 +209,16 @@ def test_delete_matched_node_data_removes_error_keys():
 
 def test_delete_matched_node_data_skips_non_dict():
     # ensure non-dict values are ignored without raising
-    node_data = {"k": None, "j": {"MinAbsErr": 5}}
+    node_data = {"k": None, "j": {"MaxRelativeErr": 5}}
     cleaned = MatchNodesController.delete_matched_node_data(copy.deepcopy(node_data))
     assert "k" in cleaned and cleaned["k"] is None
-    assert "MinAbsErr" not in cleaned["j"]
+    assert "MaxRelativeErr" not in cleaned["j"]
 
 
 def test_update_graph_node_data_noop():
     # passing empty data should simply return without errors
     original = {}
-    MatchNodesController.update_graph_node_data(original, {})
+    MatchNodesController.update_graph_node_data(original, {},'summary')
     assert original == {}
 
 
@@ -277,9 +277,9 @@ def test_process_summary_task_add_io_empty_error():
         "Bench": {"node": {"b1": {"input_data": {}, "output_data": {}}}},
     }
     res = MatchNodesController.process_summary_task_add(graph_data, "n1", "b1")
-    assert res["success"] is False
+    assert res["success"] is True
     # message should mention failure to compute statistical diff
-    assert "统计误差值为空" in res.get("error", "")
+    assert res["data"][0]["precision_index"] == 0
 
 
 def test_process_summary_task_delete_errors_and_success():

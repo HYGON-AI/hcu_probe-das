@@ -76,6 +76,7 @@ def _init_sqlite_db(db_path: str):
                 node_order INTEGER,
                 input_data TEXT,
                 output_data TEXT,
+                dump_data_dir TEXT,
                 stack_id INTEGER,
                 modified INTEGER,
                 parallel_merge_info TEXT
@@ -188,8 +189,8 @@ def _init_sqlite_db(db_path: str):
                 INSERT INTO tb_nodes(
                     node_name, up_node, sub_nodes, node_type, matched_node_link, precision_index,
                     overflow_level, matched_distributed, micro_step_id, data_source, step, rank, node_order,
-                    input_data, output_data, stack_id, modified, parallel_merge_info
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    input_data, output_data, dump_data_dir, stack_id, modified, parallel_merge_info
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     node_name,
@@ -207,6 +208,7 @@ def _init_sqlite_db(db_path: str):
                     node_order,
                     json.dumps({}),
                     json.dumps({}),
+                    None,  # dump_data_dir
                     1,
                     0,
                     json.dumps([]),
