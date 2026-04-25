@@ -577,15 +577,15 @@ class MatchedNodeCalculator:
         npu_keys = list(npu_dict.keys())
         bench_keys = list(bench_dict.keys())
 
-        min_length = min(len(npu_keys), len(bench_keys))
+        max_length = max(len(npu_keys), len(bench_keys))
 
-        for idx in range(min_length):
+        for idx in range(max_length):
             row = [""] * len(header)
             # 按顺序取对应键
-            npu_key = npu_keys[idx]
-            bench_key = bench_keys[idx]
-            npu_data = npu_dict[npu_key]
-            bench_data = bench_dict[bench_key]
+            npu_key = npu_keys[idx] if idx < len(npu_keys) else CompareConst.NAN
+            bench_key = bench_keys[idx] if idx < len(bench_keys) else CompareConst.NAN
+            npu_data = npu_dict.get(npu_key, {})
+            bench_data = bench_dict.get(bench_key, {})
 
             # 填充名称（顺序匹配后，NPU和Bench名称可以不同）
             row[header.index(CompareConst.NPU_NAME)] = npu_key

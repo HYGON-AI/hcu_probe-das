@@ -212,7 +212,7 @@ class CRC32ErrChecker(BaseAlgorithm):
         if not data_lists:
             return
 
-        null_set = (CompareConst.N_A, CompareConst.NAN)
+        null_set = (CompareConst.N_A, CompareConst.NAN, "")
         for data_list in data_lists:
             npu_md5 = api_data.get_data_by_header(CompareConst.NPU_MD5, data_list)
             bench_md5 = api_data.get_data_by_header(CompareConst.BENCH_MD5, data_list)
