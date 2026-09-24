@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dcu_probe × dcu_megatron —— 接入机制标注（Feature 织入，0 行改训练脚本）</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
+    --add-bg:rgba(45,164,78,.12); --add-bd:#2da44e; --key:#0550ae; --str:#0a3069;
+    --com:#6e7781; --fn:#8250df; --num:#0550ae; --accent:#0969da; --train:#1a7f37; --infer:#bc4c00;
+    --code-bg:#f6f8fa; --kw:#cf222e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{padding:32px 40px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#ffffff,#eef1f5)}
+  header h1{margin:0 0 6px;font-size:24px}
+  header p{margin:4px 0;color:var(--dim);font-size:14px}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 24px 80px}
+  h2.sec{margin:44px 0 6px;font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h2.sec .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;vertical-align:middle;margin-left:10px}
+  .tag.train{background:rgba(63,185,80,.15);color:var(--train);border:1px solid var(--train)}
+  .tag.infer{background:rgba(219,109,40,.15);color:var(--infer);border:1px solid var(--infer)}
+  p.lead{color:var(--dim);font-size:14px;margin:10px 0 0}
+  /* overview table */
+  table.ov{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+  table.ov th,table.ov td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  table.ov th{background:var(--panel);color:var(--dim)}
+  table.ov code{color:var(--key)}
+  .badge{display:inline-block;min-width:20px;text-align:center;font-weight:700;border-radius:6px;padding:1px 7px;font-size:12px}
+  .b-train{background:rgba(63,185,80,.2);color:var(--train)}
+  .b-infer{background:rgba(219,109,40,.2);color:var(--infer)}
+  .b-aux{background:rgba(139,148,158,.2);color:var(--dim)}
+  /* card */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin:20px 0;overflow:hidden}
+  .card .hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card .hd .no{font-weight:700;font-size:15px}
+  .card .hd .path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--key)}
+  .card .hd .loc{font-family:ui-monospace,monospace;font-size:12px;color:var(--dim)}
+  .card .hd .role{margin-left:auto;font-size:12px;color:var(--dim)}
+  .card .body{display:grid;grid-template-columns:1fr 400px}
+  @media(max-width:980px){.card .body{grid-template-columns:1fr}}
+  .code{padding:14px 0;overflow-x:auto;background:var(--code-bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .code .l{white-space:pre;padding:0 16px;min-height:19px}
+  .code .ctx{color:#8c959f}
+  .code .add{background:var(--add-bg);border-left:3px solid var(--add-bd);padding-left:13px}
+  .code .add .p{color:var(--add-bd);user-select:none}
+  .k{color:var(--kw)} .s{color:var(--str)} .c{color:var(--com)} .fn{color:var(--fn)} .n{color:var(--num)} .warn{color:#9a6700}
+  .ann{padding:16px 18px;border-left:1px solid var(--border);font-size:13.5px}
+  @media(max-width:980px){.ann{border-left:none;border-top:1px solid var(--border)}}
+  .ann h4{margin:0 0 8px;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+  .ann p{margin:0 0 10px;color:#424a53}
+  .ann .why{color:var(--fg)}
+  .ann code{background:#eff1f3;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--key)}
+  .ann .warn{color:#9a6700}
+  .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:rgba(88,166,255,.15);color:var(--accent);border:1px solid var(--accent);margin-bottom:8px}
+  .rt{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:10px;margin-bottom:10px}
+  .rt-a{background:rgba(9,105,218,.12);color:#0969da;border:1px solid #0969da}
+  .rt-b{background:rgba(130,80,223,.12);color:#8250df;border:1px solid #8250df}
+  .rt-c{background:rgba(26,127,55,.12);color:#1a7f37;border:1px solid #1a7f37}
+  .rt-d{background:rgba(154,103,0,.12);color:#9a6700;border:1px solid #9a6700}
+  .rt-e{background:rgba(101,109,118,.14);color:#57606a;border:1px solid #8c959f}
+  .rt-x{background:rgba(191,76,0,.10);color:#bc4c00;border:1px solid #bc4c00}
+  .tasks{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:16px 0}
+  @media(max-width:900px){.tasks{grid-template-columns:1fr 1fr}}
+  .tk{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--panel)}
+  .tk h4{margin:0 0 8px}
+  .tk p{margin:0 0 6px;font-size:12.5px;color:var(--dim)}
+  .tk .cards{font-size:12px;color:var(--accent);line-height:1.5}
+  .flow{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:18px 0;font-size:13.5px}
+  .flow code{color:var(--key)}
+  .arrow{color:var(--accent);font-weight:700}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<header>
+  <h1>dcu_probe × dcu_megatron（独立框架）—— 接入机制标注（Feature 织入，0 行改训练脚本）</h1>
+  <p>dcu_megatron = <b>Megatron-LM 子模块 + 海光 adaptor</b> 的预训练框架（本例 llama2-7B，TP1/PP2，8 卡 bf16）。接入 dcu_probe <b>不改一行训练脚本、不改一行 megatron 源码</b>——靠 adaptor 自带的 <b>Feature 机制</b>：写 4 个几十行薄壳、登记进 <code style="color:#0550ae">ADAPTOR_FEATURES</code> list，启动时用 <code style="color:#0550ae">patch_manager</code> monkey-patch 把 dump / monitor 的生命周期钩子<b>织进</b> megatron 的 <code style="color:#0550ae">train</code> / <code style="color:#0550ae">train_step</code> / <code style="color:#0550ae">setup_model_and_optimizer</code>。</p>
+  <p>本页标注这 4 个薄壳分别是什么、怎么登记、5 个 hook 点各挂在 megatron 哪个函数。左侧是薄壳的 verbatim 源码（<span style="color:#1a7f37">绿色高亮 = 你新增的文件 / 行</span>），右侧是说明。<b>与 verl 的本质区别</b>：verl 训推一致是在 verl / vllm 源码里逐处插 patch；dcu_megatron 是零侵入 Feature 织入，训练命令加一个 <code style="color:#0550ae">--dcu-probe-config</code> flag 即激活，不加就是原生 megatron 行为。</p>
+</header>
+
+<div class="wrap">
+
+  <div class="flow" style="border-color:#2da44e;background:linear-gradient(180deg,#ffffff,#f2fbf4)">
+    <span class="pill" style="color:#1a7f37;border-color:#1a7f37;background:rgba(45,164,78,.12)">核心机制</span><br>
+    <b>ADAPTOR_FEATURES 显式登记 + register_patches monkey-patch 织入</b>——dcu_megatron 的 <code>features_manager</code> 维护一个 <code>ADAPTOR_FEATURES</code> list（<code>features_manager/__init__.py</code>），<b>没有自动扫描</b>，Feature 靠这个 list 显式登记。启动时框架遍历它、调每个 Feature 的 <code>register_patches(patch_manager, args)</code> → <code>patch_manager.register_patch('megatron.training.training.train', wrapper, apply_wrapper=True)</code> 把 wrapper monkey-patch 织进 megatron 的 <code>train</code> / <code>train_step</code> / <code>setup_model_and_optimizer</code>。<br>
+    所以接入 = <b>拷 4 薄壳进 <code>adaptor/features_manager/probe/</code> + 在 list 加 2 行 import + 2 个实例（<code>DcuProbeFeature()</code> / <code>MonitorFeature()</code>）+ 训练命令加 flag</b>。megatron 本体、<code>pretrain_gpt.py</code>、<code>run_*.sh</code> <b>0 改动</b>。薄壳只有几十行（注册 flag + 注册 patch + 透传），业务逻辑全在 whl 翻译层 <code>dcu_probe.integrations.megatron.*</code>。
+  </div>
+
+  <h2 class="sec">总览：接入面 = 5 个文件（4 薄壳 + 1 处登记），全在 adaptor 内</h2>
+  <p class="lead">接入不跨仓、不改 megatron：4 个薄壳是<b>新建文件</b>放进 <code>dcu_megatron/adaptor/features_manager/probe/</code>，唯一改到的既有文件是 <code>features_manager/__init__.py</code>（加 2 import + 2 实例登记）。业务逻辑全在已安装的 dcu_probe whl。</p>
+  <table class="ov">
+    <tr><th>#</th><th>文件</th><th>位置 / 符号</th><th>作用</th><th>门控</th></tr>
+    <tr><td><span class="badge b-aux">登</span></td><td><code>features_manager/__init__.py</code></td><td>ADAPTOR_FEATURES list</td><td>显式登记 2 个 Feature（无自动扫描，漏则静默无效）</td><td>常开（源码）</td></tr>
+    <tr><td><span class="badge b-train">①</span></td><td><code>probe/dcu_probe_feature.py</code></td><td>DcuProbeFeature</td><td>注册 <code>--dcu-probe-config</code> + register_patches 挂 train / train_step</td><td><code>--dcu-probe-config</code></td></tr>
+    <tr><td><span class="badge b-train">②</span></td><td><code>probe/dcu_probe_wrapper.py</code></td><td>train / train_step wrapper</td><td>dump lifecycle 透传 on_train_start / step_start / step_end / train_end</td><td><code>--dcu-probe-config</code></td></tr>
+    <tr><td><span class="badge b-aux">③</span></td><td><code>probe/monitor_feature.py</code></td><td>MonitorFeature</td><td>注册 <code>--dcu-probe-monitor-config</code> + 挂 setup / train / train_step</td><td><code>--dcu-probe-monitor-config</code></td></tr>
+    <tr><td><span class="badge b-aux">④</span></td><td><code>probe/monitor_wrapper.py</code></td><td>setup / train / train_step wrapper</td><td>monitor lifecycle 透传 on_setup_done / step_end / train_end</td><td><code>--dcu-probe-monitor-config</code></td></tr>
+    <tr><td><span class="badge b-aux">译</span></td><td><code>dcu_probe whl: integrations.megatron.{dump,monitor}</code></td><td>翻译层</td><td>业务逻辑（PrecisionDebugger / TrainerMonitorV2 init、rank 过滤、cfg 解析）</td><td>随上</td></tr>
+    <tr><td><span class="badge b-aux">·</span></td><td><code>megatron / pretrain_gpt.py / run_*.sh</code></td><td>—</td><td><b>0 改动</b></td><td>—</td></tr>
+  </table>
+
+  <h2 class="sec">Feature 织入机制：5 个环节</h2>
+  <p class="lead">接入这件事从「文件在磁盘上」到「训练时钩子真生效」经过 5 个环节；后面每张卡片右上角有对应色标，标它属于哪个环节。跟 verl「改源码 patch」不同，这里全程零侵入。</p>
+  <div class="tasks">
+    <div class="tk"><h4><span class="rt rt-a">A 登记</span></h4><p>Feature 靠 list 显式登记，无自动扫描</p><div class="cards">登 <code>__init__.py</code> 加 2 import + 2 实例<br>DcuProbeFeature() / MonitorFeature()</div><p style="margin-top:8px;color:var(--fg)"><b>作用：让框架看得见 Feature</b>——光拷文件不登记 = 静默无效</p></div>
+    <div class="tk"><h4><span class="rt rt-b">B 织入</span></h4><p>register_patches monkey-patch 到 megatron 函数</p><div class="cards">① ③ register_patch(train / train_step / setup)<br>apply_wrapper=True 当装饰器套</div><p style="margin-top:8px;color:var(--fg)"><b>作用：钩子织进 megatron</b>——megatron 源码 0 改</p></div>
+    <div class="tk"><h4><span class="rt rt-c">C 薄壳</span></h4><p>wrapper 只透传 lifecycle，几十行</p><div class="cards">② train 包 on_train_start/end<br>train_step 包 on_step_start/end</div><p style="margin-top:8px;color:var(--fg)"><b>作用：把 megatron 生命周期翻成 hook</b>——可读即契约</p></div>
+    <div class="tk"><h4><span class="rt rt-d">D 翻译层</span></h4><p>业务逻辑全在 whl，薄壳不含</p><div class="cards">dcu_probe.integrations.megatron.dump<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;.monitor</div><p style="margin-top:8px;color:var(--fg)"><b>作用：PrecisionDebugger / monitor 启停</b>——换框架只换薄壳</p></div>
+    <div class="tk"><h4><span class="rt rt-e">E 激活</span></h4><p>训练命令加 CLI flag 即激活</p><div class="cards"><code>--dcu-probe-config=L0.json</code><br><code>--dcu-probe-monitor-config=...</code></div><p style="margin-top:8px;color:var(--fg)"><b>作用：门控采集</b>——不传 = baseline 原行为，最小侵入</p></div>
+  </div>
+
+  <div class="flow" style="border-color:#8250df">
+    <b>与 verl 的本质区别 —— 改源码 patch vs Feature 织入</b><br>
+    <b>verl（训推一致）</b>：在 verl / das vllm 的 forward 路径上<b>逐处插 patch</b>（dp_actor 钩 <code>compute_log_prob</code>、vllm gpu_model_runner 钩 <code>execute_model</code>…），跨 <b>3 个 git 仓</b>改真实源码，目标是训练侧 vs 推理侧逐层 <code>pt_compare</code> 比数值。<br>
+    <span class="arrow">↕</span><br>
+    <b>dcu_megatron（精度对比 / 零侵入）</b>：<b>0 行改训练脚本、0 行改 megatron 源码</b>——4 个薄壳 + <code>ADAPTOR_FEATURES</code> 登记 + 一个 CLI flag。只 dump <b>训练侧</b>统计量供离线精度分析，并用 5 模式 loss 字字一致证「接了 dcu_probe 不扰动训练」。<b>没有推理侧、没有 pt_compare、没有训推 compare 那一套。</b>
+  </div>
+
+  <h2 class="sec">薄壳把 megatron 生命周期翻成 4 个 hook（三件套在翻译层）</h2>
+  <div class="flow">
+    薄壳只透传 4 个 hook 调用，真正的 dcu_probe 三件套（<code>PrecisionDebugger(config_path)</code> → forward 前 <code>start(model)</code> → forward → <code>stop()</code> + <code>step()</code>）藏在 whl 翻译层 <code>dcu_probe.integrations.megatron.dump</code> 里，薄壳看不到：<br>
+    <code>train()</code> 入口 <code>on_train_start</code>（建 debugger）<span class="arrow">→</span> 每个 <code>train_step()</code> 入口 <code>on_step_start(model)</code>（start）<span class="arrow">→</span> 前向 + 反向（dcu_megatron 钩的是含 <code>loss.backward()</code> 的完整 train_step，故<b>前向 + 反向都采</b>，区别于 verl 只 no_grad 前向）<span class="arrow">→</span> <code>train_step()</code> 出口 <code>on_step_end</code>（stop + step）<span class="arrow">→</span> <code>train()</code> finally <code>on_train_end</code>。<br>
+    cfg 关键字段：<code>task=statistics</code>（只 Max/Min/Mean/Norm，免爆盘）、<code>level=L0</code>（module 级）/ <code>L1</code>（API 级）、<code>dump_path</code>。产物 = 每 step 一份 <code>dump.json</code>（模式细节见采集模式页）。
+  </div>
+
+  <!-- ============================ 登记 ============================ -->
+  <h2 class="sec">登记：把 Feature 加进 ADAPTOR_FEATURES<span class="tag train">唯一改到的既有文件</span></h2>
+
+  <!-- 登 __init__.py -->
+  <div class="card">
+    <div class="hd"><span class="no b-aux" style="color:var(--dim)">登</span><span class="path">dcu_megatron/adaptor/features_manager/__init__.py</span><span class="loc">ADAPTOR_FEATURES list</span><span class="role">显式登记（无自动扫描）</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l ctx"><span class="c"># 顶部 import 区加两行：</span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">from</span> .probe.dcu_probe_feature <span class="k">import</span> DcuProbeFeature</div>
+        <div class="l add"><span class="p">+ </span><span class="k">from</span> .probe.monitor_feature <span class="k">import</span> MonitorFeature</div>
+        <div class="l ctx"> </div>
+        <div class="l ctx">ADAPTOR_FEATURES = [</div>
+        <div class="l ctx">    <span class="c"># ... dcu_megatron 自带的 9 个 Feature（TE / rope / fusion ...）</span></div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">DcuProbeFeature</span>(),</div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">MonitorFeature</span>(),</div>
+        <div class="l ctx">]</div>
+      </div>
+      <div class="ann">
+        <span class="pill">关键 · 别漏</span>
+        <div class="rt rt-a">A 登记</div>
+        <h4>光拷文件不登记 = 静默无效</h4>
+        <p class="why">dcu_megatron <b>没有自动扫描</b>，Feature 全靠 <code>ADAPTOR_FEATURES</code> list 显式登记。把 4 个薄壳拷进 <code>probe/</code> 子目录后，还必须在这里加 <b>2 行 import + 2 个实例</b>。漏了这步 → 训练照跑、<b>无报错</b>、行为与 baseline 完全一样（dump / monitor 静默失效）。</p>
+        <p>启动时框架遍历这个 list、调每个 Feature 的 <code>register_patches()</code> 完成 monkey-patch。这是整个接入<b>唯一改到的既有文件</b>；<code>probe/</code> 子目录可不建 <code>__init__.py</code>（同仓其他子目录走 namespace package）。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ dump 接入 ============================ -->
+  <h2 class="sec">dump 接入：2 薄壳<span class="tag train">--dcu-probe-config</span></h2>
+
+  <!-- ① dcu_probe_feature.py -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">①</span><span class="path">probe/dcu_probe_feature.py</span><span class="loc">DcuProbeFeature（新建文件）</span><span class="role">注册 flag + 注册 patch 挂点</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l add"><span class="p">+ </span><span class="k">class</span> <span class="fn">DcuProbeFeature</span>(AbstractFeature):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">__init__</span>(self):</div>
+        <div class="l add"><span class="p">+ </span>        <span class="fn">super</span>().<span class="fn">__init__</span>(<span class="s">'dcu-probe-config'</span>, <span class="n">2</span>)  <span class="c"># feature key + 优先级</span></div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">register_args</span>(self, parser):</div>
+        <div class="l add"><span class="p">+ </span>        group = parser.<span class="fn">add_argument_group</span>(title=<span class="s">'dcu_probe'</span>)</div>
+        <div class="l add"><span class="p">+ </span>        group.<span class="fn">add_argument</span>(<span class="s">'--dcu-probe-config'</span>, type=str, default=<span class="k">None</span>, help=...)</div>
+        <div class="l add"><span class="p">+ </span>        group.<span class="fn">add_argument</span>(<span class="s">'--dcu-probe-seed'</span>, type=<span class="fn">int</span>, default=<span class="k">None</span>, help=...)</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">register_patches</span>(self, patch_manager, args):</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">from</span> ...probe.dcu_probe_wrapper <span class="k">import</span> (</div>
+        <div class="l add"><span class="p">+ </span>            dcu_probe_train_wrapper, dcu_probe_train_step_wrapper)</div>
+        <div class="l add"><span class="p">+ </span>        patch_manager.<span class="fn">register_patch</span>(</div>
+        <div class="l add"><span class="p">+ </span>            <span class="s">'megatron.training.training.train'</span>,        <span class="c"># 织进 megatron train()</span></div>
+        <div class="l add"><span class="p">+ </span>            dcu_probe_train_wrapper, apply_wrapper=<span class="k">True</span>)</div>
+        <div class="l add"><span class="p">+ </span>        patch_manager.<span class="fn">register_patch</span>(</div>
+        <div class="l add"><span class="p">+ </span>            <span class="s">'megatron.training.training.train_step'</span>,   <span class="c"># 织进 megatron train_step()</span></div>
+        <div class="l add"><span class="p">+ </span>            dcu_probe_train_step_wrapper, apply_wrapper=<span class="k">True</span>)</div>
+      </div>
+      <div class="ann">
+        <span class="pill">核心</span>
+        <div class="rt rt-b">B 织入</div>
+        <div class="rt rt-e" style="margin-left:6px">E 激活</div>
+        <h4>register_args 定 flag，register_patches 定挂点</h4>
+        <p class="why"><code>register_args</code> 给 megatron argparse 注册 <code>--dcu-probe-config</code>（dump cfg 路径）和 <code>--dcu-probe-seed</code>。<b>传了 flag 才有 dump</b>，不传 = 原生 megatron。</p>
+        <p><code>register_patches</code> 是织入核心：<code>patch_manager.register_patch('megatron.training.training.train', wrapper, apply_wrapper=True)</code> 把 wrapper monkey-patch 到 megatron 的 <code>train</code> 和 <code>train_step</code>。<code>apply_wrapper=True</code> = 把 wrapper 当<b>装饰器套在原函数外</b>（而非替换），所以原逻辑一行不动。</p>
+        <p><code>AbstractFeature</code> / <code>patch_manager</code> 都是 dcu_megatron 自带的，薄壳只继承、不实现。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② dcu_probe_wrapper.py -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">②</span><span class="path">probe/dcu_probe_wrapper.py</span><span class="loc">train / train_step wrapper（新建文件）</span><span class="role">dump lifecycle 透传</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l add"><span class="p">+ </span><span class="k">from</span> dcu_probe.integrations.megatron <span class="k">import</span> dump   <span class="c"># ← 业务在 whl 翻译层</span></div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">def</span> <span class="fn">dcu_probe_train_wrapper</span>(original_train):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">print_rank_0</span>(<span class="s">"[dcu_probe-wrapper] train() wrapper applied via Feature mechanism."</span>)</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">wrapped_train</span>(*args, **kwargs):</div>
+        <div class="l add"><span class="p">+ </span>        dump.<span class="fn">on_train_start</span>(<span class="fn">get_args</span>())</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">try</span>:</div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">return</span> <span class="fn">original_train</span>(*args, **kwargs)</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">finally</span>:</div>
+        <div class="l add"><span class="p">+ </span>            dump.<span class="fn">on_train_end</span>()</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">return</span> wrapped_train</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">def</span> <span class="fn">dcu_probe_train_step_wrapper</span>(original_train_step):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">print_rank_0</span>(<span class="s">"[dcu_probe-wrapper] train_step() wrapper applied via Feature mechanism."</span>)</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">wrapped_train_step</span>(forward_step_func, data_iterator, model, *args, **kwargs):</div>
+        <div class="l add"><span class="p">+ </span>        dump.<span class="fn">on_step_start</span>(model, <span class="fn">get_args</span>())</div>
+        <div class="l add"><span class="p">+ </span>        result = <span class="fn">original_train_step</span>(forward_step_func, data_iterator, model, *args, **kwargs)</div>
+        <div class="l add"><span class="p">+ </span>        dump.<span class="fn">on_step_end</span>(result, <span class="fn">get_args</span>())</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">return</span> result</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">return</span> wrapped_train_step</div>
+      </div>
+      <div class="ann">
+        <span class="pill">薄壳</span>
+        <div class="rt rt-c">C 薄壳</div>
+        <div class="rt rt-d" style="margin-left:6px">D 翻译层</div>
+        <h4>只透传 lifecycle，业务全在 whl</h4>
+        <p class="why">2 个 wrapper 一共十几行：<code>train</code> 外面包 <code>dump.on_train_start</code> / <code>on_train_end</code>，<code>train_step</code> 外面包 <code>dump.on_step_start(model)</code> / <code>on_step_end(result)</code>。<b>没有一行 dcu_probe 业务逻辑</b>——<code>PrecisionDebugger</code> 的 init / start / stop / step、rank 过滤、cfg 解析全在 whl 的 <code>dcu_probe.integrations.megatron.dump</code>。</p>
+        <p>薄壳只认 megatron 的函数签名（<code>forward_step_func, data_iterator, model, ...</code>）并原样转发，框架换版本也很少动。<code>on_step_start</code> 拿到 <code>model</code> 是为了 <code>PrecisionDebugger.start(model)</code> 注册前向 / 反向 hook。</p>
+        <p class="warn">marker <code>[dcu_probe-wrapper] ... wrapper applied via Feature mechanism</code> 只表示「装饰器已挂」；<b>真启动</b>要看翻译层打的 <code>PrecisionDebugger initialized</code>（见验证页）——别把「已挂」当「已采」。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ monitor 接入 ============================ -->
+  <h2 class="sec">monitor 接入：2 薄壳<span class="tag" style="background:rgba(154,103,0,.12);color:#9a6700;border:1px solid #9a6700">--dcu-probe-monitor-config · 训练监控（旁支）</span></h2>
+
+  <!-- ③ monitor_feature.py -->
+  <div class="card">
+    <div class="hd"><span class="no b-aux" style="color:var(--dim)">③</span><span class="path">probe/monitor_feature.py</span><span class="loc">MonitorFeature（新建文件）</span><span class="role">注册 flag + 挂 3 个函数</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l add"><span class="p">+ </span><span class="k">class</span> <span class="fn">MonitorFeature</span>(AbstractFeature):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">__init__</span>(self):</div>
+        <div class="l add"><span class="p">+ </span>        <span class="fn">super</span>().<span class="fn">__init__</span>(<span class="s">'dcu-probe-monitor-config'</span>, <span class="n">2</span>)</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">register_args</span>(self, parser):</div>
+        <div class="l add"><span class="p">+ </span>        group = parser.<span class="fn">add_argument_group</span>(title=<span class="s">'dcu_probe monitor'</span>)</div>
+        <div class="l add"><span class="p">+ </span>        group.<span class="fn">add_argument</span>(<span class="s">'--dcu-probe-monitor-config'</span>, type=str, default=<span class="k">None</span>, help=...)</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">register_patches</span>(self, patch_manager, args):</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">from</span> ...probe.monitor_wrapper <span class="k">import</span> (</div>
+        <div class="l add"><span class="p">+ </span>            monitor_setup_model_and_optimizer_wrapper,</div>
+        <div class="l add"><span class="p">+ </span>            monitor_train_wrapper, monitor_train_step_wrapper)</div>
+        <div class="l add"><span class="p">+ </span>        patch_manager.<span class="fn">register_patch</span>(</div>
+        <div class="l add"><span class="p">+ </span>            <span class="s">'megatron.training.training.setup_model_and_optimizer'</span>,  <span class="c"># 拿 model+optimizer</span></div>
+        <div class="l add"><span class="p">+ </span>            monitor_setup_model_and_optimizer_wrapper, apply_wrapper=<span class="k">True</span>)</div>
+        <div class="l add"><span class="p">+ </span>        patch_manager.<span class="fn">register_patch</span>(</div>
+        <div class="l add"><span class="p">+ </span>            <span class="s">'megatron.training.training.train'</span>,</div>
+        <div class="l add"><span class="p">+ </span>            monitor_train_wrapper, apply_wrapper=<span class="k">True</span>)</div>
+        <div class="l add"><span class="p">+ </span>        patch_manager.<span class="fn">register_patch</span>(</div>
+        <div class="l add"><span class="p">+ </span>            <span class="s">'megatron.training.training.train_step'</span>,</div>
+        <div class="l add"><span class="p">+ </span>            monitor_train_step_wrapper, apply_wrapper=<span class="k">True</span>)</div>
+      </div>
+      <div class="ann">
+        <div class="rt rt-b">B 织入</div>
+        <div class="rt rt-x" style="margin-left:6px">旁支 · 训练监控</div>
+        <h4>monitor 比 dump 多挂一个 setup</h4>
+        <p class="why">monitor 要拿到 <b>model + optimizer</b> 才能看 weight_grad / optimizer / param 三通道，所以比 dump 多挂一个 <code>setup_model_and_optimizer</code>——它的<b>出口正好返回 model 和 optimizer</b>。</p>
+        <p>flag 是独立的 <code>--dcu-probe-monitor-config</code>，与 dump 的 <code>--dcu-probe-config</code> 互不影响、<b>可同开</b>（采集模式页 mode5 combined）。</p>
+        <p class="warn">monitor 是<b>训练健康监控</b>，不属于「精度对比」主线，列在这里作对照。它和 dump 一样零侵入。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ monitor_wrapper.py -->
+  <div class="card">
+    <div class="hd"><span class="no b-aux" style="color:var(--dim)">④</span><span class="path">probe/monitor_wrapper.py</span><span class="loc">setup / train / train_step wrapper（新建文件）</span><span class="role">monitor lifecycle 透传</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l add"><span class="p">+ </span><span class="k">from</span> dcu_probe.integrations.megatron <span class="k">import</span> monitor   <span class="c"># ← 业务在 whl 翻译层</span></div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">def</span> <span class="fn">monitor_setup_model_and_optimizer_wrapper</span>(original_func):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">print_rank_0</span>(<span class="s">"[monitor-wrapper] setup_model_and_optimizer wrapper applied."</span>)</div>
+        <div class="l add"><span class="p">+ </span>    <span class="fn">@wraps</span>(original_func)</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">wrapper</span>(*args, **kwargs):</div>
+        <div class="l add"><span class="p">+ </span>        models, optimizer, opt_param_scheduler = <span class="fn">original_func</span>(*args, **kwargs)</div>
+        <div class="l add"><span class="p">+ </span>        monitor.<span class="fn">on_setup_done</span>(models, optimizer, <span class="fn">get_args</span>())  <span class="c"># 起 TrainerMonitorV2</span></div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">return</span> models, optimizer, opt_param_scheduler</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">return</span> wrapper</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">def</span> <span class="fn">monitor_train_wrapper</span>(original_train):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">wrapped_train</span>(*args, **kwargs):</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">try</span>:</div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">return</span> <span class="fn">original_train</span>(*args, **kwargs)</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">finally</span>:</div>
+        <div class="l add"><span class="p">+ </span>            monitor.<span class="fn">on_train_end</span>()</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">return</span> wrapped_train</div>
+        <div class="l add"><span class="p">+ </span></div>
+        <div class="l add"><span class="p">+ </span><span class="k">def</span> <span class="fn">monitor_train_step_wrapper</span>(original_train_step):</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">def</span> <span class="fn">wrapped_train_step</span>(*args, **kwargs):</div>
+        <div class="l add"><span class="p">+ </span>        result = <span class="fn">original_train_step</span>(*args, **kwargs)</div>
+        <div class="l add"><span class="p">+ </span>        monitor.<span class="fn">on_step_end</span>(result, <span class="fn">get_args</span>())</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">return</span> result</div>
+        <div class="l add"><span class="p">+ </span>    <span class="k">return</span> wrapped_train_step</div>
+      </div>
+      <div class="ann">
+        <span class="pill">薄壳</span>
+        <div class="rt rt-c">C 薄壳</div>
+        <div class="rt rt-d" style="margin-left:6px">D 翻译层</div>
+        <h4>setup 出口起 monitor，step 出口驱动</h4>
+        <p class="why"><code>setup_...</code> wrapper 用 <code>@wraps</code> 保签名，在原函数返回 <code>(models, optimizer, scheduler)</code> 后调 <code>monitor.on_setup_done(models, optimizer, args)</code> 起 <code>TrainerMonitorV2</code>；<code>train_step</code> 出口调 <code>monitor.on_step_end</code>；<code>train</code> 的 finally 调 <code>on_train_end</code>。业务在 <code>dcu_probe.integrations.megatron.monitor</code>。</p>
+        <p class="warn">★ Megatron 是 nested optimizer（<code>DistributedOptimizer</code> → <code>ChainedOptimizer</code>），upstream 自动 patch optimizer_step 会扑空 → cfg 必须 <code>patch_optimizer_step: false</code>，由 wrapper 在 <code>on_step_end</code> 手动驱动 <code>step()</code>（见验证页坑 5）。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ hook 表 ============================ -->
+  <h2 class="sec">5 个 hook 点 → whl 翻译层</h2>
+  <p class="lead">薄壳一共只暴露这几个 hook；每个 hook 挂在 megatron 哪个函数、什么条件触发如下。翻译层 = <code>dcu_probe.integrations.megatron.{dump,monitor}</code>，真正的采集逻辑在那里。</p>
+  <table class="ov">
+    <tr><th>hook 调用</th><th>挂在 megatron 哪</th><th>触发条件</th><th>翻译层</th></tr>
+    <tr><td><code>dump.on_train_start(args)</code></td><td><code>train()</code> 入口</td><td>传了 <code>--dcu-probe-config</code></td><td rowspan="4"><code>integrations.megatron.dump</code></td></tr>
+    <tr><td><code>dump.on_step_start(model, args)</code></td><td><code>train_step()</code> 入口</td><td>同上</td></tr>
+    <tr><td><code>dump.on_step_end(result, args)</code></td><td><code>train_step()</code> 出口</td><td>同上</td></tr>
+    <tr><td><code>dump.on_train_end()</code></td><td><code>train()</code> finally</td><td>同上</td></tr>
+    <tr><td><code>monitor.on_setup_done(models, opt, args)</code></td><td><code>setup_model_and_optimizer()</code> 出口</td><td>传了 <code>--dcu-probe-monitor-config</code></td><td rowspan="3"><code>integrations.megatron.monitor</code></td></tr>
+    <tr><td><code>monitor.on_step_end(result, args)</code></td><td><code>train_step()</code> 出口</td><td>同上</td></tr>
+    <tr><td><code>monitor.on_train_end()</code></td><td><code>train()</code> finally</td><td>同上</td></tr>
+  </table>
+
+  <div class="flow">
+    <b>为什么薄壳能这么薄</b> —— 业务逻辑（<code>PrecisionDebugger</code> init / <code>TrainerMonitorV2</code> 启停 / rank 过滤 / cfg 解析）全在 dcu_probe whl 的 <code>dcu_probe.integrations.megatron.*</code> 翻译层，薄壳只做「注册 flag + 注册 patch + 透传 hook」。<b>所以 trl / deepspeed / lightning 等框架接入也只需类似的几行薄壳</b>——换框架换的是薄壳挂点，不动翻译层。要加新 hook 点（如在 <code>pretrain_gpt.forward_step</code> 也 dump），在对应 <code>register_patches()</code> 多注册一条 + 写对应 wrapper 薄壳调 <code>dump.on_xxx</code> 即可。
+  </div>
+
+</div>
+<footer>
+  dcu_probe × dcu_megatron（独立框架 · Megatron-LM + 海光 adaptor · 预训练 llama2-7B）Feature 织入机制标注 · 代码 verbatim 摘自 adaptor/features_manager/probe/{dcu_probe,monitor}_{feature,wrapper}.py
+</footer>
+</body>
+</html>

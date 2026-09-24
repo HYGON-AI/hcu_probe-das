@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dcu_probe 训推一致性 · 标注页导航</title>
+<style>
+  :root{--bg:#f6f8fa;--panel:#fff;--border:#d0d7de;--fg:#1f2328;--dim:#656d76;--accent:#0969da;--train:#1a7f37;--infer:#bc4c00;--purple:#8250df}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{padding:36px 40px 24px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#fff,#eef1f5)}
+  header h1{margin:0 0 8px;font-size:25px}
+  header p{margin:5px 0;color:var(--dim);font-size:14px;max-width:900px}
+  header .note{margin-top:12px;font-size:13px;background:rgba(9,105,218,.07);border:1px solid rgba(9,105,218,.25);border-radius:8px;padding:10px 14px;color:#424a53}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 24px 80px}
+  section.ver{margin:36px 0 8px}
+  section.ver h2{font-size:19px;margin:0 0 4px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  section.ver .lead{color:var(--dim);font-size:13.5px;margin:8px 0 16px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:820px){.cards{grid-template-columns:1fr}}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;transition:box-shadow .15s,transform .15s,border-color .15s}
+  a.card:hover{box-shadow:0 3px 12px rgba(9,105,218,.12);transform:translateY(-2px);border-color:var(--accent)}
+  a.card .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:8px;margin-bottom:10px}
+  a.card.c1 .tag{background:rgba(26,127,55,.12);color:var(--train);border:1px solid var(--train)}
+  a.card.c2 .tag{background:rgba(191,76,0,.12);color:var(--infer);border:1px solid var(--infer)}
+  a.card.c3 .tag{background:rgba(130,80,223,.12);color:var(--purple);border:1px solid var(--purple)}
+  a.card h3{margin:0 0 8px;font-size:15.5px}
+  a.card p{margin:0;font-size:13px;color:var(--dim);line-height:1.55}
+  a.card .go{margin-top:12px;font-size:12.5px;color:var(--accent);font-weight:600}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:34px}
+  code{background:#eff1f3;padding:1px 6px;border-radius:5px;font-size:12.5px;color:var(--accent);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body>
+<header>
+  <h1>dcu_probe 训推一致性 · 标注页导航</h1>
+  <p>每个实验版本一组「<b>渲染即懂</b>」的标注页 —— dcu_probe 改了哪几行、为什么这么改、compare 怎么逐算子算。给新人快速建立<b>修改点 + 原理</b>的认知。</p>
+  <p class="note">📖 <b>查看方式</b>:这些 HTML 均<b>自包含、离线可看</b>。把 <code>docs/annotated/</code> 整个目录下载到本地,用浏览器打开本 <code>index.html</code> 再点卡片即可(GitLab 仓库浏览器不渲染 HTML,直接点开只看到源码)。</p>
+</header>
+
+<div class="wrap">
+
+  <section class="ver">
+    <h2>verl 0.7.1 · FSDP 后端</h2>
+    <p class="lead">dcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>dcu_probe-verl-fsdp-0.7-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="verl-0.7-fsdp/instrumentation.html">
+        <div class="tag">插桩</div>
+        <h3>插桩位置标注</h3>
+        <p>dcu_probe 在哪几个源码文件、哪几行插桩(5 处钩子 + monitor):左边带上下文源码(绿=新增行),右边逐处说明为什么这么钩。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="verl-0.7-fsdp/compare_logic.html">
+        <div class="tag">compare</div>
+        <h3>run07_filtered.py 逻辑 + pt_compare</h3>
+        <p>compare 脚本 5 步(配对→挑样本→过滤交错模块→调 pt_compare→统计),以及 <code>pt_compare</code> / <code>verify_consistency.py</code> / <code>run07_filtered.py</code> 三者区别。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="verl-0.7-fsdp/consistent_check_algorithm.html">
+        <div class="tag">算法</div>
+        <h3>consistent_check 比对算法内部</h3>
+        <p>官方 <code>pt_compare(consistent_check=True)</code> 的五段管线:解析裁窗 → 模块名映射 → 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ver">
+    <h2>verl 0.7.1 · Megatron 后端</h2>
+    <p class="lead">dcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>dcu_probe-verl-megatron-0.7-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="verl-0.7-megatron/instrumentation.html">
+        <div class="tag">插桩</div>
+        <h3>插桩位置标注</h3>
+        <p>训练侧 6 处钩子挂 <code>MegatronPPOActor</code>(megatron_actor.py)+ 推理侧 patch das vllm 0.11 <code>gpu_model_runner</code>:左边带上下文源码(绿=新增行),右边逐处说明。含 <b>★引擎陷阱</b>(别加 <code>use_legacy_worker_impl=disable</code>)。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="verl-0.7-megatron/compare_logic.html">
+        <div class="tag">compare</div>
+        <h3>run_megatron_compare.py 逻辑 + pt_compare</h3>
+        <p>compare 脚本 4 步(配对→挑样本→调 <code>pt_compare(backend=megatron)</code>→统计),比 FSDP 少一步过滤(das vllm 0.11 模块序干净),以及 <code>MEGATRON_MODULE_MAP</code> 命名映射。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="verl-0.7-megatron/consistent_check_algorithm.html">
+        <div class="tag">算法</div>
+        <h3>consistent_check 比对算法内部</h3>
+        <p>官方 <code>pt_compare(consistent_check=True, backend=megatron)</code> 的五段管线:解析裁窗 → 模块名映射(mcore/TE ↔ vllm)→ 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ver">
+    <h2>verl 0.8.0 · FSDP 后端</h2>
+    <p class="lead">dcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>dcu_probe-verl-fsdp-0.8-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="verl-0.8-fsdp/instrumentation.html">
+        <div class="tag">插桩</div>
+        <h3>插桩位置标注</h3>
+        <p>训练钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 的 micro_batch 循环体(<b>≠ 0.7 的 <code>dp_actor</code></b>)+ 推理 patch das vllm 0.11 上游 <code>gpu_model_runner</code>。含 <b>★ attn eager/sdpa 先决条件</b>(flash NaN)。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="verl-0.8-fsdp/compare_logic.html">
+        <div class="tag">compare</div>
+        <h3>run_fsdp_compare.py 逻辑 + pt_compare</h3>
+        <p>4 步<b>无过滤</b>(das vllm 0.11 模块序干净,不需 0.7 FSDP 的 <code>run07_filtered</code>)+ 官方 <code>pt_compare(backend=fsdp)</code> + <b>修法B</b>;可比叶子算子 98 个,sdpa 97/98 &lt;1%。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="verl-0.8-fsdp/consistent_check_algorithm.html">
+        <div class="tag">算法</div>
+        <h3>consistent_check 比对算法内部</h3>
+        <p>五段管线:解析裁窗 → 模块名映射(<code>FSDP_MODULE_MAP</code>)→ 四元组多对一聚合 → 双单调保序 → shape 口径修正(修法B squeeze)。0.8 FSDP das vllm 0.11 干净,双单调排序一次即过。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ver">
+    <h2>verl 0.8.0 · Megatron 后端</h2>
+    <p class="lead">dcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>dcu_probe-verl-megatron-0.8-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="verl-0.8-megatron/instrumentation.html">
+        <div class="tag">插桩</div>
+        <h3>插桩位置标注</h3>
+        <p>训练钩子挂 <b>NEW engine</b> <code>MegatronEngineWithLMHead.forward_step</code>(<b>★ 与 0.7 退回 LEGACY <code>MegatronPPOActor</code> 相反</b>)+ request_id 直接 <code>tu.get</code>(≠ 0.7 的 <code>_pending_request_ids</code> 绕法)。含<b>已知问题</b>(offload OOM + validation rollout 挂死)。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="verl-0.8-megatron/compare_logic.html">
+        <div class="tag">compare</div>
+        <h3>run_megatron_compare.py 逻辑 + pt_compare</h3>
+        <p>4 步无过滤 + <code>MEGATRON_MODULE_MAP</code>;Qwen3-8B 真算子 1083 个 <b>99.4% &lt;1%</b>。含 <b>★ compare 正确配置</b>(<code>log_prob_micro_batch</code>/<code>override_transformer_config.sequence_parallel</code>)+ 诚实定界。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="verl-0.8-megatron/consistent_check_algorithm.html">
+        <div class="tag">算法</div>
+        <h3>consistent_check 比对算法内部</h3>
+        <p>五段管线(<code>backend=megatron</code>):解析裁窗 → <code>MEGATRON_MODULE_MAP</code> → 四元组多对一聚合(自动 cat SP)→ 双单调保序 → shape 三维降二维。含<b>诚实定界</b>(可比子集 ≠ 逐 tensor 全一致)。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ver">
+    <h2>dcu_megatron(独立框架 · Megatron-LM + 海光 adaptor)</h2>
+    <p class="lead">⚠️ 这是<b>独立 dcu_megatron 框架</b>(预训练 llama2-7B,<b>精度对比 / 零侵入验证</b>),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。接入靠 <b>Feature 机制</b>(0 行改训练脚本,加 CLI flag 即激活),非改源码 patch。对应 skill <code>dcu_probe-megatron-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="dcu-megatron-lm/instrumentation.html">
+        <div class="tag">接入机制</div>
+        <h3>接入机制标注(Feature 织入)</h3>
+        <p>0 行改训练脚本:4 个薄壳注册进 <code>ADAPTOR_FEATURES</code> → <code>register_patches</code> 用 patch_manager <b>monkey-patch</b> 织进 megatron <code>train</code>/<code>train_step</code>。左真实薄壳代码,右说明;5 hook 点 → 翻译层。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="dcu-megatron-lm/capture_modes.html">
+        <div class="tag">采集模式</div>
+        <h3>5 采集模式 + CLI flag 三层链路</h3>
+        <p>baseline / L0 / L1 / monitor / combined 五模式矩阵(loss 字字一致证零侵入),CLI flag 三层链路(launcher 下划线 → train 转连字符 → pretrain_gpt),L1 yaml patch。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="dcu-megatron-lm/pitfalls_verification.html">
+        <div class="tag">坑+验证</div>
+        <h3>6 坑 + 验证三件套 + L0/L1 覆盖</h3>
+        <p>tensorboard 隐性依赖(静默假启动)、L1 yaml patch、risk_level 大写、monitor patch_optimizer_step；验证必看 <code>initialized</code>/<code>started</code> marker(只 wrapper applied 是假象)。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+  <section class="ver">
+    <h2>原生 PyTorch(ResNet50 + Adam)</h2>
+    <p class="lead">任意<b>原生 PyTorch / 自定义 train loop</b>(精度对比 / 采集验证)。<b>最直接的接入</b> —— 直接调 <code>dcu_probe.integrations._common.lifecycle</code> 的 5 个 hook,无 Feature(dcu_megatron)、无源码 patch(verl)、几行即可;这套 <code>_common.lifecycle</code> 是<b>框架无关地基 API</b>,megatron 的 Feature 薄壳、verl 的 patch 最终都调它。对应 skill <code>dcu_probe-pytorch-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="pytorch/instrumentation.html">
+        <div class="tag">接入机制</div>
+        <h3>5-hook lifecycle 直接织入(最简)</h3>
+        <p>在你的训练循环里 import <code>get_dump_lifecycle</code>/<code>get_monitor_lifecycle</code>,按训练阶段调 <code>on_train_start</code>/<code>on_step_start</code>/<code>on_step_end</code>/<code>on_train_end</code>。左真实 ResNet 代码,右说明;三框架接入机制对照。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="pytorch/capture_modes.html">
+        <div class="tag">采集模式</div>
+        <h3>dump/monitor 采集模式 + argparse CLI</h3>
+        <p>baseline / dump(L0/L1)/ monitor(三通道)/ both 四模式,<code>--dump-cfg</code>/<code>--monitor-cfg</code> 直接 argparse 控制(比 megatron 简单,不穿多层启动脚本)。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="pytorch/pitfalls_verification.html">
+        <div class="tag">坑+验证</div>
+        <h3>4 坑 + 验证三件套 + L0/L1 覆盖</h3>
+        <p>tensorboard 隐性依赖(静默假启动)、cwd/权限、monitor 三通道约束、<b>optimizer 通道需 Adam 有 state</b>(SGD 采不到);验证必看 <code>initialized</code>/<code>started</code> marker。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
+</div>
+<footer>dcu_probe · <code>docs/annotated/</code> · 各框架接入样例的「渲染即懂」代码改动点标注页 · HTML 自包含离线可看</footer>
+</body>
+</html>

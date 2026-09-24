@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>run_megatron_compare.py 代码逻辑 —— dcu_probe pt_compare(backend=megatron)复核 verl 0.8 Megatron 训推一致性</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
+    --add-bg:rgba(45,164,78,.12); --add-bd:#2da44e; --key:#0550ae; --str:#0a3069;
+    --com:#6e7781; --fn:#8250df; --num:#0550ae; --accent:#0969da; --train:#1a7f37; --infer:#bc4c00;
+    --code-bg:#f6f8fa; --kw:#cf222e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{padding:32px 40px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#ffffff,#eef1f5)}
+  header h1{margin:0 0 6px;font-size:23px}
+  header p{margin:4px 0;color:var(--dim);font-size:14px}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 24px 80px}
+  h2.sec{margin:44px 0 6px;font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  p.lead{color:var(--dim);font-size:14px;margin:10px 0 0}
+  table.ov{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+  table.ov th,table.ov td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  table.ov th{background:var(--panel);color:var(--dim)}
+  table.ov code{color:var(--key)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin:20px 0;overflow:hidden}
+  .card .hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card .hd .no{font-weight:700;font-size:15px}
+  .card .hd .ttl{font-weight:600;font-size:14px}
+  .card .hd .role{margin-left:auto;font-size:12px;color:var(--dim)}
+  .card .body{display:grid;grid-template-columns:1fr 400px}
+  @media(max-width:980px){.card .body{grid-template-columns:1fr}}
+  .code{padding:14px 0;overflow-x:auto;background:var(--code-bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .code .l{white-space:pre;padding:0 16px;min-height:19px}
+  .code .hl{background:var(--add-bg);border-left:3px solid var(--add-bd);padding-left:13px}
+  .k{color:var(--kw)} .s{color:var(--str)} .c{color:var(--com)} .fn{color:var(--fn)} .n{color:var(--num)} .warn{color:#9a6700}
+  .ann{padding:16px 18px;border-left:1px solid var(--border);font-size:13.5px}
+  @media(max-width:980px){.ann{border-left:none;border-top:1px solid var(--border)}}
+  .ann h4{margin:0 0 8px;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+  .ann p{margin:0 0 10px;color:#424a53}
+  .ann code{background:#eff1f3;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--key)}
+  .ann .warn{color:#9a6700}
+  .rt{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:10px;margin-bottom:10px}
+  .rt-a{background:rgba(9,105,218,.12);color:#0969da;border:1px solid #0969da}
+  .rt-b{background:rgba(130,80,223,.12);color:#8250df;border:1px solid #8250df}
+  .rt-c{background:rgba(26,127,55,.12);color:#1a7f37;border:1px solid #1a7f37}
+  .rt-e{background:rgba(101,109,118,.14);color:#57606a;border:1px solid #8c959f}
+  .rt-x{background:rgba(191,76,0,.12);color:#bc4c00;border:1px solid #bc4c00}
+  .tool{background:#fff;border:2px solid var(--accent);border-radius:12px;padding:18px 22px;margin:18px 0;box-shadow:0 1px 4px rgba(9,105,218,.08)}
+  .tool h3{margin:0 0 10px;font-size:17px;color:var(--accent)}
+  .tool .sig{background:#0a0e14;color:#e6edf3;font-family:ui-monospace,monospace;font-size:12.5px;padding:10px 14px;border-radius:8px;overflow-x:auto;margin:10px 0}
+  .tool .sig .k{color:#79c0ff} .tool .sig .s{color:#a5d6ff} .tool .sig .c{color:#8b949e}
+  .tool ul{margin:8px 0 0;padding-left:20px} .tool li{margin:5px 0;font-size:13.5px}
+  .flow{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:18px 0;font-size:13.5px}
+  .flow code{color:var(--key)}
+  .chain{font-family:ui-monospace,monospace;font-size:12.5px;background:#eff1f3;padding:10px 14px;border-radius:8px;overflow-x:auto;color:#424a53}
+  .arrow{color:var(--accent);font-weight:700}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:30px}
+  b.hot{color:var(--infer)}
+</style>
+</head>
+<body>
+<header>
+  <h1>run_megatron_compare.py 代码逻辑 —— 用 dcu_probe 的 <code style="color:#0969da">pt_compare(backend=megatron)</code> 复核 verl 0.8 Megatron 训推一致性</h1>
+  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧(mcore/TE)、推理侧(das vllm)的 dump <b>配对好、挑对样本</b>,再交给 dcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
+  <p>真正<b class="hot">发挥效果的 dcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本的 4 步里,前 2 步都是在「为 pt_compare 准备能对齐的输入」,第 3 步才调 pt_compare,第 4 步读它的结果。<b>与 0.7 megatron 几乎一样</b> —— 都用 das vllm 0.11、都是 4 步无过滤、都调同一个官方 pt_compare + MEGATRON_MODULE_MAP;差别只在验证模型(0.8 = Qwen3-8B)与结果规模。</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 核心工具 -->
+  <h2 class="sec">★ 核心工具:dcu_probe 的 <code>pt_compare</code>(官方精度比对 API,backend=megatron)</h2>
+  <div class="tool">
+    <h3>pt_compare 是什么、发挥什么效果</h3>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>dcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 DCU fork)。它是 dcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本调的就是它:</p>
+    <div class="sig"><span class="c"># 训练侧 dump(mcore/TE)↔ 推理侧 dump(das vllm 0.11),逐算子比对</span>
+<span class="k">pt_compare</span>({<span class="s">"npu_path"</span>: 训练侧dump.json, <span class="s">"bench_path"</span>: 推理侧dump.json},
+           output_path, <span class="k">consistent_check</span>=<span class="k">True</span>, <span class="k">backend</span>=<span class="s">"megatron"</span>)</div>
+    <p style="margin:6px 0;color:#424a53;font-size:13.5px"><b>它内部干这几件事(效果):</b></p>
+    <ul>
+      <li><b>读两侧 dump.json</b> → 建两张算子表(<b>NPU=训练侧</b>、<b>Bench=推理侧</b>;方向反了就 match 不上,证据 <code>acc_compare.py:786-787</code> 成对 <code>engine='train'</code>/<code>engine='infer'</code>)。</li>
+      <li><b><code>consistent_check=True</code></b> → 走 verl 训推一致<b>专用比对算法</b>(而非普通逐 tensor 比)。</li>
+      <li><b><code>backend="megatron"</code></b> → 用 <code>MEGATRON_MODULE_MAP</code> 把 mcore/TE 命名映射到 vllm 命名,含 <b>10 条</b>:<code>word_embeddings→embed_tokens</code>、<code>self_attention→self_attn</code>、<code>linear_qkv→qkv_proj</code>、<code>q_layernorm→q_norm</code>、<code>k_layernorm→k_norm</code>、<code>core_attention→attn</code>、<code>linear_proj→o_proj</code>、<code>router→gate</code>、<code>linear_fc1→gate_up_proj</code>、<code>linear_fc2→down_proj</code>。</li>
+      <li><b>consistent_match → dual_monotonic_sort</b> → 把两侧算子<b>按位置单调对齐</b>;张量并行(SP)切片由 <code>need_cat</code>+<code>BACKEND_CAT_RULES</code> <b>按 seq 维自动 cat</b> 回整层再比(不是平方和聚合——SP 把不同 token 分到不同 rank,平方和数学上错)。</li>
+      <li><b>逐算子算 NormRelativeErr</b>(Norm 相对误差)→ 落 <code>compare_result_*.xlsx</code>。</li>
+    </ul>
+    <p style="margin:8px 0 0;color:#9a6700;font-size:13px"><b>关键(megatron 比 FSDP 0.7 简单):</b>megatron 后端推理侧用 <b>das vllm 0.11</b>,dump 里的模块序干净、没有训练侧缺失的交错模块 → <b>可以直接把配对好的两侧 dump 喂 pt_compare</b>,<code>dual_monotonic_sort</code> 一次就过。而 FSDP 0.7 用 das vllm 0.18.1,推理 dump 多出 72 个交错模块会撑爆对齐,必须先过滤 —— 0.8 megatron 和 0.7 megatron 一样没有那道坎。</p>
+  </div>
+
+  <!-- 数据流 -->
+  <div class="flow">
+    <b>整脚本数据流(4 步,无过滤,与 0.7 megatron 同):</b>
+    <div class="chain" style="margin-top:8px">① 按 request_id 配对两侧 dump  <span class="arrow">→</span>  ② 挑同 prompt 完整 prefill 样本(embed token 数相等)  <span class="arrow">→</span>  <b style="color:#0969da">③ 调 pt_compare(backend=megatron)</b>  <span class="arrow">→</span>  ④ 读 xlsx 排除整层+统计(1083 真算子 99.4% &lt;1%、中位 0%)</div>
+  </div>
+
+  <!-- ① 配对 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">①</span><span class="ttl">按 request_id 配对两侧 dump</span><span class="role">给 pt_compare 找到"同一个 prompt 的两份 dump"</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="k">def</span> <span class="fn">strip</span>(rid): <span class="k">return</span> rid.split(<span class="s">"-"</span>)[<span class="n">0</span>] <span class="k">if</span> rid <span class="k">else</span> rid</div>
+        <div class="l"><span class="c"># 推理侧:dispatch_log 里 phase=prefill 且 requests=1 的 step → dump.json</span></div>
+        <div class="l">gen = {}</div>
+        <div class="l"><span class="k">for</span> dl <span class="k">in</span> sorted(glob.glob(<span class="s">"%s/dump_generate/*/dispatch_log.jsonl"</span> % RUN)):</div>
+        <div class="l">    pid = re.search(<span class="s">r"dump_generate/(\d+)/"</span>, dl).group(<span class="n">1</span>); k = <span class="n">0</span></div>
+        <div class="l">    <span class="k">for</span> line <span class="k">in</span> open(dl):</div>
+        <div class="l">        <span class="k">try</span>: r = json.loads(line)</div>
+        <div class="l">        <span class="k">except</span>: <span class="k">continue</span></div>
+        <div class="l">        <span class="k">if</span> r.get(<span class="s">"phase"</span>) != <span class="s">"prefill"</span>: <span class="k">continue</span></div>
+        <div class="l">        reqs = r.get(<span class="s">"requests"</span>, [])</div>
+        <div class="l">        <span class="k">if</span> len(reqs) == <span class="n">1</span>:</div>
+        <div class="l">            cand = sorted(glob.glob(<span class="s">"%s/dump_generate/%s/step%d/rank*/dump.json"</span> % (RUN, pid, k)))</div>
+        <div class="l">            rid = strip(reqs[<span class="n">0</span>].get(<span class="s">"request_id"</span>))</div>
+        <div class="l hl">            <span class="k">if</span> cand <span class="k">and</span> rid: gen.setdefault(rid, cand[<span class="n">0</span>])</div>
+        <div class="l">        k += <span class="n">1</span></div>
+        <div class="l"><span class="c"># 训练侧:update_actor_log 里 num_requests=1 → 按 step/rank 定位 dump.json</span></div>
+        <div class="l">train = {}</div>
+        <div class="l"><span class="k">for</span> ual <span class="k">in</span> sorted(glob.glob(<span class="s">"%s/dump_actor/*/update_actor_log.jsonl"</span> % RUN)):</div>
+        <div class="l">    <span class="k">for</span> line <span class="k">in</span> open(ual):</div>
+        <div class="l">        <span class="k">try</span>: r = json.loads(line)</div>
+        <div class="l">        <span class="k">except</span>: <span class="k">continue</span></div>
+        <div class="l">        <span class="k">if</span> r.get(<span class="s">"num_requests"</span>) != <span class="n">1</span>: <span class="k">continue</span></div>
+        <div class="l">        <span class="k">for</span> rid <span class="k">in</span> r.get(<span class="s">"request_ids"</span>, []):</div>
+        <div class="l">            rid = strip(rid); d = <span class="s">"%s/dump_actor/step%s/rank%s/dump.json"</span> % (RUN, r.get(<span class="s">"step"</span>), r.get(<span class="s">"rank"</span>))</div>
+        <div class="l hl">            <span class="k">if</span> os.path.exists(d) <span class="k">and</span> rid: train.setdefault(rid, d)</div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-c">配对</span>
+        <h4>把两侧对上号</h4>
+        <p>pt_compare 一次只比<b>一对</b> dump.json(一个训练前向 vs 一个推理前向)。这步用 <code>request_id</code> 把两侧对上:推理侧从 <code>dispatch_log</code> 找、训练侧从 <code>update_actor_log</code> 找。</p>
+        <p><b>只取单 request</b>(推理 <code>len(reqs)==1</code> / 训练 <code>num_requests==1</code>)的 prefill —— 多 request 拼 batch 的 dump 是混合张量,无法逐层比。das 会给 id 加 <code>-&lt;8hex&gt;</code> 后缀,<code>strip</code>(split <code>"-"</code> 取首段)去掉才对得齐。</p>
+        <p class="warn"><b>megatron 特有:</b>训练侧 request_id 由 ③ 号 patch(<code>llm_server</code>)注入 <code>extra_fields</code>、贯穿到训练侧 micro_batch,再由 <code>update_actor_log</code> 逐样本落 <code>step</code>/<code>rank</code>,这里才配得上 <code>dump_actor/stepN/rankM/dump.json</code>。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 挑样本 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">②</span><span class="ttl">挑同 prompt 的完整 prefill 样本</span><span class="role">保证 pt_compare 比的是同一个东西</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="k">def</span> <span class="fn">tok</span>(d, subs):</div>
+        <div class="l">    dd = json.load(open(d)).get(<span class="s">"data"</span>, {})</div>
+        <div class="l">    <span class="k">for</span> k, v <span class="k">in</span> dd.items():</div>
+        <div class="l">        <span class="k">if</span> all(s <span class="k">in</span> k <span class="k">for</span> s <span class="k">in</span> subs) <span class="k">and</span> k.endswith(<span class="s">"forward.0"</span>):</div>
+        <div class="l">            a = v.get(<span class="s">"input_args"</span>, [])</div>
+        <div class="l">            <span class="k">return</span> a[<span class="n">0</span>].get(<span class="s">"shape"</span>, [<span class="k">None</span>])[-<span class="n">1</span>] <span class="k">if</span> a <span class="k">and</span> isinstance(a[<span class="n">0</span>], dict) <span class="k">else</span> <span class="k">None</span></div>
+        <div class="l">    <span class="k">return</span> <span class="k">None</span></div>
+        <div class="l">common = sorted(set(gen) <span class="k">&amp;</span> set(train))   <span class="c"># 两侧都有的 request_id</span></div>
+        <div class="l hl">good = [rid <span class="k">for</span> rid <span class="k">in</span> common <span class="k">if</span> tok(train[rid], [<span class="s">"word_embeddings"</span>, <span class="s">"VocabParallel"</span>]) == tok(gen[rid], [<span class="s">"embed_tokens"</span>, <span class="s">"VocabParallel"</span>])]</div>
+        <div class="l">print(<span class="s">"总配对:"</span>, len(common), <span class="s">" token数完全匹配(真·同prompt完整prefill):"</span>, len(good))</div>
+        <div class="l"><span class="k">if</span> <span class="k">not</span> good:</div>
+        <div class="l">    <span class="k">raise</span> SystemExit(<span class="s">"无完整匹配配对"</span>)</div>
+        <div class="l">rid = good[<span class="n">0</span>]   <span class="c"># 选一个两侧 embed 输入 token 数完全相同的</span></div>
+        <div class="l">print(<span class="s">"选 rid=%s  token=%s"</span> % (rid, tok(train[rid], [<span class="s">"word_embeddings"</span>, <span class="s">"VocabParallel"</span>])))</div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-b">对齐</span>
+        <h4>token 数一致 = 真·同 prompt</h4>
+        <p><code>tok()</code> 取 embed 层 <code>forward.0</code> 的 <code>input_args[0].shape[-1]</code>(= 输入 token 数)。<b>megatron 两侧 embed 命名不同</b>:训练侧是 mcore 的 <code>word_embeddings.VocabParallelEmbedding</code>,推理侧是 vllm 的 <code>embed_tokens.VocabParallel</code> —— 所以两边各用各的关键字取。</p>
+        <p class="warn"><b>为什么必须过滤:</b>推理部分 prompt 会被 <b>chunk</b>(dump 粒度),<code>dump_generate/{pid}/step{k}</code> 可能取到不完整 chunk(完整 72 tok 取成 4 tok)。<b>不过滤会拿错配对、误差全是假象</b> —— 实测<b>过滤前 1~130%、过滤后真算子 99.4% &lt;1%</b>。选一个 token 数相等的 <code>rid</code>,拿 <code>train[rid]</code>/<code>gen[rid]</code> 去比,就是喂给 pt_compare 的那一对。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ pt_compare -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">调 dcu_probe 的 pt_compare(核心,直接喂·无过滤)</span><span class="role">★这里才真正"用 dcu_probe 工具"</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l hl"><span class="k">from</span> dcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
+        <div class="l">out = <span class="s">"%s/compare_out"</span> % RUN</div>
+        <div class="l">os.makedirs(out, exist_ok=<span class="k">True</span>)</div>
+        <div class="l"><span class="k">for</span> x <span class="k">in</span> glob.glob(out + <span class="s">"/*.xlsx"</span>): os.remove(x)</div>
+        <div class="l hl">pt_compare({<span class="s">"npu_path"</span>: train[rid], <span class="s">"bench_path"</span>: gen[rid]}, out, consistent_check=<span class="k">True</span>, backend=<span class="s">"megatron"</span>)</div>
+        <div class="l"><span class="c"># npu_path = 训练侧 dump;bench_path = 推理侧 dump(★不需先过滤)</span></div>
+        <div class="l"><span class="c"># 产物:out/compare_result_*.xlsx(逐算子 NormRelativeErr)</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-a">dcu_probe 工具</span>
+        <h4>官方逐算子比对就在这一行</h4>
+        <p>前 2 步全是铺垫,<b>这一行才是真正发挥效果的 dcu_probe 工具</b>。它读两侧 dump.json,用 <code>consistent_check</code>+<code>backend=megatron</code> 的专用算法把算子对齐(<code>MEGATRON_MODULE_MAP</code> 命名映射 + <code>dual_monotonic_sort</code> 单调对齐 + SP 切片自动 cat),逐算子算 Norm 相对误差,落 xlsx。</p>
+        <p class="warn"><b>方向不能反:</b><code>npu_path</code> 必须给训练、<code>bench_path</code> 给推理(<code>acc_compare.py:786-787</code> 成对 <code>engine='train'/'infer'</code>);反了 module 全 match 不上(报 shape/grad inconsistent)。</p>
+        <p class="warn"><b>直接喂,无过滤:</b>这里把 <code>gen[rid]</code> 直接喂进去 —— das vllm 0.11 模块序干净,<code>dual_monotonic_sort</code> 一次就过,不像 FSDP 0.7 要先剔 72 交错模块。<b>容器要 <code>pip install openpyxl</code></b>,否则存 xlsx 崩。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 后处理 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--dim)">④</span><span class="ttl">读 xlsx,排除整层+统计</span><span class="role">把 pt_compare 的结果整理成结论</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="k">import</span> pandas <span class="k">as</span> pd</div>
+        <div class="l">df = pd.read_excel(sorted(glob.glob(out + <span class="s">"/*.xlsx"</span>))[-<span class="n">1</span>])   <span class="c"># pt_compare 出的报告</span></div>
+        <div class="l">m = df[df[<span class="s">"NPU Name"</span>].notna() <span class="k">&amp;</span> df[<span class="s">"Bench Name"</span>].notna()].copy()   <span class="c"># 双边 match 的行</span></div>
+        <div class="l"><span class="k">def</span> <span class="fn">p2f</span>(x):</div>
+        <div class="l">    <span class="k">try</span>: <span class="k">return</span> float(str(x).replace(<span class="s">"%"</span>, <span class="s">""</span>))</div>
+        <div class="l">    <span class="k">except</span>: <span class="k">return</span> <span class="k">None</span></div>
+        <div class="l">m[<span class="s">"nerr"</span>] = m[<span class="s">"NormRelativeErr"</span>].apply(p2f)</div>
+        <div class="l hl">real = m[m[<span class="s">"NPU Name"</span>].astype(str).str.contains(<span class="s">"output"</span>, na=<span class="k">False</span>) <span class="k">&amp;</span> ~m[<span class="s">"NPU Name"</span>].astype(str).str.contains(<span class="s">"IdentityOp"</span>, na=<span class="k">False</span>)]</div>
+        <div class="l">print(<span class="s">"=== 双边match:"</span>, len(m), <span class="s">" Result:"</span>, df[<span class="s">"Result"</span>].value_counts().to_dict())</div>
+        <div class="l">print(<span class="s">"=== 真算子 output NormRelativeErr 分布(排除IdentityOp融合) ==="</span>)</div>
+        <div class="l">print(real[<span class="s">"nerr"</span>].describe().to_string())</div>
+        <div class="l hl">print(<span class="s">"&lt;1%%: %d/%d  &lt;0.5%%: %d"</span> % ((real[<span class="s">"nerr"</span>] &lt; <span class="n">1</span>).sum(), real[<span class="s">"nerr"</span>].notna().sum(), (real[<span class="s">"nerr"</span>] &lt; <span class="n">0.5</span>).sum()))</div>
+        <div class="l">print(<span class="s">"=== 首尾 embed/final_norm ==="</span>)</div>
+        <div class="l"><span class="k">for</span> kw <span class="k">in</span> [<span class="s">"word_embeddings.VocabParallelEmbedding.forward.0.output.0"</span>, <span class="s">"final_layernorm.RMSNorm.forward.0.output.0"</span>]:</div>
+        <div class="l">    sub = m[m[<span class="s">"NPU Name"</span>].astype(str).str.contains(kw.replace(<span class="s">"."</span>, <span class="s">"\\."</span>), na=<span class="k">False</span>, regex=<span class="k">True</span>)]</div>
+        <div class="l">    <span class="k">if</span> len(sub): print(sub[[<span class="s">"NPU l2norm"</span>, <span class="s">"Bench l2norm"</span>, <span class="s">"NormRelativeErr"</span>]].to_string())</div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-e">统计</span>
+        <h4>排除结构性不可比,报叶子算子分布</h4>
+        <p>pt_compare 会把所有算子都列进 xlsx,包括结构性不可比的:<b>整层 wrapper</b>(<code>TransformerLayer</code> 的输出是残差和)、<b><code>IdentityOp</code></b>(megatron 把 layernorm 融进 <code>TELayerNormColumnParallelLinear</code>,层内 <code>input_layernorm</code>/<code>pre_mlp_layernorm</code> 是恒等占位)。这步只留带 <code>output</code>、且非 <code>IdentityOp</code> 的<b>真叶子算子输出</b>统计 NormRelativeErr,并首尾抽查 <code>word_embeddings</code> / <code>final_layernorm</code> 两侧 l2norm。</p>
+        <p>结果(Qwen3-8B,3 个不同长度 prompt <b>72/80/112 tok</b> 汇总):<b>真算子(embed + qkv/proj/mlp/attention)1083 个 99.4% 误差 &lt;1%、中位 0%、embed 两侧 Norm 完全相同</b> = 训推一致。单样本 <code>run_megatron_compare.py</code> 跑一对、<code>batch_compare.py</code> 跨样本汇总。<code>final_layernorm</code> 官方映射表未覆盖(无 <code>final_layernorm→model.norm</code>),官方 compare 不比,但手动验两侧 Norm <code>1320==1320</code> 一致。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ compare 正确配置 -->
+  <h2 class="sec">★ compare 正确配置(0.8 megatron 实测,让两侧 dump 对齐)</h2>
+  <p class="lead">脚本能对齐的前提,是 launch 时 override 让训练侧 dump 与推理侧<b>单 prompt prefill</b> 同构。这是本任务最大教训 —— <b>反复在错误字段上试错</b>,经逐一核读 verl 0.8.0 源码才定位(每条都带 文件:行 证据)。</p>
+  <table class="ov">
+    <tr><th>目的</th><th>✅ 正确配置</th><th>❌ 易错点(为什么别的字段没用)</th></tr>
+    <tr>
+      <td>训练单 prompt micro_batch(<code>num_requests=1</code>)</td>
+      <td><code>rollout.log_prob_micro_batch_size_per_gpu=1</code><br>+ <code>actor.use_dynamic_bsz=False</code><br>+ <code>rollout.log_prob_use_dynamic_bsz=False</code></td>
+      <td><b>不是</b> <code>ppo_micro_batch_size</code>(那个只管 update_actor)。<code>compute_log_prob</code>(dump 发生处,forward_only)走 <code>infer_batch</code>(<code>engine_workers.py:644</code>),读 <code>log_prob_*</code>(init 赋值 <code>:564-566</code>)。且 <code>use_dynamic_bsz=True</code> 时按 token 打包(<code>engine/utils.py:74</code>)会忽略 micro_batch。<code>log_prob_use_dynamic_bsz</code> 须与 actor 一致,否则 <code>engine_workers.py:557</code> assert 崩。</td>
+    </tr>
+    <tr>
+      <td>关 sequence parallel(否则 output 沿 seq 切 1/TP,如 <code>[43,1,4096]</code>=344/8)</td>
+      <td><code>+actor_rollout_ref.actor.megatron.override_transformer_config.sequence_parallel=False</code><br>(ref 侧同理加一条)</td>
+      <td><b>不是</b> <code>actor.megatron.sequence_parallel</code>。默认 <code>vanilla_mbridge=True</code> 路径(<code>transformer_impl.py:192-199</code>)只读 <code>override_transformer_config</code>,<code>engine_config.sequence_parallel</code> 是死字段,SP 由 mbridge 按 TP&gt;1 自动开。关后变 <code>[344,1,4096]</code>,配合 THD packed 与 vllm <code>[total_token, h]</code> 同构。</td>
+    </tr>
+    <tr>
+      <td>shape 对齐 + 逐卡配对 + 前向可 dump</td>
+      <td><code>model.use_remove_padding=True</code><br>+ <code>trainer.balance_batch=False</code><br>+ <code>PROMPTS_ONLY=1</code><br>+ <code>rollout.enforce_eager=True</code></td>
+      <td><code>use_remove_padding</code>=THD packed 去 pad;<code>balance_batch=False</code> 不跨 rank 重排、保逐卡 request 配对;<code>PROMPTS_ONLY=1</code> 裁 response 只算 prompt prefill;<code>enforce_eager=True</code> <b>必须</b>(否则 vllm compile/cudagraph 绕过推理 hook,dump 为空)。</td>
+    </tr>
+  </table>
+  <div class="flow">
+    <b>再叠一条样本挑选纪律(② 步已实现):</b>推理部分 prompt 被 chunk,<code>dump_generate/{pid}/step{k}</code> 可能取到不完整 chunk(完整 72 tok 取成 4 tok)。<b>必须挑 train/gen embed input token 数完全匹配的样本</b> —— <code>run_megatron_compare.py</code> / <code>verify_id_match.py</code> 已含该过滤。<b>不过滤会拿错配对、误差全是假象</b>:实测<b>过滤前 1~130%、过滤后真算子 99.4% &lt;1%</b>。
+  </div>
+
+  <!-- 诚实定界 + 已知问题 -->
+  <h2 class="sec">诚实定界 + 已知问题(照实说,别夸成"逐 tensor 全一致")</h2>
+  <div class="flow">
+    <b>① 训推一致的准确含义 = 可比叶子算子 + 激活统计量一致,不是全部 tensor 一致</b><br>
+    直接读官方 <code>pt_compare</code> 的 <b>4867 行</b> xlsx 复核:<b>3927 pass</b>(253 权重同源必同 + 3673 激活统计量一致 + 1)、<b>939 "error"</b> 里 <b>903 是 <code>requires_grad</code> 元数据差</b>(训练 True/推理 False,benign)、1 是 int dtype(值相同)、<b>35 是整层 <code>TransformerLayer</code>/<code>IdentityOp</code></b>。<b>带 RelativeErr 数值的可比算子(~466)误差全 ≈0、0 个真叶子算子发散</b>(2 个独立样本 s0/s1 完全一致,多数 bit-identical)。
+    <p style="margin-top:14px"><b>② 被排除的 35 个整层是量级差,不是 bug(方法学排除)</b><br>
+    整层 <code>TransformerLayer</code> output 是残差和、含 SP,非 normed 算子:训练侧残差流 <b>massive-activation max ~2.2e4</b> vs 推理侧 <b>~5.7</b>,shape <code>[S,1,H]</code> vs <code>[S,H]</code> —— 这是不同模块边界 + LLaMA/Qwen 残差 massive-activation 现象,不参与比对,<b>但不能据此宣称逐 tensor 全一致</b>。</p>
+    <p style="margin-top:14px"><b>③ 样本数的坦白</b><br>
+    <b>token 完全匹配的干净可比样本通常只有 ~2 个</b>(多数 prompt 的 train/infer prefill token 数不完全对齐)。<code>run_megatron_compare.py</code> 只跑 <code>good[0]</code> 一对;要多样本统计通过率用 <code>batch_compare.py</code> / <code>run_megatron_compare_multi.py</code>。</p>
+  </div>
+  <div class="flow" style="border-color:#d4a72c;background:#fffbe8">
+    <b class="warn">⚠️ 已知问题(compare 数据来源的诚实交代):</b>推理侧 vllm run <b>跑不久</b> —— 两种独立失败:全 offload 把 8B 优化器态压 CPU 触发 host-RAM <b>OOM</b>(exit137,关 <code>optimizer_offload</code>/<code>grad_offload</code> 已堵)+ in-loop validation 的 <b>vllm rollout 集合通信挂死</b>(<code>EngineCore</code> 卡 <code>shm_broadcast.acquire_read</code>,关 <code>trainer.test_freq=-1</code> 已避)。都非 dcu_probe、非数值问题。<b>compare 只用崩/挂之前的早期 step 产物</b>(实测 0 NaN、有效),不期望长跑。
+  </div>
+
+  <!-- 区别 -->
+  <h2 class="sec">末尾对照:megatron 后端 compare 比 FSDP 0.7 <b>少一步</b></h2>
+  <p class="lead">关键区分:<b>pt_compare 是 dcu_probe 的官方比对工具(底层能力),两个后端都用它</b>;差别只在「喂进去之前要不要过滤」。决定因素 = 推理侧 <b>das vllm 的版本</b>。0.8 megatron 与 0.7 megatron 同一套(都 das vllm 0.11、都无过滤)。</p>
+  <table class="ov">
+    <tr><th>对象</th><th>是什么</th><th>backend / MODULE_MAP</th><th>推理侧 das vllm</th><th>过滤交错模块?</th><th>粒度 / 结果</th></tr>
+    <tr><td><code>pt_compare</code></td><td><b>dcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 DCU fork)</td><td>—(它本身就是工具)</td><td>—</td><td>—</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
+    <tr><td><code>run_megatron_compare.py</code><br>(本页,0.8)</td><td>megatron 0.8 后端 compare<br>= 配对 → 挑样本 → <b>直接喂</b> pt_compare</td><td><code>megatron</code> / <code>MEGATRON_MODULE_MAP</code></td><td><b>0.11</b></td><td><b>❌ 不需要</b>(模块序干净)</td><td>真算子(3 prompt 汇总)1083 个 → <b>99.4% &lt;1%</b>、中位 0%、embed Norm 相同</td></tr>
+    <tr><td><code>run_megatron_compare.py</code><br>(0.7 megatron)</td><td>megatron 0.7 后端 compare<br>= 配对 → 挑样本 → <b>直接喂</b> pt_compare(同一套)</td><td><code>megatron</code> / <code>MEGATRON_MODULE_MAP</code></td><td><b>0.11</b></td><td><b>❌ 不需要</b></td><td>叶子算子 289 个 → <b>266/289 &lt;1%</b>、中位 0%</td></tr>
+    <tr><td><code>run07_filtered.py</code><br>(FSDP 0.7)</td><td>FSDP 后端 compare<br>= 配对 → 挑样本 → <b>先过滤</b> → 喂 pt_compare</td><td><code>fsdp</code> / <code>FSDP_MODULE_MAP</code></td><td><b>0.18.1</b></td><td><b>✅ 必须</b>(剔 72 交错模块 338→266)</td><td>叶子算子 98 个 → <b>98/98 &lt;1%</b></td></tr>
+  </table>
+
+  <div class="flow">
+    <p><b>① 为什么 0.8 megatron 能直接喂 pt_compare</b><br>
+    megatron 后端推理走 <b>das vllm 0.11</b>,它的 dump 模块序和训练侧 mcore/TE 能一一单调对上 —— 没有"训练侧缺失、位置又交错"的模块。所以配对好、挑好样本后,<b>直接</b> <code>pt_compare(consistent_check=True, backend="megatron")</code>,<code>dual_monotonic_sort</code> 一次就过,不崩。这和 0.7 megatron 是<b>同一套</b>(都用 das vllm 0.11、都无过滤)。</p>
+    <p style="margin-top:14px"><b>② 为什么 FSDP 0.7 必须多一步过滤</b><br>
+    FSDP 0.7 推理走 <b>das vllm 0.18.1</b>,推理 dump 里比训练侧多出 <b>72 个训练侧无对应、且位置交错的模块</b>(<code>Triton.kernel_unified_attention</code>×24 + <code>reshape_and_cache</code>×24 + 独立 <code>rotary_emb</code>×24)。不剔它们,pt_compare 的 <code>dual_monotonic_sort</code> 因两侧位置无法同时单调递增而 <code>raise Conflicting comparison data</code> → 崩。所以 <code>run07_filtered.py</code> 要先把它们过滤掉(338→266)才喂 pt_compare。</p>
+    <p style="margin-top:14px"><b>③ 底层工具是同一个,只 backend 参数不同</b><br>
+    三个后端用的都是<b>同一个 <code>pt_compare</code></b>,只是 <code>backend</code> 参数不同(megatron 用 <code>MEGATRON_MODULE_MAP</code>、fsdp 用 <code>FSDP_MODULE_MAP</code>)。megatron 版的脚本因此更短、更直——省掉了那道过滤,把精力全放在配对与样本挑选上。0.8 与 0.7 的 megatron compare 脚本几乎逐行相同。</p>
+  </div>
+
+  <div class="flow">
+    <b>一句话记住 0.8 megatron vs FSDP 0.7 的 compare 差异:</b><br>
+    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = dcu_probe 官方比对工具(核心能力,两后端共用,只 backend 参数不同)
+<b style="color:#1a7f37">run_megatron_compare.py</b>(0.8/0.7)= <b>4 步·无过滤</b>:配对 → 挑样本 → 直接喂 pt_compare(backend=megatron)→ 统计   [0.8: 1083 个 99.4% &lt;1%]
+<b style="color:#bc4c00">run07_filtered.py</b>(FSDP 0.7)= <b>5 步·多一步过滤</b>:配对 → 挑样本 → 剔 72 交错模块 → 喂 pt_compare(backend=fsdp)→ 统计   [98/98 &lt;1%]
+差异根因 = 推理侧 <b>das vllm 版本</b>:megatron 用 0.11(干净)、FSDP 0.7 用 0.18.1(72 交错模块)</div>
+  </div>
+
+</div>
+<footer>
+  run_megatron_compare.py 代码逻辑 · 核心工具 dcu_probe.pytorch.compare.pt_compare(backend=megatron)· 采集级别 L0 + statistics
+</footer>
+</body>
+</html>

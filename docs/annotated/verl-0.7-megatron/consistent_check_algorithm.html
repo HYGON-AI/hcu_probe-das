@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dcu_probe pt_compare(consistent_check=True, backend=megatron) —— 训推一致比对算法流程标注</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
+    --add-bg:rgba(45,164,78,.12); --add-bd:#2da44e; --key:#0550ae; --str:#0a3069;
+    --com:#6e7781; --fn:#8250df; --num:#0550ae; --accent:#0969da; --train:#1a7f37; --infer:#bc4c00;
+    --code-bg:#f6f8fa; --kw:#cf222e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{padding:32px 40px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#ffffff,#eef1f5)}
+  header h1{margin:0 0 6px;font-size:24px}
+  header p{margin:4px 0;color:var(--dim);font-size:14px}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 24px 80px}
+  h2.sec{margin:44px 0 6px;font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h2.sec .tag{font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;vertical-align:middle;margin-left:10px}
+  .tag.train{background:rgba(63,185,80,.15);color:var(--train);border:1px solid var(--train)}
+  .tag.infer{background:rgba(219,109,40,.15);color:var(--infer);border:1px solid var(--infer)}
+  p.lead{color:var(--dim);font-size:14px;margin:10px 0 0}
+  /* overview table */
+  table.ov{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+  table.ov th,table.ov td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top}
+  table.ov th{background:var(--panel);color:var(--dim)}
+  table.ov code{color:var(--key)}
+  table.ov .tr{color:var(--train);font-weight:600}
+  table.ov .in{color:var(--infer);font-weight:600}
+  .badge{display:inline-block;min-width:20px;text-align:center;font-weight:700;border-radius:6px;padding:1px 7px;font-size:12px}
+  .b-1{background:rgba(9,105,218,.18);color:#0969da}
+  .b-2{background:rgba(130,80,223,.18);color:#8250df}
+  .b-3{background:rgba(26,127,55,.18);color:#1a7f37}
+  .b-4{background:rgba(154,103,0,.18);color:#9a6700}
+  .b-5{background:rgba(101,109,118,.2);color:#57606a}
+  /* pipeline strip */
+  .pipe{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:20px 0 8px}
+  .pipe .stg{flex:1;min-width:150px;border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:12px 14px;position:relative}
+  .pipe .stg .n{display:inline-block;font-weight:700;font-size:12px;border-radius:6px;padding:1px 8px;margin-bottom:6px}
+  .pipe .stg h4{margin:0 0 4px;font-size:13.5px}
+  .pipe .stg p{margin:0;font-size:12px;color:var(--dim)}
+  .pipe .sep{align-self:center;color:var(--accent);font-weight:700;font-size:18px;padding:0 6px}
+  @media(max-width:900px){.pipe{flex-direction:column}.pipe .sep{transform:rotate(90deg);padding:4px 0}}
+  /* card */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin:20px 0;overflow:hidden}
+  .card .hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card .hd .no{font-weight:700;font-size:15px}
+  .card .hd .path{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--key)}
+  .card .hd .loc{font-family:ui-monospace,monospace;font-size:12px;color:var(--dim)}
+  .card .hd .role{margin-left:auto;font-size:12px;color:var(--dim)}
+  .card .body{display:grid;grid-template-columns:1fr 400px}
+  @media(max-width:980px){.card .body{grid-template-columns:1fr}}
+  .code{padding:14px 0;overflow-x:auto;background:var(--code-bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .code .l{white-space:pre;padding:0 16px;min-height:19px}
+  .code .ctx{color:#8c959f}
+  .code .add{background:var(--add-bg);border-left:3px solid var(--add-bd);padding-left:13px}
+  .code .hl{background:rgba(255,215,0,.14);border-left:3px solid #d4a72c;padding-left:13px}
+  .k{color:var(--kw)} .s{color:var(--str)} .c{color:var(--com)} .fn{color:var(--fn)} .n{color:var(--num)} .warn{color:#9a6700}
+  .ann{padding:16px 18px;border-left:1px solid var(--border);font-size:13.5px}
+  @media(max-width:980px){.ann{border-left:none;border-top:1px solid var(--border)}}
+  .ann h4{margin:0 0 8px;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+  .ann p{margin:0 0 10px;color:#424a53}
+  .ann .why{color:var(--fg)}
+  .ann code{background:#eff1f3;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--key)}
+  .ann .warn{color:#9a6700}
+  .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;background:rgba(88,166,255,.15);color:var(--accent);border:1px solid var(--accent);margin-bottom:8px}
+  .pill.warn{color:#9a6700;border-color:#9a6700;background:rgba(242,204,96,.12)}
+  .rt{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:10px;margin-bottom:10px}
+  .rt-1{background:rgba(9,105,218,.12);color:#0969da;border:1px solid #0969da}
+  .rt-2{background:rgba(130,80,223,.12);color:#8250df;border:1px solid #8250df}
+  .rt-3{background:rgba(26,127,55,.12);color:#1a7f37;border:1px solid #1a7f37}
+  .rt-4{background:rgba(154,103,0,.12);color:#9a6700;border:1px solid #9a6700}
+  .rt-5{background:rgba(101,109,118,.14);color:#57606a;border:1px solid #8c959f}
+  .flow{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:18px 0;font-size:13.5px}
+  .flow code{color:var(--key)}
+  .flow b{color:var(--fg)}
+  .arrow{color:var(--accent);font-weight:700}
+  .sum{background:linear-gradient(180deg,#ffffff,#f2f6ff);border:1px solid var(--accent)}
+  .echo{border:1px solid var(--border);border-radius:10px;padding:2px 0;margin:14px 0;overflow:hidden}
+  .echo .row{display:grid;grid-template-columns:210px 1fr;gap:0;border-top:1px solid var(--border)}
+  .echo .row:first-child{border-top:none}
+  .echo .k2{padding:12px 16px;font-family:ui-monospace,monospace;font-size:12.5px;color:var(--infer);background:rgba(219,109,40,.06);font-weight:600}
+  .echo .v2{padding:12px 16px;font-size:13px;color:#424a53}
+  @media(max-width:760px){.echo .row{grid-template-columns:1fr}.echo .k2{border-bottom:1px solid var(--border)}}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:30px}
+</style>
+</head>
+<body>
+<header>
+  <h1>dcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=megatron)</code> —— 训推一致比对算法流程标注</h1>
+  <p>训推一致性里 <b>npu = 训练侧 dump</b>（mcore + TE + Megatron-LM），<b>bench = 推理侧 dump</b>（das vllm 0.11）。同一个 prompt 的 prefill 前向理论上数值一致，但两侧是<b>异构框架</b>——算子命名（mcore/TE vs vllm）、拆分粒度、shape、出现顺序全不同。默认 compare 的“算子全名对全名”必然配不上。</p>
+  <p><code style="color:#0550ae">consistent_check=True</code> 不是“调了个阈值”，而是把默认的 <code style="color:#cf222e">pd.merge(on=CMP_KEY)</code> 整体换成一套<b>语义级异构比对管线</b>：<b>解析裁窗 → 模块名归一映射 → 四元组多对一聚合 merge → 双单调保序 → shape 口径修正</b>。本页标注这条管线在<b>哪几个源码文件、哪几个函数</b>、每一步抹平哪一类异构。megatron 后端走 <code style="color:#0550ae">backend="megatron"</code> 分支（用 <code>MEGATRON_MODULE_MAP</code>），<span style="color:#1a7f37">绿色高亮 = 关键新增/专用逻辑</span>。</p>
+</header>
+
+<div class="wrap">
+
+  <!-- ============================ 为什么需要它 ============================ -->
+  <h2 class="sec">为什么需要它：普通 compare 在训推场景必然对不上</h2>
+  <p class="lead">默认 compare（<code>consistent_check=False</code>）走 <code>acc_compare.py</code> 的 <code>pd.merge(npu_df, bench_df, on=[CMP_KEY], how='outer')</code>——<b>算子全名对全名</b>。下面 5 类异构，每一类都会让这种 merge 崩掉；每一类对应一个正交机制去抹平。</p>
+  <table class="ov">
+    <tr><th>异构维度</th><th>训练侧 <span class="tr">npu（mcore/TE）</span></th><th>推理侧 <span class="in">bench（das vllm 0.11）</span></th><th>名字对名字 merge 的后果</th><th>抹平机制</th></tr>
+    <tr>
+      <td><b>算子命名</b></td>
+      <td><code>linear_qkv</code> / <code>linear_proj</code></td>
+      <td><code>qkv_proj</code> / <code>o_proj</code></td>
+      <td>字符串不等 → 直接配不上</td>
+      <td><span class="badge b-2">②</span> 模块名映射</td>
+    </tr>
+    <tr>
+      <td><b>拆分粒度</b></td>
+      <td>mcore <b>SP 沿序列切片</b>（每 rank 一段，多行统计量）</td>
+      <td>vllm 完整张量 1 行</td>
+      <td>多对一：merge 出多行、每行只对上一段</td>
+      <td><span class="badge b-3">③b</span> groupby 聚合（自动 cat SP）</td>
+    </tr>
+    <tr>
+      <td><b>shape</b></td>
+      <td>mcore 整层 <code>[S,1,H]</code> / <code>[S,B,H]</code></td>
+      <td>packed <code>[S,H]</code> / <code>[S*B,H]</code></td>
+      <td>严格 ShapeErrChecker 把可比算子全判 error</td>
+      <td><span class="badge b-4">④</span> squeeze / 降维</td>
+    </tr>
+    <tr>
+      <td><b>出现顺序</b></td>
+      <td>一整个 train_step 的前向主干顺序</td>
+      <td>das vllm 0.11 模块序<b>干净、无交错 kernel</b></td>
+      <td>两侧算子数不同，outer merge 后行顺序错乱</td>
+      <td><span class="badge b-3">③c</span> 双单调保序（megatron 无需过滤）</td>
+    </tr>
+    <tr>
+      <td><b>覆盖范围</b></td>
+      <td>一整个 train_step（含反向 + 外层壳）</td>
+      <td>只 prefill 前向</td>
+      <td>训练侧一大堆算子在推理侧根本没有</td>
+      <td><span class="badge b-1">①</span> 解析裁窗</td>
+    </tr>
+  </table>
+  <div class="flow"><b>约束前置</b>（<code>check.py check_consistent_param</code>）：<code>consistent_check=True</code> 时 <code>backend</code> 必须是 <code>fsdp</code> 或 <code>megatron</code>，否则 <code>raise CompareException</code>。因为其它后端的 dump 没有 <code>layer</code> / <code>class</code> / <code>module_mapping</code> 这些列，机制 ②③ 无从谈起。本页取 <code>backend="megatron"</code> 分支。</div>
+
+  <!-- ============================ 五段管线总览 ============================ -->
+  <h2 class="sec">五段管线总览<span class="tag train">npu=训练</span><span class="tag infer">bench=推理</span></h2>
+  <p class="lead">从两侧 dump.json 到逐行相对误差，数据依次流过 5 段。每段只干一件事、只抹平一类异构；前一段做错，compare 要么配对为 0、要么比出假 diff。这条管线与 FSDP 后端共用，只在 ② 用 <code>MEGATRON_MODULE_MAP</code>、③b 按训练侧聚合、④ 走 mcore 降维分支上有别。</p>
+  <div class="pipe">
+    <div class="stg"><span class="n b-1">① 解析裁窗</span><h4>should_parse_op</h4><p>训练侧只留 VocabParallelEmbedding→GPTModel 的前向主干</p></div>
+    <div class="sep">→</div>
+    <div class="stg"><span class="n b-2">② 模块名映射</span><h4>process_module_mapping</h4><p>linear_qkv→qkv_proj，两侧叫法归一到同一 key</p></div>
+    <div class="sep">→</div>
+    <div class="stg"><span class="n b-3">③ 聚合匹配</span><h4>consistent_match</h4><p>四元组 merge + 多对一 groupby + 双单调保序</p></div>
+    <div class="sep">→</div>
+    <div class="stg"><span class="n b-4">④ 口径修正</span><h4>VerlShapeErrChecker</h4><p>squeeze / 跳融合 / 三维降二维，抹平 shape 假差</p></div>
+    <div class="sep">→</div>
+    <div class="stg"><span class="n b-5">⑤ 逐行算指标</span><h4>calculate_excel_result_df</h4><p>换成 VERL_*_CHECKERS 出 pass/warn/error</p></div>
+  </div>
+
+  <!-- ============================ 逐段标注 ============================ -->
+  <h2 class="sec">逐段标注</h2>
+
+  <!-- 机制① -->
+  <div class="card">
+    <div class="hd"><span class="no b-1" style="color:#0969da">①</span><span class="path">core/compare/acc_compare.py</span><span class="loc">ParseData.should_parse_op</span><span class="role">解析侧裁窗</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="k">def</span> <span class="fn">should_parse_op</span>(self, parse_flag, data_name, device):</div>
+        <div class="l hl"><span class="k">if not</span> self.mode_config.consistent_check:  <span class="c"># 非训推一致 → 全解析</span></div>
+        <div class="l hl">    <span class="k">return</span> <span class="k">True</span></div>
+        <div class="l hl"><span class="k">if</span> device == <span class="s">'Bench'</span>:                <span class="c"># 推理侧 → 全解析(本就只有 prefill)</span></div>
+        <div class="l hl">    <span class="k">return</span> <span class="k">True</span></div>
+        <div class="l ctx">op_name_splits = data_name.split(<span class="s">'.'</span>)</div>
+        <div class="l ctx">module_name    = op_name_splits[-<span class="n">3</span>]   <span class="c"># 模块名</span></div>
+        <div class="l ctx">direction_name = op_name_splits[-<span class="n">2</span>]   <span class="c"># forward / backward</span></div>
+        <div class="l hl"><span class="c"># 训练侧:到顶层模型的 backward 就停止解析</span></div>
+        <div class="l hl"><span class="k">if</span> module_name <span class="k">in</span> VERL_STOP_PARSE_RULES[backend] <span class="k">and</span> direction_name == BACKWARD:</div>
+        <div class="l hl">    <span class="k">return</span> <span class="k">False</span></div>
+        <div class="l hl"><span class="c"># 训练侧:从 VocabParallelEmbedding 的 forward 起开始解析</span></div>
+        <div class="l hl"><span class="k">elif</span> module_name <span class="k">in</span> VERL_BEGIN_PARSE_RULES[backend] <span class="k">and</span> direction_name == FORWARD:</div>
+        <div class="l hl">    <span class="k">return</span> <span class="k">True</span></div>
+        <div class="l ctx"><span class="k">return</span> parse_flag</div>
+        <div class="l ctx"> </div>
+        <div class="l ctx"><span class="c"># common/const.py</span></div>
+        <div class="l ctx">VERL_STOP_PARSE_RULES  = {<span class="s">'fsdp'</span>:[<span class="s">'Qwen2Model'</span>,<span class="s">'Qwen3Model'</span>,<span class="s">'Qwen3MoeModel'</span>], <span class="s">'megatron'</span>:[<span class="s">'GPTModel'</span>]}</div>
+        <div class="l ctx">VERL_BEGIN_PARSE_RULES = {<span class="s">'fsdp'</span>:<span class="s">'Embedding'</span>, <span class="s">'megatron'</span>:<span class="s">'VocabParallelEmbedding'</span>}</div>
+      </div>
+      <div class="ann">
+        <span class="pill">范围对齐</span>
+        <div class="rt rt-1">① 只留 prefill 主干</div>
+        <h4>抹平「覆盖范围」异构</h4>
+        <p class="why">推理侧一个 request 就只有 prefill 前向；训练侧一个 <code>train_step</code> 却含<b>反向传播 + 最外层模型壳</b>。若不裁，训练侧一大堆算子在推理侧没有对应。</p>
+        <p>用两条规则给训练侧卡一个窗口：<b>从 <code>VocabParallelEmbedding</code>（megatron）的 forward 起</b>开解析，<b>到 <code>GPTModel</code> 顶层的 backward 止</b>停解析。只留和推理 prefill 可比的前向主干。（FSDP 对应的是 <code>Embedding</code> → <code>Qwen2Model</code>。）</p>
+        <p><b>推理侧（Bench）不裁</b>——它天然只有 prefill 前向。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 机制② -->
+  <div class="card">
+    <div class="hd"><span class="no b-2" style="color:#8250df">②</span><span class="path">core/compare/verl/mapping.py + acc_compare.py</span><span class="loc">process_module_mapping</span><span class="role">模块名归一映射</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l ctx"><span class="c"># verl/mapping.py —— 把两侧不同叫法映射到同一语义名</span></div>
+        <div class="l hl">MEGATRON_MODULE_MAP = {</div>
+        <div class="l hl">    <span class="s">"word_embeddings"</span>:<span class="s">"embed_tokens"</span>, <span class="s">"self_attention"</span>:<span class="s">"self_attn"</span>,</div>
+        <div class="l hl">    <span class="s">"linear_qkv"</span>:<span class="s">"qkv_proj"</span>, <span class="s">"q_layernorm"</span>:<span class="s">"q_norm"</span>, <span class="s">"k_layernorm"</span>:<span class="s">"k_norm"</span>,</div>
+        <div class="l hl">    <span class="s">"core_attention"</span>:<span class="s">"attn"</span>, <span class="s">"linear_proj"</span>:<span class="s">"o_proj"</span>, <span class="s">"router"</span>:<span class="s">"gate"</span>,</div>
+        <div class="l hl">    <span class="s">"linear_fc1"</span>:<span class="s">"gate_up_proj"</span>, <span class="s">"linear_fc2"</span>:<span class="s">"down_proj"</span>}</div>
+        <div class="l ctx"> </div>
+        <div class="l ctx"><span class="k">def</span> <span class="fn">process_module_mapping</span>(self, data_df, engine, backend):</div>
+        <div class="l ctx">    <span class="c"># 只有 FSDP 推理侧走“取叶子名”捷径;megatron 两侧都过映射表</span></div>
+        <div class="l ctx">    <span class="k">if</span> engine == <span class="s">'infer'</span> <span class="k">and</span> backend == FSDP:</div>
+        <div class="l ctx">        data_df[MODULE_MAPPING] = data_df[MODULE].apply(<span class="k">lambda</span> x: x.split(<span class="s">'.'</span>)[-<span class="n">1</span>])</div>
+        <div class="l ctx">        <span class="k">return</span></div>
+        <div class="l hl">    <span class="k">if</span>   backend == FSDP:     mapping = FSDP_MODULE_MAP</div>
+        <div class="l hl">    <span class="k">elif</span> backend == MEGATRON: mapping = MEGATRON_MODULE_MAP</div>
+        <div class="l ctx">    last_part_mapped = data_df[MODULE_LAST].map(mapping)</div>
+        <div class="l hl">    data_df[MODULE_LAST_MAPPING] = last_part_mapped.fillna(data_df[MODULE_LAST])  <span class="c"># 命中改,否则原名</span></div>
+      </div>
+      <div class="ann">
+        <div class="rt rt-2">② 叫法归一</div>
+        <h4>抹平「算子命名」异构</h4>
+        <p class="why">训练框架和推理框架对同一算子叫法不同（mcore <code>linear_qkv</code> vs vllm <code>qkv_proj</code>、<code>linear_fc2</code> vs <code>down_proj</code>）。把叶子名按映射表改写，写进 <code>MODULE_MAPPING</code> 列。</p>
+        <p><b>MEGATRON 双侧都映射</b>：mcore（<code>linear_qkv</code> / <code>linear_proj</code> / <code>linear_fc1</code>…）和 vllm（<code>qkv_proj</code> / <code>o_proj</code> / <code>gate_up_proj</code>…）命名都跟标准 HF 不一样，两边都要归一。代码里“取叶子名”的捷径只对 <b>FSDP 推理侧</b>生效，megatron 不走。</p>
+        <p>映射后，训练侧 mcore 算子和推理侧 vllm 算子落到<b>同一个语义 key</b>，为 ③ 的四元组匹配铺路。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 机制③ a/b -->
+  <div class="card">
+    <div class="hd"><span class="no b-3" style="color:#1a7f37">③a·b</span><span class="path">core/compare/acc_compare.py</span><span class="loc">consistent_match（consistent_check 时替换默认 merge）</span><span class="role">四元组 merge + 多对一聚合</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l ctx"><span class="c"># consistent_check 时用 consistent_match 顶替默认 pd.merge(on=CMP_KEY)</span></div>
+        <div class="l ctx"><span class="k">def</span> <span class="fn">consistent_match</span>(self, npu_df, bench_df):</div>
+        <div class="l ctx">    npu_rank   = {v:i <span class="k">for</span> i,v <span class="k">in</span> <span class="fn">enumerate</span>(npu_df[OP_NAME])}   <span class="c"># 记原始出现序</span></div>
+        <div class="l ctx">    bench_rank = {v:i <span class="k">for</span> i,v <span class="k">in</span> <span class="fn">enumerate</span>(bench_df[OP_NAME])}</div>
+        <div class="l hl">    <span class="c"># (a) 四元组语义 merge —— 不按算子全名</span></div>
+        <div class="l hl">    merge_df = pd.merge(npu_df, bench_df,</div>
+        <div class="l hl">        on=[CALL_DIRECTION, SUFFIX, LAYER, MODULE_MAPPING],  <span class="c"># 前反向·后缀·层号·映射名</span></div>
+        <div class="l hl">        suffixes=(<span class="s">'_x'</span>,<span class="s">'_y'</span>), how=<span class="s">'outer'</span>)</div>
+        <div class="l hl">    <span class="c"># (b) 多对一聚合</span></div>
+        <div class="l hl">    <span class="k">if</span> backend == FSDP:                              <span class="c"># 按推理 op_name_y 聚合(q/k/v 三行)</span></div>
+        <div class="l hl">        agg_dict[<span class="s">'op_name_x'</span>] = <span class="k">lambda</span> x: <span class="s">';\n'</span>.join(x)</div>
+        <div class="l hl">        agg_result = agg_rows.groupby(<span class="s">'op_name_y'</span>, sort=<span class="k">False</span>).agg(agg_dict)</div>
+        <div class="l hl">    <span class="k">elif</span> backend == MEGATRON:                       <span class="c"># 方向相反:按训练 op_name_x 聚合推理侧(cat SP 切片)</span></div>
+        <div class="l hl">        agg_result = agg_rows.groupby(<span class="s">'op_name_x'</span>, sort=<span class="k">False</span>).agg(agg_dict)</div>
+        <div class="l ctx">    match_result = pd.concat([agg_result, na_rows])   <span class="c"># na_rows = 未配对行</span></div>
+        <div class="l ctx">    match_result[<span class="s">'npu_pos'</span>]   = ....map(npu_rank)</div>
+        <div class="l ctx">    match_result[<span class="s">'bench_pos'</span>] = ....map(bench_rank)</div>
+        <div class="l ctx">    <span class="k">return</span> self.<span class="fn">dual_monotonic_sort</span>(match_result, <span class="s">'npu_pos'</span>, <span class="s">'bench_pos'</span>)  <span class="c"># → ③c</span></div>
+      </div>
+      <div class="ann">
+        <span class="pill">核心匹配</span>
+        <div class="rt rt-3">③a 语义 merge · ③b 多对一聚合</div>
+        <h4>抹平「拆分粒度」异构</h4>
+        <p class="why"><b>(a) 四元组 merge</b>：不再靠算子全名，而是按 <code>[前反向, 后缀, 层号, 映射后模块名]</code> 四元组对齐——语义对齐而非字符串对齐。</p>
+        <p class="why"><b>(b) groupby 聚合</b>：megatron 的多对一主要来自 <b>SP 沿序列切片</b>（每 rank 一段）+ mcore 的融合结构。<code>backend==MEGATRON</code> 走<b>按训练侧 <code>op_name_x</code> 分组</b>，把对应的多行 <code>op_name/dtype/shape/summary/data_name</code> 聚合成一行；方向与 FSDP（按 <code>op_name_y</code>）相反。</p>
+        <p>这就是华为文档说的“<b>自动 cat SP 切片 / 融合算子</b>”的底层实现——不是真去 concat 张量，而是把多个统计量行聚合成一行再逐项比。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 机制③ c -->
+  <div class="card">
+    <div class="hd"><span class="no b-3" style="color:#1a7f37">③c</span><span class="path">core/compare/acc_compare.py</span><span class="loc">dual_monotonic_sort</span><span class="role">双单调保序</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l ctx"><span class="k">def</span> <span class="fn">dual_monotonic_sort</span>(match_result, pos1, pos2):  <span class="c"># O(n log n) 双指针</span></div>
+        <div class="l hl">    order1 = match_result.sort_values(pos1).index   <span class="c"># 按训练侧位置排</span></div>
+        <div class="l hl">    order2 = match_result.sort_values(pos2).index   <span class="c"># 按推理侧位置排</span></div>
+        <div class="l ctx">    <span class="k">while</span> <span class="fn">len</span>(result_idx) &lt; n:</div>
+        <div class="l ctx">        min1, min2 = order1[i], order2[j]   <span class="c"># 两序列当前最小未用行</span></div>
+        <div class="l hl">        <span class="k">for</span> k <span class="k">in</span> (min1, min2):</div>
+        <div class="l hl">            <span class="c"># 该行若在某列非 NaN,必须同时是那列的当前最小</span></div>
+        <div class="l hl">            <span class="k">if not</span> pd.isna(row[pos1]) <span class="k">and</span> k != min1: ok = <span class="k">False</span></div>
+        <div class="l hl">            <span class="k">if not</span> pd.isna(row[pos2]) <span class="k">and</span> k != min2: ok = <span class="k">False</span></div>
+        <div class="l ctx">            <span class="k">if</span> ok: picked = k; <span class="k">break</span></div>
+        <div class="l hl">        <span class="k">if</span> picked <span class="k">is None</span>:   <span class="c"># 两约束冲突</span></div>
+        <div class="l hl">            <span class="k">raise</span> ValueError(<span class="s">"the two columns cannot be</span></div>
+        <div class="l hl">                             <span class="s"> monotonically increasing at the same time"</span>)</div>
+      </div>
+      <div class="ann">
+        <span class="pill">保序</span>
+        <div class="rt rt-3">③c 保序 · 冲突即报错</div>
+        <h4>抹平「出现顺序」异构</h4>
+        <p class="why">聚合 + <code>concat</code> 后行顺序乱了。这个算法用双指针重排，<b>强制最终顺序同时满足</b>「训练侧原始序 <code>npu_pos</code> 递增」<b>和</b>「推理侧原始序 <code>bench_pos</code> 递增」（未配对行 NaN 排最后）。若某行在两列上的相对位置互相矛盾，就 <code>raise</code>。</p>
+        <p><b>megatron（das vllm 0.11）在这一步直接通过、无需任何过滤。</b>推理侧 dump 的模块序很干净：只有 prefill 前向主干，<b>没有夹杂训练侧不存在的交错 kernel</b>，所以“两侧位置同时单调递增”天然成立，<code>run_megatron_compare.py</code> 里没有 bench-only 过滤步。</p>
+        <p class="warn">对照：FSDP 0.7 用的是 das vllm 0.18.1，会多 dump 数十个训练侧没有的交错模块（Triton attn / cache / rotary），夹在推理序列中间会让此处物理上无法保序而 <code>raise</code>，必须先过滤再喂 pt_compare。<b>megatron 用 0.11，没有这个坑。</b></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 机制④ -->
+  <div class="card">
+    <div class="hd"><span class="no b-4" style="color:#9a6700">④</span><span class="path">indicator_analysis/algorithm.py + calculator.py</span><span class="loc">VerlShapeErrChecker（calculator.py 换挂）</span><span class="role">shape 口径修正（修法B）</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l ctx"><span class="c"># calculator.py —— consistent_check 时把 ShapeErrChecker 换成 VerlShapeErrChecker</span></div>
+        <div class="l hl">checkers = VERL_STATISTICS_CHECKERS <span class="k">if</span> consistent_check <span class="k">else</span> STATISTICS_CHECKERS</div>
+        <div class="l hl">checkers = VERL_TENSOR_CHECKERS     <span class="k">if</span> consistent_check <span class="k">else</span> TENSOR_CHECKERS  <span class="c"># tensor 模式亦然</span></div>
+        <div class="l ctx"> </div>
+        <div class="l ctx"><span class="k">class</span> <span class="fn">VerlShapeErrChecker</span>(BaseAlgorithm):   <span class="c"># algorithm.py</span></div>
+        <div class="l ctx">    <span class="k">def</span> <span class="fn">run</span>(self, api_data, ignore_info, backend):</div>
+        <div class="l hl">        <span class="k">if</span> backend == FSDP:</div>
+        <div class="l hl">            <span class="k">if</span> <span class="s">'qkv'</span> <span class="k">in</span> bench_name <span class="k">or</span> <span class="s">'gate_up'</span> <span class="k">in</span> bench_name:</div>
+        <div class="l hl">                <span class="k">continue</span>                       <span class="c"># 跳过融合聚合 op</span></div>
+        <div class="l hl">        npu_shape   = self.<span class="fn">squeeze_shape_str</span>(npu_shape)   <span class="c"># [217,1,896]→[217,896]</span></div>
+        <div class="l hl">        bench_shape = self.<span class="fn">squeeze_shape_str</span>(bench_shape)</div>
+        <div class="l hl">        <span class="k">if</span> backend == MEGATRON <span class="k">and</span> <span class="s">三维且维数不等</span>:</div>
+        <div class="l hl">            npu_shape = <span class="s">f"[{d0},{d1*d2}]"</span>          <span class="c"># [S,B,H] → [S, B*H]</span></div>
+        <div class="l ctx">        <span class="k">if</span> npu_shape != bench_shape: set_error()</div>
+        <div class="l ctx"> </div>
+        <div class="l ctx">    <span class="k">def</span> <span class="fn">squeeze_shape_str</span>(s):   <span class="c"># 去掉所有值为 1 的维</span></div>
+        <div class="l ctx">        parts = [p <span class="k">for</span> p <span class="k">in</span> s.strip(<span class="s">"[]"</span>).split(<span class="s">","</span>) <span class="k">if</span> p.strip() != <span class="s">"1"</span>]</div>
+        <div class="l ctx">        <span class="k">return</span> <span class="s">"["</span> + <span class="s">","</span>.join(parts) + <span class="s">"]"</span></div>
+      </div>
+      <div class="ann">
+        <span class="pill warn">修法B</span>
+        <div class="rt rt-4">④ shape 口径对齐</div>
+        <h4>抹平「shape」异构</h4>
+        <p class="why">默认 <code>ShapeErrChecker</code> 字符串严格比 shape，<code>[S,1,H] != [S,H]</code> 会把可比算子<b>全判 error</b>。替换版做三件事：</p>
+        <p><b>1. squeeze</b>：去掉所有值为 1 的维，抹平 mcore 整层 <code>[S,1,H]</code> 与推理 <code>[S,H]</code> 的差异。<br>
+        <b>2. FSDP 跳融合</b>：<code>bench_name</code> 含 <code>qkv</code>/<code>gate_up</code> 的聚合行 <code>continue</code>（FSDP 专属分支，megatron 不触发）。<br>
+        <b>3. MEGATRON 降维</b>：训练 3 维 <code>[d0,d1,d2]</code> 合并后两维成 <code>[d0, d1*d2]</code> 再比（mcore <code>[S,B,H]</code> vs vllm <code>[S*B,H]</code>）。</p>
+        <p class="warn">关键：<b>statistics 和 tensor 两种 dump 模式都挂</b>（<code>VERL_STATISTICS_CHECKERS</code> + <code>VERL_TENSOR_CHECKERS</code>）。以前只挂 tensor、statistics 漏挂，就是 CLAUDE.md 反复提的“<b>修法B</b>”补丁；训推一致 dump 走 L0+statistics，靠的正是 statistics 这一挂。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ 串起来 ============================ -->
+  <h2 class="sec">串起来：一句话 + 与实测现象呼应</h2>
+  <div class="flow sum">
+    <b>consistent_check=True（backend=megatron） =</b>
+    <code>解析裁窗（留 prefill 主干）</code> <span class="arrow">→</span>
+    <code>MEGATRON_MODULE_MAP 归一映射（叫法对齐）</code> <span class="arrow">→</span>
+    <code>四元组多对一聚合 merge（cat SP 切片）</code> <span class="arrow">→</span>
+    <code>双单调排序（保序、0.11 直接过）</code> <span class="arrow">→</span>
+    <code>shape squeeze/三维降二维（口径对齐）</code>
+    的一整套异构框架比对管线。
+  </div>
+  <p class="lead">它解释了 megatron 0.7 实测的几个现象——这些不是 bug，是管线对齐后暴露出的“真一致”“真差异”或“方法学必须排除项”：</p>
+  <div class="echo">
+    <div class="row">
+      <div class="k2">叶子算子全 &lt;1% · 中位 0%</div>
+      <div class="v2">机制 ①–④ 对齐后，真叶子算子（layernorm 96 / linear 96 / attention 48 / act_fn 24 / embed 1）output NormRelativeErr <b>全 &lt;1%、中位 0%</b>，embed 与 down_proj RelErr=0——<b>0 个真叶子发散</b>，这是训推一致的直接证据（266/289 &lt;1%）。</div>
+    </div>
+    <div class="row">
+      <div class="k2">23 个 &gt;1% 全是整层 ~32x</div>
+      <div class="v2">超 1% 的 23 行<b>全是 <code>TransformerLayer</code> 整层聚合输出</b>（NPU l2≈1720 vs Bench≈54，≈32x 量级差），massive-activation + shape <code>[S,1,H]</code> vs <code>[S,H]</code>——<b>融合整层不该逐 tensor 比，方法学排除，不是 bug</b>。与 0.8.0 megatron 吻合。</div>
+    </div>
+    <div class="row">
+      <div class="k2">融合算子（act_fn/SiluAndMul）盲区</div>
+      <div class="v2">mcore 分解算子 vs vllm 融合 kernel（<code>SiluAndMul = silu(gate)·up</code>）语义可能不同，机制 ②③ 会错挂同一 key、<code>VerlShapeErrChecker</code> 也拦不住（shape 恰好一致）——这是 consistent_check 处理不了的<b>通用盲区</b>，须在脚本 ⑤ 层显式排除。megatron 0.7 此配置下 act_fn 实测 &lt;1%，但盲区依旧存在。</div>
+    </div>
+  </div>
+
+</div>
+<footer>
+  dcu_probe pt_compare(consistent_check=True, backend=megatron) 训推一致比对算法流程标注 · 代码 verbatim 摘自 dcu_probe/src/dcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py · compare 脚本 run_megatron_compare.py（无交错模块过滤步）
+</footer>
+</body>
+</html>

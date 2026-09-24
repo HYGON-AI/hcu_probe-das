@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dcu_megatron 接入 6 坑 + 验证三件套 + L0/L1 覆盖</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
+    --add-bg:rgba(45,164,78,.12); --add-bd:#2da44e; --key:#0550ae; --str:#0a3069;
+    --com:#6e7781; --fn:#8250df; --num:#0550ae; --accent:#0969da; --train:#1a7f37; --infer:#bc4c00;
+    --code-bg:#f6f8fa; --kw:#cf222e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{padding:32px 40px 20px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#ffffff,#eef1f5)}
+  header h1{margin:0 0 6px;font-size:23px}
+  header p{margin:4px 0;color:var(--dim);font-size:14px}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 24px 80px}
+  h2.sec{margin:44px 0 6px;font-size:19px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  p.lead{color:var(--dim);font-size:14px;margin:10px 0 0}
+  table.ov{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+  table.ov th,table.ov td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  table.ov th{background:var(--panel);color:var(--dim)}
+  table.ov code{color:var(--key)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;margin:20px 0;overflow:hidden}
+  .card .hd{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .card .hd .no{font-weight:700;font-size:15px}
+  .card .hd .ttl{font-weight:600;font-size:14px}
+  .card .hd .role{margin-left:auto;font-size:12px;color:var(--dim)}
+  .card .body{display:grid;grid-template-columns:1fr 400px}
+  @media(max-width:980px){.card .body{grid-template-columns:1fr}}
+  .code{padding:14px 0;overflow-x:auto;background:var(--code-bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .code .l{white-space:pre;padding:0 16px;min-height:19px}
+  .code .hl{background:var(--add-bg);border-left:3px solid var(--add-bd);padding-left:13px}
+  .k{color:var(--kw)} .s{color:var(--str)} .c{color:var(--com)} .fn{color:var(--fn)} .n{color:var(--num)} .warn{color:#9a6700}
+  .ann{padding:16px 18px;border-left:1px solid var(--border);font-size:13.5px}
+  @media(max-width:980px){.ann{border-left:none;border-top:1px solid var(--border)}}
+  .ann h4{margin:0 0 8px;font-size:13px;color:var(--accent);text-transform:uppercase;letter-spacing:.4px}
+  .ann p{margin:0 0 10px;color:#424a53}
+  .ann code{background:#eff1f3;padding:1px 5px;border-radius:4px;font-size:12px;color:var(--key)}
+  .ann .warn{color:#9a6700}
+  .rt{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:10px;margin-bottom:10px}
+  .rt-a{background:rgba(9,105,218,.12);color:#0969da;border:1px solid #0969da}
+  .rt-b{background:rgba(130,80,223,.12);color:#8250df;border:1px solid #8250df}
+  .rt-c{background:rgba(26,127,55,.12);color:#1a7f37;border:1px solid #1a7f37}
+  .rt-e{background:rgba(101,109,118,.14);color:#57606a;border:1px solid #8c959f}
+  .rt-x{background:rgba(191,76,0,.12);color:#bc4c00;border:1px solid #bc4c00}
+  .tool{background:#fff;border:2px solid var(--accent);border-radius:12px;padding:18px 22px;margin:18px 0;box-shadow:0 1px 4px rgba(9,105,218,.08)}
+  .tool h3{margin:0 0 10px;font-size:17px;color:var(--accent)}
+  .tool .sig{background:#0a0e14;color:#e6edf3;font-family:ui-monospace,monospace;font-size:12.5px;padding:10px 14px;border-radius:8px;overflow-x:auto;margin:10px 0}
+  .tool .sig .k{color:#79c0ff} .tool .sig .s{color:#a5d6ff} .tool .sig .c{color:#8b949e}
+  .tool ul{margin:8px 0 0;padding-left:20px} .tool li{margin:5px 0;font-size:13.5px}
+  .flow{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:18px 0;font-size:13.5px}
+  .flow code{color:var(--key)}
+  .chain{font-family:ui-monospace,monospace;font-size:12.5px;background:#eff1f3;padding:10px 14px;border-radius:8px;overflow-x:auto;color:#424a53}
+  .arrow{color:var(--accent);font-weight:700}
+  footer{color:var(--dim);font-size:12px;text-align:center;padding:30px}
+  b.hot{color:var(--infer)}
+</style>
+</head>
+<body>
+<header>
+  <h1>dcu_megatron 接入 <code style="color:#0969da">dcu_probe</code> —— 6 坑 + 验证三件套 + L0/L1 覆盖</h1>
+  <p>这里说的是<b>独立 dcu_megatron 框架</b>(Megatron-LM + 海光 adaptor,预训练 llama2-7B / TP1·PP2·8 卡·bf16),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。</p>
+  <p>接入靠 <b>Feature 机制、0 行改训练脚本</b>(不是 verl 那种改 forward 源码 patch);验证是 <b class="hot">精度对比 / 零侵入</b>(5 模式 loss 字字一致 + dump 供离线分析),<b>没有 pt_compare / 训推 compare 那一套</b>。本页收敛真正会绊倒人的 6 个坑、验证三件套、以及 L0/L1 该选哪个。</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 与 verl 的本质区别提醒 -->
+  <div class="flow">
+    <b>先记住与 verl 的本质区别(它决定了本页的坑长什么样):</b>
+    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">接入</b>  verl = 改源码 patch 插钩子   <span class="arrow">vs</span>   dcu_megatron = <b>Feature 织入,0 行改训练脚本</b>(加 <code>--dcu-probe-config</code> flag 即激活)
+<b style="color:#bc4c00">验证</b>  verl = 训推一致(pt_compare 逐层比)   <span class="arrow">vs</span>   dcu_megatron = <b>精度对比 / 零侵入</b>(dump 训练侧统计量 + 5 模式 loss 一致证零侵入,<b>无 pt_compare</b>)</div>
+    <p style="margin:10px 0 0;font-size:13px;color:#424a53">所以本页没有"两侧配对/过滤/单调对齐"那类 compare 坑;取而代之的是 <b>Feature 织入 + dump/monitor 生命周期</b> 特有的 6 个坑,和一套"看 marker 判真启动"的验证纪律。</p>
+  </div>
+
+  <!-- ===== 6 坑 ===== -->
+  <h2 class="sec">六个坑(每个一张卡:左 问题代码/配置 · 右 说明)</h2>
+  <p class="lead">按"最容易误判"排序:坑 1 会让你<b>误以为 dump 成功了其实是空的</b>,是最迷惑的一个。</p>
+
+  <!-- 坑 1 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--infer)">坑 1</span><span class="ttl">tensorboard 隐性依赖 → 静默假启动(最迷惑)</span><span class="role">"训练 loss 正常" ≠ "dump 成功了"</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="c"># dcu_probe 的 "pytorch 通用集成路径"</span></div>
+        <div class="l"><span class="c">#   (monitor v2 全部 + 通用 dcu_probe.dump)</span></div>
+        <div class="l hl"><span class="k">import</span> tensorboard          <span class="c"># ← 缺它 = No module named 'tensorboard'</span></div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># 后果:PrecisionDebugger / monitor init 静默失败</span></div>
+        <div class="l"><span class="c">#   → 只落 loss_tracking,没有 dump.json / csv</span></div>
+        <div class="l warn">#   但训练 lm loss 照常打印 → 看起来"成功了"(假象!)</div>
+        <div class="l"></div>
+        <div class="l hl"><span class="c"># ⚠️ megatron L0 dump 路径不 import tensorboard</span></div>
+        <div class="l"><span class="c">#   → 会出现 "L0 dump 成功 但 monitor 失败" 的迷惑组合</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-x">最迷惑</span>
+        <h4>缺库不报致命错,只静默降级</h4>
+        <p>monitor v2 与通用 <code>dcu_probe.dump</code> 路径 <b>import tensorboard</b>;容器缺它时,init 走进 <code>try/except</code> 被<b>静默吞掉</b>,不崩训练 —— 你看到 loss 正常,以为在采,实际<b>一个 dump.json / csv 都没落</b>。</p>
+        <p>更迷惑的是:<b>megatron L0 dump 走另一条(megatron 集成)路径,不依赖 tensorboard</b>。于是同一次跑可能出现"L0 dump 有产物、但 monitor 什么都没有"的组合 —— 别据此判"整体成功"。</p>
+        <p class="warn"><b>破法:</b>跑 monitor / 通用 dump 前先确认 tensorboard 在;容器无外网就从同 image 已装的容器 <code>docker cp</code> 过来。判成功<b>只看产物,不看 loss</b>(见下方"验证三件套")。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坑 2 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--fn)">坑 2</span><span class="ttl">L1 dump 必须 patch <code>support_wrap_ops.yaml</code></span><span class="role">仅 L1;whl 不含此 patch</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="c"># dcu_probe/pytorch/dump/api_dump/support_wrap_ops.yaml</span></div>
+        <div class="l"><span class="s">functional:</span></div>
+        <div class="l">  ...</div>
+        <div class="l hl">  <span class="c"># - gelu      ← 注释掉这一行</span></div>
+        <div class="l">  ...</div>
+        <div class="l hl">  <span class="c"># - silu      ← 注释掉这一行</span></div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># 不 patch 时,L1 跑 dcu_megatron 直接崩:</span></div>
+        <div class="l warn">#   ValueError: Only support fusion of gelu and swiglu   (Megatron mlp.py)</div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-b">仅 L1</span>
+        <h4>L1 wrap 破坏了 swiglu 的 identity 检查</h4>
+        <p>Megatron mcore MLP 用 <code>self.activation_func is F.silu</code> 做 <b>identity 判等</b>来决定能否走 swiglu fusion;dcu_probe L1 把 <code>F.silu</code>/<code>F.gelu</code> wrap 成新对象后,<code>is</code> 判等失败 → 抛 <code>ValueError: Only support fusion of gelu and swiglu</code>。</p>
+        <p>解法:只注释 <b><code>functional:</code> 区</b>那两行 <code>gelu</code>/<code>silu</code>。这俩词在文件里出现多次(还有 <code>torch:</code> 区、<code>npu_*</code>),<b>别误注别处</b>。</p>
+        <p class="warn"><b>易漏:</b>whl <b>不含</b>此 patch —— 每次重装 whl / 换新容器都要重打;L0 / monitor 完全不受影响。副作用:L1 dump.json 里不会再有 <code>Functional.silu/gelu</code> entry(精度↔兼容的取舍)。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坑 3 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--dim)">坑 3</span><span class="ttl">L1 的 <code>distributed:</code> 段 —— 只有 EP/MoE 才需要注释</span><span class="role">别对 llama 多注释</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l"><span class="c"># support_wrap_ops.yaml 里还有一段:</span></div>
+        <div class="l"><span class="s">distributed:</span>      <span class="c"># send/recv/all_reduce/all_gather/all_to_all/batch_isend_irecv ...(18 个通信算子)</span></div>
+        <div class="l">  ...</div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># llama2-7B(TP1/PP2,无 EP):</span></div>
+        <div class="l hl"><span class="c">#   → 只注释 gelu/silu 就够,distributed 段保持原样</span></div>
+        <div class="l">  <span class="c"># 实测:注释 distributed 与否,L1 逐 iter 数值字字一致</span></div>
+        <div class="l">  <span class="c">#       PP 的 batch_isend_irecv 被 wrap 也不破坏</span></div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># MoE / EP(如 mixtral 的 all_to_all):</span></div>
+        <div class="l hl"><span class="c">#   → 才需连 distributed 段一起注释(EP all_to_all 时序敏感)</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-e">按需</span>
+        <h4>非 MoE 别过度注释</h4>
+        <p>完整 L1 patch 除了 gelu/silu,还有 <code>distributed:</code> 段的 18 个通信算子。直觉容易"全注释了保险",但<b>非 MoE 场景反而不该动它</b>。</p>
+        <p><b>llama2-7B(TP1/PP2 无 EP)实测</b>:注释 distributed 与否,L1 <b>逐 iter 数值字字一致</b>,PP 的 <code>batch_isend_irecv</code> 被 wrap 也不影响 → <b>只 gelu/silu 就够</b>。</p>
+        <p><b>MoE / EP(mixtral 类)</b>:EP 的 <code>all_to_all</code> 对时序敏感,L1 wrap 会破坏 → 这时<b>才</b>连 <code>distributed:</code> 段一起注释。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坑 4 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--fn)">坑 4</span><span class="ttl"><code>risk_level</code> 必须大写、且只 L1 生效</span><span class="role">小写 = init failed</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l">{</div>
+        <div class="l">  <span class="s">"task"</span>: <span class="s">"statistics"</span>,</div>
+        <div class="l">  <span class="s">"level"</span>: <span class="s">"L1"</span>,</div>
+        <div class="l hl">  <span class="s">"risk_level"</span>: <span class="s">"ALL"</span>       <span class="c"># ✔ 大写 ALL / FOCUS / CORE</span></div>
+        <div class="l warn">  # "risk_level": "all"    ✘ 小写 → init failed</div>
+        <div class="l">}</div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># ⚠️ risk_level 只在 L1 cfg 生效;L0 下写了也被忽略</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-b">仅 L1</span>
+        <h4>大小写敏感的枚举字段</h4>
+        <p><code>risk_level</code>(若用)必须是<b>大写</b>枚举 <code>ALL</code> / <code>FOCUS</code> / <code>CORE</code>;写成小写 <code>all</code> 会直接 <b>init failed</b>,而不是给个友好提示。</p>
+        <p>而且它<b>只在 L1 cfg 生效</b> —— L0 下即便写了也被静默忽略,别指望它在 L0 起过滤作用。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坑 5 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">坑 5</span><span class="ttl">monitor cfg 必设 <code>patch_optimizer_step: false</code></span><span class="role">Megatron 是嵌套 optimizer</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l">{</div>
+        <div class="l">  <span class="s">"framework"</span>: <span class="s">"pytorch"</span>,</div>
+        <div class="l">  <span class="s">"output_dir"</span>: <span class="s">"./dcu_probe_dump/monitor_v2"</span>,</div>
+        <div class="l">  <span class="s">"format"</span>: <span class="s">"csv"</span>,</div>
+        <div class="l hl">  <span class="s">"patch_optimizer_step"</span>: <span class="k">false</span>,   <span class="c"># ← 必须 false</span></div>
+        <div class="l">  <span class="s">"monitors"</span>: { ... }</div>
+        <div class="l">}</div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># monitor_wrapper 在 train_step 出口手动驱动:</span></div>
+        <div class="l">monitor.<span class="fn">on_step_end</span>(result, get_args())   <span class="c"># 手动推进 step()</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-c">monitor</span>
+        <h4>upstream 自动 patch 会扑空</h4>
+        <p>upstream monitor 默认想<b>自动 patch <code>optimizer.step</code></b>来钩每步。但 Megatron 用的是<b>嵌套 optimizer</b>:<code>DistributedOptimizer → ChainedOptimizer</code>,自动 patch 挂不到真正被调的那层 → <b>钩子扑空、采不到梯度/优化器态</b>。</p>
+        <p>所以 cfg 必须 <code>patch_optimizer_step: false</code>,改由 <code>monitor_wrapper</code> 在 <b><code>train_step()</code> 出口的 <code>on_step_end</code> 手动驱动</b> step —— 这也是"薄壳 wrapper 存在的意义"之一。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 坑 6 -->
+  <div class="card">
+    <div class="hd"><span class="no" style="color:var(--train)">坑 6</span><span class="ttl">monitor 不开 <code>monitors.module</code> 通道</span><span class="role">与 PP 的输出释放冲突</span></div>
+    <div class="body">
+      <div class="code">
+        <div class="l">  <span class="s">"monitors"</span>: {</div>
+        <div class="l hl">    <span class="s">"weight_grad"</span>: { <span class="s">"enabled"</span>: <span class="k">true</span>, ... },</div>
+        <div class="l hl">    <span class="s">"optimizer"</span>:   { <span class="s">"enabled"</span>: <span class="k">true</span>, ... },</div>
+        <div class="l hl">    <span class="s">"param"</span>:       { <span class="s">"enabled"</span>: <span class="k">true</span>, ... }</div>
+        <div class="l warn">    # "module": { "enabled": true }   ✘ 别开这个通道</div>
+        <div class="l">  }</div>
+        <div class="l"></div>
+        <div class="l"><span class="c"># module 通道会 hook forward 输出,而 Megatron pipeline</span></div>
+        <div class="l"><span class="c">#   会 deallocate_pipeline_outputs 提前释放这些张量 → 冲突</span></div>
+      </div>
+      <div class="ann">
+        <span class="rt rt-c">monitor</span>
+        <h4>只开三通道,不碰 module</h4>
+        <p>monitor v2 三通道 <b>weight_grad / optimizer / param</b> 采的是权重梯度、优化器动量、参数分布,与前向输出无关,安全。</p>
+        <p>但 <b><code>module</code> 通道</b>要 hook forward 输出张量,而 Megatron pipeline 为省显存会 <code>deallocate_pipeline_outputs</code> <b>提前释放</b>这些中间输出 → 两者<b>冲突</b>(读到已释放张量 / 报错)。所以 dcu_megatron 的 monitor 只开前三通道。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 附加坑:TORCHDYNAMO -->
+  <div class="flow">
+    <b>另一个 L1 专属自动行为(不算独立坑,但要知道):</b>
+    <div class="chain" style="margin-top:8px">L1 cfg 启动时,launcher 自动 <code>export TORCHDYNAMO_DISABLE=1</code>  <span class="arrow">→</span>  因为 L1 的 monkey-patch(wrap 每个 API)会与 <b>torch dynamo 图捕获</b>冲突</div>
+    <p style="margin:10px 0 0;font-size:13px;color:#424a53">L0 / monitor 不需要这一步。这也是 L1 "更细但更娇气"的一部分代价(见文末 L0/L1 覆盖表)。</p>
+  </div>
+
+  <!-- ===== 验证三件套 ===== -->
+  <h2 class="sec">验证三件套 —— 前 / 中 / 后</h2>
+  <p class="lead">核心纪律一句话:<b class="hot">必须看到 <code style="color:#bc4c00">initialized</code> / <code style="color:#bc4c00">started</code> 才算真启动</b>;只看到 <code>[dcu_probe-wrapper] wrapper applied</code> 是<b>假象</b>(那只是装饰器挂上了,业务不一定起来 —— 见坑 1)。</p>
+
+  <div class="flow">
+    <b>三阶段 checklist(数据流)：</b>
+    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">① 训练前</b> 清残留 dump/ckpt · monitor 确认 tensorboard 在(坑1) · L1 确认 yaml 已 patch(坑2)  <span class="arrow">→</span>  <b style="color:#0969da">② 训练中</b> grep log 看 marker,认 initialized/started  <span class="arrow">→</span>  <b style="color:#bc4c00">③ 训练后</b> 产物存在 + 数量对 + 内容合理 · <code>chmod -R 755</code> 让 host 可读(0o750)</div>
+  </div>
+
+  <!-- marker 日志块 -->
+  <div class="tool">
+    <h3>★ 训练中 grep log:哪几行才算"真启动"</h3>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">跑起来后 grep 训练日志,分清"装饰器已挂"和"业务真起来"两类 marker：</p>
+    <div class="sig"><span class="c"># —— 这两行只是"装饰器已挂",不代表在采(假象,坑 1 就卡在这)——</span>
+<span style="color:#8b949e">[dcu_probe-wrapper] train() wrapper applied via Feature mechanism</span>
+<span style="color:#8b949e">[dcu_probe-wrapper] train_step() wrapper applied via Feature mechanism</span>
+
+<span class="c"># —— ★ 看到下面带 initialized / started 才算真启动 ——</span>
+<span style="color:#7ee787">[dcu_probe.dump] PrecisionDebugger initialized with &lt;cfg&gt;</span>          <span class="c">← dump 真起</span>
+<span style="color:#7ee787">[dcu_probe.monitor] TrainerMonitorV2 initialized and started</span>         <span class="c">← monitor 真起</span>
+
+<span class="c"># —— 收尾干净 ——</span>
+<span style="color:#a5d6ff">msprobe ends successfully</span>  /  <span style="color:#a5d6ff">[dcu_probe.* stopped]</span></div>
+    <ul>
+      <li><b>只有灰色两行</b>(wrapper applied)、没有绿色两行 → <b>业务没真启动</b>,大概率是坑 1(缺 tensorboard 静默失败)。</li>
+      <li><b>看到绿色 <code>initialized</code> / <code>started</code></b> → dump / monitor 真的在采,产物才会有内容。</li>
+      <li>结束看到 <code>msprobe ends successfully</code> → 生命周期收尾干净(<code>on_train_end</code> 正常触发)。</li>
+    </ul>
+  </div>
+
+  <!-- 训练后产物 -->
+  <div class="flow">
+    <b>③ 训练后:验产物(别凭"文件存在"就判过)</b>
+    <div class="chain" style="margin-top:8px">存在  <span class="arrow">→</span>  数量对(dump step0/1/2 各 rank 的 dump.json;monitor csv = 8 rank × 三通道)  <span class="arrow">→</span>  <b>内容合理</b>(dump 看 module 数 / shape / Max·Min·Mean·Norm,查 <b>NaN/Inf</b>;csv 看各层 min/max/mean/norm/nans 有真实数值)</div>
+    <p style="margin:10px 0 0;font-size:13px;color:#424a53">产物默认 <code>0o750</code>(容器 root 建的),host 读不了 → 容器内 <code>chmod -R 755 &lt;dump目录&gt;</code> 或 <code>docker exec cat</code>。<b>零侵入的判据</b>:mode1 baseline 与 mode2 L0 / mode4 monitor 的 <code>lm loss</code>、<code>grad norm</code> <b>字字一致</b>(实测 <code>lm loss 9.087223 / grad 4.535</code>,nan 0);L1 因 wrap 微扰略偏(<code>9.087196</code>),属预期。</p>
+  </div>
+
+  <!-- ===== L0 vs L1 覆盖 ===== -->
+  <h2 class="sec">L0 vs L1 覆盖差异 —— 生产选 L0,深挖用 L1</h2>
+  <p class="lead">两个 level 不是"越细越好"。L0 零依赖零 patch = <b>生产推荐</b>;L1 更细但要 patch + 关 dynamo,而且 <b>TE 融合算子它也抓不到</b>。</p>
+  <table class="ov">
+    <tr><th>维度</th><th>L0(module 级)</th><th>L1(API 级)</th></tr>
+    <tr><td>采集粒度</td><td>每个 <b>module 的 forward</b> 统计量(Max/Min/Mean/Norm)</td><td><b>Functional / Tensor / Torch</b> API 算子级,更细</td></tr>
+    <tr><td>定位能力</td><td>定位"<b>哪一层 / 哪个 module</b> 不一致"</td><td>定位"<b>哪个算子 / 哪个 API 调用</b>"</td></tr>
+    <tr><td>需 yaml patch(gelu/silu)</td><td><b>❌ 不需</b></td><td><b>✅ 需</b>(坑 2;MoE 还要 distributed 段,坑 3)</td></tr>
+    <tr><td>需 <code>TORCHDYNAMO_DISABLE</code></td><td><b>❌ 不需</b></td><td><b>✅ 需</b>(L1 monkey-patch 与 dynamo 冲突)</td></tr>
+    <tr><td>依赖 tensorboard</td><td><b>❌ 不</b>(走 megatron 集成路径)</td><td>dump 本身不;<b>monitor 通道才依赖</b>(坑 1)</td></tr>
+    <tr><td>TE 融合算子可见性</td><td>module 边界可见输入/输出统计</td><td><b>⚠️ 抓不到</b> —— 计算在 TE(TransformerEngine)kernel 内,不经 Python 层 API</td></tr>
+    <tr><td>对训练的微扰</td><td><b>零</b>(与 baseline loss 字字一致 <code>9.087223</code>)</td><td>极小(wrap 微扰,<code>9.087196</code>)</td></tr>
+    <tr><td>适用</td><td><b>✅ 生产推荐</b>:常态化精度巡检 / 快速定位哪层</td><td>算子级精度剖析 / 深挖单层内部</td></tr>
+  </table>
+  <div class="flow">
+    <b>一句话选型:</b>
+    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">L0</b> = 零 patch·零依赖·零微扰·定位到层  <span class="arrow">→</span>  日常首选
+<b style="color:#8250df">L1</b> = 要 patch yaml + 关 dynamo,细到算子,<b>但 TE kernel 内的融合算子照样看不见</b>  <span class="arrow">→</span>  只在需要算子级证据时才上</div>
+  </div>
+
+  <!-- ===== 实测状态(诚实标注) ===== -->
+  <h2 class="sec">实测状态(诚实标注)</h2>
+  <table class="ov">
+    <tr><th>结论</th><th>验证程度</th><th>依据</th></tr>
+    <tr><td>llama2-7B(TP1/PP2,8 卡,bf16)<b>5 模式全跑通</b></td><td><b style="color:#1a7f37">✅ DCU 集群实跑</b></td><td>baseline / L0 / L1 / monitor / combined 均实跑;baseline↔L0↔monitor 的 lm loss·grad 字字一致(零侵入),L1 微扰符合预期,dump.json / csv 落盘且内容合理</td></tr>
+    <tr><td>L1 注释 distributed 与否,llama 逐 iter 字字一致</td><td><b style="color:#1a7f37">✅ 实测</b></td><td>坑 3 的直接依据:PP 的 <code>batch_isend_irecv</code> 被 wrap 也不破坏数值</td></tr>
+    <tr><td>MoE / EP 才需连 <code>distributed:</code> 段一起注释</td><td><b style="color:#bc4c00">⚠️ 未在 MoE 逐项实测</b></td><td>基于 Feature 机制推断 + EP <code>all_to_all</code> 时序原理;llama 无 EP,该结论未在 mixtral 类模型上逐项复现</td></tr>
+    <tr><td>坑 6:module 通道与 <code>deallocate_pipeline_outputs</code> 冲突</td><td><b style="color:#bc4c00">⚠️ 机制约束</b></td><td>PP 输出提前释放与 module hook 的已知冲突;配置上直接规避(不开 module 通道),未刻意触发验证崩点</td></tr>
+  </table>
+  <p class="lead">原则:<b>已实测的写"✅ 实跑",推断的写"⚠️ 机制推断/未逐项实测"</b>,不把机制约束冒充成实测结论。</p>
+
+</div>
+<footer>
+  dcu_megatron(独立框架)× dcu_probe · 6 坑 + 验证三件套 + L0/L1 覆盖 · Feature 织入·零侵入精度对比(≠ verl 训推一致 pt_compare)· llama2-7B TP1/PP2 8 卡 5 模式 PoC
+</footer>
+</body>
+</html>
