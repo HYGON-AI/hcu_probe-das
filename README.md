@@ -1,98 +1,146 @@
-<h1 align="center">MindStudio Probe</h1>
-
 <div align="center">
-<p><b><span style="font-size:24px;">昇腾 AI 全场景精度调试利器</span></b></p>
 
-[![快速入门](https://badgen.net/badge/快速入门/QuickStart/blue)](docs/zh/quick_start/pytorch_quick_start.md)
-[![精确搜索](https://badgen.net/badge/精确搜索/ReadTheDocs/blue)](https://msprobe.readthedocs.io/zh-cn/latest/)
-[![AI问答(DeepWiki)](https://badgen.net/badge/AI问答/DeepWiki/blue)](https://deepwiki.com/mindstudio-docs/master)
-[![AI问答(ZRead)](https://badgen.net/badge/AI问答/ZRead/blue)](https://zread.ai/mindstudio-docs/master)
-[![昇腾社区](https://badgen.net/badge/昇腾社区/Community/blue)](https://www.hiascend.com/)
-[![报告问题](https://badgen.net/badge/报告问题/Issues/blue)](https://gitcode.com/Ascend/msprobe/issues)
+<h1 style="text-align: center;">hcuprobe: 海光 HCU 训练精度调试工具</h1>
+
+<h3 align="center">面向 PyTorch 分布式训练 / 推理的逐层 dump · 精度比对 · 训推一致性验证</h3>
+
+<p align="center">
+| <a href="docs/UPSTREAM_SYNC.md"><b>上游同步</b></a>
+| <a href="docs/offline_analysis/"><b>离线分析</b></a>
+| <a href="docs/infer/"><b>推理侧 dump</b></a>
+| <a href="docs/FAQ.md"><b>FAQ</b></a>
+|
+</p>
+
+[![version](https://img.shields.io/badge/version-26.2.0%2Bhcu.0.2.0-green)](docs/UPSTREAM_SYNC.md)
+[![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue)](docs/UPSTREAM_SYNC.md#license-与署名)
+[![upstream](https://img.shields.io/badge/upstream-msProbe%2026.2.0-brightgreen)](https://gitcode.com/Ascend/msprobe)
 
 </div>
 
-简体中文 | [English](./README_EN.md)
+<div align="left">
 
-## ✨ 最新消息
+## 🎯 适用范围
 
-<span style="font-size:14px;">
+hcuprobe 通过 **PyTorch 的 module / API 钩子**采集精度数据,只对**有 PyTorch 层可挂钩**的栈生效:
 
-🔹 **[2026.03.28]**：[msprobe 仓库 ADump 模块日落下线通知](https://gitcode.com/Ascend/msprobe/discussions/2)<br>
-🔹 **[2026.03.20]**：上线[大模型训练精度定位指南](docs/zh/best_practices/train_debug_guide.md)、[大模型推理精度定位指南](docs/zh/best_practices/infer_debug_guide.md)及[常用框架工具使能指南](docs/zh/best_practices/dump_enable_guide.md)<br>
-🔹 **[2025.12.31]**：MindStudio Probe 精度调试工具全面开源
-
-</span>
+| 状态 | 框架 / 栈 |
+| --- | --- |
+| ✅ **适用** | 基于 PyTorch 的分布式训练 / 推理 —— FSDP、Megatron-LM、verl、原生 PyTorch |
+| ❌ **不适用** | 纯 C++ / CUDA 自研训练栈、非 PyTorch 框架(TensorFlow 等)—— 无可挂钩的 module / API |
 
 ## ℹ️ 简介
 
-MindStudio Probe（MindStudio 精度调试工具，msProbe）是针对昇腾 AI 处理器打造的全场景精度调试工具链，专为模型开发的精度调试环节设计，支持 PyTorch、MindSpore 等主流框架，可显著提升用户定位模型精度问题的效率。
+hcuprobe 是海光 HCU 平台的训练精度调试 Python whl 包,给在 HCU 上训练的团队提供一套「采集 → 比对 → 定界」的精度工具:训练时逐层 dump 张量统计量、监测梯度 / 优化器 / 参数,训练后离线做两端精度比对、溢出定位、API 精度预检,以及 RL 场景的训推一致性验证。
 
-## ⚙️ 功能介绍
+它基于华为 [`mindstudio-probe`(msProbe)](https://gitcode.com/Ascend/msprobe) `26.2.0` 适配:核心 dump / 比对内核与上游一致,HCU 侧自维护多框架训练接入的翻译层。命名空间 `msprobe.*` → `hcuprobe.*`,CLI 命令 `msprobe` → `hcuprobe`。版本对齐详见 **[上游同步说明](docs/UPSTREAM_SYNC.md)**。
 
-msProbe 围绕模型精度调试提供三大核心能力，覆盖「数据采集 → 精度比对 → 可视化」完整流程：
+- **逐层采集**: L0 模块级统计 / L1 API 级 / tensor 真实数据三粒度,`task=statistics` 免爆盘。
+- **多框架接入**: hcu_megatron、原生 PyTorch、verl(FSDP / Megatron 后端)各有自包含接入 skill。
+- **训推一致性**: RL 场景下训练侧前向 vs 推理侧(vLLM)前向逐层比对,定界精度差在哪侧哪层。
+- **跨平台比对**: 采集与离线分析跨平台、纯 Python,可 HCU dump 对 NV / H20 dump。
 
-| 核心功能 | 功能说明 | 快速入口 |
-|---|---|---|
-| 数据采集 | 通过 config.json 配置，一键采集模型训练/推理过程中的精度数据 | [PyTorch 数据采集](docs/zh/user_guide/dump/pytorch_data_dump_instruct.md) |
-| 精度比对 | 将采集到的精度数据进行比对，定位出现精度差异的网络层/算子 | [PyTorch 精度比对](docs/zh/user_guide/accuracy_compare/pytorch_accuracy_compare_instruct.md) |
-| 可视化 | 解析 dump 数据还原模型图结构，分级可视化定位精度差异 | [分级可视化构图比对](docs/zh/user_guide/accuracy_compare/pytorch_visualization_instruct.md) |
+## 🚀 快速开始
 
-> 上表为最常用的 PyTorch 场景入口。更多框架及使用场景请参见《[msProbe 使用指南](docs/zh/user_guide/README.md)》。
+### 安装
 
-## 🚀 快速入门
+```bash
+# 方案 A:源码 build(本仓)
+git clone http://42.228.13.241:10068/dcutoolkit/deeplearing/hcuprobe.git
+cd hcuprobe
+pip wheel . --no-deps -w dist/
+pip install dist/hcuprobe-*.whl --no-deps
 
-10 分钟快速一站式体验数据采集、NPU/GPU 精度比对与分级可视化构图比对的完整流程，请参见《[msProbe 快速入门](docs/zh/quick_start/pytorch_quick_start.md)》。
+# 方案 B:editable(开发用)
+pip install -e .
 
-## 📦 安装指南
+# 方案 C:GitLab Releases 页下载 prebuilt whl 直接 pip install
 
-msProbe 支持 PyPI 安装、WHL 安装、源码编译三种方式，具体请参见《[msProbe 安装指南](docs/zh/install_guide/msprobe_install_guide.md)》。
+# 离线分析 precheck 扩展(onnx / onnxruntime / skl2onnx)
+pip install hcuprobe[precheck]
+```
 
-## 📘 使用指南
+> **注意:** `torch` 不在依赖里,由用户在训练环境自备(HCU / NV / H20 各自的 torch 构建)。
 
-工具的详细使用方法，请参见《[msProbe 使用指南](docs/zh/user_guide/README.md)》。
+### 训练侧 dump(最小片段)
 
-## 💡 典型案例
+```python
+from hcuprobe.pytorch import PrecisionDebugger
+dbg = PrecisionDebugger(config_path="config.json")   # task=statistics level=L0
+dbg.start(model=model)  # 前向前
+# <前向>
+dbg.stop(); dbg.step()  # 前向后 + 步进
+```
 
-通过典型问题场景帮助用户理解并掌握工具使用，请参见《[msProbe 典型案例](./docs/zh/best_practices/README.md)》。
+### 离线精度分析(dump 落盘后)
 
-## ❓ FAQ
+```bash
+# L0 dump 后两端精度比对 → xlsx
+hcuprobe compare -tp ./hcu_dump/step0 -gp ./bench_dump/step0 -o ./diff
 
-常见问题及解决方案汇总，请参见《[FAQ](docs/zh/support/faq.md)》。
+# 整网首个 NaN/Inf 起点定位(训练发散时)
+hcuprobe overflow_check -i ./dump/step_0 -o ./overflow_out
 
-## 🌌 智能检索
+# API 级精度预检(HCU bf16 vs CPU fp64 双跑)
+hcuprobe multi_acc_check -api_info ./l1_dump/step0/rank0/dump.json -o ./out
+```
 
-为提升文档查阅效率，我们提供多种高效检索方式：<br>
-🔹 [精确搜索（ReadTheDocs）](https://msprobe.readthedocs.io/zh-cn/latest/)：关键词全文检索，直达接口、参数与报错等信息。<br>
-🔹 [AI 问答（DeepWiki）](https://deepwiki.com/mindstudio-docs/master)：自然语言问答，快速把握项目架构与模块关系。<br>
-🔹 [AI 问答（ZRead）](https://zread.ai/mindstudio-docs/master)：中文问答体验更优，精准定位功能用法与细节。
+各工具详解见 **[离线分析文档](docs/offline_analysis/)**(compare / overflow / precheck / graph_viz / config_check / data2db 各篇);推理侧 dump(vLLM / SGLang)见 **[推理侧文档](docs/infer/)**。
 
-## 🛠️ 贡献指南
+## ⚙️ 能力
 
-欢迎参与项目贡献，请参见《[贡献指南](docs/zh/contributing/contributing_guide.md)》。
+| 类 | 子能力 | 入口 |
+| --- | --- | --- |
+| **训练侧 dump** | L0 模块级张量统计 / L1 API 级张量 dump / tensor 真实数据 | `hcuprobe.pytorch.PrecisionDebugger` |
+| **训练侧 monitor** | weight_grad / optimizer / param 三通道轻量监测 | `hcuprobe.core.monitor_v2.trainer.TrainerMonitorV2` |
+| **离线分析 CLI** | `compare` / `acc_check` / `overflow_check` / `graph_visualize` / `parse` / `merge_result` / `config_check` 等 | `hcuprobe <subcmd>` |
 
-## ⚖️ 相关说明
+## 🧩 已适配训练框架
 
-🔹 《[版本说明](https://gitcode.com/Ascend/msprobe/releases)》<br>
-🔹 《[开发者指南](docs/zh/development_guide/develop_guide.md)》<br>
-🔹 《[安全声明](docs/zh/legal/SECURITY.md)》<br>
-🔹 《[免责声明](docs/zh/legal/disclaimer.md)》<br>
-🔹 《[许可证声明](docs/zh/legal/license_notice.md)》
+接入操作见各 skill `.claude/skills/<skill 名>/`:
 
-## 🤝 建议与交流
+| 框架 · 后端 / 版本 | 验证场景 | 接入 skill |
+| --- | --- | --- |
+| **hcu_megatron** | 精度对比 | `hcuprobe-megatron-integration` |
+| **原生 PyTorch** | 精度对比 | `hcuprobe-pytorch-integration` |
+| **verl 0.7.1 · FSDP** | 训推一致性 | `hcuprobe-verl-fsdp-0.7-integration` |
+| **verl 0.7.1 · Megatron** | 训推一致性 | `hcuprobe-verl-megatron-0.7-integration` |
+| **verl 0.8.0 · FSDP** | 训推一致性 | `hcuprobe-verl-fsdp-0.8-integration` |
+| **verl 0.8.0 · Megatron** | 训推一致性 | `hcuprobe-verl-megatron-0.8-integration` |
 
-欢迎大家为社区做贡献。如果有任何疑问或建议，请提交 [Issues](https://gitcode.com/Ascend/msprobe/issues)，我们会尽快回复。感谢您的支持。
+各框架接入的**代码改动点标注页**(插桩位置 / compare 逻辑 / 算法内部,渲染即懂)见 **[`docs/annotated/`](docs/annotated/)** —— skill 讲怎么动手接入,标注页讲改动点的位置与原理。自包含 HTML,下载到本地用浏览器打开 `index.html` 查看。
 
-🔹 [msProbe SIG 会议](https://meeting.ascend.osinfra.cn/?sig=sig-sig-mstt)：定期社区例会，欢迎参与交流与讨论。
+## 📂 项目结构
 
-| 即时互动（微信群） | 官方资讯（公众号） | 深度支持（助手/论坛） |
-|:---:|:---:|:---|
-| <img src="https://raw.gitcode.com/Ascend/docs/files/master/common/Writing_Template/figures/qr_code_wechat_work.png" width="120"><br><sub>*扫码加入技术交流群*</sub> | <img src="https://raw.gitcode.com/Ascend/docs/files/master/common/Writing_Template/figures/qr_code_wechat_official_account.png" width="120"><br><sub>*扫码关注官方公众号*</sub> | 扫码入群并关注公众号，直达 MindStudio 用户与开发者最快捷的交流平台：<br> **快速提问：** 与社区小伙伴即时探讨技术问题<br>**掌握动态：** 第一时间获取版本发布与功能更新通知<br> **经验共享：** 与广大开发者交流最佳实践与实战心得  <br> <br> **更多支持渠道**：👉 昇腾助手：[![WeChat](https://img.shields.io/badge/WeChat-07C160?style=flat-square&logo=wechat&logoColor=white)](https://gitcode.com/Ascend/msit/blob/master/docs/zh/figures/readme/xiaozhushou.png) 👉 昇腾论坛：[![Website](https://img.shields.io/badge/Website-%231e37ff?style=flat-square&logo=RSS&logoColor=white)](https://www.hiascend.com/forum/) |
+```
+hcuprobe/
+├── src/hcuprobe/
+│   ├── core/                 # 与上游一致的内核:dump / monitor_v2 / compare
+│   ├── pytorch/              # PrecisionDebugger 等 PyTorch 侧入口
+│   ├── visualization/        # 构图可视化
+│   ├── overflow_check/       # 溢出检测
+│   ├── msaccucmp/            # 精度比对底层
+│   ├── integrations/         # HCU 侧自维护:多框架训练接入翻译层
+│   ├── tools/                # 离线分析工具实现
+│   └── cli.py                # hcuprobe CLI 入口
+├── docs/
+│   ├── offline_analysis/     # 离线分析工具文档(compare / overflow / precheck / ...)
+│   ├── infer/                # 推理侧 dump(vLLM / SGLang)
+│   ├── annotated/            # 各框架接入的代码改动点标注页(渲染即懂 HTML)
+│   ├── UPSTREAM_SYNC.md       # 上游版本同步说明
+│   └── FAQ.md                # 常见问题
+└── pyproject.toml
+```
 
-## 🙏 致谢
+## 🔄 上游同步
 
-本工具由华为公司的下列部门联合贡献：<br>
-🔹 昇腾计算 MindStudio 开发部<br>
-🔹 分布式并行计算实验室
+hcuprobe 是 msProbe 的 HCU 适配 fork。当前对齐上游 `26.0.0`(commit `ffb0c39f`),内核子树 `core / pytorch / visualization / overflow_check / msaccucmp` 与上游一致,`integrations / tools` 为 HCU 侧自维护。**本仓未覆盖的上游功能**(如 `checkpoint_compare`、`response_anomaly`、accuracy_checker 细节等)可参考上游 user_guide,注意 `msprobe` → `hcuprobe` 命令映射、跳过 NPU / 昇腾专属能力。
 
-感谢来自社区的每一个 PR，欢迎贡献 msProbe！
+**→ [上游同步说明 docs/UPSTREAM_SYNC.md](docs/UPSTREAM_SYNC.md)**
+
+## ⚖️ 许可证
+
+- **代码**: 沿用上游 msProbe 的[木兰宽松许可证 第 2 版(Mulan PSL v2)](https://gitcode.com/Ascend/msprobe)。
+- **文档**: 上游 `docs/` 为 CC-BY 4.0;从上游文档复制内容须保留署名。
+
+详见 **[上游同步说明 · License 与署名](docs/UPSTREAM_SYNC.md#license-与署名)**。
