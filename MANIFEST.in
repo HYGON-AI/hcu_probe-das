@@ -1,6 +1,6 @@
 include README.md
 include LICENSE
-recursive-include python/msprobe *
+recursive-include python/hcuprobe *
 recursive-exclude test *
 recursive-exclude ccsrc *
 

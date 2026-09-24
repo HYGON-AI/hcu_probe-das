@@ -15,7 +15,7 @@
 from enum import Enum
 
 # 允许执行的命令白名单
-ALLOWED_COMMANDS = {"msprobe"}
+ALLOWED_COMMANDS = {"hcuprobe"}
 # 禁止的参数模式（注入攻击特征）
 FORBIDDEN_ARG_PATTERNS = [
     r"\|",  # 管道符

@@ -16,7 +16,7 @@ repos:
       - id: check-yaml
         args: ["--allow-multiple-documents"]
         exclude: |
-          (?i)python/msprobe/pytorch/dump/api_dump/support_wrap_ops\.yaml
+          (?i)python/hcuprobe/pytorch/dump/api_dump/support_wrap_ops\.yaml
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: detect-private-key

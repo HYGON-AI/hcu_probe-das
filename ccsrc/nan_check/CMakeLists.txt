@@ -89,5 +89,5 @@ target_link_options(nan_check_ext PRIVATE
     "-Wl,-rpath,${TORCH_NPU_LIB_DIR}"
 )
 
-set(NAN_CHECK_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../python/msprobe/lib/)
+set(NAN_CHECK_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../python/hcuprobe/lib/)
 install(TARGETS nan_check_ext LIBRARY DESTINATION ${NAN_CHECK_LIB_DIR})

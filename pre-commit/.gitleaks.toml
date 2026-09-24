@@ -4,7 +4,7 @@
 # 当前状态：仅继承二进制内置官方全套默认规则，无新增/无屏蔽任何规则
 # 标准继承语法：[extend] useDefault = true（官方推荐，通用离线二进制兼容）
 # ==============================================
-title = "msprobe pre-commit secret scan config"
+title = "hcuprobe pre-commit secret scan config"
 
 # 【标准继承内置默认规则】
 # useDefault=true：加载工具内置全部密钥检测规则（AWS/Git/SSH/OBS等）

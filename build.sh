@@ -21,7 +21,7 @@ INCLUDE_MOD=""
 ATB_PROBE_MOD="'atb_probe'"
 ACLGRAPH_DUMP_MOD="'aclgraph_dump'"
 NAN_CHECK_MOD="'nan_check'"
-PYTHON_NAN_CHECK_VENDOR_DIR="${BUILD_PATH}/python/msprobe/vendors"
+PYTHON_NAN_CHECK_VENDOR_DIR="${BUILD_PATH}/python/hcuprobe/vendors"
 XOR_CHECKSUM_MOD="'xor_checksum'"
 
 HELP_DOC=$(cat << EOF
@@ -88,9 +88,9 @@ while true; do
             USE_LOCAL_FIRST=True ; shift ;;
         -f | --force-rebuild)
             rm -rf "${BUILD_PATH}/build_dependency" "${BUILD_PATH}/lib" "${BUILD_PATH}/output" "${BUILD_PATH}/third_party" \
-                   "${BUILD_PATH}/python/msprobe/lib/*" "${BUILD_PATH}/ccsrc/xor_checksum/build" \
+                   "${BUILD_PATH}/python/hcuprobe/lib/*" "${BUILD_PATH}/ccsrc/xor_checksum/build" \
                    "${BUILD_PATH}/ccsrc/xor_checksum/dist" "${BUILD_PATH}/ccsrc/xor_checksum"/*.egg-info \
-                   "${BUILD_PATH}/python/msprobe/lib/xor_checksum_ext.so"
+                   "${BUILD_PATH}/python/hcuprobe/lib/xor_checksum_ext.so"
             shift ;;
         -t | --test-cases)
             BUILD_TEST_CASE=True ; shift ;;
@@ -204,8 +204,8 @@ if [[ "${INCLUDE_MOD}" == *"${XOR_CHECKSUM_MOD}"* ]]; then
     fi
 fi
 
-if [ ! -d ${BUILD_PATH}/python/msprobe/lib ]; then
-    mkdir ${BUILD_PATH}/python/msprobe/lib
+if [ ! -d ${BUILD_PATH}/python/hcuprobe/lib ]; then
+    mkdir ${BUILD_PATH}/python/hcuprobe/lib
 fi
 
 # Merge each module's CMake database so clangd can index all native modules.
@@ -250,16 +250,16 @@ if [[ -f "${COMPILE_COMMANDS_SOURCE}" ]]; then
 fi
 
 if [[ "${INCLUDE_MOD}" == *"${ATB_PROBE_MOD}"* ]]; then
-    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi0.so ${BUILD_PATH}/python/msprobe/lib/libatb_probe_abi0.so
-    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi1.so ${BUILD_PATH}/python/msprobe/lib/libatb_probe_abi1.so
+    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi0.so ${BUILD_PATH}/python/hcuprobe/lib/libatb_probe_abi0.so
+    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/atb_probe/libatb_probe_abi1.so ${BUILD_PATH}/python/hcuprobe/lib/libatb_probe_abi1.so
 fi
 
 if [[ "${INCLUDE_MOD}" == *"${ACLGRAPH_DUMP_MOD}"* ]]; then
-    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/aclgraph_dump/aclgraph_dump_ext.so ${BUILD_PATH}/python/msprobe/lib/aclgraph_dump_ext.so
+    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/aclgraph_dump/aclgraph_dump_ext.so ${BUILD_PATH}/python/hcuprobe/lib/aclgraph_dump_ext.so
 fi
 
 if [[ "${INCLUDE_MOD}" == *"${NAN_CHECK_MOD}"* ]]; then
-    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/nan_check/nan_check_ext.so ${BUILD_PATH}/python/msprobe/lib/nan_check_ext.so
+    cp -f ${BUILD_OUTPUT_PATH}/ccsrc/nan_check/nan_check_ext.so ${BUILD_PATH}/python/hcuprobe/lib/nan_check_ext.so
     chmod -R u+w "${PYTHON_NAN_CHECK_VENDOR_DIR}" 2>/dev/null || true
     rm -rf "${PYTHON_NAN_CHECK_VENDOR_DIR}"
     if [[ -d "${BUILD_PATH}/vendors" ]]; then
@@ -275,5 +275,5 @@ elif [[ -d "${PYTHON_NAN_CHECK_VENDOR_DIR}" ]]; then
 fi
 
 if [[ "${INCLUDE_MOD}" == *"${XOR_CHECKSUM_MOD}"* ]]; then
-    cp -f ${BUILD_OUTPUT_PATH}/xor_checksum/xor_checksum_ext.so ${BUILD_PATH}/python/msprobe/lib/xor_checksum_ext.so
+    cp -f ${BUILD_OUTPUT_PATH}/xor_checksum/xor_checksum_ext.so ${BUILD_PATH}/python/hcuprobe/lib/xor_checksum_ext.so
 fi

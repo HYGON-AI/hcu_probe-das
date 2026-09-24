@@ -22,7 +22,7 @@ from tensorboard.util import tb_logging
 from ..utils.graph_utils import GraphUtils
 from ..utils.global_state import GraphState
 from ..utils.constant import Extension, DataType
-from msprobe.visualization.utils import ProgressInfo, update_progress_info
+from hcuprobe.visualization.utils import ProgressInfo, update_progress_info
 
 logger = tb_logging.get_logger()
 DB_EXT = Extension.DB.value
@@ -92,7 +92,7 @@ class GraphServiceStrategy(ABC):
         def call_path_api():
             ProgressInfo.reset()
             run_list = [
-                "msprobe",
+                "hcuprobe",
                 "graph_visualize",
                 "-tp",
                 npu_path,

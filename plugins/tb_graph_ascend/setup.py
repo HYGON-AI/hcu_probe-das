@@ -21,8 +21,8 @@ setuptools.setup(
     version=VERSION,
     description="Model Hierarchical Visualization TensorBoard Plugin",
     long_description="Model Hierarchical Visualization TensorBoard Plugin : \
-        https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend",
-    url="https://gitcode.com/Ascend/msprobe/tree/master/plugins/tb_graph_ascend",
+        https://gitcode.com/Ascend/hcuprobe/tree/master/plugins/tb_graph_ascend",
+    url="https://gitcode.com/Ascend/hcuprobe/tree/master/plugins/tb_graph_ascend",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
     packages=setuptools.find_packages(),

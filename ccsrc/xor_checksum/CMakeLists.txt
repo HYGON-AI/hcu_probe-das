@@ -68,7 +68,7 @@ set(COMPILE_OPTIONS
     ${TORCH_CXX_FLAGS}
     -fdiagnostics-color=always
     -w
-    -DEXTENSION_MODULE_NAME=msprobe
+    -DEXTENSION_MODULE_NAME=hcuprobe
 )
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     list(APPEND COMPILE_OPTIONS -O0 -g)

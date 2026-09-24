@@ -58,5 +58,5 @@ target_link_libraries(${LIB_NAME} PRIVATE
     -lpthread
 )
 
-set(ATB_PROBE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../python/msprobe/lib/)
+set(ATB_PROBE_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../python/hcuprobe/lib/)
 install(TARGETS ${LIB_NAME} LIBRARY DESTINATION ${ATB_PROBE_LIB_DIR})

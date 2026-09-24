@@ -43,7 +43,7 @@
         "${workspaceFolder}/output",
         "${workspaceFolder}/artifacts",
         "${workspaceFolder}/test_output",
-        "${workspaceFolder}/test/msprobe_test/report"
+        "${workspaceFolder}/test/hcuprobe_test/report"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

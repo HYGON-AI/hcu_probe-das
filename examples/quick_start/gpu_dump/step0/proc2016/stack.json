@@ -4,7 +4,7 @@
    "Functional.conv2d.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -37,7 +37,7 @@
    "Tensor.add_.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -54,7 +54,7 @@
    "Functional.batch_norm.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -86,7 +86,7 @@
    "Functional.relu.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -118,7 +118,7 @@
    "Functional.max_pool2d.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/pooling.py, line 224, in forward, \n return F.max_pool2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -152,7 +152,7 @@
    "Functional.conv2d.8.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -205,7 +205,7 @@
    "Tensor.add_.8.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -232,7 +232,7 @@
    "Functional.batch_norm.8.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -284,7 +284,7 @@
    "Functional.relu.7.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -336,7 +336,7 @@
    "Functional.conv2d.9.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -389,7 +389,7 @@
    "Tensor.add_.9.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -416,7 +416,7 @@
    "Functional.batch_norm.9.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -468,7 +468,7 @@
    "Functional.relu.8.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -520,7 +520,7 @@
    "Functional.conv2d.10.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -573,7 +573,7 @@
    "Tensor.add_.10.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -600,7 +600,7 @@
    "Functional.batch_norm.10.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -650,7 +650,7 @@
    "Functional.conv2d.4.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -708,7 +708,7 @@
    "Tensor.add_.4.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -737,7 +737,7 @@
    "Functional.batch_norm.4.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -791,7 +791,7 @@
    "Tensor.__iadd__.2.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torchvision/models/resnet.py, line 160, in forward, \n out += identity",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -814,7 +814,7 @@
    "Functional.relu.9.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -903,7 +903,7 @@
    "Functional.conv2d.21.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -958,7 +958,7 @@
    "Tensor.add_.21.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -986,7 +986,7 @@
    "Functional.batch_norm.21.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1040,7 +1040,7 @@
    "Functional.relu.19.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1094,7 +1094,7 @@
    "Functional.conv2d.22.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -1149,7 +1149,7 @@
    "Tensor.add_.22.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1177,7 +1177,7 @@
    "Functional.batch_norm.22.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1231,7 +1231,7 @@
    "Functional.relu.20.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1285,7 +1285,7 @@
    "Functional.conv2d.23.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -1340,7 +1340,7 @@
    "Tensor.add_.23.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1368,7 +1368,7 @@
    "Functional.batch_norm.23.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1419,7 +1419,7 @@
    "Functional.conv2d.14.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -1477,7 +1477,7 @@
    "Tensor.add_.14.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1506,7 +1506,7 @@
    "Functional.batch_norm.14.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1561,7 +1561,7 @@
    "Tensor.__iadd__.6.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torchvision/models/resnet.py, line 160, in forward, \n out += identity",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1585,7 +1585,7 @@
    "Functional.relu.21.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1678,7 +1678,7 @@
    "Functional.conv2d.40.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -1737,7 +1737,7 @@
    "Tensor.add_.40.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1767,7 +1767,7 @@
    "Functional.batch_norm.40.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1825,7 +1825,7 @@
    "Functional.relu.37.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1883,7 +1883,7 @@
    "Functional.conv2d.41.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -1942,7 +1942,7 @@
    "Tensor.add_.41.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -1972,7 +1972,7 @@
    "Functional.batch_norm.41.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2030,7 +2030,7 @@
    "Functional.relu.38.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2088,7 +2088,7 @@
    "Functional.conv2d.42.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -2147,7 +2147,7 @@
    "Tensor.add_.42.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2177,7 +2177,7 @@
    "Functional.batch_norm.42.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2230,7 +2230,7 @@
    "Functional.conv2d.27.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -2288,7 +2288,7 @@
    "Tensor.add_.27.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2317,7 +2317,7 @@
    "Functional.batch_norm.27.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2374,7 +2374,7 @@
    "Tensor.__iadd__.12.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torchvision/models/resnet.py, line 160, in forward, \n out += identity",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2400,7 +2400,7 @@
    "Functional.relu.39.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2494,7 +2494,7 @@
    "Functional.conv2d.50.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -2547,7 +2547,7 @@
    "Tensor.add_.50.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2574,7 +2574,7 @@
    "Functional.batch_norm.50.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2626,7 +2626,7 @@
    "Functional.relu.46.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2678,7 +2678,7 @@
    "Functional.conv2d.51.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -2731,7 +2731,7 @@
    "Tensor.add_.51.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2758,7 +2758,7 @@
    "Functional.batch_norm.51.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2810,7 +2810,7 @@
    "Functional.relu.47.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2862,7 +2862,7 @@
    "Functional.conv2d.52.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -2915,7 +2915,7 @@
    "Tensor.add_.52.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2942,7 +2942,7 @@
    "Functional.batch_norm.52.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -2992,7 +2992,7 @@
    "Functional.conv2d.46.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 543, in _conv_forward, \n return F.conv2d(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/conv.py, line 548, in forward, \n return self._conv_forward(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
@@ -3050,7 +3050,7 @@
    "Tensor.add_.46.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 173, in forward, \n self.num_batches_tracked.add_(1)  # type: ignore[has-type]",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3079,7 +3079,7 @@
    "Functional.batch_norm.46.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/batchnorm.py, line 193, in forward, \n return F.batch_norm(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3133,7 +3133,7 @@
    "Tensor.__iadd__.15.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torchvision/models/resnet.py, line 160, in forward, \n out += identity",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3156,7 +3156,7 @@
    "Functional.relu.48.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/activation.py, line 135, in forward, \n return F.relu(input, inplace=self.inplace)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3242,7 +3242,7 @@
    "Functional.adaptive_avg_pool2d.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/pooling.py, line 1475, in forward, \n return F.adaptive_avg_pool2d(input, self.output_size)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3274,7 +3274,7 @@
    "Functional.linear.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/linear.py, line 125, in forward, \n return F.linear(input, self.weight, self.bias)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1827, in inner, \n result = forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1879, in _call_impl, \n return inner()",
@@ -3306,7 +3306,7 @@
    "Functional.cross_entropy.0.forward"
   ],
   [
-   "File /root/miniconda3/lib/python3.12/site-packages/msprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
+   "File /root/miniconda3/lib/python3.12/site-packages/hcuprobe/core/dump/api_dump/api_registry.py, line 95, in api_function, \n return api_instance(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/loss.py, line 1310, in forward, \n return F.cross_entropy(",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1784, in _call_impl, \n return forward_call(*args, **kwargs)",
    "File /root/miniconda3/lib/python3.12/site-packages/torch/nn/modules/module.py, line 1773, in _wrapped_call_impl, \n return self._call_impl(*args, **kwargs)",

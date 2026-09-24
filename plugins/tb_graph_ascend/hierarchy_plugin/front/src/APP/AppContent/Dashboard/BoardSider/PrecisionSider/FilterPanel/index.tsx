@@ -74,7 +74,7 @@ const PrecisionPanel = (props: PrecisionPanelProps): React.JSX.Element => {
                 {t('precision_desc_before')}
                 <a
                   className={styles.tooltipLink}
-                  href="https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_compare/pytorch_visualization_instruct.md#%E9%A2%9C%E8%89%B2%E8%AF%B4%E6%98%8E"
+                  href="https://gitcode.com/Ascend/hcuprobe/blob/master/docs/zh/accuracy_compare/pytorch_visualization_instruct.md#%E9%A2%9C%E8%89%B2%E8%AF%B4%E6%98%8E"
                   target="_blank"
                 >
                   {t('precision_desc_link')}

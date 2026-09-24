@@ -1,6 +1,6 @@
 {
     "Tensor.__add__.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_net/PanGu/pangu/training/utils.py, line 176, in get_ltor_reset_masks_and_position_ids, \n attention_mask[b, 0, (i + 1):, :(i + 1)] = 0",
         "File /path_to_net/PanGu/pretrain_gpt.py, line 174, in get_batch, \n attention_mask, position_ids = get_ltor_reset_masks_and_position_ids(",
         "File /path_to_net/PanGu/pretrain_gpt.py, line 243, in forward_step, \n tokens, labels, loss_mask, attention_mask, position_ids = get_batch(",
@@ -14,7 +14,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "Tensor.__add__.1.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_net/PanGu/pangu/training/utils.py, line 176, in get_ltor_reset_masks_and_position_ids, \n attention_mask[b, 0, (i + 1):, :(i + 1)] = 0",
         "File /path_to_net/PanGu/pretrain_gpt.py, line 174, in get_batch, \n attention_mask, position_ids = get_ltor_reset_masks_and_position_ids(",
         "File /path_to_net/PanGu/pretrain_gpt.py, line 243, in forward_step, \n tokens, labels, loss_mask, attention_mask, position_ids = get_batch(",
@@ -28,7 +28,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "Tensor.__or__.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_tensor.py, line 61, in tensor_op_template, \n return TensorOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_package/third_party/MindSpeed/mindspeed/core/tensor_parallel/layers.py, line 19, in vocab_parallel_embedding_forward, \n input_mask = (input_ < self.vocab_start_index) | \\",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1568, in _call_impl, \n result = forward_call(*args, **kwargs)",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1518, in _wrapped_call_impl, \n return self._call_impl(*args, **kwargs)",
@@ -58,7 +58,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "Distributed.all_reduce.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_distributed.py, line 68, in distributed_op_template, \n return DistributedOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_distributed.py, line 68, in distributed_op_template, \n return DistributedOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_net/third_party/Megatron-LM/megatron/core/tensor_parallel/mappings.py, line 24, in _reduce, \n torch.distributed.all_reduce(input_, group=get_tensor_model_parallel_group())",
         "File /path_to_net/third_party/Megatron-LM/megatron/core/tensor_parallel/mappings.py, line 223, in forward, \n return _reduce(input_)",
         "File /path_to_package/site-packages/torch/autograd/function.py, line 539, in apply, \n return super().apply(*args, **kwargs)  # type: ignore[misc]",
@@ -118,7 +118,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "NPU.npu_rms_norm.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_npu_custom.py, line 78, in npu_op_template, \n return NpuOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_npu_custom.py, line 78, in npu_op_template, \n return NpuOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_package/third_party/MindSpeed/mindspeed/core/fusions/rms_norm.py, line 26, in wrapper, \n return torch_npu.npu_rms_norm(x, self.weight, epsilon=self.eps)[0]",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1568, in _call_impl, \n result = forward_call(*args, **kwargs)",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1518, in _wrapped_call_impl, \n return self._call_impl(*args, **kwargs)",
@@ -242,7 +242,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "Torch.cos.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_torch.py, line 76, in torch_op_template, \n return TorchOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_torch.py, line 76, in torch_op_template, \n return TorchOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_package/third_party/MindSpeed/mindspeed/core/fusions/rotary_pos_embedding.py, line 16, in wrapper, \n cos_ = torch.cos(freqs).to(t.dtype)",
         "File /path_to_net/PanGu/pangu/core/fusions/rotary_pos_embedding.py, line 13, in wrapper, \n t = fn(t, freqs, rotary_interleaved)",
         "File /path_to_net/third_party/Megatron-LM/megatron/core/models/common/embeddings/rotary_pos_embedding.py, line 313, in apply_rotary_pos_emb, \n return apply_rotary_pos_emb_bshd(t, freqs, rotary_interleaved=config.rotary_interleaved)",
@@ -281,7 +281,7 @@
         "File /path_to_net/PanGu/pretrain_gpt.py, line 392, in <module>, \n main()"
     ],
     "NPU.npu_fusion_attention.0.forward": [
-        "File /path_to_package/mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/wrap_npu_custom.py, line 78, in npu_op_template, \n return NpuOPTemplate(op_name, hook)(*args, **kwargs)",
+        "File /path_to_package/mstt/debug/accuracy_tools/hcuprobe/pytorch/hook_module/wrap_npu_custom.py, line 78, in npu_op_template, \n return NpuOPTemplate(op_name, hook)(*args, **kwargs)",
         "File /path_to_package/third_party/MindSpeed/mindspeed/model/transformer.py, line 525, in flash_self_attention_forward, \n output = torch_npu.npu_fusion_attention(",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1568, in _call_impl, \n result = forward_call(*args, **kwargs)",
         "File /path_to_package/site-packages/torch/nn/modules/module.py, line 1518, in _wrapped_call_impl, \n return self._call_impl(*args, **kwargs)",

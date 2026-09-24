@@ -90,7 +90,7 @@ export const resources = {
 
       step1_title: 'Step 1: Collect Model Data Files',
       step1_desc:
-        'The msprobe tool primarily collects precision data by adding dump interfaces in the training script and launching training.',
+        'The hcuprobe tool primarily collects precision data by adding dump interfaces in the training script and launching training.',
       pytorch_link_text: 'Data Dump Guide for PyTorch',
       mindspore_link_text: 'Data Dump Guide for MindSpore',
       step2_title: 'Step 2: Build Graph Structure File (.vis.db)',
@@ -311,7 +311,7 @@ export const resources = {
       build_info_mindspore_link_text: 'MindSpore场景的分级可视化构图比对',
 
       step1_title: 'Step1: 采集模型数据文件',
-      step1_desc: 'msprobe工具主要通过在训练脚本内添加dump接口、启动训练的方式采集精度数据。',
+      step1_desc: 'hcuprobe工具主要通过在训练脚本内添加dump接口、启动训练的方式采集精度数据。',
       pytorch_link_text: 'pytorch场景的数据采集指南',
       mindspore_link_text: 'mindspore场景的数据采集指南',
       step2_title: 'Step 2: 构建图结构文件(.vis.db)',

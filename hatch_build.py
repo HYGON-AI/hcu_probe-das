@@ -25,7 +25,7 @@ from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 CI_GLIBC_PATH = "/opt/gcc11-glibc2.17"
-BUILD_INFO_PATH = Path("python") / "msprobe" / "_build_info.py"
+BUILD_INFO_PATH = Path("python") / "hcuprobe" / "_build_info.py"
 REPOSITORY_URL = "https://gitcode.com/Ascend/MindStudio-Probe"
 
 

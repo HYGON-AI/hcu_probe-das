@@ -46,7 +46,7 @@ namespace
 namespace py = pybind11;
 
 static std::atomic<uint64_t> serial_num{0};
-static constexpr const char* kForwardStartMarker = "__msprobe_fwd_start__";
+static constexpr const char* kForwardStartMarker = "__hcuprobe_fwd_start__";
 static constexpr const char* kAclRuntimeInitError =
     "ACL runtime not initialized (no current context). Ensure NPU backend is initialized before calling acl_save.";
 static constexpr const char* kAclSaveLogPrefix = "[acl_save_debug]";

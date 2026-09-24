@@ -188,7 +188,7 @@ class GraphUtils:
         """
         安全校验外部传入的命令列表，防止命令注入攻击。
 
-        :param cmd_list: 命令列表，如 ["msprobe", "graph_visualize", "-tp", "/path/to/file"]
+        :param cmd_list: 命令列表，如 ["hcuprobe", "graph_visualize", "-tp", "/path/to/file"]
         :return: (success, error_message) 元组，校验通过返回 (True, None)
         """
         if not isinstance(cmd_list, (list, tuple)):

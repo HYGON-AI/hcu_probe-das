@@ -15,8 +15,8 @@ test_output/
 artifacts/
 output/
 third_party/
-test/msprobe_test/report/
-python/msprobe/scripts/
+test/hcuprobe_test/report/
+python/hcuprobe/scripts/
 .devcontainer/.host-gitconfig
 .coverage
 .coverage.*

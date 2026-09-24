@@ -15,7 +15,7 @@
 // -------------------------------------------------------------------------
 
 {
-  "name": "msprobe",
+  "name": "hcuprobe",
   "image": "swr.cn-north-4.myhuaweicloud.com/mindstudio-image/mindstudio-build:26.1.0-0701",
 
   "workspaceFolder": "/workspace",

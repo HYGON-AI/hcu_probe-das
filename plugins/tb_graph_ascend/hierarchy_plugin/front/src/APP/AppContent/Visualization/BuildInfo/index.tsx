@@ -70,14 +70,14 @@ const BuildInfo = () => {
                     {t('step1_desc')}
                     <br />
                     <a
-                      href="https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/dump/pytorch_data_dump_instruct.md"
+                      href="https://gitcode.com/Ascend/hcuprobe/blob/master/docs/zh/dump/pytorch_data_dump_instruct.md"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
                       {t('pytorch_link_text')}
                     </a>
                     <a
-                      href="https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/dump/mindspore_data_dump_instruct.md"
+                      href="https://gitcode.com/Ascend/hcuprobe/blob/master/docs/zh/dump/mindspore_data_dump_instruct.md"
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ marginLeft: 20 }}
@@ -99,7 +99,7 @@ const BuildInfo = () => {
           <div className={styles.mainTitleDesc}>
             {t('build_info_sub_title')}
             <a
-              href="https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_compare/pytorch_visualization_instruct.md"
+              href="https://gitcode.com/Ascend/hcuprobe/blob/master/docs/zh/accuracy_compare/pytorch_visualization_instruct.md"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -107,7 +107,7 @@ const BuildInfo = () => {
             </a>
 
             <a
-              href="https://gitcode.com/Ascend/msprobe/blob/master/docs/zh/accuracy_compare/mindspore_visualization_instruct.md"
+              href="https://gitcode.com/Ascend/hcuprobe/blob/master/docs/zh/accuracy_compare/mindspore_visualization_instruct.md"
               target="_blank"
               rel="noopener noreferrer"
               style={{ marginLeft: 10 }}

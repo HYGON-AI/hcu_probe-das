@@ -105,7 +105,7 @@ function parse_script_args() {
 # create temp dir for product
 function create_temp_dir() {
     local temp_dir=${1}
-    local cmp_dir=${TOP_DIR}/python/msprobe/msaccucmp
+    local cmp_dir=${TOP_DIR}/python/hcuprobe/msaccucmp
 
     cp -r ${cmp_dir} ${temp_dir}
 

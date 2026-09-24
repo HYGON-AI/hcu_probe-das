@@ -20,7 +20,7 @@ set -u
 
 readonly WORKSPACE_DIR="/workspace"
 readonly HOST_GITCONFIG="/tmp/host-gitconfig"
-readonly HINT_MARKER="# >>> msprobe devcontainer >>>"
+readonly HINT_MARKER="# >>> hcuprobe devcontainer >>>"
 readonly TORCH_VERSION="2.11.0"
 readonly TORCH_NPU_VERSION="2.11.0"
 readonly TORCH_CPU_INDEX="${MSPROBE_TORCH_CPU_INDEX:-https://mirrors.nju.edu.cn/pytorch/whl/cpu}"
@@ -132,7 +132,7 @@ install_pytorch_npu() {
         return 0
     fi
 
-    warn "installing the msprobe PyTorch/TorchNPU development stack"
+    warn "installing the hcuprobe PyTorch/TorchNPU development stack"
     local -a conflicting_packages=()
     while IFS= read -r package_name; do
         [[ -z "${package_name}" ]] || conflicting_packages+=("${package_name}")
@@ -167,12 +167,12 @@ install_pytorch_npu() {
 }
 install_project_dependencies() {
     if ! python3 -m pip --version >/dev/null 2>&1; then
-        warn "pip is unavailable; msprobe runtime dependencies were not installed"
+        warn "pip is unavailable; hcuprobe runtime dependencies were not installed"
         return 0
     fi
 
     python3 -m pip install --user --progress-bar off --editable "${WORKSPACE_DIR}" || \
-        warn "msprobe runtime dependency installation failed"
+        warn "hcuprobe runtime dependency installation failed"
 }
 
 sync_git_identity() {
@@ -208,11 +208,11 @@ append_dev_hint_once() {
     {
         echo ""
         echo "${HINT_MARKER}"
-        echo "echo 'msprobe development commands:'"
+        echo "echo 'hcuprobe development commands:'"
         echo "echo '  Release: python3 build.py -e include-mod=all'"
         echo "echo '  Debug:   python3 build.py -e include-mod=all -e build-type=debug'"
         echo "echo '  Tests:   python3 build.py test'"
-        echo "# <<< msprobe devcontainer <<<"
+        echo "# <<< hcuprobe devcontainer <<<"
     } >> "${target}"
 }
 
@@ -252,7 +252,7 @@ ignore_vscode_settings() {
 }
 
 main() {
-    echo "[devcontainer] starting msprobe environment initialization"
+    echo "[devcontainer] starting hcuprobe environment initialization"
     configure_user_bin
     configure_cann_runtime
     configure_python311
@@ -268,7 +268,7 @@ main() {
     if [[ ! -e "${WORKSPACE_DIR}/build/compile_commands.json" ]]; then
         echo "[devcontainer] build/compile_commands.json will be created after the first C++ build."
     fi
-    echo "[devcontainer] msprobe environment initialization completed"
+    echo "[devcontainer] hcuprobe environment initialization completed"
 }
 
 main || warn "initialization completed with recoverable errors"

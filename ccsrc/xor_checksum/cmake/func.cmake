@@ -27,7 +27,7 @@ function(recursive_add_subdirectory)
     endforeach()
 endfunction()
 
-function(msprobe_add_current_op OUT_TARGET)
+function(hcuprobe_add_current_op OUT_TARGET)
     get_filename_component(PARENT_DIR "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
     get_filename_component(OP_NAME "${PARENT_DIR}" NAME)
 

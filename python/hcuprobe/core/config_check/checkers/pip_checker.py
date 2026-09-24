@@ -1,0 +1,91 @@
+# -------------------------------------------------------------------------
+#  This file is part of the MindStudio project.
+# Copyright (c) 2025 Huawei Technologies Co.,Ltd.
+#
+# MindStudio is licensed under Mulan PSL v2.
+# You can use this software according to the terms and conditions of the Mulan PSL v2.
+# You may obtain a copy of Mulan PSL v2 at:
+#
+#          http://license.coscl.org.cn/MulanPSL2
+#
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
+# EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
+# MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
+# See the Mulan PSL v2 for more details.
+# -------------------------------------------------------------------------
+
+import os
+import pandas as pd
+try:
+    import importlib.metadata as metadata
+except ImportError:
+    import importlib_metadata as metadata
+
+from hcuprobe.core.common.file_utils import load_yaml, create_file_in_zip
+from hcuprobe.core.config_check.checkers.base_checker import BaseChecker
+from hcuprobe.core.config_check.config_checker import register_checker_item
+from hcuprobe.core.config_check.utils.utils import config_checking_print, process_pass_check
+from hcuprobe.core.common.file_utils import FileOpen, save_excel
+from hcuprobe.core.common.const import Const
+
+dirpath = os.path.dirname(__file__)
+depend_path = os.path.join(dirpath, "../resource/dependency.yaml")
+
+
+def load_pip_txt(file_path):
+    output_dir = {}
+    with FileOpen(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+        for line in lines:
+            info_list = line.strip().split("=")
+            output_dir[info_list[0]] = "" if len(info_list) != 2 else info_list[1]
+    return output_dir
+
+
+def collect_pip_data():
+    result = ""
+    packages = metadata.distributions()
+    for pkg in packages:
+        if pkg.metadata:
+            result += f"{pkg.metadata.get('Name')}={pkg.version}\n"
+    return result
+
+
+def compare_pip_data(bench_pip_path, cmp_pip_path):
+    necessary_dependency = load_yaml(depend_path)["dependency"]
+    bench_data = load_pip_txt(bench_pip_path)
+    cmp_data = load_pip_txt(cmp_pip_path)
+    data = []
+    for package in necessary_dependency:
+        bench_version = bench_data.get(package)
+        cmp_version = cmp_data.get(package)
+
+        if bench_version != cmp_version:
+            data.append([package, bench_version if bench_version else 'None',
+                         cmp_version if cmp_version else 'None',
+                         Const.CONFIG_CHECK_ERROR])
+
+    df = pd.DataFrame(data, columns=PipPackageChecker.result_header)
+    return df
+
+
+@register_checker_item("pip")
+class PipPackageChecker(BaseChecker):
+
+    target_name_in_zip = "pip"
+    result_header = ['package', 'bench version', 'cmp version', 'level']
+
+    @staticmethod
+    def pack(pack_input):
+        output_zip_path = pack_input.output_zip_path
+        pip_data = collect_pip_data()
+        create_file_in_zip(output_zip_path, PipPackageChecker.target_name_in_zip, pip_data)
+        config_checking_print(f"add pip info to zip")
+
+    @staticmethod
+    def compare(bench_dir, cmp_dir, output_path):
+        bench_pip_path = os.path.join(bench_dir, PipPackageChecker.target_name_in_zip)
+        cmp_pip_path = os.path.join(cmp_dir, PipPackageChecker.target_name_in_zip)
+        df = compare_pip_data(bench_pip_path, cmp_pip_path)
+        pass_check = process_pass_check(df['level'].values)
+        return PipPackageChecker.target_name_in_zip, pass_check, df

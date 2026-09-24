@@ -230,13 +230,13 @@ class BuildManager:
 
     def _prepare_package_artifacts(self):
         src_scripts = self.project_root / "scripts"
-        dst_scripts = self.project_root / "python" / "msprobe" / "scripts"
+        dst_scripts = self.project_root / "python" / "hcuprobe" / "scripts"
         if src_scripts.exists():
             if dst_scripts.exists():
                 shutil.rmtree(dst_scripts)
             shutil.copytree(src_scripts, dst_scripts)
 
-        vendor_dir = self.project_root / "python" / "msprobe" / "vendors"
+        vendor_dir = self.project_root / "python" / "hcuprobe" / "vendors"
         if "nan_check" not in self.mod_list and vendor_dir.exists():
             for root, dirs, files in os.walk(vendor_dir):
                 for d in dirs:
@@ -299,9 +299,9 @@ class BuildManager:
             plugin_packages.append('"python/trend_analyzer"')
 
         if plugin_packages:
-            packages_line = f'packages = ["python/msprobe", {", ".join(plugin_packages)}]'
+            packages_line = f'packages = ["python/hcuprobe", {", ".join(plugin_packages)}]'
         else:
-            packages_line = 'packages = ["python/msprobe"]'
+            packages_line = 'packages = ["python/hcuprobe"]'
 
         content = re.sub(
             r'^packages\s*=\s*\[.*?\]',
@@ -339,7 +339,7 @@ class BuildManager:
             self._restore_pyproject()
 
     def _run_tests(self):
-        test_dir = self.project_root / "test" / "msprobe_test"
+        test_dir = self.project_root / "test" / "hcuprobe_test"
 
         if 'local' not in self.args.command:
             self._execute_command([sys.executable, "-m", "pip", "install", "-e", f"{self.project_root}[test]"])

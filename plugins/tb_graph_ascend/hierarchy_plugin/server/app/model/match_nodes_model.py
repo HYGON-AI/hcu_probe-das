@@ -16,7 +16,7 @@ from ..utils.graph_utils import GraphUtils
 from ..utils.constant import ADD_MATCH_KEYS, MODULE, NPU, BENCH
 from ..utils.global_state import GraphState
 
-from msprobe.visualization.builder.msprobe_adapter import MatchedNodeCalculator
+from hcuprobe.visualization.builder.hcuprobe_adapter import MatchedNodeCalculator
 
 
 class MatchNodesController:
