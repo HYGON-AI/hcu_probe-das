@@ -19,13 +19,19 @@ from unittest.mock import patch
 
 from msprobe.core.common.const import Const
 from msprobe.core.dump.data_dump.data_processor.factory import DataProcessorFactory
-from msprobe.core.dump.data_dump.data_processor.mindspore_processor import (
-    StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
-    TensorDataProcessor as MindsporeTensorDataProcessor,
-)
-
+_has_mindspore = False
+try:
+    import mindspore
+    from msprobe.core.dump.data_dump.data_processor.mindspore_processor import (
+        StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
+        TensorDataProcessor as MindsporeTensorDataProcessor,
+    )
+    _has_mindspore = True
+except ImportError:
+    _has_mindspore = False
 
 class TestDataProcessorFactory(unittest.TestCase):
+    @unittest.skipUnless(_has_mindspore, "mindspore is not available")
     def test_register_processors(self):
         with patch.object(DataProcessorFactory, "register_processor") as mock_register:
             DataProcessorFactory.register_processors(Const.MS_FRAMEWORK)

@@ -16,16 +16,21 @@
 
 import unittest
 import zlib
+import pytest
 from unittest.mock import patch, MagicMock
-
-import mindspore as ms
 import numpy as np
 from packaging.version import parse as version_parse
-from mindspore import Tensor, ops, mint
 
-from msprobe.core.dump.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor, TensorDataProcessor
+try:
+    import mindspore as ms
+    from mindspore import Tensor, ops, mint
+    from msprobe.core.dump.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor, TensorDataProcessor
+except ImportError:
+    pytest.skip(
+        "mindspore is not installed, skip test_config_check.py",
+        allow_module_level=True,
+    )
 from msprobe.mindspore.common.log import logger
-
 
 def patch_norm(value):
     return ops.norm(value)

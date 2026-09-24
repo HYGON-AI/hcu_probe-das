@@ -27,8 +27,13 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.dump.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs, \
     TensorStatInfo, BaseDataProcessor
-from msprobe.core.dump.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
-
+_has_mindspore = False
+try:
+    import mindspore
+    from msprobe.core.dump.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor
+    _has_mindspore = True
+except ImportError:
+    _has_mindspore = False
 
 class TestModuleForwardInputsOutputs(unittest.TestCase):
 
@@ -428,14 +433,15 @@ class TestBaseDataProcessor(unittest.TestCase):
         excepted_result = {"key1": [None, None, {"key2": None, "key3": [None]}]}
         self.assertEqual(result, excepted_result)
 
-    @patch.object(MindsporeDataProcessor, "is_hookable_element", return_value=True)
+    @unittest.skipUnless(_has_mindspore, "mindspore is not available")
     def test_register_hook_single_element(self, _):
-        element = MagicMock()
-        element.hasattr = MagicMock(side_effect=lambda attr: attr == "register_hook")
-        element.requires_grad = True
-        hook_fn = MagicMock()
-        MindsporeDataProcessor.register_hook_single_element(element, [1, 2], hook_fn)
-        element.register_hook.assert_called_once()
+        with patch.object(MindsporeDataProcessor, "is_hookable_element", return_value=True):
+            element = MagicMock()
+            element.hasattr = MagicMock(side_effect=lambda attr: attr == "register_hook")
+            element.requires_grad = True
+            hook_fn = MagicMock()
+            MindsporeDataProcessor.register_hook_single_element(element, [1, 2], hook_fn)
+            element.register_hook.assert_called_once()
 
     @patch("msprobe.core.dump.data_dump.data_processor.base.partial")
     def test_analyze_debug_backward(self, mock_partial):

@@ -118,12 +118,19 @@ def run_ut():
     head_ut_directories = [os.path.join(cur_dir, "common_set_up")]
     tail_ut_directories = [os.path.join(cur_dir, "pytorch_ut"), os.path.join(cur_dir, "mindspore_ut")]
     msaccucmp_ut_dir = os.path.join(cur_dir, "msaccucmp_ut")
+    exclude_ut_directories = [
+        os.path.join(cur_dir, "common_set_up"), 
+        os.path.join(cur_dir, "infer_ut"), 
+        os.path.join(cur_dir, "mindspore_ut"), 
+    ]
 
     # 分离 msaccucmp_ut 和其他 ut
     other_ut_dirs = []
     for item in os.listdir(cur_dir):
         item_path = os.path.join(cur_dir, item)
         if item == "msaccucmp_ut":
+            continue
+        if item_path in exclude_ut_directories:
             continue
         if os.path.isdir(item_path) and not item.startswith("."):
             other_ut_dirs.append(item_path)

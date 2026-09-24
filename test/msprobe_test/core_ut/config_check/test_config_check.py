@@ -4,12 +4,11 @@ import shutil
 import unittest
 import torch
 import json
+import pytest
 import numpy as np
 from packaging.version import parse as version_parse
 import torch.nn as nn
-import mindspore as ms
-import mindspore.nn as ms_nn
-from mindspore import Tensor
+
 from msprobe.core.config_check.config_checker import ConfigChecker
 from msprobe.core.config_check.checkers.pip_checker import PipPackageChecker
 from msprobe.core.config_check.checkers.random_checker import RandomChecker
@@ -17,7 +16,13 @@ from msprobe.core.config_check.checkers.dataset_checker import DatasetChecker
 from msprobe.core.config_check.checkers.weights_checker import WeightsChecker
 from msprobe.core.common.file_utils import read_xlsx
 from msprobe.core.common.framework_adapter import FmkAdp
-
+try:
+    import mindspore as ms
+except ImportError:
+    pytest.skip(
+        "mindspore is not installed, skip test_config_check.py",
+        allow_module_level=True,
+    )
 
 testdir = os.path.dirname(__file__)
 config_checking_dir = os.path.dirname(testdir)

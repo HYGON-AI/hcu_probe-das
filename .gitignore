@@ -20,3 +20,20 @@ python/msprobe/scripts/
 .devcontainer/.host-gitconfig
 .coverage
 .coverage.*
+
+# test output
+test_*/
+!test_dump_file/
+monitor_output/
+empty_path/
+initialize_save_path/
+dump_path/
+report/
+*.npy
+*.csv
+!test/dcu_probe_test/resources/*.csv
+monitor_output_csv2tb
+.nfs*
+.coverage
+
+

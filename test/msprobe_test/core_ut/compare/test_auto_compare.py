@@ -8,6 +8,12 @@ from unittest.mock import patch, MagicMock
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.auto_compare import compare_auto_mode
+_has_mindspore = False
+try:
+    import mindspore
+    _has_mindspore = True
+except ImportError:
+    _has_mindspore = False
 
 
 def _build_args(
@@ -105,6 +111,7 @@ class TestCompareAutoMode(unittest.TestCase):
         mock_check_path.assert_any_call(args.target_path)
         mock_check_path.assert_any_call(args.golden_path)
 
+    @unittest.skipUnless(_has_mindspore, "mindspore is not available")
     @patch("msprobe.core.compare.auto_compare.check_file_or_directory_path")
     @patch("msprobe.core.compare.auto_compare.check_file_type")
     @patch("msprobe.core.compare.auto_compare.get_compare_framework")
@@ -156,6 +163,7 @@ class TestCompareAutoMode(unittest.TestCase):
         mock_mix_compare.assert_called_once_with(args, 1)
         mock_compare_inner.assert_not_called()
 
+    @unittest.skipUnless(_has_mindspore, "mindspore is not available")
     @patch("msprobe.core.compare.auto_compare.compare_distributed_inner")
     @patch("msprobe.mindspore.compare.distributed_compare.ms_graph_compare")
     @patch("msprobe.core.compare.auto_compare.mix_compare", return_value=False)

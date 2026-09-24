@@ -64,7 +64,14 @@ from msprobe.core.common.utils import (CompareException,
                                        check_slice_info,
                                        slice_by_config)
 from msprobe.core.common.decorator import recursion_depth_decorator
-from torchrec.sparse.jagged_tensor import JaggedTensor, KeyedJaggedTensor, KeyedTensor
+
+_has_torchrec = False
+try:
+    from torchrec.sparse.jagged_tensor import JaggedTensor, KeyedJaggedTensor, KeyedTensor
+
+    _has_torchrec = True
+except Exception as _:
+    _has_torchrec = False
 
 
 class TestUtils(TestCase):
@@ -625,6 +632,7 @@ class TestTorchrecUtils(unittest.TestCase):
         result = is_keyed_tensor(non_tensor_data)
         self.assertFalse(result)
 
+    @unittest.skipUnless(_has_torchrec, "torchrec is not available")
     def test_is_jagged_tensor_with_valid_jagged_tensor(self):
         values = torch.tensor([1, 2, 3, 4, 5])
         lengths = torch.tensor([2, 3])
@@ -632,6 +640,7 @@ class TestTorchrecUtils(unittest.TestCase):
         result = is_jagged_tensor(jt)
         self.assertTrue(result)
 
+    @unittest.skipUnless(_has_torchrec, "torchrec is not available")
     def test_is_keyed_jagged_tensor_with_valid_keyed_jagged_tensor(self):
         kjt = KeyedJaggedTensor(
             keys=["featA", "featB"],
@@ -642,6 +651,7 @@ class TestTorchrecUtils(unittest.TestCase):
         result = is_keyed_jagged_tensor(kjt)
         self.assertTrue(result)
 
+    @unittest.skipUnless(_has_torchrec, "torchrec is not available")
     def test_is_keyed_tensor_with_valid_keyed_tensor(self):
         user_dim = 2
         item_dim = 5
@@ -654,6 +664,7 @@ class TestTorchrecUtils(unittest.TestCase):
         result = is_keyed_tensor(kt)
         self.assertTrue(result)
 
+    @unittest.skipUnless(_has_torchrec, "torchrec is not available")
     @patch("msprobe.core.common.utils._has_torchrec", False)
     def test_is_jagged_tensor_when_torchrec_unavailable(self):
         values = torch.tensor([1, 2, 3, 4, 5])
