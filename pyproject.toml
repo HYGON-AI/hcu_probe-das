@@ -1,13 +1,14 @@
 [project]
-name = "mindstudio-probe"
-version = "26.0.0"
+name = "hcu-probe"
+version = "26.2.0+hcu.0.2.0"
 requires-python = ">=3.8,<3.15"
-description = "Ascend MindStudio Probe Utils"
+description = "Sugon HCU distribution of mindstudio-probe training precision debugger, with multi-framework integration layer"
 license = "MulanPSL-2.0"
+readme = "README.md"
 authors = [
-    {name = "Ascend Team", email = "pmail_mindstudio@huawei.com"},
+    {name = "Sugon DAS Team"},
 ]
-keywords = ["pytorch", "hcuprobe", "ascend"]
+keywords = ["pytorch", "probe", "hcu", "precision", "megatron"]
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -41,7 +42,7 @@ dependencies = [
 hcuprobe = "hcuprobe.hcuprobe:main"
 
 [project.urls]
-Homepage = "https://gitcode.com/Ascend/MindStudio-Probe"
+Homepage = "https://github.com/HYGON-AI/hcu_probe-das"
 
 [project.optional-dependencies]
 test = [
