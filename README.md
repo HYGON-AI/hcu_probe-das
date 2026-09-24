@@ -46,8 +46,8 @@ hcuprobe 是海光 HCU 平台的训练精度调试 Python whl 包,给在 HCU 上
 
 ```bash
 # 方案 A:源码 build(本仓)
-git clone http://42.228.13.241:10068/dcutoolkit/deeplearing/hcuprobe.git
-cd hcuprobe
+git clone https://github.com/HYGON-AI/hcu_probe-das
+cd hcu_probe-das
 pip wheel . --no-deps -w dist/
 pip install dist/hcuprobe-*.whl --no-deps
 

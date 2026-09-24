@@ -1,12 +1,12 @@
 # 代码改动点标注页(框架接入样例)
 
-这里收录的是各训练框架接入 dcu_probe 的**样例实验**中,代码改动点的「渲染即懂」标注页。每一页把「dcu_probe 在框架源码的哪几个文件、哪几处插桩,为什么这么改,离线 compare 怎么逐算子比,以及 `consistent_check` 比对算法内部怎么跑」用**带高亮的源码片段加逐处说明**的方式讲清楚,帮做框架接入的同学快速建立「改点 + 原理」的整体认知。
+这里收录的是各训练框架接入 hcu_probe 的**样例实验**中,代码改动点的「渲染即懂」标注页。每一页把「hcu_probe 在框架源码的哪几个文件、哪几处插桩,为什么这么改,离线 compare 怎么逐算子比,以及 `consistent_check` 比对算法内部怎么跑」用**带高亮的源码片段加逐处说明**的方式讲清楚,帮做框架接入的同学快速建立「改点 + 原理」的整体认知。
 
 > **怎么查看**:这些页面都是自包含、可离线打开的 HTML,不依赖任何外部资源。**GitLab 仓库浏览器不会渲染 HTML**(直接点开只会看到源码),所以请把 `docs/annotated/` 整个目录下载到本地,用浏览器打开其中的 [`index.html`](index.html),再从导航页点卡片进入各页。
 
 ## 页面清单
 
-每个框架版本对应一组页面。verl 各版本是三页「**插桩位置标注 / compare 脚本逻辑 / consistent_check 算法内部**」;dcu_megatron 与原生 PyTorch 是三页「**接入机制 / 采集模式 / 坑 + 验证**」。
+每个框架版本对应一组页面。verl 各版本是三页「**插桩位置标注 / compare 脚本逻辑 / consistent_check 算法内部**」;hcu_megatron 与原生 PyTorch 是三页「**接入机制 / 采集模式 / 坑 + 验证**」。
 
 | 框架 · 后端 / 版本 | 验证场景 | 页面组 |
 | --- | --- | --- |
@@ -14,7 +14,7 @@
 | verl 0.7.1 · Megatron | 训推一致性 | `verl-0.7-megatron/` |
 | verl 0.8.0 · FSDP | 训推一致性 | `verl-0.8-fsdp/` |
 | verl 0.8.0 · Megatron | 训推一致性 | `verl-0.8-megatron/` |
-| dcu_megatron(独立框架) | 精度对比 | `dcu-megatron-lm/` |
+| hcu_megatron(独立框架) | 精度对比 | `hcu-megatron-lm/` |
 | 原生 PyTorch(ResNet50) | 精度对比 | `pytorch/` |
 
 这些标注页与仓库根 README「已适配训练框架」一节列出的各接入 skill 一一对应:skill 讲**怎么动手接入**,标注页讲**改动点的位置与原理**,两者互为补充。

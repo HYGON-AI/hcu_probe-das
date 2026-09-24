@@ -2,13 +2,13 @@
 
 ## 概述
 
-在 SGLang 推理框架中接入 dcu_probe，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
+在 SGLang 推理框架中接入 hcu_probe，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
 
-完整链路：**接入 → dump → `dcu-probe compare` 比对 → `dcu-probe graph_visualize` 构图 → TensorBoard 浏览**
+完整链路：**接入 → dump → `hcu-probe compare` 比对 → `hcu-probe graph_visualize` 构图 → TensorBoard 浏览**
 
 ## 两种接入方式
 
-SGLang 在不同版本中，接入 dcu_probe 的方式不同：
+SGLang 在不同版本中，接入 hcu_probe 的方式不同：
 
 | | 方式一：手动接入（侵入式） | 方式二：原生接入 |
 |---|---|---|
@@ -16,7 +16,7 @@ SGLang 在不同版本中，接入 dcu_probe 的方式不同：
 | **改动方式** | 修改 `ModelRunner` 源码 ~20 行 | 启动参数 `--msprobe-dump-config` |
 | **源码修改** | 需要 | **不需要** |
 | **PD 分离处理** | 手动判断 `disaggregation_mode` + bootstrap_room 固定 | 只需分别指定 prefill / decode 配置文件 |
-| **dcu_probe 兼容** | 完全兼容（代码中直接 `import dcu_probe`） | 需确认 `dcu_probe` 能否替代 SGLang 内置的 `msprobe` 导入 |
+| **hcu_probe 兼容** | 完全兼容（代码中直接 `import hcu_probe`） | 需确认 `hcu_probe` 能否替代 SGLang 内置的 `msprobe` 导入 |
 
 > 根据你的 SGLang 版本选择对应章节阅读即可。
 
@@ -31,7 +31,7 @@ SGLang 在不同版本中，接入 dcu_probe 的方式不同：
 ```json
 {
     "task": "statistics",
-    "dump_path": "/home/dcu_dump",
+    "dump_path": "/home/hcu_dump",
     "rank": [],
     "step": [],
     "level": "mix",
@@ -68,12 +68,12 @@ class ModelRunner(ModelRunnerKVCacheMixin):
         ...
     ):
         ...
-        ################################ dcu_probe ################################
-        from dcu_probe.pytorch import PrecisionDebugger, seed_all
+        ################################ hcu_probe ################################
+        from hcu_probe.pytorch import PrecisionDebugger, seed_all
 
         seed_all(mode=True)
         self.debugger = PrecisionDebugger(config_path="./config.json")
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
         # Parse args
         self.mem_fraction_static = mem_fraction_static
         self.device = server_args.device
@@ -95,18 +95,18 @@ def forward(
     split_forward_count: int = 1,
 ) -> ModelRunnerOutput:
     self.forward_pass_id += 1
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
     if hasattr(self, 'debugger'):
         self.debugger.start(model=self.model)
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
 
     ...
 
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
     if hasattr(self, 'debugger'):
         self.debugger.stop()
         self.debugger.step()
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
 
     return output
 ```
@@ -183,8 +183,8 @@ SGLang 的 Prefill-Decode 分离部署场景需额外处理。
 
 创建两份配置，`dump_path` **必须不同**以避免写入冲突：
 
-- `config_prefill.json` → `"dump_path": "/home/dcu_dump_prefill"`
-- `config_decode.json` → `"dump_path": "/home/dcu_dump_decode"`
+- `config_prefill.json` → `"dump_path": "/home/hcu_dump_prefill"`
+- `config_decode.json` → `"dump_path": "/home/hcu_dump_decode"`
 
 > 若只需采集其中一侧，将另一侧的 `config_path` 设为空字符串 `""` 即可。
 
@@ -193,8 +193,8 @@ SGLang 的 Prefill-Decode 分离部署场景需额外处理。
 根据 `disaggregation_mode` 选择对应配置：
 
 ```python
-################################ dcu_probe ################################
-from dcu_probe.pytorch import PrecisionDebugger, seed_all
+################################ hcu_probe ################################
+from hcu_probe.pytorch import PrecisionDebugger, seed_all
 
 seed_all(mode=True)
 config_path = ""
@@ -205,7 +205,7 @@ elif disagg_mode == "decode":
     config_path = "./config_decode.json"    # 不采 decode 则改为 ""
 if config_path:
     self.debugger = PrecisionDebugger(config_path=config_path)
-################################ dcu_probe ################################
+################################ hcu_probe ################################
 ```
 
 #### （C）固定 bootstrap_room（DP > 1 时必须）
@@ -221,9 +221,9 @@ class GenerateReqInput(BaseReq):
         ...
 
         # Normalize bootstrap_room
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
         self.bootstrap_room = 6347036608774465186  # 固定值，保证可复现
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
         if self.bootstrap_room is None:
             self.bootstrap_room = [None] * num
         elif not isinstance(self.bootstrap_room, list):
@@ -274,7 +274,7 @@ python3 -m sglang_router.launch_router \
     --port 6688
 ```
 
-> `--disaggregation-transfer-backend` 根据 DCU 实际支持的 backend 选择。
+> `--disaggregation-transfer-backend` 根据 HCU 实际支持的 backend 选择。
 
 ### 5. dump 产物
 
@@ -286,7 +286,7 @@ python3 -m sglang_router.launch_router \
 
 SGLang 0.5.11+ 已内置 msprobe 支持，通过启动参数 `--msprobe-dump-config` 即可启用，**无需修改源码**。
 
-> **dcu_probe 适配说明**：SGLang 原生 flag 内部调用 `msprobe.pytorch.PrecisionDebugger`。如果 DCU 环境中 `import dcu_probe` 的 API 与 `msprobe` 兼容（`PrecisionDebugger` 和 `seed_all` 接口一致），可直接使用此方式。否则请回退到 [方式一](#方式一手动接入sglang--0511)。
+> **hcu_probe 适配说明**：SGLang 原生 flag 内部调用 `msprobe.pytorch.PrecisionDebugger`。如果 HCU 环境中 `import hcu_probe` 的 API 与 `msprobe` 兼容（`PrecisionDebugger` 和 `seed_all` 接口一致），可直接使用此方式。否则请回退到 [方式一](#方式一手动接入sglang--0511)。
 
 ### 1. 创建配置文件
 
@@ -295,7 +295,7 @@ SGLang 0.5.11+ 已内置 msprobe 支持，通过启动参数 `--msprobe-dump-con
 ```json
 {
     "task": "statistics",
-    "dump_path": "/home/dcu_dump",
+    "dump_path": "/home/hcu_dump",
     "rank": [],
     "step": [],
     "level": "mix",
@@ -331,8 +331,8 @@ SGLang 自动完成 `PrecisionDebugger` 的初始化和 `start` / `stop` / `step
 
 `dump_path` 必须不同：
 
-- `config_prefill.json` → `"dump_path": "/home/dcu_dump_prefill"`
-- `config_decode.json` → `"dump_path": "/home/dcu_dump_decode"`
+- `config_prefill.json` → `"dump_path": "/home/hcu_dump_prefill"`
+- `config_decode.json` → `"dump_path": "/home/hcu_dump_decode"`
 
 #### （B）启动命令
 
@@ -373,31 +373,31 @@ python3 -m sglang_router.launch_router \
 
 ## 精度比对
 
-dump 完成后，在 DCU 环境和 baseline 环境（另一台 DCU 或 GPU）各得到一份 dump 数据：
+dump 完成后，在 HCU 环境和 baseline 环境（另一台 HCU 或 GPU）各得到一份 dump 数据：
 
 ```
-dcu_dump/step0/rank{0..N}/      ← DCU（目标侧, target）
-baseline_dump/step0/rank{0..N}/ ← GPU / 另一 DCU（标杆侧, golden）
+hcu_dump/step0/rank{0..N}/      ← HCU（目标侧, target）
+baseline_dump/step0/rank{0..N}/ ← GPU / 另一 HCU（标杆侧, golden）
 ```
 
 ### 比对命令
 
 ```bash
 # 单卡比对
-dcu-probe compare \
-    -tp ./dcu_dump/step0/rank0/dump.json \
+hcu-probe compare \
+    -tp ./hcu_dump/step0/rank0/dump.json \
     -gp ./baseline_dump/step0/rank0/dump.json \
     -o ./compare_output
 
 # 多卡比对（自动遍历所有 rank 并合并结果）
-dcu-probe compare \
-    -tp ./dcu_dump/step0 \
+hcu-probe compare \
+    -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output
 
 # 输出 xlsx 格式（更便于查看）
-dcu-probe compare \
-    -tp ./dcu_dump/step0 \
+hcu-probe compare \
+    -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output \
     --xlsx
@@ -409,7 +409,7 @@ dcu-probe compare \
 
 | 字段 | 含义 | 参考阈值 |
 |---|---|---|
-| `Target Name` | DCU 侧算子 / 模块名 | — |
+| `Target Name` | HCU 侧算子 / 模块名 | — |
 | `Bench Name` | 匹配上的 baseline 算子 / 模块名 | — |
 | `CosineSimilarity` | 余弦相似度 | > 0.99 |
 | `MaxAbsoluteError` | 最大绝对误差 | — |
@@ -437,20 +437,20 @@ dcu-probe compare \
 
 ```bash
 # 双图比对（单 rank）
-dcu-probe graph_visualize \
-    -tp ./dcu_dump/step0/rank0 \
+hcu-probe graph_visualize \
+    -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output
 
 # 多 rank 批量比对
-dcu-probe graph_visualize \
-    -tp ./dcu_dump/step0 \
+hcu-probe graph_visualize \
+    -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./vis_output
 
 # 开启溢出检测
-dcu-probe graph_visualize \
-    -tp ./dcu_dump/step0/rank0 \
+hcu-probe graph_visualize \
+    -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output \
     -oc
@@ -471,7 +471,7 @@ tensorboard --logdir ./vis_output --bind_all
 将多个 step 的 dump 数据导入 SQLite，查看精度数据在 step / rank / 模块三个维度的趋势分布：
 
 ```bash
-dcu-probe data2db --data ./dcu_dump --db ./trend_output
+hcu-probe data2db --data ./hcu_dump --db ./trend_output
 
 tensorboard --logdir ./trend_output --bind_all
 ```

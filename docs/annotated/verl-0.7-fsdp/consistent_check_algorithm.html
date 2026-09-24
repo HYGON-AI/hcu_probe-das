@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe pt_compare(consistent_check=True) —— 训推一致比对算法流程标注</title>
+<title>hcu_probe pt_compare(consistent_check=True) —— 训推一致比对算法流程标注</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -89,7 +89,7 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=…)</code> —— 训推一致比对算法流程标注</h1>
+  <h1>hcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=…)</code> —— 训推一致比对算法流程标注</h1>
   <p>训推一致性里 <b>npu = 训练侧 dump</b>（HF / mcore + FSDP），<b>bench = 推理侧 dump</b>（vllm）。同一个 prompt 的 prefill 前向理论上数值一致，但两侧是<b>异构框架</b>——算子命名、拆分粒度、shape、出现顺序全不同。默认 compare 的“算子全名对全名”必然配不上。</p>
   <p><code style="color:#0550ae">consistent_check=True</code> 不是“调了个阈值”，而是把默认的 <code style="color:#cf222e">pd.merge(on=CMP_KEY)</code> 整体换成一套<b>语义级异构比对管线</b>：<b>解析裁窗 → 模块名归一映射 → 四元组多对一聚合 merge → 双单调保序 → shape 口径修正</b>。本页标注这条管线在<b>哪几个源码文件、哪几行</b>、每一步抹平哪一类异构。<span style="color:#1a7f37">绿色高亮 = 关键新增/专用逻辑</span>。</p>
 </header>
@@ -355,7 +355,7 @@
 
 </div>
 <footer>
-  dcu_probe pt_compare(consistent_check=True) 训推一致比对算法流程标注 · 代码 verbatim 摘自 dcu_probe/src/dcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py
+  hcu_probe pt_compare(consistent_check=True) 训推一致比对算法流程标注 · 代码 verbatim 摘自 hcu_probe/src/hcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py
 </footer>
 </body>
 </html>

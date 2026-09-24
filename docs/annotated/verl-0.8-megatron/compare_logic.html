@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>run_megatron_compare.py 代码逻辑 —— dcu_probe pt_compare(backend=megatron)复核 verl 0.8 Megatron 训推一致性</title>
+<title>run_megatron_compare.py 代码逻辑 —— hcu_probe pt_compare(backend=megatron)复核 verl 0.8 Megatron 训推一致性</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,18 +61,18 @@
 </head>
 <body>
 <header>
-  <h1>run_megatron_compare.py 代码逻辑 —— 用 dcu_probe 的 <code style="color:#0969da">pt_compare(backend=megatron)</code> 复核 verl 0.8 Megatron 训推一致性</h1>
-  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧(mcore/TE)、推理侧(das vllm)的 dump <b>配对好、挑对样本</b>,再交给 dcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
-  <p>真正<b class="hot">发挥效果的 dcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本的 4 步里,前 2 步都是在「为 pt_compare 准备能对齐的输入」,第 3 步才调 pt_compare,第 4 步读它的结果。<b>与 0.7 megatron 几乎一样</b> —— 都用 das vllm 0.11、都是 4 步无过滤、都调同一个官方 pt_compare + MEGATRON_MODULE_MAP;差别只在验证模型(0.8 = Qwen3-8B)与结果规模。</p>
+  <h1>run_megatron_compare.py 代码逻辑 —— 用 hcu_probe 的 <code style="color:#0969da">pt_compare(backend=megatron)</code> 复核 verl 0.8 Megatron 训推一致性</h1>
+  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧(mcore/TE)、推理侧(das vllm)的 dump <b>配对好、挑对样本</b>,再交给 hcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
+  <p>真正<b class="hot">发挥效果的 hcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本的 4 步里,前 2 步都是在「为 pt_compare 准备能对齐的输入」,第 3 步才调 pt_compare,第 4 步读它的结果。<b>与 0.7 megatron 几乎一样</b> —— 都用 das vllm 0.11、都是 4 步无过滤、都调同一个官方 pt_compare + MEGATRON_MODULE_MAP;差别只在验证模型(0.8 = Qwen3-8B)与结果规模。</p>
 </header>
 
 <div class="wrap">
 
   <!-- 核心工具 -->
-  <h2 class="sec">★ 核心工具:dcu_probe 的 <code>pt_compare</code>(官方精度比对 API,backend=megatron)</h2>
+  <h2 class="sec">★ 核心工具:hcu_probe 的 <code>pt_compare</code>(官方精度比对 API,backend=megatron)</h2>
   <div class="tool">
     <h3>pt_compare 是什么、发挥什么效果</h3>
-    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>dcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 DCU fork)。它是 dcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本调的就是它:</p>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>hcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 HCU fork)。它是 hcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本调的就是它:</p>
     <div class="sig"><span class="c"># 训练侧 dump(mcore/TE)↔ 推理侧 dump(das vllm 0.11),逐算子比对</span>
 <span class="k">pt_compare</span>({<span class="s">"npu_path"</span>: 训练侧dump.json, <span class="s">"bench_path"</span>: 推理侧dump.json},
            output_path, <span class="k">consistent_check</span>=<span class="k">True</span>, <span class="k">backend</span>=<span class="s">"megatron"</span>)</div>
@@ -165,10 +165,10 @@
 
   <!-- ③ pt_compare -->
   <div class="card">
-    <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">调 dcu_probe 的 pt_compare(核心,直接喂·无过滤)</span><span class="role">★这里才真正"用 dcu_probe 工具"</span></div>
+    <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">调 hcu_probe 的 pt_compare(核心,直接喂·无过滤)</span><span class="role">★这里才真正"用 hcu_probe 工具"</span></div>
     <div class="body">
       <div class="code">
-        <div class="l hl"><span class="k">from</span> dcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
+        <div class="l hl"><span class="k">from</span> hcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
         <div class="l">out = <span class="s">"%s/compare_out"</span> % RUN</div>
         <div class="l">os.makedirs(out, exist_ok=<span class="k">True</span>)</div>
         <div class="l"><span class="k">for</span> x <span class="k">in</span> glob.glob(out + <span class="s">"/*.xlsx"</span>): os.remove(x)</div>
@@ -177,9 +177,9 @@
         <div class="l"><span class="c"># 产物:out/compare_result_*.xlsx(逐算子 NormRelativeErr)</span></div>
       </div>
       <div class="ann">
-        <span class="rt rt-a">dcu_probe 工具</span>
+        <span class="rt rt-a">hcu_probe 工具</span>
         <h4>官方逐算子比对就在这一行</h4>
-        <p>前 2 步全是铺垫,<b>这一行才是真正发挥效果的 dcu_probe 工具</b>。它读两侧 dump.json,用 <code>consistent_check</code>+<code>backend=megatron</code> 的专用算法把算子对齐(<code>MEGATRON_MODULE_MAP</code> 命名映射 + <code>dual_monotonic_sort</code> 单调对齐 + SP 切片自动 cat),逐算子算 Norm 相对误差,落 xlsx。</p>
+        <p>前 2 步全是铺垫,<b>这一行才是真正发挥效果的 hcu_probe 工具</b>。它读两侧 dump.json,用 <code>consistent_check</code>+<code>backend=megatron</code> 的专用算法把算子对齐(<code>MEGATRON_MODULE_MAP</code> 命名映射 + <code>dual_monotonic_sort</code> 单调对齐 + SP 切片自动 cat),逐算子算 Norm 相对误差,落 xlsx。</p>
         <p class="warn"><b>方向不能反:</b><code>npu_path</code> 必须给训练、<code>bench_path</code> 给推理(<code>acc_compare.py:786-787</code> 成对 <code>engine='train'/'infer'</code>);反了 module 全 match 不上(报 shape/grad inconsistent)。</p>
         <p class="warn"><b>直接喂,无过滤:</b>这里把 <code>gen[rid]</code> 直接喂进去 —— das vllm 0.11 模块序干净,<code>dual_monotonic_sort</code> 一次就过,不像 FSDP 0.7 要先剔 72 交错模块。<b>容器要 <code>pip install openpyxl</code></b>,否则存 xlsx 崩。</p>
       </div>
@@ -253,15 +253,15 @@
     <b>token 完全匹配的干净可比样本通常只有 ~2 个</b>(多数 prompt 的 train/infer prefill token 数不完全对齐)。<code>run_megatron_compare.py</code> 只跑 <code>good[0]</code> 一对;要多样本统计通过率用 <code>batch_compare.py</code> / <code>run_megatron_compare_multi.py</code>。</p>
   </div>
   <div class="flow" style="border-color:#d4a72c;background:#fffbe8">
-    <b class="warn">⚠️ 已知问题(compare 数据来源的诚实交代):</b>推理侧 vllm run <b>跑不久</b> —— 两种独立失败:全 offload 把 8B 优化器态压 CPU 触发 host-RAM <b>OOM</b>(exit137,关 <code>optimizer_offload</code>/<code>grad_offload</code> 已堵)+ in-loop validation 的 <b>vllm rollout 集合通信挂死</b>(<code>EngineCore</code> 卡 <code>shm_broadcast.acquire_read</code>,关 <code>trainer.test_freq=-1</code> 已避)。都非 dcu_probe、非数值问题。<b>compare 只用崩/挂之前的早期 step 产物</b>(实测 0 NaN、有效),不期望长跑。
+    <b class="warn">⚠️ 已知问题(compare 数据来源的诚实交代):</b>推理侧 vllm run <b>跑不久</b> —— 两种独立失败:全 offload 把 8B 优化器态压 CPU 触发 host-RAM <b>OOM</b>(exit137,关 <code>optimizer_offload</code>/<code>grad_offload</code> 已堵)+ in-loop validation 的 <b>vllm rollout 集合通信挂死</b>(<code>EngineCore</code> 卡 <code>shm_broadcast.acquire_read</code>,关 <code>trainer.test_freq=-1</code> 已避)。都非 hcu_probe、非数值问题。<b>compare 只用崩/挂之前的早期 step 产物</b>(实测 0 NaN、有效),不期望长跑。
   </div>
 
   <!-- 区别 -->
   <h2 class="sec">末尾对照:megatron 后端 compare 比 FSDP 0.7 <b>少一步</b></h2>
-  <p class="lead">关键区分:<b>pt_compare 是 dcu_probe 的官方比对工具(底层能力),两个后端都用它</b>;差别只在「喂进去之前要不要过滤」。决定因素 = 推理侧 <b>das vllm 的版本</b>。0.8 megatron 与 0.7 megatron 同一套(都 das vllm 0.11、都无过滤)。</p>
+  <p class="lead">关键区分:<b>pt_compare 是 hcu_probe 的官方比对工具(底层能力),两个后端都用它</b>;差别只在「喂进去之前要不要过滤」。决定因素 = 推理侧 <b>das vllm 的版本</b>。0.8 megatron 与 0.7 megatron 同一套(都 das vllm 0.11、都无过滤)。</p>
   <table class="ov">
     <tr><th>对象</th><th>是什么</th><th>backend / MODULE_MAP</th><th>推理侧 das vllm</th><th>过滤交错模块?</th><th>粒度 / 结果</th></tr>
-    <tr><td><code>pt_compare</code></td><td><b>dcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 DCU fork)</td><td>—(它本身就是工具)</td><td>—</td><td>—</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
+    <tr><td><code>pt_compare</code></td><td><b>hcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 HCU fork)</td><td>—(它本身就是工具)</td><td>—</td><td>—</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
     <tr><td><code>run_megatron_compare.py</code><br>(本页,0.8)</td><td>megatron 0.8 后端 compare<br>= 配对 → 挑样本 → <b>直接喂</b> pt_compare</td><td><code>megatron</code> / <code>MEGATRON_MODULE_MAP</code></td><td><b>0.11</b></td><td><b>❌ 不需要</b>(模块序干净)</td><td>真算子(3 prompt 汇总)1083 个 → <b>99.4% &lt;1%</b>、中位 0%、embed Norm 相同</td></tr>
     <tr><td><code>run_megatron_compare.py</code><br>(0.7 megatron)</td><td>megatron 0.7 后端 compare<br>= 配对 → 挑样本 → <b>直接喂</b> pt_compare(同一套)</td><td><code>megatron</code> / <code>MEGATRON_MODULE_MAP</code></td><td><b>0.11</b></td><td><b>❌ 不需要</b></td><td>叶子算子 289 个 → <b>266/289 &lt;1%</b>、中位 0%</td></tr>
     <tr><td><code>run07_filtered.py</code><br>(FSDP 0.7)</td><td>FSDP 后端 compare<br>= 配对 → 挑样本 → <b>先过滤</b> → 喂 pt_compare</td><td><code>fsdp</code> / <code>FSDP_MODULE_MAP</code></td><td><b>0.18.1</b></td><td><b>✅ 必须</b>(剔 72 交错模块 338→266)</td><td>叶子算子 98 个 → <b>98/98 &lt;1%</b></td></tr>
@@ -278,7 +278,7 @@
 
   <div class="flow">
     <b>一句话记住 0.8 megatron vs FSDP 0.7 的 compare 差异:</b><br>
-    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = dcu_probe 官方比对工具(核心能力,两后端共用,只 backend 参数不同)
+    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = hcu_probe 官方比对工具(核心能力,两后端共用,只 backend 参数不同)
 <b style="color:#1a7f37">run_megatron_compare.py</b>(0.8/0.7)= <b>4 步·无过滤</b>:配对 → 挑样本 → 直接喂 pt_compare(backend=megatron)→ 统计   [0.8: 1083 个 99.4% &lt;1%]
 <b style="color:#bc4c00">run07_filtered.py</b>(FSDP 0.7)= <b>5 步·多一步过滤</b>:配对 → 挑样本 → 剔 72 交错模块 → 喂 pt_compare(backend=fsdp)→ 统计   [98/98 &lt;1%]
 差异根因 = 推理侧 <b>das vllm 版本</b>:megatron 用 0.11(干净)、FSDP 0.7 用 0.18.1(72 交错模块)</div>
@@ -286,7 +286,7 @@
 
 </div>
 <footer>
-  run_megatron_compare.py 代码逻辑 · 核心工具 dcu_probe.pytorch.compare.pt_compare(backend=megatron)· 采集级别 L0 + statistics
+  run_megatron_compare.py 代码逻辑 · 核心工具 hcu_probe.pytorch.compare.pt_compare(backend=megatron)· 采集级别 L0 + statistics
 </footer>
 </body>
 </html>

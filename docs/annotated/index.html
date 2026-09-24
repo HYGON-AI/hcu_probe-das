@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe 训推一致性 · 标注页导航</title>
+<title>hcu_probe 训推一致性 · 标注页导航</title>
 <style>
   :root{--bg:#f6f8fa;--panel:#fff;--border:#d0d7de;--fg:#1f2328;--dim:#656d76;--accent:#0969da;--train:#1a7f37;--infer:#bc4c00;--purple:#8250df}
   *{box-sizing:border-box}
@@ -33,8 +33,8 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe 训推一致性 · 标注页导航</h1>
-  <p>每个实验版本一组「<b>渲染即懂</b>」的标注页 —— dcu_probe 改了哪几行、为什么这么改、compare 怎么逐算子算。给新人快速建立<b>修改点 + 原理</b>的认知。</p>
+  <h1>hcu_probe 训推一致性 · 标注页导航</h1>
+  <p>每个实验版本一组「<b>渲染即懂</b>」的标注页 —— hcu_probe 改了哪几行、为什么这么改、compare 怎么逐算子算。给新人快速建立<b>修改点 + 原理</b>的认知。</p>
   <p class="note">📖 <b>查看方式</b>:这些 HTML 均<b>自包含、离线可看</b>。把 <code>docs/annotated/</code> 整个目录下载到本地,用浏览器打开本 <code>index.html</code> 再点卡片即可(GitLab 仓库浏览器不渲染 HTML,直接点开只看到源码)。</p>
 </header>
 
@@ -42,12 +42,12 @@
 
   <section class="ver">
     <h2>verl 0.7.1 · FSDP 后端</h2>
-    <p class="lead">dcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>dcu_probe-verl-fsdp-0.7-integration</code>。</p>
+    <p class="lead">hcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>hcu_probe-verl-fsdp-0.7-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.7-fsdp/instrumentation.html">
         <div class="tag">插桩</div>
         <h3>插桩位置标注</h3>
-        <p>dcu_probe 在哪几个源码文件、哪几行插桩(5 处钩子 + monitor):左边带上下文源码(绿=新增行),右边逐处说明为什么这么钩。</p>
+        <p>hcu_probe 在哪几个源码文件、哪几行插桩(5 处钩子 + monitor):左边带上下文源码(绿=新增行),右边逐处说明为什么这么钩。</p>
         <div class="go">打开 →</div>
       </a>
       <a class="card c2" href="verl-0.7-fsdp/compare_logic.html">
@@ -67,7 +67,7 @@
 
   <section class="ver">
     <h2>verl 0.7.1 · Megatron 后端</h2>
-    <p class="lead">dcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>dcu_probe-verl-megatron-0.7-integration</code>。</p>
+    <p class="lead">hcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.7-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.7-megatron/instrumentation.html">
         <div class="tag">插桩</div>
@@ -92,7 +92,7 @@
 
   <section class="ver">
     <h2>verl 0.8.0 · FSDP 后端</h2>
-    <p class="lead">dcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>dcu_probe-verl-fsdp-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-0.8-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-fsdp/instrumentation.html">
         <div class="tag">插桩</div>
@@ -117,7 +117,7 @@
 
   <section class="ver">
     <h2>verl 0.8.0 · Megatron 后端</h2>
-    <p class="lead">dcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>dcu_probe-verl-megatron-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.8-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-megatron/instrumentation.html">
         <div class="tag">插桩</div>
@@ -141,22 +141,22 @@
   </section>
 
   <section class="ver">
-    <h2>dcu_megatron(独立框架 · Megatron-LM + 海光 adaptor)</h2>
-    <p class="lead">⚠️ 这是<b>独立 dcu_megatron 框架</b>(预训练 llama2-7B,<b>精度对比 / 零侵入验证</b>),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。接入靠 <b>Feature 机制</b>(0 行改训练脚本,加 CLI flag 即激活),非改源码 patch。对应 skill <code>dcu_probe-megatron-integration</code>。</p>
+    <h2>hcu_megatron(独立框架 · Megatron-LM + 海光 adaptor)</h2>
+    <p class="lead">⚠️ 这是<b>独立 hcu_megatron 框架</b>(预训练 llama2-7B,<b>精度对比 / 零侵入验证</b>),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。接入靠 <b>Feature 机制</b>(0 行改训练脚本,加 CLI flag 即激活),非改源码 patch。对应 skill <code>hcu_probe-megatron-integration</code>。</p>
     <div class="cards">
-      <a class="card c1" href="dcu-megatron-lm/instrumentation.html">
+      <a class="card c1" href="hcu-megatron-lm/instrumentation.html">
         <div class="tag">接入机制</div>
         <h3>接入机制标注(Feature 织入)</h3>
         <p>0 行改训练脚本:4 个薄壳注册进 <code>ADAPTOR_FEATURES</code> → <code>register_patches</code> 用 patch_manager <b>monkey-patch</b> 织进 megatron <code>train</code>/<code>train_step</code>。左真实薄壳代码,右说明;5 hook 点 → 翻译层。</p>
         <div class="go">打开 →</div>
       </a>
-      <a class="card c2" href="dcu-megatron-lm/capture_modes.html">
+      <a class="card c2" href="hcu-megatron-lm/capture_modes.html">
         <div class="tag">采集模式</div>
         <h3>5 采集模式 + CLI flag 三层链路</h3>
         <p>baseline / L0 / L1 / monitor / combined 五模式矩阵(loss 字字一致证零侵入),CLI flag 三层链路(launcher 下划线 → train 转连字符 → pretrain_gpt),L1 yaml patch。</p>
         <div class="go">打开 →</div>
       </a>
-      <a class="card c3" href="dcu-megatron-lm/pitfalls_verification.html">
+      <a class="card c3" href="hcu-megatron-lm/pitfalls_verification.html">
         <div class="tag">坑+验证</div>
         <h3>6 坑 + 验证三件套 + L0/L1 覆盖</h3>
         <p>tensorboard 隐性依赖(静默假启动)、L1 yaml patch、risk_level 大写、monitor patch_optimizer_step；验证必看 <code>initialized</code>/<code>started</code> marker(只 wrapper applied 是假象)。</p>
@@ -167,7 +167,7 @@
 
   <section class="ver">
     <h2>原生 PyTorch(ResNet50 + Adam)</h2>
-    <p class="lead">任意<b>原生 PyTorch / 自定义 train loop</b>(精度对比 / 采集验证)。<b>最直接的接入</b> —— 直接调 <code>dcu_probe.integrations._common.lifecycle</code> 的 5 个 hook,无 Feature(dcu_megatron)、无源码 patch(verl)、几行即可;这套 <code>_common.lifecycle</code> 是<b>框架无关地基 API</b>,megatron 的 Feature 薄壳、verl 的 patch 最终都调它。对应 skill <code>dcu_probe-pytorch-integration</code>。</p>
+    <p class="lead">任意<b>原生 PyTorch / 自定义 train loop</b>(精度对比 / 采集验证)。<b>最直接的接入</b> —— 直接调 <code>hcu_probe.integrations._common.lifecycle</code> 的 5 个 hook,无 Feature(hcu_megatron)、无源码 patch(verl)、几行即可;这套 <code>_common.lifecycle</code> 是<b>框架无关地基 API</b>,megatron 的 Feature 薄壳、verl 的 patch 最终都调它。对应 skill <code>hcu_probe-pytorch-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="pytorch/instrumentation.html">
         <div class="tag">接入机制</div>
@@ -191,6 +191,6 @@
   </section>
 
 </div>
-<footer>dcu_probe · <code>docs/annotated/</code> · 各框架接入样例的「渲染即懂」代码改动点标注页 · HTML 自包含离线可看</footer>
+<footer>hcu_probe · <code>docs/annotated/</code> · 各框架接入样例的「渲染即懂」代码改动点标注页 · HTML 自包含离线可看</footer>
 </body>
 </html>

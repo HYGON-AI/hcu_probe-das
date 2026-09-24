@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe × 原生 PyTorch —— 接入标注（5-hook lifecycle 直接织入）</title>
+<title>hcu_probe × 原生 PyTorch —— 接入标注（5-hook lifecycle 直接织入）</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -75,15 +75,15 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe × 原生 PyTorch —— 接入标注（5-hook lifecycle 直接织入，最简）</h1>
-  <p>原生 PyTorch / 任意自定义 train loop（样例 = <b>ResNet50 + Adam，单卡</b>）接 dcu_probe 做<b>精度对比 / 采集验证</b>——<code style="color:#1a7f37">dump</code> 采每 step 前向逐 module 统计量、<code style="color:#bc4c00">monitor</code> 采 weight_grad / optimizer / param 三通道。这是<b>单侧训练态</b>数据，供离线精度分析。<b>不是训推一致</b>（那是 verl 双侧配对）。</p>
-  <p>本页标注在你<b>自己的训练脚本</b>里织入 <b>5 个 lifecycle hook</b> 的 6 处位置。左侧是 verbatim ResNet 训练代码（<span style="color:#1a7f37">绿色高亮 = 你新增的 dcu_probe 行</span>），右侧是说明。这是<b>最直接的接入</b>——无 Feature（dcu_megatron）、无 callback（transformers）、无源码 patch（verl），直接 <code style="color:#0550ae">import _common.lifecycle</code> 按训练阶段调 hook，几行即可。不传 cfg = 原训练、零影响（最小侵入）。</p>
+  <h1>hcu_probe × 原生 PyTorch —— 接入标注（5-hook lifecycle 直接织入，最简）</h1>
+  <p>原生 PyTorch / 任意自定义 train loop（样例 = <b>ResNet50 + Adam，单卡</b>）接 hcu_probe 做<b>精度对比 / 采集验证</b>——<code style="color:#1a7f37">dump</code> 采每 step 前向逐 module 统计量、<code style="color:#bc4c00">monitor</code> 采 weight_grad / optimizer / param 三通道。这是<b>单侧训练态</b>数据，供离线精度分析。<b>不是训推一致</b>（那是 verl 双侧配对）。</p>
+  <p>本页标注在你<b>自己的训练脚本</b>里织入 <b>5 个 lifecycle hook</b> 的 6 处位置。左侧是 verbatim ResNet 训练代码（<span style="color:#1a7f37">绿色高亮 = 你新增的 hcu_probe 行</span>），右侧是说明。这是<b>最直接的接入</b>——无 Feature（hcu_megatron）、无 callback（transformers）、无源码 patch（verl），直接 <code style="color:#0550ae">import _common.lifecycle</code> 按训练阶段调 hook，几行即可。不传 cfg = 原训练、零影响（最小侵入）。</p>
 </header>
 
 <div class="wrap">
 
   <h2 class="sec">总览：1 个文件、5 个 lifecycle hook、0 行 patch</h2>
-  <p class="lead">改动<b>只在你自己的训练脚本</b>里（<code>train_resnet_dcu_probe.py</code>），不碰任何框架本体、不注册任何东西。全部由两个 argparse flag <code>--dump-cfg</code> / <code>--monitor-cfg</code> 门控——都不传就是普通 ResNet 训练。</p>
+  <p class="lead">改动<b>只在你自己的训练脚本</b>里（<code>train_resnet_hcu_probe.py</code>），不碰任何框架本体、不注册任何东西。全部由两个 argparse flag <code>--dump-cfg</code> / <code>--monitor-cfg</code> 门控——都不传就是普通 ResNet 训练。</p>
   <table class="ov">
     <tr><th>#</th><th>调用</th><th>训练循环阶段</th><th>作用</th><th>门控</th></tr>
     <tr><td><span class="badge b-train">①</span></td><td><code>dump_lc.on_train_start(...)</code></td><td>初始化后（model / optimizer 建好）</td><td>构造 PrecisionDebugger + 固定 seed + 挂 LossTracker</td><td><code>--dump-cfg</code></td></tr>
@@ -95,14 +95,14 @@
   </table>
 
   <div class="flow" style="border-left:4px solid var(--accent)">
-    <b>为什么说这是"最直接的接入"</b> —— 对比另两个框架：verl 要<b>改 3 仓源码、在 forward 处插钩子 patch</b>；dcu_megatron 要<b>注册 Feature 类、运行时 monkey-patch</b>。而原生 PyTorch <span class="arrow">→</span> <b>在你已有的 train loop 里 import 一行、按阶段调 5 个 hook</b>，没有 Feature、没有 callback、没有源码 patch、没有注册表。<code>_common.lifecycle</code> 是<b>框架无关的地基 API</b>——dcu_megatron 的 Feature、verl 的 patch 兜兜转转最终都调进它，pytorch 只是<b>直接调地基、跳过中间胶水</b>。<span class="rt rt-e" style="margin:0 0 0 4px">最小侵入</span> 不传 cfg 时全部 <code>if args.*_cfg:</code> 为假，一行 dcu_probe 都不进 = 原训练。
+    <b>为什么说这是"最直接的接入"</b> —— 对比另两个框架：verl 要<b>改 3 仓源码、在 forward 处插钩子 patch</b>；hcu_megatron 要<b>注册 Feature 类、运行时 monkey-patch</b>。而原生 PyTorch <span class="arrow">→</span> <b>在你已有的 train loop 里 import 一行、按阶段调 5 个 hook</b>，没有 Feature、没有 callback、没有源码 patch、没有注册表。<code>_common.lifecycle</code> 是<b>框架无关的地基 API</b>——hcu_megatron 的 Feature、verl 的 patch 兜兜转转最终都调进它，pytorch 只是<b>直接调地基、跳过中间胶水</b>。<span class="rt rt-e" style="margin:0 0 0 4px">最小侵入</span> 不传 cfg 时全部 <code>if args.*_cfg:</code> 为假，一行 hcu_probe 都不进 = 原训练。
   </div>
 
   <h2 class="sec">核心 API：两个单例 + 一个路径解析（全在 whl 里）</h2>
   <p class="lead">整个接入只 import 三个符号：两个 <code>get_*_lifecycle()</code> 返回<b>进程内单例</b>（dump 与 monitor 各一个，不用自己 new），<code>resolve_loss_output_dir</code> 从 cfg 推出统一的 LossTracker 落点。之后所有 hook 都是 <code>dump_lc.</code> / <code>mon_lc.</code> 的方法调用。</p>
   <div class="code" style="border:1px solid var(--border);border-radius:8px;margin:14px 0">
-    <div class="l"><span class="k">from</span> dcu_probe.integrations._common.lifecycle <span class="k">import</span> <span class="fn">get_dump_lifecycle</span>, <span class="fn">get_monitor_lifecycle</span></div>
-    <div class="l"><span class="k">from</span> dcu_probe.integrations._common.config <span class="k">import</span> <span class="fn">resolve_loss_output_dir</span></div>
+    <div class="l"><span class="k">from</span> hcu_probe.integrations._common.lifecycle <span class="k">import</span> <span class="fn">get_dump_lifecycle</span>, <span class="fn">get_monitor_lifecycle</span></div>
+    <div class="l"><span class="k">from</span> hcu_probe.integrations._common.config <span class="k">import</span> <span class="fn">resolve_loss_output_dir</span></div>
     <div class="l"></div>
     <div class="l">dump_lc = <span class="fn">get_dump_lifecycle</span>()   <span class="c"># 进程内单例（dump 子系统）</span></div>
     <div class="l">mon_lc  = <span class="fn">get_monitor_lifecycle</span>()  <span class="c"># 进程内单例（monitor 子系统）</span></div>
@@ -115,7 +115,7 @@
 
   <!-- ① on_train_start -->
   <div class="card">
-    <div class="hd"><span class="no b-train" style="color:var(--train)">①</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">main() · dump 初始化（model/optimizer 建好后）</span><span class="role">dump 采集起点</span></div>
+    <div class="hd"><span class="no b-train" style="color:var(--train)">①</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">main() · dump 初始化（model/optimizer 建好后）</span><span class="role">dump 采集起点</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">        model = <span class="fn">model_ctor</span>(weights=<span class="k">None</span>).to(device)</div>
@@ -142,7 +142,7 @@
 
   <!-- ② on_setup_done -->
   <div class="card">
-    <div class="hd"><span class="no b-infer" style="color:var(--infer)">②</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">main() · monitor 初始化（拿 model + optimizer）</span><span class="role">monitor 挂 model / optimizer</span></div>
+    <div class="hd"><span class="no b-infer" style="color:var(--infer)">②</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">main() · monitor 初始化（拿 model + optimizer）</span><span class="role">monitor 挂 model / optimizer</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">        model = <span class="fn">model_ctor</span>(weights=<span class="k">None</span>).to(device)</div>
@@ -167,7 +167,7 @@
 
   <!-- ③ on_step_start -->
   <div class="card">
-    <div class="hd"><span class="no b-train" style="color:var(--train)">③</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">训练循环 · forward 之前</span><span class="role">dump 注册前向钩子</span></div>
+    <div class="hd"><span class="no b-train" style="color:var(--train)">③</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">训练循环 · forward 之前</span><span class="role">dump 注册前向钩子</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">        model.<span class="fn">train</span>()</div>
@@ -191,7 +191,7 @@
 
   <!-- ④ on_step_end (dump) -->
   <div class="card">
-    <div class="hd"><span class="no b-train" style="color:var(--train)">④</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">训练循环 · 算完 loss / grad 后</span><span class="role">dump 停采 + 落 dump.json</span></div>
+    <div class="hd"><span class="no b-train" style="color:var(--train)">④</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">训练循环 · 算完 loss / grad 后</span><span class="role">dump 停采 + 落 dump.json</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">            loss.<span class="fn">backward</span>()</div>
@@ -215,7 +215,7 @@
 
   <!-- ⑤ on_step_end (monitor) -->
   <div class="card">
-    <div class="hd"><span class="no b-infer" style="color:var(--infer)">⑤</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">训练循环 · 同一位置（紧跟 ④）</span><span class="role">monitor 三通道写 csv</span></div>
+    <div class="hd"><span class="no b-infer" style="color:var(--infer)">⑤</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">训练循环 · 同一位置（紧跟 ④）</span><span class="role">monitor 三通道写 csv</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">            gn = torch.nn.utils.<span class="fn">clip_grad_norm_</span>(model.parameters(), <span class="fn">float</span>(<span class="s">"inf"</span>))</div>
@@ -238,7 +238,7 @@
 
   <!-- ⑥ on_train_end -->
   <div class="card">
-    <div class="hd"><span class="no b-aux" style="color:var(--dim)">⑥</span><span class="path">train_resnet_dcu_probe.py</span><span class="loc">main() · 训练循环结束后</span><span class="role">收尾（monitor 先、dump 后）</span></div>
+    <div class="hd"><span class="no b-aux" style="color:var(--dim)">⑥</span><span class="path">train_resnet_hcu_probe.py</span><span class="loc">main() · 训练循环结束后</span><span class="role">收尾（monitor 先、dump 后）</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">        <span class="c"># cleanup（顺序：monitor 先停 → dump 后停）</span></div>
@@ -270,15 +270,15 @@
 
   <!-- ============================ 三框架对照 ============================ -->
   <h2 class="sec">同一套 lifecycle 地基，三种织入方式</h2>
-  <p class="lead">dump / monitor 的真正业务实现（PrecisionDebugger、TrainerMonitorV2、LossTracker、rank 过滤）都在 <code>dcu_probe.integrations._common.lifecycle</code> 这套<b>框架无关地基</b>里。三个框架只是<b>把 hook 织进训练流程的方式不同</b>，最终都汇到同一个地基。</p>
+  <p class="lead">dump / monitor 的真正业务实现（PrecisionDebugger、TrainerMonitorV2、LossTracker、rank 过滤）都在 <code>hcu_probe.integrations._common.lifecycle</code> 这套<b>框架无关地基</b>里。三个框架只是<b>把 hook 织进训练流程的方式不同</b>，最终都汇到同一个地基。</p>
   <table class="ov">
     <tr><th>框架</th><th>织入方式</th><th>改动量</th><th>是否碰框架本体</th><th>最终落到</th></tr>
     <tr><td><b>verl</b>（FSDP / Megatron 后端）</td><td>改源码 <b>patch</b>：在 forward 处插钩子（为训推一致双侧配对）</td><td>跨 3 仓多处 patch</td><td><b>是</b>（改 verl / vllm 源码）</td><td rowspan="3" style="text-align:center;vertical-align:middle"><code>_common.<br>lifecycle</code></td></tr>
-    <tr><td><b>dcu_megatron</b></td><td>注册 <b>Feature 类</b> → 运行时 monkey-patch megatron</td><td>0 行改训练脚本</td><td><b>是</b>（运行时 patch 框架）</td></tr>
+    <tr><td><b>hcu_megatron</b></td><td>注册 <b>Feature 类</b> → 运行时 monkey-patch megatron</td><td>0 行改训练脚本</td><td><b>是</b>（运行时 patch 框架）</td></tr>
     <tr><td><b>原生 PyTorch</b>（本页）</td><td>自己 train loop <b>直接调 5 个 hook</b></td><td>几行（本页标注）</td><td><b>否</b>（只加你自己的代码）</td></tr>
   </table>
   <div class="flow" style="border-left:4px solid var(--train)">
-    <b>殊途同归</b>：verl 的 patch、dcu_megatron 的 Feature 薄壳，绕一圈最后都是调 <code>dcu_probe.integrations._common.lifecycle</code> 的同一批 hook。<span class="arrow">→</span> <b>原生 PyTorch 是唯一"直接调地基、不经中间胶水"的接入</b>——没有 patch 要维护、没有 Feature 要注册、没有框架版本耦合，所以最简、也最能反映 lifecycle 这套 API 本身的样子。你在任意自定义 train loop（CV / NLP / 自研模型）里都能照这 6 处照抄。
+    <b>殊途同归</b>：verl 的 patch、hcu_megatron 的 Feature 薄壳，绕一圈最后都是调 <code>hcu_probe.integrations._common.lifecycle</code> 的同一批 hook。<span class="arrow">→</span> <b>原生 PyTorch 是唯一"直接调地基、不经中间胶水"的接入</b>——没有 patch 要维护、没有 Feature 要注册、没有框架版本耦合，所以最简、也最能反映 lifecycle 这套 API 本身的样子。你在任意自定义 train loop（CV / NLP / 自研模型）里都能照这 6 处照抄。
   </div>
 
   <div class="flow">
@@ -287,7 +287,7 @@
 
 </div>
 <footer>
-  dcu_probe × 原生 PyTorch 接入标注 · 代码 verbatim 摘自 scripts/train_resnet_dcu_probe.py · ResNet50 + Adam + 单卡精度对比（dump + monitor）
+  hcu_probe × 原生 PyTorch 接入标注 · 代码 verbatim 摘自 scripts/train_resnet_hcu_probe.py · ResNet50 + Adam + 单卡精度对比（dump + monitor）
 </footer>
 </body>
 </html>

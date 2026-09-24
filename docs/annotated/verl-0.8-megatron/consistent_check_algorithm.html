@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe pt_compare(consistent_check=True, backend=megatron) —— 训推一致比对算法流程标注（verl 0.8.0）</title>
+<title>hcu_probe pt_compare(consistent_check=True, backend=megatron) —— 训推一致比对算法流程标注（verl 0.8.0）</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -89,10 +89,10 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=megatron)</code> —— 训推一致比对算法流程标注 <span style="font-size:15px;color:#656d76">· verl 0.8.0 Megatron 后端</span></h1>
+  <h1>hcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=megatron)</code> —— 训推一致比对算法流程标注 <span style="font-size:15px;color:#656d76">· verl 0.8.0 Megatron 后端</span></h1>
   <p>训推一致性里 <b>npu = 训练侧 dump</b>（mcore + TE + Megatron-LM <code>core_v0.13.1</code>），<b>bench = 推理侧 dump</b>（das vllm 0.11）。同一个 prompt 的 prefill 前向理论上数值一致，但两侧是<b>异构框架</b>——算子命名（mcore/TE vs vllm）、拆分粒度、shape、出现顺序全不同。默认 compare 的“算子全名对全名”必然配不上。</p>
   <p><code style="color:#0550ae">consistent_check=True</code> 不是“调了个阈值”，而是把默认的 <code style="color:#cf222e">pd.merge(on=CMP_KEY)</code> 整体换成一套<b>语义级异构比对管线</b>：<b>解析裁窗 → 模块名归一映射 → 四元组多对一聚合 merge → 双单调保序 → shape 口径修正</b>。本页标注这条管线在<b>哪几个源码文件、哪几个函数</b>、每一步抹平哪一类异构。megatron 后端走 <code style="color:#0550ae">backend="megatron"</code> 分支（用 <code>MEGATRON_MODULE_MAP</code>），<span style="color:#1a7f37">绿色高亮 = 关键新增/专用逻辑</span>。</p>
-  <p><b>与 0.7 的唯一区别在“钩子挂哪”，不在“compare 怎么比”。</b>0.8.0 的训练侧 dump 钩子挂在 <b>NEW engine</b> 的 <code>verl/workers/engine/megatron/transformer_impl.py</code>（<code>MegatronEngineWithLMHead.forward_step</code> 的 forward_fn 前后），而 0.7.1 挂在 <b>legacy</b> 的 <code>megatron_actor.py</code>。<span style="color:#1a7f37">两版 dump 出来的 dump.json 结构相同</span>——本页这条 consistent_check 五段管线是 dcu_probe 源码、<b>版本无关</b>，0.8 与 0.7 逐段一致。</p>
+  <p><b>与 0.7 的唯一区别在“钩子挂哪”，不在“compare 怎么比”。</b>0.8.0 的训练侧 dump 钩子挂在 <b>NEW engine</b> 的 <code>verl/workers/engine/megatron/transformer_impl.py</code>（<code>MegatronEngineWithLMHead.forward_step</code> 的 forward_fn 前后），而 0.7.1 挂在 <b>legacy</b> 的 <code>megatron_actor.py</code>。<span style="color:#1a7f37">两版 dump 出来的 dump.json 结构相同</span>——本页这条 consistent_check 五段管线是 hcu_probe 源码、<b>版本无关</b>，0.8 与 0.7 逐段一致。</p>
 </header>
 
 <div class="wrap">
@@ -316,14 +316,14 @@
         <div class="l ctx">        <span class="k">return</span> <span class="s">"["</span> + <span class="s">","</span>.join(parts) + <span class="s">"]"</span></div>
       </div>
       <div class="ann">
-        <span class="pill warn">修法B（已合入 dcu_probe 主仓）</span>
+        <span class="pill warn">修法B（已合入 hcu_probe 主仓）</span>
         <div class="rt rt-4">④ shape 口径对齐</div>
         <h4>抹平「shape」异构</h4>
         <p class="why">默认 <code>ShapeErrChecker</code> 字符串严格比 shape，<code>[S,1,H] != [S,H]</code> 会把可比算子<b>全判 error</b>。替换版做三件事：</p>
         <p><b>1. squeeze</b>：去掉所有值为 1 的维，抹平 mcore 整层 <code>[S,1,H]</code> 与推理 <code>[S,H]</code> 的差异。<br>
         <b>2. FSDP 跳融合</b>：<code>bench_name</code> 含 <code>qkv</code>/<code>gate_up</code> 的聚合行 <code>continue</code>（FSDP 专属分支，megatron 不触发）。<br>
         <b>3. MEGATRON 三维降二维</b>：训练 3 维 <code>[d0,d1,d2]</code> 合并后两维成 <code>[d0, d1*d2]</code> 再比——即 mcore <code>[S,B,H]</code>（关 SP 后 <code>[344,1,4096]</code> 等）降成 <code>[S, B*H]</code>，与 vllm packed <code>[S*B,H]</code> 对齐。这是 megatron 后端能过 shape 门的关键分支。</p>
-        <p class="warn">关键：<b>statistics 和 tensor 两种 dump 模式都挂</b>（<code>VERL_STATISTICS_CHECKERS</code> + <code>VERL_TENSOR_CHECKERS</code>）。以前只挂 tensor、statistics 漏挂，就是 CLAUDE.md 反复提的“<b>修法B</b>”补丁；<b>该补丁已合入 dcu_probe 主仓 whl</b>，装官方包即带此逻辑，无需再改源码。训推一致 dump 走 L0+statistics，靠的正是 statistics 这一挂。</p>
+        <p class="warn">关键：<b>statistics 和 tensor 两种 dump 模式都挂</b>（<code>VERL_STATISTICS_CHECKERS</code> + <code>VERL_TENSOR_CHECKERS</code>）。以前只挂 tensor、statistics 漏挂，就是 CLAUDE.md 反复提的“<b>修法B</b>”补丁；<b>该补丁已合入 hcu_probe 主仓 whl</b>，装官方包即带此逻辑，无需再改源码。训推一致 dump 走 L0+statistics，靠的正是 statistics 这一挂。</p>
       </div>
     </div>
   </div>
@@ -365,7 +365,7 @@
 
 </div>
 <footer>
-  dcu_probe pt_compare(consistent_check=True, backend=megatron) 训推一致比对算法流程标注 · verl 0.8.0 Megatron 后端（mcore + TE + Megatron-LM core_v0.13.1 训练 / das vllm 0.11 推理，钩子挂 NEW engine transformer_impl.py 的 MegatronEngineWithLMHead.forward_step）· 代码 verbatim 摘自 dcu_probe/src/dcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py · compare 脚本 run_megatron_compare.py（无交错模块过滤步）
+  hcu_probe pt_compare(consistent_check=True, backend=megatron) 训推一致比对算法流程标注 · verl 0.8.0 Megatron 后端（mcore + TE + Megatron-LM core_v0.13.1 训练 / das vllm 0.11 推理，钩子挂 NEW engine transformer_impl.py 的 MegatronEngineWithLMHead.forward_step）· 代码 verbatim 摘自 hcu_probe/src/hcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py · compare 脚本 run_megatron_compare.py（无交错模块过滤步）
 </footer>
 </body>
 </html>

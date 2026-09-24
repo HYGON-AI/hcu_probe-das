@@ -2,9 +2,9 @@
 
 ## 概述
 
-在 vLLM 推理框架中接入 dcu_probe 的 `PrecisionDebugger`，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
+在 vLLM 推理框架中接入 hcu_probe 的 `PrecisionDebugger`，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
 
-完整链路：**接入 → dump → `dcu-probe compare` 比对 → `dcu-probe graph_visualize` 构图 → TensorBoard 浏览**
+完整链路：**接入 → dump → `hcu-probe compare` 比对 → `hcu-probe graph_visualize` 构图 → TensorBoard 浏览**
 
 ## 适用场景
 
@@ -13,7 +13,7 @@
 | 社区原生 vLLM | PyTorch Eager 模式 | ✅ 本文档 |
 | 社区原生 vLLM | PyTorch 图模式 | ❌ 不支持 |
 
-> 社区版 vLLM 在 DCU 上使用时，确保已安装对应 DCU 的 PyTorch 构建版本。
+> 社区版 vLLM 在 HCU 上使用时，确保已安装对应 HCU 的 PyTorch 构建版本。
 
 ## 接入流程
 
@@ -24,7 +24,7 @@
 ```json
 {
     "task": "statistics",
-    "dump_path": "/home/dcu_dump",
+    "dump_path": "/home/hcu_dump",
     "rank": [],
     "step": [],
     "level": "mix",
@@ -53,12 +53,12 @@ class GPUModelRunner:
         vllm_config: VllmConfig,
         device: torch.device,
     ):
-        ################################ dcu_probe ################################
-        from dcu_probe.pytorch import PrecisionDebugger, seed_all
+        ################################ hcu_probe ################################
+        from hcu_probe.pytorch import PrecisionDebugger, seed_all
 
         seed_all(mode=True)
         self.debugger = PrecisionDebugger(config_path="./config.json")
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
         self.vllm_config = vllm_config
         self.device = device
         ...
@@ -75,20 +75,20 @@ def execute_model(
     scheduler_output: "SchedulerOutput",
     intermediate_tensors: Optional[IntermediateTensors] = None,
 ) -> Union[ModelRunnerOutput, torch.Tensor]:
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
     if hasattr(self, "debugger"):
         self.debugger.start(model=self.model)
-    ################################ dcu_probe ################################
+    ################################ hcu_probe ################################
 
     try:
         ...
         return output
     finally:
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
         if hasattr(self, "debugger"):
             self.debugger.stop()
             self.debugger.step()
-        ################################ dcu_probe ################################
+        ################################ hcu_probe ################################
 ```
 
 > 如果不方便使用 `try...finally` 整体包裹，也可在各个 `return` 前分别添加 `stop()` 和 `step()` 调用。
@@ -141,14 +141,14 @@ curl http://127.0.0.1:8000/v1/completions \
 
 ## 精度比对
 
-dump 完成后在 DCU 和 baseline 环境各得到一份数据。比对命令和结果解读与 SGLang 完全一致，详见 [SGLang 精度比对](./sglang.md#精度比对)。
+dump 完成后在 HCU 和 baseline 环境各得到一份数据。比对命令和结果解读与 SGLang 完全一致，详见 [SGLang 精度比对](./sglang.md#精度比对)。
 
 快速示例：
 
 ```bash
 # 多卡比对
-dcu-probe compare \
-    -tp ./dcu_dump/step0 \
+hcu-probe compare \
+    -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output \
     --xlsx
@@ -166,8 +166,8 @@ dcu-probe compare \
 
 ```bash
 # 生成可视化数据
-dcu-probe graph_visualize \
-    -tp ./dcu_dump/step0/rank0 \
+hcu-probe graph_visualize \
+    -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output
 

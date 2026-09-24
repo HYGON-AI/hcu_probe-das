@@ -18,7 +18,7 @@
 | 多 step 批量构图 | 自动识别 | step1 / step2 / ... 一起构 |
 | 双源结构差异比对 | `-gp <golden>` | 含跨套件比对(DeepSpeed vs Megatron) |
 | 双源精度数据比对 | `-gp <golden>` | 三种 dump 类型:`statistics` / `tensor` / `md5` |
-| **跨套件比对** | `-lm` / `-lm mapping.yaml` | DCU↔NV / 不同框架 module 名映射 |
+| **跨套件比对** | `-lm` / `-lm mapping.yaml` | HCU↔NV / 不同框架 module 名映射 |
 | **模糊匹配** | `-fm` | 节点名容差匹配,适合层级结构有微差的场景 |
 | **溢出标注** | `-oc` | 每节点带 medium / high / critical 溢出等级标记 |
 | 不同切分策略图合并 | `--rank_size --tp --pp --vpp --order` | 多机张量并行 / 流水线并行场景 |
@@ -28,14 +28,14 @@
 ## Python API
 
 ```python
-from dcu_probe.tools import graph_viz
+from hcu_probe.tools import graph_viz
 
 # 单源
-graph_viz.run(target_path="./dcu_dump/step0", output_path="./vis_out")
+graph_viz.run(target_path="./hcu_dump/step0", output_path="./vis_out")
 
 # 双源 diff
 graph_viz.run(
-    target_path="./dcu_dump/step0",
+    target_path="./hcu_dump/step0",
     golden_path="./h20_dump/step0",
     output_path="./vis_diff_out",
     overflow_check=True,   # 把溢出节点标红
@@ -66,31 +66,31 @@ def run(
 
 ```bash
 # 单源
-dcu-probe graph_visualize -tp ./dump -o ./vis_out
+hcu-probe graph_visualize -tp ./dump -o ./vis_out
 
 # 双源
-dcu-probe graph_visualize -tp ./dcu_dump -gp ./h20_dump -o ./vis_diff -oc
+hcu-probe graph_visualize -tp ./hcu_dump -gp ./h20_dump -o ./vis_diff -oc
 
 # tensorboard 浏览
 tensorboard --logdir ./vis_out --bind_all
 ```
 
-## DCU 上的关注点
+## HCU 上的关注点
 
 ### construct.json 模块名兼容
 
-可视化依赖 `construct.json` 还原模型图。dcu_megatron 通过 patch 改了一些模块实现(reuse-fp32-param / EDGC / DualPipeV 调度模块等),可能与原生 Megatron 在 NV 上的 construct.json 模块名不完全一致。
+可视化依赖 `construct.json` 还原模型图。hcu_megatron 通过 patch 改了一些模块实现(reuse-fp32-param / EDGC / DualPipeV 调度模块等),可能与原生 Megatron 在 NV 上的 construct.json 模块名不完全一致。
 
-**应对**:第一次跨平台比对时,在生成的图上观察自动匹配率。匹配率低时用 `layer_mapping` 写一份 DCU↔NV 模块名映射 YAML,常见映射可沉淀为模板复用。
+**应对**:第一次跨平台比对时,在生成的图上观察自动匹配率。匹配率低时用 `layer_mapping` 写一份 HCU↔NV 模块名映射 YAML,常见映射可沉淀为模板复用。
 
 ### 通信算子可视化
 
-`reduce_scatter_to_sequence_parallel_region` / `reduce_from_tensor_model_parallel_region` 等通信算子在 dcu_megatron 里被 `torch._dynamo.disable` 包装。验证点:这些算子是否能被 dump hook 拦截到并出现在可视化图上。
+`reduce_scatter_to_sequence_parallel_region` / `reduce_from_tensor_model_parallel_region` 等通信算子在 hcu_megatron 里被 `torch._dynamo.disable` 包装。验证点:这些算子是否能被 dump hook 拦截到并出现在可视化图上。
 
-### DCU 上的状态(后端构图 + 浏览侧 双实证)
+### HCU 上的状态(后端构图 + 浏览侧 双实证)
 
 ✅ **2026-05-12 后端构图 — scnet docker 跑通**:
-- 节点 f09r1n05 / 容器 `dcu_probe_lab`
+- 节点 f09r1n05 / 容器 `hcu_probe_lab`
 - 输入:llama2-7B L0 dump 单源 8 卡 × step0
 - 处理时长:~20 秒(rank 0-7 并行 export)
 - 产物:`build_20260512164944.vis.db` SQLite 文件 **608 MB**
@@ -100,7 +100,7 @@ tensorboard --logdir ./vis_out --bind_all
 - pip install `tb-graph-ascend 8.3.2` + `tensorboard 2.20.0`
 - 浏览器 `http://localhost:6006/#graph_ascend` 完整渲染:Module.module.Float16Module.forward.X 节点 + dtype/shape/Max/Min/Mean/Norm/requires_grad 全字段
 
-DCU 上 construct.json 模块名格式与上游 mindstudio-probe 兼容,无需 layer_mapping 即可自动 export。跨 NV 比对仍待补做(需 H20 标杆 dump)。
+HCU 上 construct.json 模块名格式与上游 mindstudio-probe 兼容,无需 layer_mapping 即可自动 export。跨 NV 比对仍待补做(需 H20 标杆 dump)。
 
 ## 输出产物
 
@@ -113,7 +113,7 @@ DCU 上 construct.json 模块名格式与上游 mindstudio-probe 兼容,无需 l
 
 ## 浏览侧:tb_graph_ascend tensorboard 插件
 
-`graph_visualize` 命令**dcu_probe whl 已支持**(生成 `.vis.db`),浏览器看节点搜索 / 精度筛选 / 层级下钻 / 跳转展开等交互能力**需要单独装 `tb_graph_ascend` 插件**(独立 PyPI 包,不在 dcu_probe whl 里)。
+`graph_visualize` 命令**hcu_probe whl 已支持**(生成 `.vis.db`),浏览器看节点搜索 / 精度筛选 / 层级下钻 / 跳转展开等交互能力**需要单独装 `tb_graph_ascend` 插件**(独立 PyPI 包,不在 hcu_probe whl 里)。
 
 ### 安装(任意干净 Python 环境)
 
@@ -123,7 +123,7 @@ source /tmp/venv_tb_graph/bin/activate
 pip install tb-graph-ascend tensorboard
 ```
 
-不需要装 mindstudio-probe 全套或 dcu_probe whl —— **浏览侧零硬件依赖**,可在任意 Mac / Linux / Windows 机器跑。
+不需要装 mindstudio-probe 全套或 hcu_probe whl —— **浏览侧零硬件依赖**,可在任意 Mac / Linux / Windows 机器跑。
 
 ### 启动浏览
 
@@ -152,13 +152,13 @@ tensorboard --logdir <dir_containing_vis_db> --port 6006
 - **dtype 识别**:`torch.bfloat16` / `torch.float32` / `torch.int64` / `torch.bool` 全部正常显示
 - **shape 识别**:`[1, 4096]` / `[4096, 1, 4096]` 等 llama2-7B seq=4096 / hidden=4096 形状
 
-→ **DCU 训练数据 + tb_graph_ascend 浏览插件完整兼容,跨平台开箱即用**。
+→ **HCU 训练数据 + tb_graph_ascend 浏览插件完整兼容,跨平台开箱即用**。
 
 ### 命名说明(`Ascend` 残留)
 
-`tb_graph_ascend` 插件名 + URL Tab `#graph_ascend` + 视图标题 `GRAPH_ASCEND` 都沿用上游 mindstudio-probe 项目对**华为昇腾(NPU)**的品牌命名。但**插件功能跟硬件解耦**(纯 SQLite 读取 + Vue/D3 前端渲染,源码内无 NPU 硬编码),DCU 训练数据完全 work,无需修改。
+`tb_graph_ascend` 插件名 + URL Tab `#graph_ascend` + 视图标题 `GRAPH_ASCEND` 都沿用上游 mindstudio-probe 项目对**华为昇腾(NPU)**的品牌命名。但**插件功能跟硬件解耦**(纯 SQLite 读取 + Vue/D3 前端渲染,源码内无 NPU 硬编码),HCU 训练数据完全 work,无需修改。
 
-跟我们 dcu_probe whl 沿用 `from msprobe.xxx` 内部 import 路径是同性质决策:**功能可用 ≠ 命名要重做**。
+跟我们 hcu_probe whl 沿用 `from msprobe.xxx` 内部 import 路径是同性质决策:**功能可用 ≠ 命名要重做**。
 
 ### 如果未来希望去掉 Ascend 字样
 
@@ -169,7 +169,7 @@ tensorboard --logdir <dir_containing_vis_db> --port 6006
 | Author | Ascend Team(华为) |
 | 当前版本 | 8.3.2(2026-02-04) |
 
-改名思路(若决定做):fork → 改 plugin entry point 名(`tb_graph_ascend` → `tb_graph_dcu_probe`)+ 改 URL Tab + 改视图标题 → 重打包发布。**代价**:每次上游 release 需 rebase 改名 patch,short-term 不建议。**当前直接用上游 PyPI 包即可**。
+改名思路(若决定做):fork → 改 plugin entry point 名(`tb_graph_ascend` → `tb_graph_hcu_probe`)+ 改 URL Tab + 改视图标题 → 重打包发布。**代价**:每次上游 release 需 rebase 改名 patch,short-term 不建议。**当前直接用上游 PyPI 包即可**。
 
 ## 与其他工具的关系
 
@@ -179,7 +179,7 @@ tensorboard --logdir <dir_containing_vis_db> --port 6006
 
 ## 完整能力参考(上游 PyTorch 文档)
 
-dcu_probe 的 graph_visualize 实现完全沿用上游 mindstudio-probe v26.0.0-alpha.1 的 PyTorch 路径代码。以下细节本文档没展开,需要时查上游 PyTorch 场景文档:
+hcu_probe 的 graph_visualize 实现完全沿用上游 mindstudio-probe v26.0.0-alpha.1 的 PyTorch 路径代码。以下细节本文档没展开,需要时查上游 PyTorch 场景文档:
 
 - 完整 7 个工具特性(重建层级 / 结构差异 / 精度数据比对 / 溢出检测 / 多卡批量构图 / 节点搜索筛选 / 跨套件跨框架比对 / 切分策略图合并)
 - 节点命名格式 `{Module}.{module_name}.{class_name}.{forward/backward}.{调用次数}`

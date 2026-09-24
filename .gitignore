@@ -31,7 +31,7 @@ dump_path/
 report/
 *.npy
 *.csv
-!test/dcu_probe_test/resources/*.csv
+!test/hcu_probe_test/resources/*.csv
 monitor_output_csv2tb
 .nfs*
 .coverage

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_megatron 5 采集模式 + CLI flag 三层链路 —— dcu_probe dump/monitor</title>
+<title>hcu_megatron 5 采集模式 + CLI flag 三层链路 —— hcu_probe dump/monitor</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,18 +61,18 @@
 </head>
 <body>
 <header>
-  <h1>dcu_megatron 5 采集模式 + CLI flag 三层链路 —— dcu_probe <code style="color:#0969da">dump</code> / <code style="color:#bc4c00">monitor</code></h1>
-  <p>这里说的是<b>独立 dcu_megatron 框架</b>(Megatron-LM + 海光 adaptor,预训练 llama2-7B)—— <b>不是</b> verl 的 Megatron 后端(RL 训推一致),别混。</p>
-  <p>dcu_probe 在 dcu_megatron 里做的是 <b class="hot">单侧精度采集 + 零侵入验证</b>:采训练侧统计量供离线精度分析,并用「5 模式 loss <b>字字一致</b>」证明钩子零侵入。<b>没有 pt_compare、没有训推双侧比对</b> —— 这是它和 verl 最本质的区别。</p>
+  <h1>hcu_megatron 5 采集模式 + CLI flag 三层链路 —— hcu_probe <code style="color:#0969da">dump</code> / <code style="color:#bc4c00">monitor</code></h1>
+  <p>这里说的是<b>独立 hcu_megatron 框架</b>(Megatron-LM + 海光 adaptor,预训练 llama2-7B)—— <b>不是</b> verl 的 Megatron 后端(RL 训推一致),别混。</p>
+  <p>hcu_probe 在 hcu_megatron 里做的是 <b class="hot">单侧精度采集 + 零侵入验证</b>:采训练侧统计量供离线精度分析,并用「5 模式 loss <b>字字一致</b>」证明钩子零侵入。<b>没有 pt_compare、没有训推双侧比对</b> —— 这是它和 verl 最本质的区别。</p>
 </header>
 
 <div class="wrap">
 
   <!-- 核心工具 -->
-  <h2 class="sec">★ 核心能力:dcu_probe 的采集 API(<code>PrecisionDebugger</code> dump + <code>TrainerMonitorV2</code> monitor)</h2>
+  <h2 class="sec">★ 核心能力:hcu_probe 的采集 API(<code>PrecisionDebugger</code> dump + <code>TrainerMonitorV2</code> monitor)</h2>
   <div class="tool">
-    <h3>dcu_probe 在 dcu_megatron 里发挥什么效果</h3>
-    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">和 verl 的 <code>pt_compare</code>(双侧逐算子比对)不同,dcu_megatron 用的是 dcu_probe 的<b>采集</b>能力 —— 两套独立子系统,经 Feature 钩子织进 megatron 的 <code>train_step</code>:</p>
+    <h3>hcu_probe 在 hcu_megatron 里发挥什么效果</h3>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">和 verl 的 <code>pt_compare</code>(双侧逐算子比对)不同,hcu_megatron 用的是 hcu_probe 的<b>采集</b>能力 —— 两套独立子系统,经 Feature 钩子织进 megatron 的 <code>train_step</code>:</p>
     <div class="sig"><span class="c"># dump:每个 train_step 前向前后开关采集器,落逐 module / 逐 API 统计量</span>
 <span class="k">PrecisionDebugger</span>(config_path)   <span class="c"># task=statistics, level=L0/L1, 只 Max/Min/Mean/Norm</span>
   ├ on_step_start → debugger.<span class="k">start</span>(model)   <span class="c"># 前向前</span>
@@ -86,34 +86,34 @@
       <li><b>monitor</b>(<code>TrainerMonitorV2</code>)→ 逐 step 的梯度 / 优化器 / 参数三通道 <code>csv</code>,做<b>训练态监控</b>(看梯度爆炸 / NaN / 参数漂移)。</li>
       <li><b>零侵入证明</b>:开采集与 baseline 的 <code>lm loss</code> 逐 iter <b>字字一致</b>(L0/monitor/combined = <code>9.087223</code>)→ 说明钩子没改变训练数值。</li>
     </ul>
-    <p style="margin:8px 0 0;color:#9a6700;font-size:13px"><b>关键区别:</b>这里<b>不做训推一致</b>、<b>不调 pt_compare</b> —— dcu_megatron 是纯训练框架,采集的是<b>单侧</b>训练态数据。verl 那套「训练 dump ↔ 推理 dump 逐算子比误差」在这里根本不存在。</p>
+    <p style="margin:8px 0 0;color:#9a6700;font-size:13px"><b>关键区别:</b>这里<b>不做训推一致</b>、<b>不调 pt_compare</b> —— hcu_megatron 是纯训练框架,采集的是<b>单侧</b>训练态数据。verl 那套「训练 dump ↔ 推理 dump 逐算子比误差」在这里根本不存在。</p>
   </div>
 
   <!-- 数据流:CLI flag 三层链路 -->
   <div class="flow">
     <b>CLI flag 三层链路(下划线 flag 怎么一路变成 megatron 认的连字符 flag):</b>
-    <div class="chain" style="margin-top:8px">① <b style="color:#1a7f37">launcher</b> 解析 <code>--dcu_probe_config</code>(下划线,=号)  <span class="arrow">→</span>  ② <b style="color:#bc4c00">train 脚本</b> 读 level(L1 自动 <code>TORCHDYNAMO_DISABLE</code>)+ 组装 <code>DCU_PROBE_ARGS</code>(下划线转连字符)  <span class="arrow">→</span>  ③ <b style="color:#0969da">pretrain_gpt.py</b> argparse 收 <code>--dcu-probe-config</code>(连字符,Feature <code>register_args</code> 注册的)</div>
+    <div class="chain" style="margin-top:8px">① <b style="color:#1a7f37">launcher</b> 解析 <code>--hcu_probe_config</code>(下划线,=号)  <span class="arrow">→</span>  ② <b style="color:#bc4c00">train 脚本</b> 读 level(L1 自动 <code>TORCHDYNAMO_DISABLE</code>)+ 组装 <code>HCU_PROBE_ARGS</code>(下划线转连字符)  <span class="arrow">→</span>  ③ <b style="color:#0969da">pretrain_gpt.py</b> argparse 收 <code>--hcu-probe-config</code>(连字符,Feature <code>register_args</code> 注册的)</div>
   </div>
 
   <h2 class="sec">一、CLI flag 三层链路(核心坑 = 下划线 ↔ 连字符)</h2>
-  <p class="lead">megatron 的 <code>pretrain_gpt.py</code> <b>只认连字符</b> <code>--dcu-probe-config</code>;而 launcher 惯用<b>下划线</b> <code>--dcu_probe_config</code>。启动脚本必须做「下划线 → 连字符」转换,否则 flag 被静默吞掉、行为退回 baseline(无报错、最难查)。</p>
+  <p class="lead">megatron 的 <code>pretrain_gpt.py</code> <b>只认连字符</b> <code>--hcu-probe-config</code>;而 launcher 惯用<b>下划线</b> <code>--hcu_probe_config</code>。启动脚本必须做「下划线 → 连字符」转换,否则 flag 被静默吞掉、行为退回 baseline(无报错、最难查)。</p>
 
   <!-- ① launcher -->
   <div class="card">
     <div class="hd"><span class="no" style="color:var(--train)">①</span><span class="ttl">launcher 层 —— 解析下划线 flag</span><span class="role">加进脚本已有的入参循环</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># dcu_megatron 的 train 脚本本就有 `for para in $*` 的 if/elif 链</span></div>
+        <div class="l"><span class="c"># hcu_megatron 的 train 脚本本就有 `for para in $*` 的 if/elif 链</span></div>
         <div class="l"><span class="c"># 解析 --data_path 等,照同样写法多加 3 个分支:</span></div>
-        <div class="l hl"><span class="k">elif</span> [[ $para == --dcu_probe_config* ]];        <span class="k">then</span> dcu_probe_config=${para#*=}</div>
-        <div class="l"><span class="k">elif</span> [[ $para == --dcu_probe_seed* ]];          <span class="k">then</span> dcu_probe_seed=${para#*=}</div>
-        <div class="l"><span class="k">elif</span> [[ $para == --dcu_probe_monitor_config* ]];<span class="k">then</span> dcu_probe_monitor_config=${para#*=}</div>
+        <div class="l hl"><span class="k">elif</span> [[ $para == --hcu_probe_config* ]];        <span class="k">then</span> hcu_probe_config=${para#*=}</div>
+        <div class="l"><span class="k">elif</span> [[ $para == --hcu_probe_seed* ]];          <span class="k">then</span> hcu_probe_seed=${para#*=}</div>
+        <div class="l"><span class="k">elif</span> [[ $para == --hcu_probe_monitor_config* ]];<span class="k">then</span> hcu_probe_monitor_config=${para#*=}</div>
       </div>
       <div class="ann">
         <span class="rt rt-c">接收</span>
         <h4>用下划线接命令行</h4>
-        <p>用户跑 <code>bash launcher.sh --dcu_probe_config=...L0.json</code>,launcher 用<b>下划线</b>形式接住(shell 里带连字符的变量名不合法,所以约定俗成用下划线)。</p>
-        <p class="warn"><b>两层脚本要穿两层</b>:若结构是「外层 <code>run_*.sh</code> + 内层 <code>train_*.sh</code>」,外层要把 <code>--dcu_probe_config=$xxx</code> 透传给内层,内层才收得到;否则外层静默忽略。</p>
+        <p>用户跑 <code>bash launcher.sh --hcu_probe_config=...L0.json</code>,launcher 用<b>下划线</b>形式接住(shell 里带连字符的变量名不合法,所以约定俗成用下划线)。</p>
+        <p class="warn"><b>两层脚本要穿两层</b>:若结构是「外层 <code>run_*.sh</code> + 内层 <code>train_*.sh</code>」,外层要把 <code>--hcu_probe_config=$xxx</code> 透传给内层,内层才收得到;否则外层静默忽略。</p>
       </div>
     </div>
   </div>
@@ -124,21 +124,21 @@
     <div class="body">
       <div class="code">
         <div class="l"><span class="c"># (b) L1 自动关 dynamo(读 cfg 的 level 判断,不用用户手动)</span></div>
-        <div class="l"><span class="k">if</span> [[ -n <span class="s">"${dcu_probe_config}"</span> <span class="k">&amp;&amp;</span> -f <span class="s">"${dcu_probe_config}"</span> ]]; <span class="k">then</span></div>
-        <div class="l">  level=$(python3 -c <span class="s">"import json;print(json.load(open('${dcu_probe_config}'))['level'])"</span>)</div>
+        <div class="l"><span class="k">if</span> [[ -n <span class="s">"${hcu_probe_config}"</span> <span class="k">&amp;&amp;</span> -f <span class="s">"${hcu_probe_config}"</span> ]]; <span class="k">then</span></div>
+        <div class="l">  level=$(python3 -c <span class="s">"import json;print(json.load(open('${hcu_probe_config}'))['level'])"</span>)</div>
         <div class="l hl">  [[ <span class="s">"${level}"</span> == <span class="s">"L1"</span> ]] <span class="k">&amp;&amp;</span> <span class="k">export</span> TORCHDYNAMO_DISABLE=<span class="n">1</span></div>
         <div class="l"><span class="k">fi</span></div>
         <div class="l"> </div>
         <div class="l"><span class="c"># (c) 下划线 flag → megatron 连字符 flag,拼成参数数组</span></div>
-        <div class="l">DCU_PROBE_ARGS=()</div>
-        <div class="l hl">[[ -n <span class="s">"${dcu_probe_config}"</span> ]]         <span class="k">&amp;&amp;</span> DCU_PROBE_ARGS+=(--dcu-probe-config <span class="s">"${dcu_probe_config}"</span>)</div>
-        <div class="l hl">[[ -n <span class="s">"${dcu_probe_seed}"</span> ]]           <span class="k">&amp;&amp;</span> DCU_PROBE_ARGS+=(--dcu-probe-seed <span class="s">"${dcu_probe_seed}"</span>)</div>
-        <div class="l hl">[[ -n <span class="s">"${dcu_probe_monitor_config}"</span> ]] <span class="k">&amp;&amp;</span> DCU_PROBE_ARGS+=(--dcu-probe-monitor-config <span class="s">"${dcu_probe_monitor_config}"</span>)</div>
+        <div class="l">HCU_PROBE_ARGS=()</div>
+        <div class="l hl">[[ -n <span class="s">"${hcu_probe_config}"</span> ]]         <span class="k">&amp;&amp;</span> HCU_PROBE_ARGS+=(--hcu-probe-config <span class="s">"${hcu_probe_config}"</span>)</div>
+        <div class="l hl">[[ -n <span class="s">"${hcu_probe_seed}"</span> ]]           <span class="k">&amp;&amp;</span> HCU_PROBE_ARGS+=(--hcu-probe-seed <span class="s">"${hcu_probe_seed}"</span>)</div>
+        <div class="l hl">[[ -n <span class="s">"${hcu_probe_monitor_config}"</span> ]] <span class="k">&amp;&amp;</span> HCU_PROBE_ARGS+=(--hcu-probe-monitor-config <span class="s">"${hcu_probe_monitor_config}"</span>)</div>
       </div>
       <div class="ann">
         <span class="rt rt-x">核心坑</span>
         <h4>下划线 → 连字符,少这一步全盘失效</h4>
-        <p><code>DCU_PROBE_ARGS+=(--dcu-<b>connective</b>...)</code> 这三行把<b>下划线变量</b>拼成 megatron argparse 认的<b>连字符 flag</b>。忘了转 → megatron 收不到 → 静默走 baseline、无任何报错。</p>
+        <p><code>HCU_PROBE_ARGS+=(--hcu-<b>connective</b>...)</code> 这三行把<b>下划线变量</b>拼成 megatron argparse 认的<b>连字符 flag</b>。忘了转 → megatron 收不到 → 静默走 baseline、无任何报错。</p>
         <p><b>L1 自动 <code>TORCHDYNAMO_DISABLE=1</code></b>:脚本读 cfg 里的 <code>level</code>,是 L1 就自动关 dynamo(L1 的 API 级 monkey-patch 与 torch dynamo 图捕获冲突)。用户不用手动 export。</p>
       </div>
     </div>
@@ -149,33 +149,33 @@
     <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">pretrain_gpt.py —— megatron argparse 收连字符 flag</span><span class="role">Feature 的 register_args 注册的那个 flag</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># DcuProbeFeature.register_args() 里注册的(见接入机制页):</span></div>
-        <div class="l hl">group.add_argument(<span class="s">'--dcu-probe-config'</span>, type=str, default=<span class="k">None</span>,</div>
-        <div class="l">                   help=<span class="s">'Path to dcu_probe config JSON ...'</span>)</div>
+        <div class="l"><span class="c"># HcuProbeFeature.register_args() 里注册的(见接入机制页):</span></div>
+        <div class="l hl">group.add_argument(<span class="s">'--hcu-probe-config'</span>, type=str, default=<span class="k">None</span>,</div>
+        <div class="l">                   help=<span class="s">'Path to hcu_probe config JSON ...'</span>)</div>
         <div class="l"> </div>
-        <div class="l"><span class="c"># train 脚本把 ${DCU_PROBE_ARGS[@]} 拼进 APP,与其他 *_ARGS 并列:</span></div>
+        <div class="l"><span class="c"># train 脚本把 ${HCU_PROBE_ARGS[@]} 拼进 APP,与其他 *_ARGS 并列:</span></div>
         <div class="l">APP=<span class="s">"python -u ${MEGATRON_PATH}/pretrain_gpt.py \</span></div>
         <div class="l"><span class="s">     ${GPT_MODEL_ARGS[@]} ${TRAINING_ARGS[@]} ... \</span></div>
-        <div class="l hl"><span class="s">     ${DCU_PROBE_ARGS[@]}"</span>          <span class="c"># ← 加这一行即接通</span></div>
+        <div class="l hl"><span class="s">     ${HCU_PROBE_ARGS[@]}"</span>          <span class="c"># ← 加这一行即接通</span></div>
       </div>
       <div class="ann">
         <span class="rt rt-a">收 flag</span>
         <h4>megatron 端只认连字符</h4>
-        <p><code>--dcu-probe-config</code> 是 Feature 的 <code>register_args()</code> 用 <code>add_argument</code> 注册进 megatron argparse 的。所以 ② 必须先把下划线转成它,argparse 才 match 得上。</p>
-        <p>把 <code>${DCU_PROBE_ARGS[@]}</code> 拼进组装 <code>pretrain_gpt.py</code> 的 <code>APP</code> 字符串就接通了 —— <b>训练脚本本体只加这一行</b>,megatron 源码 0 改动。收到 flag 后,启动时 Feature 的 <code>register_patches()</code> 把 dump wrapper monkey-patch 进 <code>train_step</code>。</p>
+        <p><code>--hcu-probe-config</code> 是 Feature 的 <code>register_args()</code> 用 <code>add_argument</code> 注册进 megatron argparse 的。所以 ② 必须先把下划线转成它,argparse 才 match 得上。</p>
+        <p>把 <code>${HCU_PROBE_ARGS[@]}</code> 拼进组装 <code>pretrain_gpt.py</code> 的 <code>APP</code> 字符串就接通了 —— <b>训练脚本本体只加这一行</b>,megatron 源码 0 改动。收到 flag 后,启动时 Feature 的 <code>register_patches()</code> 把 dump wrapper monkey-patch 进 <code>train_step</code>。</p>
       </div>
     </div>
   </div>
 
   <h2 class="sec">二、dump / monitor 采集器 lifecycle</h2>
-  <p class="lead">flag 接通后,采集器的真正开关由钩子 wrapper 驱动 —— 薄壳只透传,业务全在 whl 的 <code>dcu_probe.integrations.megatron.dump</code> / <code>.monitor</code> 翻译层。</p>
+  <p class="lead">flag 接通后,采集器的真正开关由钩子 wrapper 驱动 —— 薄壳只透传,业务全在 whl 的 <code>hcu_probe.integrations.megatron.dump</code> / <code>.monitor</code> 翻译层。</p>
 
   <!-- ④ dump lifecycle -->
   <div class="card">
     <div class="hd"><span class="no" style="color:var(--fn)">④</span><span class="ttl">dump lifecycle —— on_step_start / on_step_end 经 hook 织入</span><span class="role">PrecisionDebugger 的开关点</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># dcu_probe_wrapper.py:train_step 薄壳(verbatim)</span></div>
+        <div class="l"><span class="c"># hcu_probe_wrapper.py:train_step 薄壳(verbatim)</span></div>
         <div class="l"><span class="k">def</span> <span class="fn">wrapped_train_step</span>(forward_step_func, data_iterator, model, *args, **kwargs):</div>
         <div class="l hl">    dump.<span class="fn">on_step_start</span>(model, get_args())        <span class="c"># 前向前 debugger.start(model)</span></div>
         <div class="l">    result = <span class="fn">original_train_step</span>(forward_step_func, data_iterator, model, *args, **kwargs)</div>
@@ -199,7 +199,7 @@
     <div class="hd"><span class="no" style="color:var(--infer)">⑤</span><span class="ttl">★L1 yaml patch —— 注释 support_wrap_ops.yaml 的 gelu / silu</span><span class="role">仅 L1 需要,whl 不含</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># dcu_probe 包内 pytorch/dump/api_dump/support_wrap_ops.yaml</span></div>
+        <div class="l"><span class="c"># hcu_probe 包内 pytorch/dump/api_dump/support_wrap_ops.yaml</span></div>
         <div class="l"><span class="k">functional:</span>          <span class="c"># ← 只改这个 functional 区(文件靠前)</span></div>
         <div class="l">  - conv2d</div>
         <div class="l">  - linear</div>
@@ -221,17 +221,17 @@
   <h2 class="sec">三、5 采集模式矩阵(实测 llama2-7B,8 卡 bf16,iter5)</h2>
   <p class="lead">同一套接入,靠命令行传不同 flag 组合切模式。<b>L0 / monitor / combined 的 <code>lm loss</code> 与 baseline 逐 iter 字字一致 = 零侵入</b>;只有 L1 因 API 级 wrap 有极微扰动。</p>
   <table class="ov">
-    <tr><th>模式</th><th>启用方式(launcher 层下划线 flag)</th><th>dcu_probe 采什么</th><th>lm loss (iter5)</th><th>产物</th></tr>
-    <tr><td><b>mode1 baseline</b></td><td>不加任何 flag（原训练）</td><td>—（纯训练,做对照基准）</td><td><code>9.087223</code> / grad 4.535 / nan 0</td><td>无 dcu_probe 产物</td></tr>
-    <tr><td><b>mode2 L0 dump</b></td><td><code>--dcu_probe_config=...L0.json</code></td><td>module 级 statistics(每 module forward 的 Max/Min/Mean/Norm)</td><td><code>9.087223</code>(<b>字字一致</b>)</td><td><code>dump.json</code> step0/1/2</td></tr>
+    <tr><th>模式</th><th>启用方式(launcher 层下划线 flag)</th><th>hcu_probe 采什么</th><th>lm loss (iter5)</th><th>产物</th></tr>
+    <tr><td><b>mode1 baseline</b></td><td>不加任何 flag（原训练）</td><td>—（纯训练,做对照基准）</td><td><code>9.087223</code> / grad 4.535 / nan 0</td><td>无 hcu_probe 产物</td></tr>
+    <tr><td><b>mode2 L0 dump</b></td><td><code>--hcu_probe_config=...L0.json</code></td><td>module 级 statistics(每 module forward 的 Max/Min/Mean/Norm)</td><td><code>9.087223</code>(<b>字字一致</b>)</td><td><code>dump.json</code> step0/1/2</td></tr>
     <tr><td><b>mode3 L1 dump</b></td><td><code>...L1.json</code>(自动 <code>TORCHDYNAMO_DISABLE</code>)</td><td>API 级(Functional / Tensor / Torch 算子)</td><td><code>9.087196</code>(<b class="hot">L1 wrap 微扰</b>)</td><td><code>dump.json</code> step0/1/2</td></tr>
-    <tr><td><b>mode4 monitor v2</b></td><td><code>--dcu_probe_monitor_config=...json</code></td><td>weight_grad / optimizer / param 三通道</td><td><code>9.087223</code>(<b>字字一致</b>)</td><td><code>csv</code>(8 rank × 15)</td></tr>
+    <tr><td><b>mode4 monitor v2</b></td><td><code>--hcu_probe_monitor_config=...json</code></td><td>weight_grad / optimizer / param 三通道</td><td><code>9.087223</code>(<b>字字一致</b>)</td><td><code>csv</code>(8 rank × 15)</td></tr>
     <tr><td><b>mode5 combined</b></td><td>L0 + monitor 同开</td><td>dump + csv 叠加</td><td><code>9.087223</code>(<b>字字一致</b>)</td><td><code>dump.json</code> + <code>csv</code>,LossTracker 单例去重</td></tr>
   </table>
 
   <!-- 每模式一张卡 -->
   <div class="card">
-    <div class="hd"><span class="no" style="color:var(--dim)">mode1</span><span class="ttl">baseline —— 零 dcu_probe</span><span class="role">先证训练本身健康,才谈采集</span></div>
+    <div class="hd"><span class="no" style="color:var(--dim)">mode1</span><span class="ttl">baseline —— 零 hcu_probe</span><span class="role">先证训练本身健康,才谈采集</span></div>
     <div class="body">
       <div class="code">
         <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh          <span class="c"># 不加任何 flag = 原训练</span></div>
@@ -240,7 +240,7 @@
       <div class="ann">
         <span class="rt rt-e">对照基准</span>
         <h4>采什么:什么都不采</h4>
-        <p>baseline 的作用是<b>提供零侵入判据</b>:后面开采集的 loss 要拿它逐 iter 对齐。铁律 —— 先跑通健康 baseline 再接 dcu_probe,否则在坏训练上验采集毫无意义。</p>
+        <p>baseline 的作用是<b>提供零侵入判据</b>:后面开采集的 loss 要拿它逐 iter 对齐。铁律 —— 先跑通健康 baseline 再接 hcu_probe,否则在坏训练上验采集毫无意义。</p>
       </div>
     </div>
   </div>
@@ -249,7 +249,7 @@
     <div class="hd"><span class="no" style="color:var(--train)">mode2</span><span class="ttl">L0 dump —— module 级(生产推荐)</span><span class="role">不依赖 tensorboard、不需 yaml patch</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --dcu_probe_config=$(realpath L0.json)</div>
+        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --hcu_probe_config=$(realpath L0.json)</div>
         <div class="l"><span class="c"># cfg: "task":"statistics", "level":"L0", "step":[0,1,2]</span></div>
       </div>
       <div class="ann">
@@ -264,7 +264,7 @@
     <div class="hd"><span class="no" style="color:var(--infer)">mode3</span><span class="ttl">L1 dump —— API 级(更细,有代价)</span><span class="role">需 yaml patch + 自动关 dynamo</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --dcu_probe_config=$(realpath L1.json)</div>
+        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --hcu_probe_config=$(realpath L1.json)</div>
         <div class="l"><span class="c"># 同 L0,仅 "level":"L1";launcher 自动 export TORCHDYNAMO_DISABLE=1</span></div>
       </div>
       <div class="ann">
@@ -279,7 +279,7 @@
     <div class="hd"><span class="no" style="color:var(--fn)">mode4</span><span class="ttl">monitor v2 —— 训练态三通道 csv</span><span class="role">与 dump 是两套独立 API</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --dcu_probe_monitor_config=$(realpath monitor.json)</div>
+        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --hcu_probe_monitor_config=$(realpath monitor.json)</div>
         <div class="l"><span class="c"># cfg: "patch_optimizer_step":false, 三通道 weight_grad/optimizer/param</span></div>
       </div>
       <div class="ann">
@@ -294,8 +294,8 @@
     <div class="hd"><span class="no" style="color:var(--accent)">mode5</span><span class="ttl">combined —— L0 dump + monitor 同开</span><span class="role">两钩子并存无冲突</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --dcu_probe_config=$(realpath L0.json) \</div>
-        <div class="l">                    --dcu_probe_monitor_config=$(realpath monitor.json)</div>
+        <div class="l"><span class="k">bash</span> &lt;launcher&gt;.sh --hcu_probe_config=$(realpath L0.json) \</div>
+        <div class="l">                    --hcu_probe_monitor_config=$(realpath monitor.json)</div>
         <div class="l"><span class="c"># dump.json + csv 同时产出,loss 仍 9.087223 字字一致</span></div>
       </div>
       <div class="ann">
@@ -308,9 +308,9 @@
 
   <!-- 与 verl 对照 -->
   <h2 class="sec">和 verl 的本质区别:精度对比 / 零侵入 ≠ 训推一致</h2>
-  <p class="lead">同样叫"接 dcu_probe",dcu_megatron 和 verl 是<b>两种完全不同的用法</b>。别把这页当成 verl 那套训推 compare 来读。</p>
+  <p class="lead">同样叫"接 hcu_probe",hcu_megatron 和 verl 是<b>两种完全不同的用法</b>。别把这页当成 verl 那套训推 compare 来读。</p>
   <table class="ov">
-    <tr><th>维度</th><th><b>dcu_megatron(本页,独立框架)</b></th><th>verl(Megatron/FSDP 后端,RL)</th></tr>
+    <tr><th>维度</th><th><b>hcu_megatron(本页,独立框架)</b></th><th>verl(Megatron/FSDP 后端,RL)</th></tr>
     <tr><td>接入机制</td><td><b>Feature 机制,0 行改训练脚本</b>:写 4 薄壳 + 注册进 <code>ADAPTOR_FEATURES</code>,启动 monkey-patch 织入</td><td><b>改源码 patch</b>:在 forward 路径手动插钩子</td></tr>
     <tr><td>验证场景</td><td><b>精度对比 / 零侵入</b>:采训练侧单侧统计量,供离线精度分析</td><td><b>训推一致性</b>:训练侧 dump ↔ 推理侧 dump 逐层比误差</td></tr>
     <tr><td>核心工具</td><td><code>PrecisionDebugger</code>(dump)+ <code>TrainerMonitorV2</code>(monitor)—— <b>只采集</b></td><td><code>pt_compare</code>(双侧逐算子比对)+ dump</td></tr>
@@ -320,13 +320,13 @@
 
   <div class="flow">
     <b>一句话记住:</b><br>
-    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">dcu_megatron</b> = Feature 织入 + <b>单侧采集</b>(dump/monitor)+ loss 字字一致证零侵入 —— <b>无 pt_compare</b>
+    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">hcu_megatron</b> = Feature 织入 + <b>单侧采集</b>(dump/monitor)+ loss 字字一致证零侵入 —— <b>无 pt_compare</b>
 <b style="color:#bc4c00">verl</b>         = 改源码 patch + <b>训推双侧</b> dump + <b>pt_compare</b> 逐算子比误差 —— 训推一致性</div>
   </div>
 
 </div>
 <footer>
-  dcu_megatron 5 采集模式 + CLI flag 三层链路 · 核心能力 dcu_probe.integrations.megatron.dump / monitor(PrecisionDebugger + TrainerMonitorV2）· 独立 dcu_megatron 框架(≠ verl 的 Megatron 后端)· 精度对比 / 零侵入,无 pt_compare
+  hcu_megatron 5 采集模式 + CLI flag 三层链路 · 核心能力 hcu_probe.integrations.megatron.dump / monitor(PrecisionDebugger + TrainerMonitorV2）· 独立 hcu_megatron 框架(≠ verl 的 Megatron 后端)· 精度对比 / 零侵入,无 pt_compare
 </footer>
 </body>
 </html>

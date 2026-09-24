@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>原生 PyTorch 接入 dcu_probe 4 坑 + 验证 + L0/L1 覆盖</title>
+<title>原生 PyTorch 接入 hcu_probe 4 坑 + 验证 + L0/L1 覆盖</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,8 +61,8 @@
 </head>
 <body>
 <header>
-  <h1>原生 PyTorch 接入 dcu_probe —— <code style="color:#bc4c00">4 坑</code> + 验证三件套 + L0/L1 覆盖</h1>
-  <p>pytorch 是最直接的接入:<b>直接在你的 train loop 里调 <code style="color:#0969da">_common.lifecycle</code> 的 5 个 hook</b> —— 无 Feature(dcu_megatron)、无 callback、无源码 patch(verl)。所以这里的坑<b>不在框架胶水</b>,而在 <b>whl 依赖</b> 与 <b>产物验证</b>。</p>
+  <h1>原生 PyTorch 接入 hcu_probe —— <code style="color:#bc4c00">4 坑</code> + 验证三件套 + L0/L1 覆盖</h1>
+  <p>pytorch 是最直接的接入:<b>直接在你的 train loop 里调 <code style="color:#0969da">_common.lifecycle</code> 的 5 个 hook</b> —— 无 Feature(hcu_megatron)、无 callback、无源码 patch(verl)。所以这里的坑<b>不在框架胶水</b>,而在 <b>whl 依赖</b> 与 <b>产物验证</b>。</p>
   <p>验证场景 = <b>精度对比 / 采集验证</b>(单侧 dump + monitor 三通道),<b>不是训推一致</b>,<b class="hot">没有 pt_compare</b>。本页把 4 个坑各拆一张卡,再给验证三件套 + L0/L1 覆盖差异 + 诚实实测状态。</p>
 </header>
 
@@ -86,7 +86,7 @@
       <div class="code">
         <div class="l"><span class="c"># _common.lifecycle 的 dump + monitor 内部都 import tensorboard</span></div>
         <div class="l"><span class="c"># 缺它 → PrecisionDebugger / TrainerMonitorV2 静默 init 失败(被吞异常)</span></div>
-        <div class="l">$ python train_resnet_dcu_probe.py --dump-cfg L0.json --monitor-cfg monitor.json</div>
+        <div class="l">$ python train_resnet_hcu_probe.py --dump-cfg L0.json --monitor-cfg monitor.json</div>
         <div class="l warn">[resnet-poc] step 0: loss = 7.123 | grad_norm = 3.41   <span class="c"># loss 照常打印 = 假象!</span></div>
         <div class="l"><span class="c"># ↓ 但产物目录里只有:</span></div>
         <div class="l"><span class="c">#   loss_tracking / loss_log.csv</span></div>
@@ -193,7 +193,7 @@
     <div class="hd"><span class="no" style="color:var(--train)">中</span><span class="ttl">grep stdout 看 init marker(不是看 loss)</span><span class="role">坑 1 静默失败靠这一步暴露</span></div>
     <div class="body">
       <div class="code">
-        <div class="l">$ python train_resnet_dcu_probe.py --dump-cfg L0.json --monitor-cfg monitor.json 2&gt;&amp;1 | grep -E <span class="s">"initialized|started"</span></div>
+        <div class="l">$ python train_resnet_hcu_probe.py --dump-cfg L0.json --monitor-cfg monitor.json 2&gt;&amp;1 | grep -E <span class="s">"initialized|started"</span></div>
         <div class="l hl">PrecisionDebugger initialized with L0.json         <span class="c"># dump 起来了</span></div>
         <div class="l hl">TrainerMonitorV2 initialized and started           <span class="c"># monitor 起来了</span></div>
         <div class="l warn"><span class="c"># 两条都没有 → 采集没起(多半是坑 1 tensorboard 缺失)</span></div>
@@ -270,7 +270,7 @@
 
 </div>
 <footer>
-  原生 PyTorch 接入 dcu_probe · 4 坑(tensorboard 隐性依赖 / 相对路径+0o750 / monitor 三通道约束 / optimizer 需 Adam state)+ 验证三件套 + L0/L1 覆盖 · 采集验证(dump + monitor),非训推一致、无 pt_compare · 事实源 train_resnet_dcu_probe.py
+  原生 PyTorch 接入 hcu_probe · 4 坑(tensorboard 隐性依赖 / 相对路径+0o750 / monitor 三通道约束 / optimizer 需 Adam state)+ 验证三件套 + L0/L1 覆盖 · 采集验证(dump + monitor),非训推一致、无 pt_compare · 事实源 train_resnet_hcu_probe.py
 </footer>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe × verl 0.7.1 Megatron —— 插桩位置标注</title>
+<title>hcu_probe × verl 0.7.1 Megatron —— 插桩位置标注</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -75,9 +75,9 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe × verl 0.7.1（Megatron 后端）—— 插桩位置标注</h1>
-  <p>RL 训练里<b>同一个模型</b>既做推理（vllm rollout 生成 response）又做训练（Megatron actor 的 <code style="color:#0550ae">compute_log_prob</code> 前向）。两侧对<b>同一 prompt 的 prefill 前向</b>理论上数值一致。dcu_probe 在两侧分别 <b>dump</b> 前向统计量，按 <code style="color:#0550ae">request_id</code> 配对、比相对误差，定界精度差在训练侧还是推理侧。</p>
-  <p>本页标注 dcu_probe 在<b>哪几个源码文件、哪几处方法</b>插桩（<span style="color:#1a7f37">绿色高亮 = 新增行</span>，右侧是插桩说明）。全部改动靠 <b>env 开关门控</b>——不开 dump 就是 verl 原行为（最小侵入）。<b>训练侧钩子全部落在 <code style="color:#0550ae">MegatronPPOActor</code>（<code style="color:#0550ae">megatron_actor.py</code>，LEGACY 路径），不是 FSDP 的 <code style="color:#0550ae">dp_actor</code>、也不是 0.8.0 的 engine。</b></p>
+  <h1>hcu_probe × verl 0.7.1（Megatron 后端）—— 插桩位置标注</h1>
+  <p>RL 训练里<b>同一个模型</b>既做推理（vllm rollout 生成 response）又做训练（Megatron actor 的 <code style="color:#0550ae">compute_log_prob</code> 前向）。两侧对<b>同一 prompt 的 prefill 前向</b>理论上数值一致。hcu_probe 在两侧分别 <b>dump</b> 前向统计量，按 <code style="color:#0550ae">request_id</code> 配对、比相对误差，定界精度差在训练侧还是推理侧。</p>
+  <p>本页标注 hcu_probe 在<b>哪几个源码文件、哪几处方法</b>插桩（<span style="color:#1a7f37">绿色高亮 = 新增行</span>，右侧是插桩说明）。全部改动靠 <b>env 开关门控</b>——不开 dump 就是 verl 原行为（最小侵入）。<b>训练侧钩子全部落在 <code style="color:#0550ae">MegatronPPOActor</code>（<code style="color:#0550ae">megatron_actor.py</code>，LEGACY 路径），不是 FSDP 的 <code style="color:#0550ae">dp_actor</code>、也不是 0.8.0 的 engine。</b></p>
 </header>
 
 <div class="wrap">
@@ -86,12 +86,12 @@
   <div class="flow" style="border-left:5px solid #bc4c00;background:rgba(191,76,0,.06);margin-top:26px">
     <div style="font-size:15px;font-weight:700;color:#bc4c00;margin-bottom:10px">★★ megatron 0.7.1 最大的坑 —— 别加 <code style="color:#bc4c00">use_legacy_worker_impl=disable</code>，钩子必须挂 LEGACY 的 <code style="color:#bc4c00">MegatronPPOActor</code></div>
     <p style="margin:0 0 8px">verl 0.7.1 的 actor 有<b>两条执行路径</b>：<b>LEGACY</b>（<code>megatron_workers.py</code> → <code>MegatronPPOActor</code>，即 <code>verl/workers/actor/megatron_actor.py</code>）和 <b>NEW engine</b>（<code>verl/workers/engine/megatron/transformer_impl.py</code>）。上游 async 文档 + 0.8.0 skill 都钩 <b>NEW engine</b>，靠 <code>trainer.use_legacy_worker_impl=disable</code> 强制走它。</p>
-    <p style="margin:0 0 8px"><b>但 0.7.1 的 NEW engine 的 <code>compute_log_prob</code> 有权重未物化 bug</b>：前向一进第一个 leaf <code>word_embeddings</code> 就 <code>F.embedding(masked_input, self.weight)</code> 报 <code>RuntimeError: The tensor has a non-zero number of elements, but its data is not allocated yet</code>（EXIT=1），dump 全空。<b>关键：DUMP_ON=0（零 dump 插桩）也照崩</b> → 隔离实验坐实这是<b>引擎 bug、与 dcu_probe 无关</b>。<b>空 dump 是「forward 崩」的下游症状，不是「hook 到 0 module」。</b></p>
+    <p style="margin:0 0 8px"><b>但 0.7.1 的 NEW engine 的 <code>compute_log_prob</code> 有权重未物化 bug</b>：前向一进第一个 leaf <code>word_embeddings</code> 就 <code>F.embedding(masked_input, self.weight)</code> 报 <code>RuntimeError: The tensor has a non-zero number of elements, but its data is not allocated yet</code>（EXIT=1），dump 全空。<b>关键：DUMP_ON=0（零 dump 插桩）也照崩</b> → 隔离实验坐实这是<b>引擎 bug、与 hcu_probe 无关</b>。<b>空 dump 是「forward 崩」的下游症状，不是「hook 到 0 module」。</b></p>
     <p style="margin:0"><b>修法</b> = 弃 NEW engine，钩 proven-healthy 的 LEGACY <code>MegatronPPOActor</code>；launch <b>不加</b> <code>use_legacy_worker_impl=disable</code>（默认 <code>auto</code> 即 legacy）。这也是与 0.8.0（钩 NEW engine 的 <code>transformer_impl.py</code>）、FSDP 0.7（钩 <code>dp_actor</code>）的核心区别。</p>
   </div>
 
   <h2 class="sec">总览：3 个 git 仓、env 门控的钩子</h2>
-  <p class="lead">改动跨 3 仓（verl submodule / dcu_verl 主仓 / das vllm 0.11 上游）。训练侧 6 处全在 <code>megatron_actor.py</code> 的 <code>MegatronPPOActor</code>；推理侧 2 处在上游 <code>vllm/v1/worker/gpu_model_runner.py</code>（das vllm 0.11 内联，<b>无独立 vllm_hcu 包</b>）。全部由环境变量 <code>DUMP_ON</code> / <code>DUMP_PHASE</code> / <code>DUMP_ACTOR_CONFIG</code> / <code>DUMP_CONFIG_PATH</code> 控制。</p>
+  <p class="lead">改动跨 3 仓（verl submodule / hcu_verl 主仓 / das vllm 0.11 上游）。训练侧 6 处全在 <code>megatron_actor.py</code> 的 <code>MegatronPPOActor</code>；推理侧 2 处在上游 <code>vllm/v1/worker/gpu_model_runner.py</code>（das vllm 0.11 内联，<b>无独立 vllm_hcu 包</b>）。全部由环境变量 <code>DUMP_ON</code> / <code>DUMP_PHASE</code> / <code>DUMP_ACTOR_CONFIG</code> / <code>DUMP_CONFIG_PATH</code> 控制。</p>
   <table class="ov">
     <tr><th>#</th><th>仓 / 文件</th><th>位置（方法/结构）</th><th>作用</th><th>门控</th></tr>
     <tr><td><span class="badge b-aux">·</span></td><td><code>verl/workers/actor/megatron_actor.py</code></td><td>MegatronPPOActor.__init__ 末尾</td><td>加 dump 状态字段（_debugger / _should_dump / _pending_request_ids …）</td><td><code>DUMP_ON</code></td></tr>
@@ -100,7 +100,7 @@
     <tr><td><span class="badge b-aux">·</span></td><td><code>megatron_actor.py</code></td><td>forward_backward_batch（拿到 func 后）</td><td>按 forward_only→phase 设 _should_dump（门控）</td><td><code>DUMP_PHASE</code></td></tr>
     <tr><td><span class="badge b-train">③</span></td><td><code>megatron_actor.py</code></td><td>嵌套 forward_step 非融合分支</td><td>训练侧前向 dump（核心钩子 start/stop/step）</td><td><code>DUMP_ON</code></td></tr>
     <tr><td><span class="badge b-train">④</span></td><td><code>megatron_actor.py</code></td><td>compute_log_prob 开头</td><td>捕获本 rank 有序 request_id（★megatron 特有）</td><td><code>DUMP_ON</code></td></tr>
-    <tr><td><span class="badge b-aux">·</span></td><td><code>dcu_verl/trainer/constants_ppo.py</code></td><td>PPO_RAY_RUNTIME_ENV</td><td>把 DUMP_* env 透传给 ray worker</td><td>常开</td></tr>
+    <tr><td><span class="badge b-aux">·</span></td><td><code>hcu_verl/trainer/constants_ppo.py</code></td><td>PPO_RAY_RUNTIME_ENV</td><td>把 DUMP_* env 透传给 ray worker</td><td>常开</td></tr>
     <tr><td><span class="badge b-train">④</span></td><td><code>verl/experimental/agent_loop/agent_loop.py</code></td><td>AsyncLLMServerManager.generate</td><td>注入训推配对用的 request_id（源码自带）</td><td>常开</td></tr>
     <tr><td><span class="badge b-infer">①</span></td><td><code>vllm/v1/worker/dispatch_logger.py</code></td><td>新建文件</td><td>推理侧 request_id / prefill 调度记录</td><td><code>DUMP_CONFIG_PATH</code></td></tr>
     <tr><td><span class="badge b-infer">②</span></td><td><code>vllm/v1/worker/gpu_model_runner.py</code></td><td>__init__ 末尾 + execute_model 围 self.model(...)</td><td>推理侧前向 dump（只 prefill）</td><td><code>DUMP_CONFIG_PATH</code></td></tr>
@@ -109,22 +109,22 @@
   <h2 class="sec">这版 verl（0.7.1 Megatron）训推一致性：要解决的 5 类问题</h2>
   <p class="lead">目标 = 让训练侧 Megatron actor 和推理侧 vllm 对<b>同一 prompt 的 prefill 前向</b>各 dump 一份逐层数据 → 按 request_id 配对 → 比数值，定界精度差在训练还是推理。要让这件事成立，必须解决下面 5 类问题；后面每处代码改动都归属其中一类（卡片右侧标注面板左上角有对应色标）。</p>
   <div class="tasks">
-    <div class="tk"><h4><span class="rt rt-a">A 采集</span></h4><p>两侧前向都要被 dcu_probe 钩住、落 dump.json</p><div class="cards">③ forward_step 钩子 + _ensure_debugger（训练侧）<br>② gpu_model_runner + ① dispatch（推理侧）</div><p style="margin-top:8px;color:var(--fg)"><b>作用：产出可比的数据</b>——没有它无从比</p></div>
+    <div class="tk"><h4><span class="rt rt-a">A 采集</span></h4><p>两侧前向都要被 hcu_probe 钩住、落 dump.json</p><div class="cards">③ forward_step 钩子 + _ensure_debugger（训练侧）<br>② gpu_model_runner + ① dispatch（推理侧）</div><p style="margin-top:8px;color:var(--fg)"><b>作用：产出可比的数据</b>——没有它无从比</p></div>
     <div class="tk"><h4><span class="rt rt-b">B 对齐</span></h4><p>两侧喂模型的必须是同一 prompt 的 prefill</p><div class="cards">PROMPTS_ONLY 裁 response（ray_trainer）<br>关 prefix caching · run 单请求配置</div><p style="margin-top:8px;color:var(--fg)"><b>作用：保证比的是同一个东西</b>——否则差异是输入不同的假象</p></div>
     <div class="tk"><h4><span class="rt rt-c">C 配对</span></h4><p>两侧 dump 靠 request_id 对上号</p><div class="cards">④ compute_log_prob 捕获 + _log_update_actor_step 记录<br>agent_loop 注入 · ① dispatch_log 记录</div><p style="margin-top:8px;color:var(--fg)"><b>作用：知道哪份训练 dump 对哪份推理 dump</b></p></div>
     <div class="tk"><h4><span class="rt rt-d">D 防护</span></h4><p>采集不能破坏训练、不能爆盘</p><div class="cards">只 prefill 门控 · forward_only 才 dump<br>DUMP_ON 门控 · ref 跳过</div><p style="margin-top:8px;color:var(--fg)"><b>作用：让采集安全跑完</b>——不崩不爆盘、不开时零影响</p></div>
-    <div class="tk"><h4><span class="rt rt-e">E 工程</span></h4><p>DCU / ray / vllm 特有的环境适配</p><div class="cards">constants_ppo env 透传<br>CUDAGraphWrapper 解包 · enforce_eager · seed_all</div><p style="margin-top:8px;color:var(--fg)"><b>作用：让钩子在 ray worker/DCU 上真生效</b></p></div>
+    <div class="tk"><h4><span class="rt rt-e">E 工程</span></h4><p>HCU / ray / vllm 特有的环境适配</p><div class="cards">constants_ppo env 透传<br>CUDAGraphWrapper 解包 · enforce_eager · seed_all</div><p style="margin-top:8px;color:var(--fg)"><b>作用：让钩子在 ray worker/HCU 上真生效</b></p></div>
   </div>
   <div class="flow"><b>比较（compare）本身不在源码插桩里</b> —— A/B/C 备齐后，由官方 <code>pt_compare(consistent_check=True, backend="megatron")</code>（<code>run_megatron_compare.py</code> 封装）<b>离线</b>读两侧 dump.json 配对比数值（见文末 compare 章节）。换句话说：<b>A 决定有没有数据可比，B 决定比得对不对齐，C 决定配不配得上对</b> —— 这三类做错，compare 要么配对为 0、要么比出假 diff。</div>
 
-  <h2 class="sec">dcu_probe 的 dump API（就三个调用）</h2>
+  <h2 class="sec">hcu_probe 的 dump API（就三个调用）</h2>
   <div class="flow">
     forward 前后围一圈，三个 API：<code>PrecisionDebugger(config_path)</code> 读 config → <code>dbg.start(model=model)</code>（forward 前）<span class="arrow">→</span> forward <span class="arrow">→</span> <code>dbg.stop()</code> + <code>dbg.step()</code>（forward 后 + 步进）。训练侧和推理侧是<b>同一套 API</b>，只是挂钩位置不同。<br>
     config（<code>config_actor.json</code> / <code>config_generate.json</code>）关键字段：<code>task=statistics</code>（只 Max/Min/Mean/Norm，免爆盘）、<code>level=L0</code>（module 级）、<code>dump_path</code>（训推两侧<b>必须不同</b>）。产物 = 每次 forward 一份 <code>dump.json</code> + 配对日志（训练 <code>update_actor_log.jsonl</code> / 推理 <code>dispatch_log.jsonl</code> 各记 request_id）。<b>训推一致性天然只能在 L0 做</b>——L1 API 级两框架算子分解/融合不同，对不齐。
   </div>
 
   <!-- ============================ 训练侧 ============================ -->
-  <h2 class="sec">训练侧插桩（6 处，全在 MegatronPPOActor）<span class="tag train">verl submodule + dcu_verl</span></h2>
+  <h2 class="sec">训练侧插桩（6 处，全在 MegatronPPOActor）<span class="tag train">verl submodule + hcu_verl</span></h2>
 
   <!-- 1. __init__ 状态字段 -->
   <div class="card">
@@ -133,12 +133,12 @@
       <div class="code">
         <div class="l ctx">        self.actor_module = actor_module</div>
         <div class="l ctx">        self.actor_optimizer: DistributedOptimizer = actor_optimizer</div>
-        <div class="l add"><span class="p">+ </span><span class="c"># dcu_probe 训推一致 dump:懒初始化 debugger(仅 actor,ref 无 optimizer 跳过);</span></div>
+        <div class="l add"><span class="p">+ </span><span class="c"># hcu_probe 训推一致 dump:懒初始化 debugger(仅 actor,ref 无 optimizer 跳过);</span></div>
         <div class="l add"><span class="p">+ </span><span class="c"># _should_dump 由 forward_backward_batch 按 forward_only/DUMP_PHASE 设定,forward_step 据此挂钩。</span></div>
         <div class="l add"><span class="p">+ </span>        self._debugger = <span class="k">None</span></div>
         <div class="l add"><span class="p">+ </span>        self._update_actor_logger_fp = <span class="k">None</span></div>
         <div class="l add"><span class="p">+ </span>        self._should_dump = <span class="k">False</span></div>
-        <div class="l add"><span class="p">+ </span><span class="c"># dcu_probe ③ request_id:compute_log_prob 里从 data.non_tensor_batch 捕获本 rank 有序 request_id,</span></div>
+        <div class="l add"><span class="p">+ </span><span class="c"># hcu_probe ③ request_id:compute_log_prob 里从 data.non_tensor_batch 捕获本 rank 有序 request_id,</span></div>
         <div class="l add"><span class="p">+ </span><span class="c"># micro_batch split 只保 .batch(TensorDict)会丢 non_tensor,故按 micro 顺序索引取。</span></div>
         <div class="l add"><span class="p">+ </span>        self._pending_request_ids = <span class="k">None</span></div>
         <div class="l add"><span class="p">+ </span>        self._micro_dump_idx = <span class="n">0</span></div>
@@ -163,7 +163,7 @@
         <div class="l add"><span class="p">+ </span>        <span class="k">if</span> self.actor_optimizer <span class="k">is None</span>: <span class="k">return</span>  <span class="c"># Reference Policy 跳过</span></div>
         <div class="l add"><span class="p">+ </span>        <span class="k">if not</span> <span class="fn">int</span>(os.environ.get(<span class="s">"DUMP_ON"</span>, <span class="n">0</span>)): <span class="k">return</span></div>
         <div class="l add"><span class="p">+ </span>        <span class="k">from</span> pathlib <span class="k">import</span> Path</div>
-        <div class="l add"><span class="p">+ </span>        <span class="k">from</span> dcu_probe.pytorch <span class="k">import</span> PrecisionDebugger, seed_all</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">from</span> hcu_probe.pytorch <span class="k">import</span> PrecisionDebugger, seed_all</div>
         <div class="l add"><span class="p">+ </span>        <span class="fn">seed_all</span>(mode=<span class="k">True</span>)</div>
         <div class="l add"><span class="p">+ </span>        self._debugger = <span class="fn">PrecisionDebugger</span>(config_path=os.environ.get(<span class="s">"DUMP_ACTOR_CONFIG"</span>, ...))</div>
         <div class="l add"><span class="p">+ </span>        dump_path = self._debugger.config.dump_path</div>
@@ -173,8 +173,8 @@
       </div>
       <div class="ann">
         <div class="rt rt-a">A 采集 · 引入点</div>
-        <h4>dcu_probe 引入点（训练侧）</h4>
-        <p class="why">这里是整个训练侧<b>唯一 import dcu_probe 的地方</b>：<code>from dcu_probe.pytorch import PrecisionDebugger, seed_all</code>。懒初始化——首次 <code>forward_backward_batch</code> 才建 debugger。</p>
+        <h4>hcu_probe 引入点（训练侧）</h4>
+        <p class="why">这里是整个训练侧<b>唯一 import hcu_probe 的地方</b>：<code>from hcu_probe.pytorch import PrecisionDebugger, seed_all</code>。懒初始化——首次 <code>forward_backward_batch</code> 才建 debugger。</p>
         <p><b>三重门控</b>：① 已建则跳过；② <code>actor_optimizer is None</code> 即 Reference Policy，不 dump；③ <code>DUMP_ON</code> 未开则原行为。</p>
         <p><code>seed_all(mode=True)</code> 固定随机性保证可复现。按 pid 建 <code>update_actor_log.jsonl</code>（多 worker 隔离）。</p>
       </div>
@@ -216,7 +216,7 @@
     <div class="body">
       <div class="code">
         <div class="l ctx">        forward_backward_func = get_forward_backward_func()</div>
-        <div class="l add"><span class="p">+ </span><span class="c"># dcu_probe 训推 dump:门控本次 forward_backward_batch 是否挂钩(仅 actor 的 compute_log_prob 前向)。</span></div>
+        <div class="l add"><span class="p">+ </span><span class="c"># hcu_probe 训推 dump:门控本次 forward_backward_batch 是否挂钩(仅 actor 的 compute_log_prob 前向)。</span></div>
         <div class="l add"><span class="p">+ </span><span class="c"># forward_only=True → phase=log_prob(与推理 prefill 对齐);update 阶段(带 grad)默认不 dump。</span></div>
         <div class="l add"><span class="p">+ </span>        dump_phase = os.environ.get(<span class="s">"DUMP_PHASE"</span>, <span class="s">"log_prob"</span>)</div>
         <div class="l add"><span class="p">+ </span>        phase = <span class="s">"log_prob"</span> <span class="k">if</span> forward_only <span class="k">else</span> <span class="s">"update"</span></div>
@@ -239,7 +239,7 @@
     <div class="body">
       <div class="code">
         <div class="l ctx">                logits_processor_args = {<span class="s">"label"</span>: label, <span class="s">"label_mask"</span>: label_mask}</div>
-        <div class="l add"><span class="p">+ </span><span class="c"># dcu_probe 训推 dump:forward_fn 前后包 debugger(仅非 fused 路径;dump 须 use_fused_kernels=False)</span></div>
+        <div class="l add"><span class="p">+ </span><span class="c"># hcu_probe 训推 dump:forward_fn 前后包 debugger(仅非 fused 路径;dump 须 use_fused_kernels=False)</span></div>
         <div class="l add"><span class="p">+ </span>                <span class="k">if</span> self._should_dump:</div>
         <div class="l add"><span class="p">+ </span>                    self._debugger.<span class="fn">start</span>(model=model)</div>
         <div class="l ctx">                output = <span class="fn">forward_fn</span>(</div>
@@ -258,8 +258,8 @@
         <span class="pill">核心</span>
         <div class="rt rt-a">A 采集 · 训练侧</div>
         <h4>为什么插在这里</h4>
-        <p class="why">这是训练侧被 dump 的<b>那一次前向</b>。megatron legacy 的每个 micro_batch 都经过嵌套 <code>forward_step</code> 里的 <code>forward_fn(...)</code>（<code>get_mcore_forward_fn</code> 拿到的真实 mcore 前向），把它用 dcu_probe 三件套围起来，就抓到了训练侧 prefill 前向的逐算子统计量。</p>
-        <p><b>钩子点纠正</b>：华为/0.8.0 文档钩 NEW engine 的 <code>MegatronEngine.forward_step</code>（0.7.1 该路径 compute_log_prob 权重崩，见页首★）；<b>dcu_verl 0.7.1 实际走 LEGACY <code>MegatronPPOActor</code></b>，钩子就落在它的嵌套 <code>forward_step</code>。</p>
+        <p class="why">这是训练侧被 dump 的<b>那一次前向</b>。megatron legacy 的每个 micro_batch 都经过嵌套 <code>forward_step</code> 里的 <code>forward_fn(...)</code>（<code>get_mcore_forward_fn</code> 拿到的真实 mcore 前向），把它用 hcu_probe 三件套围起来，就抓到了训练侧 prefill 前向的逐算子统计量。</p>
+        <p><b>钩子点纠正</b>：华为/0.8.0 文档钩 NEW engine 的 <code>MegatronEngine.forward_step</code>（0.7.1 该路径 compute_log_prob 权重崩，见页首★）；<b>hcu_verl 0.7.1 实际走 LEGACY <code>MegatronPPOActor</code></b>，钩子就落在它的嵌套 <code>forward_step</code>。</p>
         <p class="warn">挂<b>非融合分支</b>：dump 须 <code>use_fused_kernels=False</code>（融合 kernel 把逐算子折叠，hook 抓不到 leaf）。<code>_should_dump</code> 为假时这段零开销。</p>
       </div>
     </div>
@@ -273,7 +273,7 @@
         <div class="l ctx">        Returns:</div>
         <div class="l ctx">            DataProto: torch.Tensor: the log_prob tensor</div>
         <div class="l ctx">        """</div>
-        <div class="l add"><span class="p">+ </span><span class="c"># dcu_probe ③ request_id:捕获本 rank 有序 request_id(non_tensor,后续 micro_batch split 会丢);</span></div>
+        <div class="l add"><span class="p">+ </span><span class="c"># hcu_probe ③ request_id:捕获本 rank 有序 request_id(non_tensor,后续 micro_batch split 会丢);</span></div>
         <div class="l add"><span class="p">+ </span><span class="c"># forward_step 的 _log_update_actor_step 按 _micro_dump_idx 顺序取,micro_batch_size=1 时逐样本对齐。</span></div>
         <div class="l add"><span class="p">+ </span>        self._pending_request_ids = <span class="k">None</span></div>
         <div class="l add"><span class="p">+ </span>        self._micro_dump_idx = <span class="n">0</span></div>
@@ -297,13 +297,13 @@
 
   <!-- constants_ppo env passthrough -->
   <div class="card">
-    <div class="hd"><span class="no b-aux" style="color:var(--dim)">·</span><span class="path">dcu_verl/trainer/constants_ppo.py</span><span class="loc">PPO_RAY_RUNTIME_ENV</span><span class="role">env 透传 ray worker</span></div>
+    <div class="hd"><span class="no b-aux" style="color:var(--dim)">·</span><span class="path">hcu_verl/trainer/constants_ppo.py</span><span class="loc">PPO_RAY_RUNTIME_ENV</span><span class="role">env 透传 ray worker</span></div>
     <div class="body">
       <div class="code">
         <div class="l ctx">PPO_RAY_RUNTIME_ENV = {</div>
         <div class="l ctx">    <span class="s">"env_vars"</span>: {</div>
         <div class="l ctx">        ...</div>
-        <div class="l add"><span class="p">+ </span>        <span class="c"># dcu_probe dump:driver 透传到 ray worker(worker 进程读)</span></div>
+        <div class="l add"><span class="p">+ </span>        <span class="c"># hcu_probe dump:driver 透传到 ray worker(worker 进程读)</span></div>
         <div class="l add"><span class="p">+ </span>        <span class="s">"DUMP_ON"</span>: os.getenv(<span class="s">"DUMP_ON"</span>, <span class="s">"0"</span>),</div>
         <div class="l add"><span class="p">+ </span>        <span class="s">"DUMP_PHASE"</span>: os.getenv(<span class="s">"DUMP_PHASE"</span>, <span class="s">"log_prob"</span>),</div>
         <div class="l add"><span class="p">+ </span>        <span class="s">"DUMP_ACTOR_CONFIG"</span>: os.getenv(<span class="s">"DUMP_ACTOR_CONFIG"</span>, ...),  <span class="c"># 训练侧 _ensure_debugger 读</span></div>
@@ -336,7 +336,7 @@
         <div class="rt rt-c">C 配对 · 注入 id</div>
         <h4>源码自带，通常无需改</h4>
         <p class="why">verl 0.7.1 的 rollout 是默认 async AgentLoop。<code>generate</code> 的<b>入参</b> request_id 只做 sticky-session 路由，内部另用 <code>uuid4().hex</code> 生成真正传给 vllm 的 id，并写进 <code>output.extra_fields["request_id"]</code>。</p>
-        <p>这份注入 <b>dcu_verl 0.7.1 源码已带</b>（与推理侧记录的 request_id 同源）。它随后展开进训练侧 <code>non_tensor_batch["request_id"]</code>，被 ④ 在 <code>compute_log_prob</code> 捕获。<b>若你的分支没有这段，需补上</b>，否则训练侧拿不到 vllm 实际用的 id、配对为 0。</p>
+        <p>这份注入 <b>hcu_verl 0.7.1 源码已带</b>（与推理侧记录的 request_id 同源）。它随后展开进训练侧 <code>non_tensor_batch["request_id"]</code>，被 ④ 在 <code>compute_log_prob</code> 捕获。<b>若你的分支没有这段，需补上</b>，否则训练侧拿不到 vllm 实际用的 id、配对为 0。</p>
       </div>
     </div>
   </div>
@@ -379,23 +379,23 @@
     <div class="body">
       <div class="code">
         <div class="l ctx">        self.sampled_token_ids_pinned_cpu = torch.empty(...)  <span class="c"># 注入锚点</span></div>
-        <div class="l add"><span class="p">+ </span>        <span class="c"># === dcu_probe 训推一致 dump ②:env DUMP_CONFIG_PATH 开关(无 additional_config 故走 env)===</span></div>
-        <div class="l add"><span class="p">+ </span>        self._dcu_debugger = <span class="k">None</span>; self._dcu_dispatch_logger = <span class="k">None</span></div>
-        <div class="l add"><span class="p">+ </span>        _dcu_cfg = _os.environ.get(<span class="s">"DUMP_CONFIG_PATH"</span>)</div>
-        <div class="l add"><span class="p">+ </span>        <span class="k">if</span> _dcu_cfg:</div>
-        <div class="l add"><span class="p">+ </span>            <span class="k">from</span> dcu_probe.pytorch <span class="k">import</span> PrecisionDebugger, seed_all</div>
+        <div class="l add"><span class="p">+ </span>        <span class="c"># === hcu_probe 训推一致 dump ②:env DUMP_CONFIG_PATH 开关(无 additional_config 故走 env)===</span></div>
+        <div class="l add"><span class="p">+ </span>        self._hcu_debugger = <span class="k">None</span>; self._hcu_dispatch_logger = <span class="k">None</span></div>
+        <div class="l add"><span class="p">+ </span>        _hcu_cfg = _os.environ.get(<span class="s">"DUMP_CONFIG_PATH"</span>)</div>
+        <div class="l add"><span class="p">+ </span>        <span class="k">if</span> _hcu_cfg:</div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">from</span> hcu_probe.pytorch <span class="k">import</span> PrecisionDebugger, seed_all</div>
         <div class="l add"><span class="p">+ </span>            <span class="fn">seed_all</span>(mode=<span class="k">False</span>)  <span class="c"># ★ mode=False:固定种子但不开确定性算法</span></div>
-        <div class="l add"><span class="p">+ </span>            self._dcu_debugger = <span class="fn">PrecisionDebugger</span>(config_path=_dcu_cfg)</div>
-        <div class="l add"><span class="p">+ </span>            _dcu_pid_path = _os.path.join(self._dcu_debugger.config.dump_path, <span class="fn">str</span>(_os.getpid()))</div>
-        <div class="l add"><span class="p">+ </span>            self._dcu_debugger.config.dump_path = _dcu_pid_path  <span class="c"># 多 worker 按 pid 隔离</span></div>
+        <div class="l add"><span class="p">+ </span>            self._hcu_debugger = <span class="fn">PrecisionDebugger</span>(config_path=_hcu_cfg)</div>
+        <div class="l add"><span class="p">+ </span>            _hcu_pid_path = _os.path.join(self._hcu_debugger.config.dump_path, <span class="fn">str</span>(_os.getpid()))</div>
+        <div class="l add"><span class="p">+ </span>            self._hcu_debugger.config.dump_path = _hcu_pid_path  <span class="c"># 多 worker 按 pid 隔离</span></div>
         <div class="l add"><span class="p">+ </span>            <span class="k">from</span> vllm.v1.worker.dispatch_logger <span class="k">import</span> DispatchLogger</div>
-        <div class="l add"><span class="p">+ </span>            self._dcu_dispatch_logger = <span class="fn">DispatchLogger</span>(dump_path=_dcu_pid_path, pid=_dcu_pid, rank=...)</div>
+        <div class="l add"><span class="p">+ </span>            self._hcu_dispatch_logger = <span class="fn">DispatchLogger</span>(dump_path=_hcu_pid_path, pid=_hcu_pid, rank=...)</div>
       </div>
       <div class="ann">
         <span class="pill warn" style="color:#9a6700;border-color:#9a6700;background:rgba(242,204,96,.12)">锚点注入</span>
         <div class="rt rt-a">A 采集 · 推理侧</div>
-        <h4>dcu_probe 引入点（推理侧）</h4>
-        <p class="why">推理侧<b>唯一 import dcu_probe 的地方</b>。das vllm 的 GPUModelRunner 没有 <code>additional_config</code> 入口，所以走 env <code>DUMP_CONFIG_PATH</code> 开关——空则整段不建、原行为。用 <code>patch_gpu_dump.py</code> 按<b>代码字符串锚点</b>（非行号）幂等注入（marker <code>_dcu_debugger</code>，锚点不符即报错退出）。</p>
+        <h4>hcu_probe 引入点（推理侧）</h4>
+        <p class="why">推理侧<b>唯一 import hcu_probe 的地方</b>。das vllm 的 GPUModelRunner 没有 <code>additional_config</code> 入口，所以走 env <code>DUMP_CONFIG_PATH</code> 开关——空则整段不建、原行为。用 <code>patch_gpu_dump.py</code> 按<b>代码字符串锚点</b>（非行号）幂等注入（marker <code>_hcu_debugger</code>，锚点不符即报错退出）。</p>
         <p><b>★ <code>seed_all(mode=False)</code></b>：mode=True 会开 <code>use_deterministic_algorithms</code>，而 vllm 0.11 sampler 的 <code>torch.cumsum</code> 无确定性实现 → 起 engine 的 profile_run 崩。固定种子已够可比（前向 dump 比的是 layernorm 输出）。</p>
         <p>dump_path 拼 <code>pid</code> 子目录多 worker 隔离；同时建 <code>DispatchLogger</code>（①）。</p>
       </div>
@@ -407,28 +407,28 @@
     <div class="hd"><span class="no" style="color:var(--infer)">②</span><span class="path">vllm/v1/worker/gpu_model_runner.py</span><span class="loc">execute_model 围 self.model(...)（set_forward_context 块内）</span><span class="role">推理侧前向 dump（只 prefill）</span></div>
     <div class="body">
       <div class="code">
-        <div class="l add"><span class="p">+ </span>            _dcu_on = getattr(self, <span class="s">"_dcu_debugger"</span>, <span class="k">None</span>) <span class="k">is not None</span></div>
-        <div class="l add"><span class="p">+ </span>            _dcu_prefill = _dcu_on <span class="k">and</span> <span class="fn">len</span>(scheduler_output.scheduled_new_reqs) &gt; <span class="n">0</span></div>
-        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _dcu_prefill:</div>
+        <div class="l add"><span class="p">+ </span>            _hcu_on = getattr(self, <span class="s">"_hcu_debugger"</span>, <span class="k">None</span>) <span class="k">is not None</span></div>
+        <div class="l add"><span class="p">+ </span>            _hcu_prefill = _hcu_on <span class="k">and</span> <span class="fn">len</span>(scheduler_output.scheduled_new_reqs) &gt; <span class="n">0</span></div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _hcu_prefill:</div>
         <div class="l add"><span class="p">+ </span>                <span class="c"># self.model 是 CUDAGraphWrapper(.runnable 才是真实 nn.Module),循环解包</span></div>
-        <div class="l add"><span class="p">+ </span>                _dcu_m = self.model</div>
-        <div class="l add"><span class="p">+ </span>                <span class="k">while not</span> <span class="fn">isinstance</span>(_dcu_m, torch.nn.Module) <span class="k">and</span> <span class="fn">hasattr</span>(_dcu_m, <span class="s">"runnable"</span>):</div>
-        <div class="l add"><span class="p">+ </span>                    _dcu_m = _dcu_m.runnable</div>
-        <div class="l add"><span class="p">+ </span>                self._dcu_debugger.<span class="fn">start</span>(model=_dcu_m)</div>
+        <div class="l add"><span class="p">+ </span>                _hcu_m = self.model</div>
+        <div class="l add"><span class="p">+ </span>                <span class="k">while not</span> <span class="fn">isinstance</span>(_hcu_m, torch.nn.Module) <span class="k">and</span> <span class="fn">hasattr</span>(_hcu_m, <span class="s">"runnable"</span>):</div>
+        <div class="l add"><span class="p">+ </span>                    _hcu_m = _hcu_m.runnable</div>
+        <div class="l add"><span class="p">+ </span>                self._hcu_debugger.<span class="fn">start</span>(model=_hcu_m)</div>
         <div class="l ctx">            model_output = self.<span class="fn">model</span>(</div>
         <div class="l ctx">                input_ids=input_ids, positions=positions, ...)</div>
-        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _dcu_on <span class="k">and</span> self._dcu_dispatch_logger <span class="k">is not None</span>:</div>
-        <div class="l add"><span class="p">+ </span>                self._dcu_dispatch_logger.<span class="fn">log_step</span>(scheduler_output)</div>
-        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _dcu_prefill:</div>
-        <div class="l add"><span class="p">+ </span>                self._dcu_debugger.<span class="fn">stop</span>(); self._dcu_debugger.<span class="fn">step</span>()</div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _hcu_on <span class="k">and</span> self._hcu_dispatch_logger <span class="k">is not None</span>:</div>
+        <div class="l add"><span class="p">+ </span>                self._hcu_dispatch_logger.<span class="fn">log_step</span>(scheduler_output)</div>
+        <div class="l add"><span class="p">+ </span>            <span class="k">if</span> _hcu_prefill:</div>
+        <div class="l add"><span class="p">+ </span>                self._hcu_debugger.<span class="fn">stop</span>(); self._hcu_debugger.<span class="fn">step</span>()</div>
       </div>
       <div class="ann">
         <span class="pill">核心（推理侧）</span>
         <div class="rt rt-a">A 采集 · 推理侧（只 prefill）</div>
         <h4>只在 prefill 门控，防爆盘</h4>
         <p class="why">推理侧被 dump 的<b>那一次前向</b>——挂内层 <code>self.model(...)</code>（with <code>set_forward_context</code> 块内）。</p>
-        <p><b><code>_dcu_prefill</code> = 只在有新 request（prefill）时 dump</b>：一个 response 要 ~上千次 execute_model（decode），全 dump 会瞬间爆盘。只抓 prefill 那次即与训练侧对齐。</p>
-        <p class="warn"><b>★ CUDAGraphWrapper 解包</b>：<code>self.model</code> 是包装器，dcu_probe 的 <code>check_model</code> 只认 <code>nn.Module</code>，要 <code>while ... hasattr("runnable")</code> 循环解包到真实 module 再传 debugger（prefill 走 eager 会命中，decode 走 cudagraph 不 dump，无碍）。硬前置：<code>enforce_eager=True</code>——compile+cudagraph 会绕过 hook 导致 dump 空。</p>
+        <p><b><code>_hcu_prefill</code> = 只在有新 request（prefill）时 dump</b>：一个 response 要 ~上千次 execute_model（decode），全 dump 会瞬间爆盘。只抓 prefill 那次即与训练侧对齐。</p>
+        <p class="warn"><b>★ CUDAGraphWrapper 解包</b>：<code>self.model</code> 是包装器，hcu_probe 的 <code>check_model</code> 只认 <code>nn.Module</code>，要 <code>while ... hasattr("runnable")</code> 循环解包到真实 module 再传 debugger（prefill 走 eager 会命中，decode 走 cudagraph 不 dump，无碍）。硬前置：<code>enforce_eager=True</code>——compile+cudagraph 会绕过 hook 导致 dump 空。</p>
       </div>
     </div>
   </div>
@@ -447,7 +447,7 @@
     <b>② 挑同 prompt 样本</b>：<code>common = set(gen) &amp; set(train)</code>，只留 <code>tok(train,["word_embeddings","VocabParallel"]) == tok(gen,["embed_tokens","VocabParallel"])</code> 的 rid（embed 输入 token 数相同 = 真同 prompt 完整 prefill）。<br>
     <b>③ 比对</b>（无过滤步）：<code>pt_compare({"npu_path":train[rid], "bench_path":gen[rid]}, out, consistent_check=True, backend="megatron")</code>。<br>
     <b>④ 读 xlsx</b>：双边 match，排除 <code>TransformerLayer</code> 整层 / <code>IdentityOp</code>，只留真叶子 output，统计 <code>NormRelativeErr &lt; 1%</code>。</p>
-    <p style="margin-top:12px"><b>backend="megatron" 的关键</b>：用 <code>MEGATRON_MODULE_MAP</code>（不是 FSDP_MODULE_MAP）把训练侧 mcore/TE 命名（<code>decoder.layers.N.self_attention.linear_qkv.TELayerNormColumnParallelLinear</code> …）对到推理侧 vllm 命名（<code>model.layers.N.self_attn.qkv_proj.QKVParallelLinear</code> …）；<b>npu=训练 / bench=推理</b>（方向反则 match 不上），SP 切片自动 cat。<code>pt_compare</code> = 华为 msprobe compare 的 DCU fork。</p>
+    <p style="margin-top:12px"><b>backend="megatron" 的关键</b>：用 <code>MEGATRON_MODULE_MAP</code>（不是 FSDP_MODULE_MAP）把训练侧 mcore/TE 命名（<code>decoder.layers.N.self_attention.linear_qkv.TELayerNormColumnParallelLinear</code> …）对到推理侧 vllm 命名（<code>model.layers.N.self_attn.qkv_proj.QKVParallelLinear</code> …）；<b>npu=训练 / bench=推理</b>（方向反则 match 不上），SP 切片自动 cat。<code>pt_compare</code> = 华为 msprobe compare 的 HCU fork。</p>
   </div>
 
   <div class="flow">
@@ -455,7 +455,7 @@
     <code>agent_loop.generate</code> 生成 <code>vllm_request_id</code> <span class="arrow">→</span> 传 vllm + 写 <code>extra_fields["request_id"]</code> <span class="arrow">→</span> 展开进训练侧 <code>non_tensor_batch["request_id"]</code> <span class="arrow">→</span> <b><code>compute_log_prob</code> 开头捕获</b>（★micro split 前，否则被丢）<span class="arrow">→</span> <code>forward_step</code> 按 <code>_micro_dump_idx</code> 取 → <code>_log_update_actor_step</code> 记训练侧 <code>update_actor_log.jsonl</code>；推理侧 <code>dispatch_log.jsonl</code> 靠同 id 关联（das 加 <code>-&lt;8hex&gt;</code> 后缀，compare strip 后对齐）。
   </div>
 
-  <h2 class="sec">验证结果（首验，Qwen2.5-0.5B + GSM8K，单节点 8 卡 DCU）</h2>
+  <h2 class="sec">验证结果（首验，Qwen2.5-0.5B + GSM8K，单节点 8 卡 HCU）</h2>
   <div class="flow">
     <p><b>baseline 健康</b>（无 dump，走默认 auto=LEGACY，与 dump 采集同一路径）：<code>grad_norm</code> 0.00047~6.3 有限无 NaN、<code>reward</code> 0.0125→0.66 在学、<code>ppo_kl</code>≈0、<code>response</code> 241~422 不截断。</p>
     <p style="margin-top:10px"><b>dump</b>：训练侧 dump.json <b>391 模块</b>、推理侧 <b>290 模块</b>、<b>NaN=0 / Inf=0</b>；<code>request_id</code> 两侧交集 <b>8/8</b>（DP8 每 rank 1 样本）。</p>
@@ -464,7 +464,7 @@
 
 </div>
 <footer>
-  dcu_probe × verl 0.7.1 Megatron 训推一致性插桩标注 · 训练侧代码 verbatim 摘自 patches/megatron_actor_dump.patch · 推理侧摘自 patches/{patch_gpu_dump,dispatch_logger}.py · compare 摘自 scripts/run_megatron_compare.py
+  hcu_probe × verl 0.7.1 Megatron 训推一致性插桩标注 · 训练侧代码 verbatim 摘自 patches/megatron_actor_dump.patch · 推理侧摘自 patches/{patch_gpu_dump,dispatch_logger}.py · compare 摘自 scripts/run_megatron_compare.py
 </footer>
 </body>
 </html>

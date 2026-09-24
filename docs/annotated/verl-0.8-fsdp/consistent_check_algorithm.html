@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_probe pt_compare(consistent_check=True, backend=fsdp) —— verl 0.8.0 FSDP 训推一致比对算法流程标注</title>
+<title>hcu_probe pt_compare(consistent_check=True, backend=fsdp) —— verl 0.8.0 FSDP 训推一致比对算法流程标注</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -89,9 +89,9 @@
 </head>
 <body>
 <header>
-  <h1>dcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=fsdp)</code> —— 训推一致比对算法流程标注</h1>
+  <h1>hcu_probe <code style="color:#0550ae">pt_compare(consistent_check=True, backend=fsdp)</code> —— 训推一致比对算法流程标注</h1>
   <p>本页 = <b>verl 0.8.0 FSDP 后端</b>。训推一致性里 <b>npu = 训练侧 dump</b>（HF 风格 FSDP，命名 <code>embed_tokens</code> / <code>q_proj</code>·<code>k_proj</code>·<code>v_proj</code>（分开）/ <code>o_proj</code> / <code>gate_proj</code>·<code>up_proj</code>（分开）/ <code>down_proj</code> / <code>RMSNorm</code>），<b>bench = 推理侧 dump</b>（<b>das vllm 0.11</b>）。同一个 prompt 的 prefill 前向理论上数值一致，但两侧是<b>异构框架</b>——算子命名、拆分粒度、shape、出现顺序全不同。默认 compare 的“算子全名对全名”必然配不上。</p>
-  <p><code style="color:#0550ae">consistent_check=True</code> 不是“调了个阈值”，而是把默认的 <code style="color:#cf222e">pd.merge(on=CMP_KEY)</code> 整体换成一套<b>语义级异构比对管线</b>：<b>解析裁窗 → 模块名归一映射 → 四元组多对一聚合 merge → 双单调保序 → shape 口径修正</b>。这套管线是 <b>dcu_probe 源码、版本无关</b>——与 verl-0.7-fsdp 版 95% 相同；差异只在推理栈从 das vllm 0.18.1 换到 <b>0.11</b> 带来的“出现顺序”与实测数字。本页标注这条管线在<b>哪几个源码文件、哪几行</b>、每一步抹平哪一类异构。<span style="color:#1a7f37">绿色高亮 = 关键新增/专用逻辑</span>。</p>
+  <p><code style="color:#0550ae">consistent_check=True</code> 不是“调了个阈值”，而是把默认的 <code style="color:#cf222e">pd.merge(on=CMP_KEY)</code> 整体换成一套<b>语义级异构比对管线</b>：<b>解析裁窗 → 模块名归一映射 → 四元组多对一聚合 merge → 双单调保序 → shape 口径修正</b>。这套管线是 <b>hcu_probe 源码、版本无关</b>——与 verl-0.7-fsdp 版 95% 相同；差异只在推理栈从 das vllm 0.18.1 换到 <b>0.11</b> 带来的“出现顺序”与实测数字。本页标注这条管线在<b>哪几个源码文件、哪几行</b>、每一步抹平哪一类异构。<span style="color:#1a7f37">绿色高亮 = 关键新增/专用逻辑</span>。</p>
 </header>
 
 <div class="wrap">
@@ -141,7 +141,7 @@
 
   <!-- ============================ 五段管线总览 ============================ -->
   <h2 class="sec">五段管线总览<span class="tag train">npu=训练</span><span class="tag infer">bench=推理</span></h2>
-  <p class="lead">从两侧 dump.json 到逐行相对误差，数据依次流过 5 段。每段只干一件事、只抹平一类异构；前一段做错，compare 要么配对为 0、要么比出假 diff。这套算法是 dcu_probe 源码、<b>版本无关</b>——FSDP / Megatron、0.7 / 0.8 共用同一份实现。</p>
+  <p class="lead">从两侧 dump.json 到逐行相对误差，数据依次流过 5 段。每段只干一件事、只抹平一类异构；前一段做错，compare 要么配对为 0、要么比出假 diff。这套算法是 hcu_probe 源码、<b>版本无关</b>——FSDP / Megatron、0.7 / 0.8 共用同一份实现。</p>
   <div class="pipe">
     <div class="stg"><span class="n b-1">① 解析裁窗</span><h4>should_parse_op</h4><p>训练侧只留 Embedding→顶层模型的前向主干</p></div>
     <div class="sep">→</div>
@@ -322,7 +322,7 @@
         <p><b>1. squeeze</b>：去掉所有值为 1 的维，抹平 batch=1 差异（FSDP 训练 <code>[1,S,H]</code> ↔ 推理 packed <code>[S,H]</code>）。<br>
         <b>2. FSDP 跳融合</b>：<code>bench_name</code> 含 <code>qkv</code>/<code>gate_up</code> 的聚合行直接 <code>continue</code>（已多对一拼过，shape 本就对不上）。<br>
         <b>3. MEGATRON 降维</b>：训练 3 维 <code>[d0,d1,d2]</code> 合并后两维成 <code>[d0, d1*d2]</code> 再比（mcore <code>[S,B,H]</code> vs vllm <code>[S*B,H]</code>）。</p>
-        <p class="why"><b>0.8 FSDP 语境</b>：修法B <b>已合入 dcu_probe 主仓</b> —— <code>statistics</code> + <code>consistent_check</code> 会自动挂 <code>VerlShapeErrChecker</code>、自动 squeeze <code>[1,S,H]</code>↔<code>[S,H]</code>，<b>用含此修正的 dcu_probe whl 即可，不必手改源码</b>（compare 跑通 98 算子即证）。验证：<code>python3 -c "from dcu_probe.core.compare.indicator_analysis.algorithm import VERL_STATISTICS_CHECKERS, VerlShapeErrChecker"</code> 不报错。</p>
+        <p class="why"><b>0.8 FSDP 语境</b>：修法B <b>已合入 hcu_probe 主仓</b> —— <code>statistics</code> + <code>consistent_check</code> 会自动挂 <code>VerlShapeErrChecker</code>、自动 squeeze <code>[1,S,H]</code>↔<code>[S,H]</code>，<b>用含此修正的 hcu_probe whl 即可，不必手改源码</b>（compare 跑通 98 算子即证）。验证：<code>python3 -c "from hcu_probe.core.compare.indicator_analysis.algorithm import VERL_STATISTICS_CHECKERS, VerlShapeErrChecker"</code> 不报错。</p>
         <p class="warn">关键：<b>statistics 和 tensor 两种 dump 模式都挂</b>（<code>VERL_STATISTICS_CHECKERS</code> + <code>VERL_TENSOR_CHECKERS</code>）。以前只挂 tensor、statistics 漏挂 → 全 shape error、配对几乎为 0，这就是 CLAUDE.md 反复提的“<b>修法B</b>”补丁；现已进主仓。<b>另：<code>Megatron-LM</code> 必须在 <code>PYTHONPATH</code></b>（VerlShapeErrChecker 依赖）。</p>
       </div>
     </div>
@@ -361,7 +361,7 @@
 
 </div>
 <footer>
-  dcu_probe pt_compare(consistent_check=True, backend=fsdp) · verl 0.8.0 FSDP 后端（HF 训练侧 + das vllm 0.11 推理侧）训推一致比对算法流程标注 · 代码 verbatim 摘自 dcu_probe/src/dcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py · 管线版本无关，与 verl-0.7-fsdp 版 95% 相同
+  hcu_probe pt_compare(consistent_check=True, backend=fsdp) · verl 0.8.0 FSDP 后端（HF 训练侧 + das vllm 0.11 推理侧）训推一致比对算法流程标注 · 代码 verbatim 摘自 hcu_probe/src/hcu_probe/core/compare/{acc_compare,check,verl/mapping,indicator_analysis/{algorithm,calculator}}.py + common/const.py · 管线版本无关，与 verl-0.7-fsdp 版 95% 相同
 </footer>
 </body>
 </html>

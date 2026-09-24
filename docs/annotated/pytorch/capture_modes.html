@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>原生 PyTorch dcu_probe 采集模式 + argparse CLI —— dump/monitor</title>
+<title>原生 PyTorch hcu_probe 采集模式 + argparse CLI —— dump/monitor</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,7 +61,7 @@
 </head>
 <body>
 <header>
-  <h1>原生 PyTorch dcu_probe 采集模式 + <code style="color:#0969da">argparse</code> CLI —— dump / monitor</h1>
+  <h1>原生 PyTorch hcu_probe 采集模式 + <code style="color:#0969da">argparse</code> CLI —— dump / monitor</h1>
   <p>这一页讲「<b>采什么、怎么开</b>」:4 种采集模式(<b>baseline / dump / monitor / both</b>),全部由你训练脚本<b>自己的 argparse 两个 flag</b> <code style="color:#0969da">--dump-cfg</code> / <code style="color:#0969da">--monitor-cfg</code> 控制。</p>
   <p>pytorch 是最直接的接入 —— <b class="hot">控制面就是你脚本里的 argparse</b>:不传 flag = 原生训练一行不改,传了才启对应 lifecycle。<b>单侧训练态精度采集,无 <code style="color:#bc4c00">pt_compare</code>、非训推一致</b>(那是 verl 干的事)。</p>
 </header>
@@ -73,22 +73,22 @@
   <div class="tool">
     <h3>--dump-cfg / --monitor-cfg 就是全部开关</h3>
     <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">采集完全由训练脚本 <code>parse_args()</code> 里加的两个参数控制,每个参数的值 = 一个 JSON cfg 路径。<b>传谁启谁,都不传就是 baseline 原训练</b>:</p>
-    <div class="sig"><span class="c"># baseline —— 一行 dcu_probe 都不跑</span>
-python train_resnet_dcu_probe.py
+    <div class="sig"><span class="c"># baseline —— 一行 hcu_probe 都不跑</span>
+python train_resnet_hcu_probe.py
 
 <span class="c"># dump(L0 module 级 statistics)</span>
-python train_resnet_dcu_probe.py <span class="k">--dump-cfg</span> <span class="s">dump_config_resnet_L0.json</span>
+python train_resnet_hcu_probe.py <span class="k">--dump-cfg</span> <span class="s">dump_config_resnet_L0.json</span>
 
 <span class="c"># monitor(weight_grad/optimizer/param 三通道 csv)</span>
-python train_resnet_dcu_probe.py <span class="k">--monitor-cfg</span> <span class="s">monitor_v2_config_resnet.json</span>
+python train_resnet_hcu_probe.py <span class="k">--monitor-cfg</span> <span class="s">monitor_v2_config_resnet.json</span>
 
 <span class="c"># both —— dump + monitor 同一进程并存</span>
-python train_resnet_dcu_probe.py <span class="k">--dump-cfg</span> <span class="s">L0.json</span> <span class="k">--monitor-cfg</span> <span class="s">monitor.json</span></div>
+python train_resnet_hcu_probe.py <span class="k">--dump-cfg</span> <span class="s">L0.json</span> <span class="k">--monitor-cfg</span> <span class="s">monitor.json</span></div>
     <p style="margin:6px 0;color:#424a53;font-size:13.5px"><b>为什么说它比 megatron 简单:</b></p>
     <ul>
-      <li>flag 名是你 argparse <b>自己起的</b>(不是 dcu_probe 规定),想叫 <code>--probe</code> 也行 —— 它只是被你的代码用来选「传不传 cfg」。</li>
+      <li>flag 名是你 argparse <b>自己起的</b>(不是 hcu_probe 规定),想叫 <code>--probe</code> 也行 —— 它只是被你的代码用来选「传不传 cfg」。</li>
       <li><b>直接在你自己的 <code>argparse</code> 里</b>:不用穿过 <code>run.sh → pretrain → arguments</code> 多层启动脚本,没有任何框架启动胶水。</li>
-      <li><b>不做「下划线↔连字符」名字转换</b>:megatron 的 flag 要在启动链里做 <code>--dcu-probe-dump</code> ↔ <code>dcu_probe_dump</code> 的转换才能落到参数;pytorch 直接 <code>args.dump_cfg</code> 拿到,零转换。</li>
+      <li><b>不做「下划线↔连字符」名字转换</b>:megatron 的 flag 要在启动链里做 <code>--hcu-probe-dump</code> ↔ <code>hcu_probe_dump</code> 的转换才能落到参数;pytorch 直接 <code>args.dump_cfg</code> 拿到,零转换。</li>
       <li>启停机制就是一个 Python 判断:<code>if args.dump_cfg:</code> 为 False 就整段 lifecycle 都不执行 = 纯原生训练。</li>
     </ul>
     <p style="margin:8px 0 0;color:#9a6700;font-size:13px"><b>关键:</b>这里没有 <code>pt_compare</code>、没有推理侧、没有配对 —— pytorch 只在<b>训练一侧</b>把每步的模块统计 / 三通道量落盘,供<b>离线精度分析</b>。要「训练 vs 推理逐层比」那是 verl 的场景,不在本页。</p>
@@ -99,7 +99,7 @@ python train_resnet_dcu_probe.py <span class="k">--dump-cfg</span> <span class="
   <p class="lead">同一份训练脚本,靠传不传两个 cfg flag 切出 4 种采集模式:</p>
   <table class="ov">
     <tr><th>模式</th><th>flag</th><th>采什么</th><th>产物</th></tr>
-    <tr><td><b style="color:var(--dim)">baseline</b></td><td><b>(不传)</b></td><td>—(纯原生训练,dcu_probe 完全不介入)</td><td>只有你自己的 stdout / ckpt</td></tr>
+    <tr><td><b style="color:var(--dim)">baseline</b></td><td><b>(不传)</b></td><td>—(纯原生训练,hcu_probe 完全不介入)</td><td>只有你自己的 stdout / ckpt</td></tr>
     <tr><td><b style="color:var(--accent)">dump</b></td><td><code>--dump-cfg dump_config_resnet_L0.json</code></td><td><b>L0</b> module 级 <code>statistics</code>(改 <code>level=L1</code> 即 API 级)</td><td><code>dump_path/step{0,1,2}/dump.json</code></td></tr>
     <tr><td><b style="color:var(--train)">monitor</b></td><td><code>--monitor-cfg monitor_v2_config_resnet.json</code></td><td><b>三通道</b> weight_grad / optimizer / param</td><td><code>output_dir/rank_0/{weight_grad,optimizer,param}_*.csv</code></td></tr>
     <tr><td><b style="color:var(--infer)">both</b></td><td>两个都给</td><td>dump + 三通道 csv 同时采</td><td>上面两套 + 共用一份 <code>loss_log.csv</code></td></tr>
@@ -113,7 +113,7 @@ python train_resnet_dcu_probe.py <span class="k">--dump-cfg</span> <span class="
 
   <!-- ① baseline -->
   <div class="card">
-    <div class="hd"><span class="no" style="color:var(--dim)">①</span><span class="ttl">baseline —— 不传 cfg = 原训练</span><span class="role">guard 为 False,dcu_probe 一行不跑</span></div>
+    <div class="hd"><span class="no" style="color:var(--dim)">①</span><span class="ttl">baseline —— 不传 cfg = 原训练</span><span class="role">guard 为 False,hcu_probe 一行不跑</span></div>
     <div class="body">
       <div class="code">
         <div class="l"><span class="k">def</span> <span class="fn">parse_args</span>():</div>
@@ -131,7 +131,7 @@ python train_resnet_dcu_probe.py <span class="k">--dump-cfg</span> <span class="
         <span class="rt rt-e">baseline</span>
         <h4>不传 = 什么都不接</h4>
         <p>两个 flag 的 <code>default=None</code>。不传时 <code>args.dump_cfg</code> / <code>args.monitor_cfg</code> 都是 <code>None</code>,训练脚本里的 <code>if args.xxx_cfg:</code> guard 全为 False → <b>PrecisionDebugger / TrainerMonitorV2 根本不构造</b>,训练循环里所有 hook 调用都被跳过。</p>
-        <p>这正是「接入零成本」的体现:<b>接了 dcu_probe 的脚本,不传 flag 时和原生训练完全一样</b>。按铁律,先跑这个确认 baseline 训练健康,再开采集。</p>
+        <p>这正是「接入零成本」的体现:<b>接了 hcu_probe 的脚本,不传 flag 时和原生训练完全一样</b>。按铁律,先跑这个确认 baseline 训练健康,再开采集。</p>
       </div>
     </div>
   </div>
@@ -280,13 +280,13 @@ resnet_monitor_v2/         <span class="c"># ← output_dir,--monitor-cfg 才有
   </div>
 
   <!-- 对照表 -->
-  <h2 class="sec">采集控制面对照:pytorch vs dcu_megatron vs verl</h2>
+  <h2 class="sec">采集控制面对照:pytorch vs hcu_megatron vs verl</h2>
   <p class="lead">同样是「开采集」,三框架的控制面复杂度差很多 —— <b>pytorch 最直接</b>:</p>
   <table class="ov">
     <tr><th>框架</th><th>怎么开采集</th><th>启动链路</th><th>命名转换</th><th>是否动源码</th></tr>
     <tr><td><b style="color:var(--accent)">原生 PyTorch</b></td><td>你脚本自己的 <code>argparse</code> 两个 flag <code>--dump-cfg</code> / <code>--monitor-cfg</code></td><td><b>无</b> —— 直接 <code>args.dump_cfg</code> 拿到,零启动胶水</td><td><b>无</b>(flag 名你自定)</td><td><b>无源码 patch</b>,直接调 lifecycle hook</td></tr>
-    <tr><td>dcu_megatron</td><td><code>--dcu-probe-dump L0</code> / <code>--dcu-probe-monitor</code> 双 flag</td><td>穿 <code>run.sh → pretrain → arguments</code> 多层启动脚本</td><td><b>要</b>「下划线↔连字符」转换</td><td>Feature 机制 monkey-patch(不改脚本本体)</td></tr>
-    <tr><td>verl(FSDP/Megatron 后端)</td><td>manage 脚本 <code>--dcu-probe &lt;mode&gt;</code> → env → ray runtime env</td><td>manage → ray worker 透传 env</td><td>—</td><td>改 verl 源码插钩子(训推一致场景)</td></tr>
+    <tr><td>hcu_megatron</td><td><code>--hcu-probe-dump L0</code> / <code>--hcu-probe-monitor</code> 双 flag</td><td>穿 <code>run.sh → pretrain → arguments</code> 多层启动脚本</td><td><b>要</b>「下划线↔连字符」转换</td><td>Feature 机制 monkey-patch(不改脚本本体)</td></tr>
+    <tr><td>verl(FSDP/Megatron 后端)</td><td>manage 脚本 <code>--hcu-probe &lt;mode&gt;</code> → env → ray runtime env</td><td>manage → ray worker 透传 env</td><td>—</td><td>改 verl 源码插钩子(训推一致场景)</td></tr>
   </table>
 
   <div class="flow">
@@ -299,7 +299,7 @@ resnet_monitor_v2/         <span class="c"># ← output_dir,--monitor-cfg 才有
 
 </div>
 <footer>
-  原生 PyTorch dcu_probe 采集模式 · 控制面 = 训练脚本自己的 argparse(--dump-cfg / --monitor-cfg)· dump L0/L1 + monitor 三通道 · 单侧精度采集,无 pt_compare · 取自 train_resnet_dcu_probe.py
+  原生 PyTorch hcu_probe 采集模式 · 控制面 = 训练脚本自己的 argparse(--dump-cfg / --monitor-cfg)· dump L0/L1 + monitor 三通道 · 单侧精度采集,无 pt_compare · 取自 train_resnet_hcu_probe.py
 </footer>
 </body>
 </html>

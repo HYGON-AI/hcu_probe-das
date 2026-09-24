@@ -1,6 +1,6 @@
 # overflow_check 产物 `anomaly_analyze.json` 分析指南
 
-`dcu-probe overflow_check` 检测到异常时,产 `anomaly_analyze_{timestamp}.json`。本文教你怎么读这份产物。
+`hcu-probe overflow_check` 检测到异常时,产 `anomaly_analyze_{timestamp}.json`。本文教你怎么读这份产物。
 
 ---
 
@@ -98,24 +98,24 @@ pretrain_gpt.py:264               ← 训练入口
     pretrain()
 Megatron-LM/.../training.py:737   ← Megatron 主循环
     train(...)
-dcu_megatron/.../monitor_wrapper.py:36   ← dcu_probe wrapper
+hcu_megatron/.../monitor_wrapper.py:36   ← hcu_probe wrapper
     return original_train(...)
-dcu_megatron/.../msprobe_wrapper.py:23   ← dcu_probe wrapper
-dcu_megatron/training/training.py:1969   ← 真 train()
+hcu_megatron/.../msprobe_wrapper.py:23   ← hcu_probe wrapper
+hcu_megatron/training/training.py:1969   ← 真 train()
 ... train_step + forward_backward 调度 ...
 pretrain_gpt.py:178               ← forward_step()
     output_tensor = model(...)
 ... GPTModel.forward → _preprocess → embedding ...
 language_model_embedding.py:122   ← ★ 异常代码位置(self.word_embeddings(input_ids))
 ... PyTorch nn.Module call chain ...
-torch/nn/modules/module.py:1801   ← PyTorch forward_hook 触发点(dcu_probe 注册的)
+torch/nn/modules/module.py:1801   ← PyTorch forward_hook 触发点(hcu_probe 注册的)
     hook_result = hook(self, args, kwargs, result)   ← 这一步检测到 NaN
 ```
 
 **实战价值**:
 1. **找异常代码文件 + 行号**(`language_model_embedding.py:122`)
 2. **看训练框架调用路径**(Megatron pipeline → forward_step → model)
-3. **看 dcu_probe wrapper 插入点**(`msprobe_wrapper.py:23 / 35`)
+3. **看 hcu_probe wrapper 插入点**(`msprobe_wrapper.py:23 / 35`)
 
 ---
 
@@ -138,7 +138,7 @@ input 是 <input.dtype / shape / Max>(正常),output 是 <output.dtype / shape /
 → 异常起点:不是上游传的,从这个 module 自己开始。
 
 模型架构层次:<construct_info 从最外到最内,4-6 层>
-代码位置:<stack_info 里 dcu_megatron / project 代码的某帧 file:line>
+代码位置:<stack_info 里 hcu_megatron / project 代码的某帧 file:line>
 
 可能根因(按异常 module 类型):
   - <根据下方表格选>
@@ -159,13 +159,13 @@ input 是 <input.dtype / shape / Max>(正常),output 是 <output.dtype / shape /
 
 ---
 
-## 跟其他 dcu_probe 工具协同
+## 跟其他 hcu_probe 工具协同
 
 | 工具 | 协同方式 |
 |---|---|
 | `graph_visualize -oc` | 把 anomaly 标到模型图上,浏览器直观看在哪层 |
 | `compare` | 拿同样 step 的"正常 dump"(比如前一个 ckpt 跑的)跟当前 dump 比,找哪个 step 开始崩 |
-| `precheck` (`acc_check`) | 针对 anomaly module 类型(如 `Linear` / `RMSNorm`)单独跑 API 精度预检,验算子本身在 DCU 上是否精度可靠 |
+| `precheck` (`acc_check`) | 针对 anomaly module 类型(如 `Linear` / `RMSNorm`)单独跑 API 精度预检,验算子本身在 HCU 上是否精度可靠 |
 | `data2db` | 把多 step monitor csv 导入 trend.db,在 TENSORBOARD 上看 weight / grad norm 长期趋势,验证 NaN 起源 step |
 
 ---
@@ -175,7 +175,7 @@ input 是 <input.dtype / shape / Max>(正常),output 是 <output.dtype / shape /
 1. **只检测 Max / Min 字段**(不查 Mean / Norm,理论上不会漏但极端 case 可能)
 2. **只标第一个起点**(`for ... break`),同 rank 同 step 多起点只报第一个;rerun 时换 step 数据可能换报另一个
 3. **跨 rank 关联依赖通信算子识别**(`is_communication_op`),如果有自定义 comm op 没识别可能漏报传播路径
-4. **L0 / L1 dump 兼容**,**L2 kernel dump 上游 NPU 专属**(DCU 没必要管)
+4. **L0 / L1 dump 兼容**,**L2 kernel dump 上游 NPU 专属**(HCU 没必要管)
 5. **真实场景需 task=statistics dump**(JSON 元数据),task=tensor dump 也能用但产物含真实 tensor 数据时无意义(NaN 在 .pt 里,工具检 dump.json 字段)
 
 ---
@@ -185,7 +185,7 @@ input 是 <input.dtype / shape / Max>(正常),output 是 <output.dtype / shape /
 容器内跑:
 
 ```bash
-cd /workspace/dcu_megatron_clean/examples/dcu_probe/whl/tools_validation
+cd /workspace/hcu_megatron_clean/examples/hcu_probe/whl/tools_validation
 bash 10_overflow_nan_demo.sh
 ```
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>run_fsdp_compare.py 代码逻辑 —— dcu_probe pt_compare(backend=fsdp) 复核 verl 0.8 FSDP 训推一致性</title>
+<title>run_fsdp_compare.py 代码逻辑 —— hcu_probe pt_compare(backend=fsdp) 复核 verl 0.8 FSDP 训推一致性</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,18 +61,18 @@
 </head>
 <body>
 <header>
-  <h1>run_fsdp_compare.py 代码逻辑 —— 用 dcu_probe 的 <code style="color:#0969da">pt_compare(backend=fsdp)</code> 复核 verl 0.8 FSDP 训推一致性</h1>
-  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧、推理侧的 dump <b>配对好</b>,<b>直接</b>交给 dcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
-  <p>真正<b class="hot">发挥效果的 dcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本只有 <b>4 步、无过滤</b>:前 2 步为 pt_compare 准备能对齐的输入,第 3 步才调 pt_compare,第 4 步读它的结果。<b>0.8 FSDP 推理用 das vllm 0.11 → dump 模块序干净 → 不需要 0.7 那步过滤</b>(这是 0.8 相对 0.7 FSDP 的最大简化,和 Megatron 后端同一套思路,因两者都用 das vllm 0.11)。</p>
+  <h1>run_fsdp_compare.py 代码逻辑 —— 用 hcu_probe 的 <code style="color:#0969da">pt_compare(backend=fsdp)</code> 复核 verl 0.8 FSDP 训推一致性</h1>
+  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧、推理侧的 dump <b>配对好</b>,<b>直接</b>交给 hcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
+  <p>真正<b class="hot">发挥效果的 hcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本只有 <b>4 步、无过滤</b>:前 2 步为 pt_compare 准备能对齐的输入,第 3 步才调 pt_compare,第 4 步读它的结果。<b>0.8 FSDP 推理用 das vllm 0.11 → dump 模块序干净 → 不需要 0.7 那步过滤</b>(这是 0.8 相对 0.7 FSDP 的最大简化,和 Megatron 后端同一套思路,因两者都用 das vllm 0.11)。</p>
 </header>
 
 <div class="wrap">
 
   <!-- 核心工具 -->
-  <h2 class="sec">★ 核心工具:dcu_probe 的 <code>pt_compare</code>(官方精度比对 API,两后端共用)</h2>
+  <h2 class="sec">★ 核心工具:hcu_probe 的 <code>pt_compare</code>(官方精度比对 API,两后端共用)</h2>
   <div class="tool">
     <h3>pt_compare 是什么、发挥什么效果</h3>
-    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>dcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 DCU fork)。它是 dcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本第 3 步调的就是它:</p>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>hcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 HCU fork)。它是 hcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本第 3 步调的就是它:</p>
     <div class="sig"><span class="c"># 训练侧 dump ↔ 推理侧 dump,逐算子比对(FSDP 后端)</span>
 <span class="k">pt_compare</span>({<span class="s">"npu_path"</span>: 训练侧dump.json, <span class="s">"bench_path"</span>: 推理侧dump.json},
            out, <span class="k">consistent_check</span>=<span class="k">True</span>, <span class="k">backend</span>=<span class="s">"fsdp"</span>)</div>
@@ -155,10 +155,10 @@
 
   <!-- ③ pt_compare -->
   <div class="card">
-    <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">直接调 dcu_probe 的 pt_compare(核心,无过滤)</span><span class="role">★这里才真正"用 dcu_probe 工具"</span></div>
+    <div class="hd"><span class="no" style="color:var(--accent)">③</span><span class="ttl">直接调 hcu_probe 的 pt_compare(核心,无过滤)</span><span class="role">★这里才真正"用 hcu_probe 工具"</span></div>
     <div class="body">
       <div class="code">
-        <div class="l hl"><span class="k">from</span> dcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
+        <div class="l hl"><span class="k">from</span> hcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
         <div class="l">out = <span class="s">"%s/compare_out"</span> % RUN</div>
         <div class="l">os.makedirs(out, exist_ok=<span class="k">True</span>)</div>
         <div class="l"><span class="k">for</span> x <span class="k">in</span> glob.glob(out + <span class="s">"/*.xlsx"</span>): os.remove(x)</div>
@@ -167,9 +167,9 @@
         <div class="l"><span class="c"># 产物:out/compare_result_*.xlsx(逐算子 NormRelativeErr)</span></div>
       </div>
       <div class="ann">
-        <span class="rt rt-a">dcu_probe 工具</span>
+        <span class="rt rt-a">hcu_probe 工具</span>
         <h4>官方逐算子比对就在这一行</h4>
-        <p>前 2 步全是铺垫,<b>这一行才是真正发挥效果的 dcu_probe 工具</b>。<code>bench_path</code> 直接传 <code>gen[rid]</code> —— <b>没有 0.7 的过滤步</b>。因为 0.8 用 <b>das vllm 0.11</b>,推理 dump 模块序干净,<code>dual_monotonic_sort</code> 一次就能把两侧单调对齐,不会崩。</p>
+        <p>前 2 步全是铺垫,<b>这一行才是真正发挥效果的 hcu_probe 工具</b>。<code>bench_path</code> 直接传 <code>gen[rid]</code> —— <b>没有 0.7 的过滤步</b>。因为 0.8 用 <b>das vllm 0.11</b>,推理 dump 模块序干净,<code>dual_monotonic_sort</code> 一次就能把两侧单调对齐,不会崩。</p>
         <p><b>脚本 vs 工具的分工</b>:脚本负责"配对好、挑对样本",<code>pt_compare</code> 负责"命名映射(FSDP_MODULE_MAP)+ 单调对齐 + 算 Norm 相对误差 + 出 xlsx"。</p>
         <p class="warn"><b>能直接喂的前提 = 修法B 已生效</b>(见下卡)—— 否则 FSDP 训练 <code>[1,S,H]</code> vs 推理 <code>[S,H]</code> 会全判 shape error、配对≈0。</p>
       </div>
@@ -181,8 +181,8 @@
     <div class="hd"><span class="no" style="color:var(--infer)">★B</span><span class="ttl">修法B:FSDP statistics + consistent_check 的 shape squeeze 盲区</span><span class="role">FSDP 特有先决,支撑③能直接喂</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># 验证 dcu_probe 是否已含修法B(打印 OK = compare 直接能跑):</span></div>
-        <div class="l">docker exec &lt;容器&gt; python3 -c <span class="s">"from dcu_probe.core.compare.indicator_analysis.algorithm \</span></div>
+        <div class="l"><span class="c"># 验证 hcu_probe 是否已含修法B(打印 OK = compare 直接能跑):</span></div>
+        <div class="l">docker exec &lt;容器&gt; python3 -c <span class="s">"from hcu_probe.core.compare.indicator_analysis.algorithm \</span></div>
         <div class="l"><span class="s">    import VERL_STATISTICS_CHECKERS, VerlShapeErrChecker; print('修法B OK')"</span></div>
         <div class="l"> </div>
         <div class="l"><span class="c"># 修法B 本体:algorithm.py 的检查器列表(把 ShapeErrChecker 换成带 squeeze 的版本)</span></div>
@@ -204,8 +204,8 @@
       <div class="ann">
         <span class="rt rt-x">FSDP 特有</span>
         <h4>[1,S,H] vs [S,H] 的容差</h4>
-        <p>FSDP 训练侧 dump 张量是 <code>[1,S,H]</code>(HF eager 里 <code>unsqueeze(0)</code>),推理 vllm 是 <code>[S,H]</code>(packed)。dcu_probe 的 squeeze 容差检查器 <code>VerlShapeErrChecker</code> <b>早期只挂 <code>task=tensor</code></b>;而本 skill 用的 <code>task=statistics</code>(L0 统计量)恒用<b>严格 <code>ShapeErrChecker</code></b> → 两侧 shape 字符串不等 → <b>几乎全判 shape error、可比配对≈0</b>。</p>
-        <p>修法B = 让 <code>statistics</code> + <code>consistent_check</code> 也走 <code>VerlShapeErrChecker</code>:加 <code>VERL_STATISTICS_CHECKERS</code> 列表 + <code>calculator._add_algorithm</code> 的 <code>if self.consistent_check</code> 分支。<b>已合入 dcu_probe 主仓</b> —— 用含此修正的包即可,验证命令打印 <code>OK</code> 就能直接跑。</p>
+        <p>FSDP 训练侧 dump 张量是 <code>[1,S,H]</code>(HF eager 里 <code>unsqueeze(0)</code>),推理 vllm 是 <code>[S,H]</code>(packed)。hcu_probe 的 squeeze 容差检查器 <code>VerlShapeErrChecker</code> <b>早期只挂 <code>task=tensor</code></b>;而本 skill 用的 <code>task=statistics</code>(L0 统计量)恒用<b>严格 <code>ShapeErrChecker</code></b> → 两侧 shape 字符串不等 → <b>几乎全判 shape error、可比配对≈0</b>。</p>
+        <p>修法B = 让 <code>statistics</code> + <code>consistent_check</code> 也走 <code>VerlShapeErrChecker</code>:加 <code>VERL_STATISTICS_CHECKERS</code> 列表 + <code>calculator._add_algorithm</code> 的 <code>if self.consistent_check</code> 分支。<b>已合入 hcu_probe 主仓</b> —— 用含此修正的包即可,验证命令打印 <code>OK</code> 就能直接跑。</p>
         <p class="warn"><b>另一前置:</b><code>Megatron-LM</code> 必须在 <code>PYTHONPATH</code>(<code>VerlShapeErrChecker</code> 链路依赖它,缺则 import 深处报错)。</p>
       </div>
     </div>
@@ -260,10 +260,10 @@
 
   <!-- 区别 -->
   <h2 class="sec">pt_compare vs 0.8 FSDP / 0.7 FSDP / 0.8 Megatron 的关系</h2>
-  <p class="lead">关键区分:<b>pt_compare 是 dcu_probe 的官方比对工具(底层能力,两后端共用)</b>;各脚本的差别只在「用哪个 <code>backend</code>、喂之前要不要过滤」。</p>
+  <p class="lead">关键区分:<b>pt_compare 是 hcu_probe 的官方比对工具(底层能力,两后端共用)</b>;各脚本的差别只在「用哪个 <code>backend</code>、喂之前要不要过滤」。</p>
   <table class="ov">
     <tr><th>对象</th><th>是什么</th><th>das vllm</th><th>步数 / 过滤</th><th>backend</th><th>结果</th></tr>
-    <tr><td><code>pt_compare</code></td><td><b>dcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 DCU fork)</td><td>—</td><td>—(它本身就是工具)</td><td><code>fsdp</code>/<code>megatron</code> 二选一</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
+    <tr><td><code>pt_compare</code></td><td><b>hcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 HCU fork)</td><td>—</td><td>—(它本身就是工具)</td><td><code>fsdp</code>/<code>megatron</code> 二选一</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
     <tr><td><code>run_fsdp_compare.py</code><br>(本页,0.8 FSDP)</td><td>配对好<b>直接喂</b> pt_compare</td><td><b>0.11</b></td><td><b>4 步,❌ 不过滤</b></td><td><code>fsdp</code></td><td>叶子算子 98,<b>sdpa 97/98 &lt;1% 中位 0.121%</b></td></tr>
     <tr><td><code>run07_filtered.py</code><br>(0.7 FSDP)</td><td>= run_fsdp_compare + <b>先过滤交错模块</b></td><td>0.18.1</td><td><b>5 步,✅ 过滤 72</b></td><td><code>fsdp</code></td><td>叶子算子 98,<b>98/98 &lt;1%</b>(过滤后官方口径)</td></tr>
     <tr><td><code>run_megatron_compare.py</code><br>(0.8 Megatron)</td><td>同一 pt_compare,只<b>换 backend</b></td><td>0.11</td><td>4 步,❌ 不过滤</td><td><code>megatron</code></td><td>真算子 <b>1083 个 99.4% &lt;1%</b>(叶子全 &lt;1%)</td></tr>
@@ -275,12 +275,12 @@
     <p style="margin-top:14px"><b>② 0.7 FSDP <code>run07_filtered.py</code>(5 步,多一步过滤)</b><br>
     推理用 <b>das vllm 0.18.1</b>,推理 dump 里比训练侧多出 <b>72 个训练侧无对应、且位置交错的模块</b>(<code>Triton</code> attn kernel / <code>reshape_and_cache</code> / 独立 <code>rotary_emb</code>)→ 不先剔掉,<code>pt_compare</code> 的 <code>dual_monotonic_sort</code> 会因两侧位置无法同时单调递增而崩 → 所以 0.7 必须<b>多一步过滤</b>(338→266)才能喂进<b>同一个</b> pt_compare。</p>
     <p style="margin-top:14px"><b>③ 二者跑的是同一个 pt_compare</b><br>
-    <code>run_fsdp_compare.py</code> 与 <code>run07_filtered.py</code> 调的<b>都是 dcu_probe 官方 <code>pt_compare(backend="fsdp")</code></b>,底层比对算法、命名映射(FSDP_MODULE_MAP)、排除口径完全一致 —— <b>唯一差别就是「喂之前要不要过滤」</b>,而这取决于推理侧用的是 das vllm 0.11(干净)还是 0.18.1(有交错模块)。两者结论互相印证:0.8 的 98 个叶子 sdpa 97/98 &lt;1% ≈ 0.7 过滤后的 98/98 &lt;1%。</p>
+    <code>run_fsdp_compare.py</code> 与 <code>run07_filtered.py</code> 调的<b>都是 hcu_probe 官方 <code>pt_compare(backend="fsdp")</code></b>,底层比对算法、命名映射(FSDP_MODULE_MAP)、排除口径完全一致 —— <b>唯一差别就是「喂之前要不要过滤」</b>,而这取决于推理侧用的是 das vllm 0.11(干净)还是 0.18.1(有交错模块)。两者结论互相印证:0.8 的 98 个叶子 sdpa 97/98 &lt;1% ≈ 0.7 过滤后的 98/98 &lt;1%。</p>
   </div>
 
   <div class="flow">
     <b>一句话记住:</b><br>
-    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = dcu_probe 官方比对工具(核心能力,两后端共用,只 backend 参数不同)
+    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = hcu_probe 官方比对工具(核心能力,两后端共用,只 backend 参数不同)
 <b style="color:#bc4c00">0.8 FSDP  run_fsdp_compare.py</b> = 4 步无过滤(das vllm 0.11,模块序干净,直接喂)
 <b>0.7 FSDP  run07_filtered.py </b> = 5 步多一步过滤(das vllm 0.18.1,72 交错模块先剔)
 两者跑的都是同一个 pt_compare —— 差别只在「喂之前要不要过滤」</div>
@@ -288,7 +288,7 @@
 
 </div>
 <footer>
-  run_fsdp_compare.py 代码逻辑 · 核心工具 dcu_probe.pytorch.compare.pt_compare(backend=fsdp)· 修法B(VerlShapeErrChecker + VERL_STATISTICS_CHECKERS)· 代码逐字摘自 scripts/run_fsdp_compare.py + references/dcu_probe-fsdp-statistics-fix.md
+  run_fsdp_compare.py 代码逻辑 · 核心工具 hcu_probe.pytorch.compare.pt_compare(backend=fsdp)· 修法B(VerlShapeErrChecker + VERL_STATISTICS_CHECKERS)· 代码逐字摘自 scripts/run_fsdp_compare.py + references/hcu_probe-fsdp-statistics-fix.md
 </footer>
 </body>
 </html>

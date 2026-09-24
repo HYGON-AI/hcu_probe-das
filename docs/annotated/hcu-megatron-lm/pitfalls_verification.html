@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dcu_megatron 接入 6 坑 + 验证三件套 + L0/L1 覆盖</title>
+<title>hcu_megatron 接入 6 坑 + 验证三件套 + L0/L1 覆盖</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,8 +61,8 @@
 </head>
 <body>
 <header>
-  <h1>dcu_megatron 接入 <code style="color:#0969da">dcu_probe</code> —— 6 坑 + 验证三件套 + L0/L1 覆盖</h1>
-  <p>这里说的是<b>独立 dcu_megatron 框架</b>(Megatron-LM + 海光 adaptor,预训练 llama2-7B / TP1·PP2·8 卡·bf16),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。</p>
+  <h1>hcu_megatron 接入 <code style="color:#0969da">hcu_probe</code> —— 6 坑 + 验证三件套 + L0/L1 覆盖</h1>
+  <p>这里说的是<b>独立 hcu_megatron 框架</b>(Megatron-LM + 海光 adaptor,预训练 llama2-7B / TP1·PP2·8 卡·bf16),<b>不是 verl 的 Megatron 后端(RL 训推一致)</b>。</p>
   <p>接入靠 <b>Feature 机制、0 行改训练脚本</b>(不是 verl 那种改 forward 源码 patch);验证是 <b class="hot">精度对比 / 零侵入</b>(5 模式 loss 字字一致 + dump 供离线分析),<b>没有 pt_compare / 训推 compare 那一套</b>。本页收敛真正会绊倒人的 6 个坑、验证三件套、以及 L0/L1 该选哪个。</p>
 </header>
 
@@ -71,8 +71,8 @@
   <!-- 与 verl 的本质区别提醒 -->
   <div class="flow">
     <b>先记住与 verl 的本质区别(它决定了本页的坑长什么样):</b>
-    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">接入</b>  verl = 改源码 patch 插钩子   <span class="arrow">vs</span>   dcu_megatron = <b>Feature 织入,0 行改训练脚本</b>(加 <code>--dcu-probe-config</code> flag 即激活)
-<b style="color:#bc4c00">验证</b>  verl = 训推一致(pt_compare 逐层比)   <span class="arrow">vs</span>   dcu_megatron = <b>精度对比 / 零侵入</b>(dump 训练侧统计量 + 5 模式 loss 一致证零侵入,<b>无 pt_compare</b>)</div>
+    <div class="chain" style="margin-top:8px"><b style="color:#1a7f37">接入</b>  verl = 改源码 patch 插钩子   <span class="arrow">vs</span>   hcu_megatron = <b>Feature 织入,0 行改训练脚本</b>(加 <code>--hcu-probe-config</code> flag 即激活)
+<b style="color:#bc4c00">验证</b>  verl = 训推一致(pt_compare 逐层比)   <span class="arrow">vs</span>   hcu_megatron = <b>精度对比 / 零侵入</b>(dump 训练侧统计量 + 5 模式 loss 一致证零侵入,<b>无 pt_compare</b>)</div>
     <p style="margin:10px 0 0;font-size:13px;color:#424a53">所以本页没有"两侧配对/过滤/单调对齐"那类 compare 坑;取而代之的是 <b>Feature 织入 + dump/monitor 生命周期</b> 特有的 6 个坑,和一套"看 marker 判真启动"的验证纪律。</p>
   </div>
 
@@ -85,8 +85,8 @@
     <div class="hd"><span class="no" style="color:var(--infer)">坑 1</span><span class="ttl">tensorboard 隐性依赖 → 静默假启动(最迷惑)</span><span class="role">"训练 loss 正常" ≠ "dump 成功了"</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># dcu_probe 的 "pytorch 通用集成路径"</span></div>
-        <div class="l"><span class="c">#   (monitor v2 全部 + 通用 dcu_probe.dump)</span></div>
+        <div class="l"><span class="c"># hcu_probe 的 "pytorch 通用集成路径"</span></div>
+        <div class="l"><span class="c">#   (monitor v2 全部 + 通用 hcu_probe.dump)</span></div>
         <div class="l hl"><span class="k">import</span> tensorboard          <span class="c"># ← 缺它 = No module named 'tensorboard'</span></div>
         <div class="l"></div>
         <div class="l"><span class="c"># 后果:PrecisionDebugger / monitor init 静默失败</span></div>
@@ -99,7 +99,7 @@
       <div class="ann">
         <span class="rt rt-x">最迷惑</span>
         <h4>缺库不报致命错,只静默降级</h4>
-        <p>monitor v2 与通用 <code>dcu_probe.dump</code> 路径 <b>import tensorboard</b>;容器缺它时,init 走进 <code>try/except</code> 被<b>静默吞掉</b>,不崩训练 —— 你看到 loss 正常,以为在采,实际<b>一个 dump.json / csv 都没落</b>。</p>
+        <p>monitor v2 与通用 <code>hcu_probe.dump</code> 路径 <b>import tensorboard</b>;容器缺它时,init 走进 <code>try/except</code> 被<b>静默吞掉</b>,不崩训练 —— 你看到 loss 正常,以为在采,实际<b>一个 dump.json / csv 都没落</b>。</p>
         <p>更迷惑的是:<b>megatron L0 dump 走另一条(megatron 集成)路径,不依赖 tensorboard</b>。于是同一次跑可能出现"L0 dump 有产物、但 monitor 什么都没有"的组合 —— 别据此判"整体成功"。</p>
         <p class="warn"><b>破法:</b>跑 monitor / 通用 dump 前先确认 tensorboard 在;容器无外网就从同 image 已装的容器 <code>docker cp</code> 过来。判成功<b>只看产物,不看 loss</b>(见下方"验证三件套")。</p>
       </div>
@@ -111,20 +111,20 @@
     <div class="hd"><span class="no" style="color:var(--fn)">坑 2</span><span class="ttl">L1 dump 必须 patch <code>support_wrap_ops.yaml</code></span><span class="role">仅 L1;whl 不含此 patch</span></div>
     <div class="body">
       <div class="code">
-        <div class="l"><span class="c"># dcu_probe/pytorch/dump/api_dump/support_wrap_ops.yaml</span></div>
+        <div class="l"><span class="c"># hcu_probe/pytorch/dump/api_dump/support_wrap_ops.yaml</span></div>
         <div class="l"><span class="s">functional:</span></div>
         <div class="l">  ...</div>
         <div class="l hl">  <span class="c"># - gelu      ← 注释掉这一行</span></div>
         <div class="l">  ...</div>
         <div class="l hl">  <span class="c"># - silu      ← 注释掉这一行</span></div>
         <div class="l"></div>
-        <div class="l"><span class="c"># 不 patch 时,L1 跑 dcu_megatron 直接崩:</span></div>
+        <div class="l"><span class="c"># 不 patch 时,L1 跑 hcu_megatron 直接崩:</span></div>
         <div class="l warn">#   ValueError: Only support fusion of gelu and swiglu   (Megatron mlp.py)</div>
       </div>
       <div class="ann">
         <span class="rt rt-b">仅 L1</span>
         <h4>L1 wrap 破坏了 swiglu 的 identity 检查</h4>
-        <p>Megatron mcore MLP 用 <code>self.activation_func is F.silu</code> 做 <b>identity 判等</b>来决定能否走 swiglu fusion;dcu_probe L1 把 <code>F.silu</code>/<code>F.gelu</code> wrap 成新对象后,<code>is</code> 判等失败 → 抛 <code>ValueError: Only support fusion of gelu and swiglu</code>。</p>
+        <p>Megatron mcore MLP 用 <code>self.activation_func is F.silu</code> 做 <b>identity 判等</b>来决定能否走 swiglu fusion;hcu_probe L1 把 <code>F.silu</code>/<code>F.gelu</code> wrap 成新对象后,<code>is</code> 判等失败 → 抛 <code>ValueError: Only support fusion of gelu and swiglu</code>。</p>
         <p>解法:只注释 <b><code>functional:</code> 区</b>那两行 <code>gelu</code>/<code>silu</code>。这俩词在文件里出现多次(还有 <code>torch:</code> 区、<code>npu_*</code>),<b>别误注别处</b>。</p>
         <p class="warn"><b>易漏:</b>whl <b>不含</b>此 patch —— 每次重装 whl / 换新容器都要重打;L0 / monitor 完全不受影响。副作用:L1 dump.json 里不会再有 <code>Functional.silu/gelu</code> entry(精度↔兼容的取舍)。</p>
       </div>
@@ -188,7 +188,7 @@
       <div class="code">
         <div class="l">{</div>
         <div class="l">  <span class="s">"framework"</span>: <span class="s">"pytorch"</span>,</div>
-        <div class="l">  <span class="s">"output_dir"</span>: <span class="s">"./dcu_probe_dump/monitor_v2"</span>,</div>
+        <div class="l">  <span class="s">"output_dir"</span>: <span class="s">"./hcu_probe_dump/monitor_v2"</span>,</div>
         <div class="l">  <span class="s">"format"</span>: <span class="s">"csv"</span>,</div>
         <div class="l hl">  <span class="s">"patch_optimizer_step"</span>: <span class="k">false</span>,   <span class="c"># ← 必须 false</span></div>
         <div class="l">  <span class="s">"monitors"</span>: { ... }</div>
@@ -225,7 +225,7 @@
         <span class="rt rt-c">monitor</span>
         <h4>只开三通道,不碰 module</h4>
         <p>monitor v2 三通道 <b>weight_grad / optimizer / param</b> 采的是权重梯度、优化器动量、参数分布,与前向输出无关,安全。</p>
-        <p>但 <b><code>module</code> 通道</b>要 hook forward 输出张量,而 Megatron pipeline 为省显存会 <code>deallocate_pipeline_outputs</code> <b>提前释放</b>这些中间输出 → 两者<b>冲突</b>(读到已释放张量 / 报错)。所以 dcu_megatron 的 monitor 只开前三通道。</p>
+        <p>但 <b><code>module</code> 通道</b>要 hook forward 输出张量,而 Megatron pipeline 为省显存会 <code>deallocate_pipeline_outputs</code> <b>提前释放</b>这些中间输出 → 两者<b>冲突</b>(读到已释放张量 / 报错)。所以 hcu_megatron 的 monitor 只开前三通道。</p>
       </div>
     </div>
   </div>
@@ -239,7 +239,7 @@
 
   <!-- ===== 验证三件套 ===== -->
   <h2 class="sec">验证三件套 —— 前 / 中 / 后</h2>
-  <p class="lead">核心纪律一句话:<b class="hot">必须看到 <code style="color:#bc4c00">initialized</code> / <code style="color:#bc4c00">started</code> 才算真启动</b>;只看到 <code>[dcu_probe-wrapper] wrapper applied</code> 是<b>假象</b>(那只是装饰器挂上了,业务不一定起来 —— 见坑 1)。</p>
+  <p class="lead">核心纪律一句话:<b class="hot">必须看到 <code style="color:#bc4c00">initialized</code> / <code style="color:#bc4c00">started</code> 才算真启动</b>;只看到 <code>[hcu_probe-wrapper] wrapper applied</code> 是<b>假象</b>(那只是装饰器挂上了,业务不一定起来 —— 见坑 1)。</p>
 
   <div class="flow">
     <b>三阶段 checklist(数据流)：</b>
@@ -251,15 +251,15 @@
     <h3>★ 训练中 grep log:哪几行才算"真启动"</h3>
     <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">跑起来后 grep 训练日志,分清"装饰器已挂"和"业务真起来"两类 marker：</p>
     <div class="sig"><span class="c"># —— 这两行只是"装饰器已挂",不代表在采(假象,坑 1 就卡在这)——</span>
-<span style="color:#8b949e">[dcu_probe-wrapper] train() wrapper applied via Feature mechanism</span>
-<span style="color:#8b949e">[dcu_probe-wrapper] train_step() wrapper applied via Feature mechanism</span>
+<span style="color:#8b949e">[hcu_probe-wrapper] train() wrapper applied via Feature mechanism</span>
+<span style="color:#8b949e">[hcu_probe-wrapper] train_step() wrapper applied via Feature mechanism</span>
 
 <span class="c"># —— ★ 看到下面带 initialized / started 才算真启动 ——</span>
-<span style="color:#7ee787">[dcu_probe.dump] PrecisionDebugger initialized with &lt;cfg&gt;</span>          <span class="c">← dump 真起</span>
-<span style="color:#7ee787">[dcu_probe.monitor] TrainerMonitorV2 initialized and started</span>         <span class="c">← monitor 真起</span>
+<span style="color:#7ee787">[hcu_probe.dump] PrecisionDebugger initialized with &lt;cfg&gt;</span>          <span class="c">← dump 真起</span>
+<span style="color:#7ee787">[hcu_probe.monitor] TrainerMonitorV2 initialized and started</span>         <span class="c">← monitor 真起</span>
 
 <span class="c"># —— 收尾干净 ——</span>
-<span style="color:#a5d6ff">msprobe ends successfully</span>  /  <span style="color:#a5d6ff">[dcu_probe.* stopped]</span></div>
+<span style="color:#a5d6ff">msprobe ends successfully</span>  /  <span style="color:#a5d6ff">[hcu_probe.* stopped]</span></div>
     <ul>
       <li><b>只有灰色两行</b>(wrapper applied)、没有绿色两行 → <b>业务没真启动</b>,大概率是坑 1(缺 tensorboard 静默失败)。</li>
       <li><b>看到绿色 <code>initialized</code> / <code>started</code></b> → dump / monitor 真的在采,产物才会有内容。</li>
@@ -298,7 +298,7 @@
   <h2 class="sec">实测状态(诚实标注)</h2>
   <table class="ov">
     <tr><th>结论</th><th>验证程度</th><th>依据</th></tr>
-    <tr><td>llama2-7B(TP1/PP2,8 卡,bf16)<b>5 模式全跑通</b></td><td><b style="color:#1a7f37">✅ DCU 集群实跑</b></td><td>baseline / L0 / L1 / monitor / combined 均实跑;baseline↔L0↔monitor 的 lm loss·grad 字字一致(零侵入),L1 微扰符合预期,dump.json / csv 落盘且内容合理</td></tr>
+    <tr><td>llama2-7B(TP1/PP2,8 卡,bf16)<b>5 模式全跑通</b></td><td><b style="color:#1a7f37">✅ HCU 集群实跑</b></td><td>baseline / L0 / L1 / monitor / combined 均实跑;baseline↔L0↔monitor 的 lm loss·grad 字字一致(零侵入),L1 微扰符合预期,dump.json / csv 落盘且内容合理</td></tr>
     <tr><td>L1 注释 distributed 与否,llama 逐 iter 字字一致</td><td><b style="color:#1a7f37">✅ 实测</b></td><td>坑 3 的直接依据:PP 的 <code>batch_isend_irecv</code> 被 wrap 也不破坏数值</td></tr>
     <tr><td>MoE / EP 才需连 <code>distributed:</code> 段一起注释</td><td><b style="color:#bc4c00">⚠️ 未在 MoE 逐项实测</b></td><td>基于 Feature 机制推断 + EP <code>all_to_all</code> 时序原理;llama 无 EP,该结论未在 mixtral 类模型上逐项复现</td></tr>
     <tr><td>坑 6:module 通道与 <code>deallocate_pipeline_outputs</code> 冲突</td><td><b style="color:#bc4c00">⚠️ 机制约束</b></td><td>PP 输出提前释放与 module hook 的已知冲突;配置上直接规避(不开 module 通道),未刻意触发验证崩点</td></tr>
@@ -307,7 +307,7 @@
 
 </div>
 <footer>
-  dcu_megatron(独立框架)× dcu_probe · 6 坑 + 验证三件套 + L0/L1 覆盖 · Feature 织入·零侵入精度对比(≠ verl 训推一致 pt_compare)· llama2-7B TP1/PP2 8 卡 5 模式 PoC
+  hcu_megatron(独立框架)× hcu_probe · 6 坑 + 验证三件套 + L0/L1 覆盖 · Feature 织入·零侵入精度对比(≠ verl 训推一致 pt_compare)· llama2-7B TP1/PP2 8 卡 5 模式 PoC
 </footer>
 </body>
 </html>

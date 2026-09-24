@@ -2,7 +2,7 @@
 
 ## config.json 参数说明
 
-dcu_probe 的数据采集通过 `config.json` 配置文件控制，在 `PrecisionDebugger(config_path="./config.json")` 初始化时传入。以下仅列出 PyTorch 场景适用的参数。
+hcu_probe 的数据采集通过 `config.json` 配置文件控制，在 `PrecisionDebugger(config_path="./config.json")` 初始化时传入。以下仅列出 PyTorch 场景适用的参数。
 
 ### 通用参数
 

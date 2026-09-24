@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>run07_filtered.py 代码逻辑 —— dcu_probe pt_compare 复核 verl 0.7 训推一致性</title>
+<title>run07_filtered.py 代码逻辑 —— hcu_probe pt_compare 复核 verl 0.7 训推一致性</title>
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --border:#d0d7de; --fg:#1f2328; --dim:#656d76;
@@ -61,18 +61,18 @@
 </head>
 <body>
 <header>
-  <h1>run07_filtered.py 代码逻辑 —— 用 dcu_probe 的 <code style="color:#0969da">pt_compare</code> 复核 verl 0.7 训推一致性</h1>
-  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧、推理侧的 dump <b>配对好、过滤干净</b>,再交给 dcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
-  <p>真正<b class="hot">发挥效果的 dcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本的 5 步里,前 3 步都是在「为 pt_compare 准备能对齐的输入」,第 4 步才调 pt_compare,第 5 步读它的结果。</p>
+  <h1>run07_filtered.py 代码逻辑 —— 用 hcu_probe 的 <code style="color:#0969da">pt_compare</code> 复核 verl 0.7 训推一致性</h1>
+  <p>这个脚本本身<b>不算精度</b> —— 它做的是「把训练侧、推理侧的 dump <b>配对好、过滤干净</b>,再交给 hcu_probe 的官方比对工具 <code style="color:#0969da">pt_compare</code> 去逐算子算误差」。</p>
+  <p>真正<b class="hot">发挥效果的 hcu_probe 工具 = <code style="color:#bc4c00">pt_compare</code></b>;脚本的 5 步里,前 3 步都是在「为 pt_compare 准备能对齐的输入」,第 4 步才调 pt_compare,第 5 步读它的结果。</p>
 </header>
 
 <div class="wrap">
 
   <!-- 核心工具 -->
-  <h2 class="sec">★ 核心工具:dcu_probe 的 <code>pt_compare</code>(官方精度比对 API)</h2>
+  <h2 class="sec">★ 核心工具:hcu_probe 的 <code>pt_compare</code>(官方精度比对 API)</h2>
   <div class="tool">
     <h3>pt_compare 是什么、发挥什么效果</h3>
-    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>dcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 DCU fork)。它是 dcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本调的就是它:</p>
+    <p style="margin:0 0 6px;color:#424a53;font-size:13.5px">来自 <code>hcu_probe.pytorch.compare.pt_compare</code>(= 华为 msprobe compare 的 HCU fork)。它是 hcu_probe 提供的<b>官方逐算子精度比对能力</b>,本脚本调的就是它:</p>
     <div class="sig"><span class="c"># 训练侧 dump ↔ 推理侧 dump,逐算子比对</span>
 <span class="k">pt_compare</span>({<span class="s">"npu_path"</span>: 训练侧dump.json, <span class="s">"bench_path"</span>: 推理侧dump.json},
            output_path, <span class="k">consistent_check</span>=<span class="k">True</span>, <span class="k">backend</span>=<span class="s">"fsdp"</span>)</div>
@@ -161,19 +161,19 @@
 
   <!-- ④ pt_compare -->
   <div class="card">
-    <div class="hd"><span class="no" style="color:var(--accent)">④</span><span class="ttl">调 dcu_probe 的 pt_compare(核心)</span><span class="role">★这里才真正"用 dcu_probe 工具"</span></div>
+    <div class="hd"><span class="no" style="color:var(--accent)">④</span><span class="ttl">调 hcu_probe 的 pt_compare(核心)</span><span class="role">★这里才真正"用 hcu_probe 工具"</span></div>
     <div class="body">
       <div class="code">
-        <div class="l hl"><span class="k">from</span> dcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
+        <div class="l hl"><span class="k">from</span> hcu_probe.pytorch.compare.pt_compare <span class="k">import</span> pt_compare</div>
         <div class="l hl">pt_compare({<span class="s">"npu_path"</span>: tp, <span class="s">"bench_path"</span>: fbench}, out,</div>
         <div class="l hl">           consistent_check=<span class="k">True</span>, backend=<span class="s">"fsdp"</span>)</div>
         <div class="l"><span class="c"># npu_path = 训练侧 dump;bench_path = ③ 过滤后的推理 dump</span></div>
         <div class="l"><span class="c"># 产物:out/compare_result_*.xlsx(逐算子 NormRelativeErr)</span></div>
       </div>
       <div class="ann">
-        <span class="rt rt-a">dcu_probe 工具</span>
+        <span class="rt rt-a">hcu_probe 工具</span>
         <h4>官方逐算子比对就在这一行</h4>
-        <p>前 3 步全是铺垫,<b>这一行才是真正发挥效果的 dcu_probe 工具</b>。它读两侧 dump.json,用 <code>consistent_check</code>+<code>backend=fsdp</code> 的专用算法把算子对齐(FSDP_MODULE_MAP 命名映射 + dual_monotonic_sort 单调对齐),逐算子算 Norm 相对误差,落 xlsx。</p>
+        <p>前 3 步全是铺垫,<b>这一行才是真正发挥效果的 hcu_probe 工具</b>。它读两侧 dump.json,用 <code>consistent_check</code>+<code>backend=fsdp</code> 的专用算法把算子对齐(FSDP_MODULE_MAP 命名映射 + dual_monotonic_sort 单调对齐),逐算子算 Norm 相对误差,落 xlsx。</p>
         <p><b>脚本 vs 工具的分工</b>:脚本负责"喂对齐好的数据",<code>pt_compare</code> 负责"算误差、出报告"。</p>
       </div>
     </div>
@@ -201,10 +201,10 @@
 
   <!-- 区别 -->
   <h2 class="sec">pt_compare vs verify_consistency.py vs run_fsdp_compare_07.py 的区别</h2>
-  <p class="lead">关键区分:<b>pt_compare 是 dcu_probe 的官方比对工具(底层能力)</b>;三个脚本的差别在于「用不用它、怎么喂它」。</p>
+  <p class="lead">关键区分:<b>pt_compare 是 hcu_probe 的官方比对工具(底层能力)</b>;三个脚本的差别在于「用不用它、怎么喂它」。</p>
   <table class="ov">
     <tr><th>对象</th><th>是什么</th><th>用 pt_compare?</th><th>在 0.7 上</th><th>粒度 / 结果</th></tr>
-    <tr><td><code>pt_compare</code></td><td><b>dcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 DCU fork)</td><td>—(它本身就是工具)</td><td>直接喂 0.7 dump 会崩</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
+    <tr><td><code>pt_compare</code></td><td><b>hcu_probe 官方比对 API</b>(底层工具,华为 msprobe compare 的 HCU fork)</td><td>—(它本身就是工具)</td><td>直接喂 0.7 dump 会崩</td><td>逐算子 NormRelativeErr,出 xlsx</td></tr>
     <tr><td><code>verify_consistency.py</code></td><td><b>自研外挂脚本</b>(原来 0.7 收官用的)</td><td><b>❌ 不用</b> —— 自己读 dump.json 比</td><td>✅ 可用(绕开 pt_compare 的盲区)</td><td>只比 embed + 每层 2 layernorm 的 normed 输出 → <b>80/80 &lt;1%</b></td></tr>
     <tr><td><code>run_fsdp_compare_07.py</code></td><td>调 pt_compare <b>原版</b>(0.8 那套,不过滤)</td><td><b>✅ 用</b></td><td><b>❌ 崩</b>(dual_monotonic_sort)</td><td>—(72 交错模块撑爆对齐)</td></tr>
     <tr><td><code>run07_filtered.py</code></td><td>= run_fsdp_compare + <b>先过滤交错模块</b></td><td><b>✅ 用</b></td><td>✅ 通</td><td>叶子算子 98 个 → <b>98/98 &lt;1%</b></td></tr>
@@ -221,7 +221,7 @@
 
   <div class="flow">
     <b>一句话记住三者关系:</b><br>
-    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = dcu_probe 官方比对工具(核心能力)
+    <div class="chain" style="margin-top:8px"><b style="color:#0969da">pt_compare</b> = hcu_probe 官方比对工具(核心能力)
 <b style="color:#1a7f37">verify_consistency.py</b> = <b>绕开</b> pt_compare,自研只比 normed 算子(80/80,原来用的)
 <b>run_fsdp_compare_07.py</b> = <b>直接喂</b> pt_compare,0.7 上崩(证明官方工具不能裸用)
 <b style="color:#bc4c00">run07_filtered.py</b> = <b>过滤后喂</b> pt_compare,0.7 上通(98/98,官方口径复核)</div>
@@ -229,7 +229,7 @@
 
 </div>
 <footer>
-  run07_filtered.py 代码逻辑 · 核心工具 dcu_probe.pytorch.compare.pt_compare · 与 verify_consistency.py / run_fsdp_compare_07.py 对照
+  run07_filtered.py 代码逻辑 · 核心工具 hcu_probe.pytorch.compare.pt_compare · 与 verify_consistency.py / run_fsdp_compare_07.py 对照
 </footer>
 </body>
 </html>
