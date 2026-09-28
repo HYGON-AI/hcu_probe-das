@@ -36,4 +36,7 @@ monitor_output_csv2tb
 .nfs*
 .coverage
 
+# skill output
+.claude/pytorch-integration/dump/scripts/results
+
 
