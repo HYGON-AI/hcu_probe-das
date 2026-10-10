@@ -1,25 +1,11 @@
 ---
-name: pytorch-integration
-description: 把 hcuprobe 精度数据 dump 集成进 PyTorch 训练/推理脚本。当用户需要采集算子级（L1）、模块级（L0）精度数据、编写 config.json、按 step 定点 dump、或排查"结果目录空/字段缺失"等问题时使用。keywords: hcuprobe, PrecisionDebugger, dump, 精度数据采集, config.json, L0, L1, module_dump, seed_all
+name: pytorch-integration-dump
+description: 把 hcuprobe 精度数据 dump 集成进 PyTorch 训练/推理脚本。hcuProbe工具通过在训练脚本中添加PrecisionDebugger接口并启动训练的方式，采集模型在运行过程中的精度数据。
 ---
 
-# PyTorch 精度数据采集集成
+## 一、快速入门
 
-本 skill 说明如何用 `hcuprobe` 在 PyTorch 脚本中接入精度数据采集，覆盖 `scripts/` 下四个可直接运行的 demo。
-
-## 核心模型
-
-hcuprobe 的采集流程只有三个动作，所有 demo 都是这三步的不同变体：
-
-1. **构造** `PrecisionDebugger(config_path=...)` —— 进程内单例，重复构造返回同一实例。
-2. **圈定范围** —— `debugger.start()` / `debugger.stop()` 之间的 forward/backward 才会被采集。
-3. **推进 step** —— `debugger.step()` 结束当前 step，把缓冲的数据落盘到 `dump_path/stepN/`。
-
-`start()` 和 `stop()` 是成对的书挡。漏掉 `stop()` 数据不落盘；漏掉 `step()` 则多个 step 的数据会挤在同一个目录里。
-
-## 最小可运行模板
-
-`scripts/quick_start.py` 是最小完整例子：单次 forward + backward + 一次 step。
+`scripts/quick_start.py` 是最小完整例子：它展示如何在PyTorch模型中使用hcuProbe工具进行精度数据采集。这个示例定义了一个nn.Module类型的简单网络，使用原型函数PrecisionDebugger进行数据采集。
 
 ```python
 import os
@@ -40,24 +26,44 @@ class ModuleOP(nn.Module):
         return F.relu(x1)
 
 if __name__ == "__main__":
-    seed_all()                                  # 固定随机种子，保证可复现
+    seed_all()                                                    # 固定随机种子，保证可复现
     os.chdir(Path(__file__).resolve().parent)   # 让相对 dump_path 落在脚本目录
     debugger = PrecisionDebugger(config_path=str(Path(__file__).resolve().parent / "config.json"))
     model = ModuleOP()
-    debugger.start(model=model)                 # 圈定采集范围
+    debugger.start(model=model)                    # 圈定采集范围
     x = torch.randn(10, 8)
     out = model(x)
     loss = out.sum()
     loss.backward()
-    debugger.stop()                             # 停止采集
-    debugger.step()                             # 落盘当前 step
+    debugger.stop()                                            # 停止采集
+    debugger.step()                                            # 落盘当前 step
+```
+其中config.json文件为精度数据采集的配置文件，需要自行创建，详细说明请参见config.json介绍。下面是一个简单的config.json文件示例：
+
+```json
+{
+    "task": "statistics",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "async_dump": false,
+    "extra_info": true,
+
+    "statistics": {
+        "scope": [],
+        "list": [],
+        "tensor_list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}
 ```
 
-**必须 `os.chdir` 到脚本目录**。`config.json` 里的 `"dump_path": "results"` 是相对路径，不切目录时结果会散落在启动时的工作目录下。四个 demo 都做了这一步。
 
-## 四种集成模式
+## 二、数据采集功能介绍
 
-### 模式 1：单次前反向（`quick_start.py`）
+### 2.1 dump采集基础示例
 
 用于快速验证工具是否接通。一次 forward/backward 配一次 step，产出 `results/step0/proc<PID>/`。
 

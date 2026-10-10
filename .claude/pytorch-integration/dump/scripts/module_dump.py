@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Hygon Information Technology Co., Ltd.
+# SPDX-License-Identifier: MulanPSL-2.0
+
 import os
 import torch
 import torch.nn as nn

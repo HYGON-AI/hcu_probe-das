@@ -71,11 +71,15 @@ pip install hcuprobe[precheck]
 
 hcuprobe 是 msProbe 的 HCU 适配 fork。内核子树 `core / pytorch / visualization / overflow_check / msaccucmp` 与上游一致,`integrations / tools` 为 HCU 侧自维护。**本仓未覆盖的上游功能**(如 `checkpoint_compare`、`response_anomaly`、accuracy_checker 细节等)可参考上游 user_guide,注意 `msprobe` → `hcuprobe` 命令映射、跳过 NPU / 昇腾专属能力。
 
+**基线 Commit**: 上游 `26.2.0` 分支 `76f701cd74b765b98e9652fa0730b377daa25559`(2026-09-23);本仓历史中对应提交为 `87dec7eb1602b0b123c312eab0840b1d5ab1fd89`(历史整理后哈希不同,树内容与上游基线完全一致)。基线之后的全部提交均为 HYGON 侧修改。
+
 **→ [上游同步说明 docs/UPSTREAM_SYNC.md](docs/UPSTREAM_SYNC.md)**
 
 ## ⚖️ 许可证
 
-- **代码**: 沿用上游 msProbe 的[木兰宽松许可证 第 2 版(Mulan PSL v2)](https://gitcode.com/Ascend/msprobe)。
-- **文档**: 上游 `docs/` 为 CC-BY 4.0;从上游文档复制内容须保留署名。
+- **代码**: 沿用上游 msProbe 的[木兰宽松许可证 第 2 版(Mulan PSL v2)](LICENSE)。
+- **文档**: 上游 `docs/` 为 CC-BY 4.0([docs/LICENSE](docs/LICENSE));从上游文档复制内容须保留署名。
+- **修改归属**: 上游基线之上的 HCU 适配修改与新增内容 Copyright (c) 2026 HYGON DAS Team,同样以 Mulan PSL v2 发布。
+- **第三方清单**: 仓内含有/构建时引用的第三方代码的来源、固定版本、版权及许可证,见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 详见 **[上游同步说明 · License 与署名](docs/UPSTREAM_SYNC.md#license-与署名)**。
