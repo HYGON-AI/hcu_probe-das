@@ -2,11 +2,11 @@
 name = "hcu-probe"
 version = "26.2.0+hcu.0.2.0"
 requires-python = ">=3.8,<3.15"
-description = "Sugon HCU distribution of mindstudio-probe training precision debugger, with multi-framework integration layer"
+description = "HYGON HCU distribution of mindstudio-probe training precision debugger, with multi-framework integration layer"
 license = "MulanPSL-2.0"
 readme = "README.md"
 authors = [
-    {name = "Sugon DAS Team"},
+    {name = "HYGON DAS Team"},
 ]
 keywords = ["pytorch", "probe", "hcu", "precision", "megatron"]
 classifiers = [
