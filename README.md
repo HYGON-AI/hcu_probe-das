@@ -20,6 +20,8 @@
 
 <div align="left">
 
+简体中文 | [English](README_EN.md)
+
 ## ℹ️ 简介
 
 hcuprobe 是海光 HCU 平台的训练精度调试 Python whl 包,给在 HCU 上训练的团队提供一套「采集 → 比对 → 定界」的精度工具:训练时逐层 dump 张量统计量、监测梯度 / 优化器 / 参数,训练后离线做两端精度比对、溢出定位、API 精度预检,以及 RL 场景的训推一致性验证。
@@ -79,7 +81,7 @@ hcuprobe 是 msProbe 的 HCU 适配 fork。内核子树 `core / pytorch / visual
 
 - **代码**: 沿用上游 msProbe 的[木兰宽松许可证 第 2 版(Mulan PSL v2)](LICENSE)。
 - **文档**: 上游 `docs/` 为 CC-BY 4.0([docs/LICENSE](docs/LICENSE));从上游文档复制内容须保留署名。
-- **修改归属**: 上游基线之上的 HCU 适配修改与新增内容 Copyright (c) 2026 HYGON DAS Team,同样以 Mulan PSL v2 发布。
+- **修改归属**: 上游基线之上的 HCU 适配修改与新增内容 Hygon Information Technology Co., Ltd.同样以 Mulan PSL v2 发布。
 - **第三方清单**: 仓内含有/构建时引用的第三方代码的来源、固定版本、版权及许可证,见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 详见 **[上游同步说明 · License 与署名](docs/UPSTREAM_SYNC.md#license-与署名)**。
