@@ -25,7 +25,7 @@ classifiers = [
 dependencies = [
     "wheel",
     "einops",
-    "numpy>=1.23.0",
+    "numpy>=1.23.0, <2.0",
     "pandas>=1.3.5",
     "pyyaml",
     "tqdm",
@@ -36,6 +36,7 @@ dependencies = [
     "packaging",
     "pytz",
     "psutil",
+    "h5py",
 ]
 
 [project.scripts]
