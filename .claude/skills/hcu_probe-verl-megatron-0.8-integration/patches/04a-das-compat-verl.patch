@@ -1,0 +1,15 @@
+diff --git a/verl/utils/fsdp_utils.py b/verl/utils/fsdp_utils.py
+index 6d84ded5..1a1856ef 100644
+--- a/verl/utils/fsdp_utils.py
++++ b/verl/utils/fsdp_utils.py
+@@ -12,6 +12,10 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++# das torch 2.5.1 兼容:verl 0.8.0 此文件仅在 torch>=2.6 import DTensorSpec,但 :1050 函数签名注解无条件引用,
++# torch 2.4-2.6 区间 import 时触发 NameError。future annotations 让注解 lazy(PEP 563)规避(该函数 torch2.5 不调用)。
++from __future__ import annotations
++
+ import functools
+ import itertools
+ import json

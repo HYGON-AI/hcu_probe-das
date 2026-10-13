@@ -1,0 +1,14 @@
+{
+    "task": "statistics",
+    "dump_path": "/data/hcu_probe_verl/verl_run/dump_generate",
+    "rank": [],
+    "step": [],
+    "level": "L0",
+    "async_dump": false,
+    "statistics": {
+        "scope": [],
+        "list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}

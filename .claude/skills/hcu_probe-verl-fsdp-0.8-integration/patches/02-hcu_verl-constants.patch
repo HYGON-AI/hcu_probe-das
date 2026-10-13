@@ -1,0 +1,21 @@
+diff --git a/hcu_verl/trainer/constants_ppo.py b/hcu_verl/trainer/constants_ppo.py
+index 8412a65..2fa4434 100644
+--- a/hcu_verl/trainer/constants_ppo.py
++++ b/hcu_verl/trainer/constants_ppo.py
+@@ -69,6 +69,16 @@ PPO_RAY_RUNTIME_ENV = {
+         "GLOG_minloglevel": "3",
+         "GPU_MAX_HW_QUEUES": "10",
+         "RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO": "0",
++        # hcu_probe 训推 dump:从 driver 透传到 ray worker(MegatronEngine/FSDPEngine._ensure_debugger 在 worker 进程读)
++        "DUMP_ON": os.getenv("DUMP_ON", "0"),
++        "DUMP_PHASE": os.getenv("DUMP_PHASE", "log_prob"),
++        "DUMP_ACTOR_CONFIG": os.getenv("DUMP_ACTOR_CONFIG", "/path/to/shared/config_actor.json"),
++        # 推理侧 vllm worker(也是 ray worker)读 DUMP_CONFIG_PATH 建 debugger;空字符串则不 dump
++        "DUMP_CONFIG_PATH": os.getenv("DUMP_CONFIG_PATH", ""),
++        # async dump 文档要求关 torchdynamo(避免训练侧编译影响 dump 数值);shell export 到不了 worker,须透传
++        "TORCHDYNAMO_DISABLE": os.getenv("TORCHDYNAMO_DISABLE", "0"),
++        # hcu_probe monitor:worker 读 MONITOR_CONFIG 建 TrainerMonitorV2;空则不 monitor
++        "MONITOR_CONFIG": os.getenv("MONITOR_CONFIG", ""),
+     },
+ }
+ 

@@ -1,0 +1,33 @@
+#!/bin/bash
+mkdir -p /path/to/shared/verl_run_v08
+exec > /path/to/shared/verl_run_v08/train_dump.log 2>&1
+set +e
+VERL=/path/to/shared/hcu_verl_v0.8.0
+OUT=/path/to/shared/verl_run_v08
+ray stop --force 2>/dev/null || true
+for pat in main_ppo EngineCore vllm_async WorkerDict; do pkill -9 -f "$pat" 2>/dev/null; done
+sleep 6
+RAY_PY=$(pip show ray | grep Location | awk -F 'Location: ' '{print $2}')/ray/_private/thirdparty/pyamdsmi/pyamdsmi.py
+if [[ -f "$RAY_PY" ]]; then
+  sed -i "s|/sys/module/amdgpu/initstate|/sys/module/hycu/initstate|g" "$RAY_PY"
+  sed -i "s|rocm_path = os.environ.get('ROCM_PATH', '/opt/rocm')|rocm_path = os.environ.get('HYHAL_PATH', '/opt/rocm')|g" "$RAY_PY"
+fi
+cp ${VERL}/hcu_verl/patch_init.py ${VERL}/verl/verl/__init__.py
+RQ=${VERL}/examples/grpo_trainer/run_qwen3_8b_megatron.sh
+sed -i "s/^train_cp=2/train_cp=1/" $RQ
+sed -i "s/^enable_sleep=True/enable_sleep=False/" $RQ
+sed -i "s/^gpu_memory_utilization=0.6/gpu_memory_utilization=0.18/" $RQ
+export PYTHONWARNINGS=ignore TRANSFORMERS_VERBOSITY=error VERL_PATH=${VERL}
+export PYTHONPATH=${VERL}:${VERL}/verl:${VERL}/Megatron-LM:${PYTHONPATH}
+export VLLM_CUDART_SO_PATH=/opt/dtk/hip/lib/libamdhip64.so HYHAL_PATH=${HYHAL_PATH:-/opt/hyhal}
+export TENSORBOARD_DIR=${OUT}/tensorboard
+unset CUDA_VISIBLE_DEVICES ROCR_VISIBLE_DEVICES
+export HIP_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 RAY_EXPERIMENTAL_NOSET_HIP_VISIBLE_DEVICES=1 GPUS_PER_NODE=8
+export HYDRA_FULL_ERROR=1 RAY_DEDUP_LOGS=0
+export HSA_NO_SCRATCH_RECLAIM=1 HSA_FORCE_FINE_GRAIN_PCIE=1 HIP_FORCE_DEV_KERNARG=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export DUMP_ON=1 PROMPTS_ONLY=1 DUMP_PHASE=log_prob DUMP_ACTOR_CONFIG=/path/to/shared/config_actor_v08.json
+export DUMP_CONFIG_PATH=/path/to/shared/dump_tools/config_generate_v08.json
+cd ${VERL}/examples/grpo_trainer || exit 1
+echo "localhost slots=8" > ./hostfile
+bash run_qwen3_8b_megatron.sh --data_path=/path/to/shared/data --host_file=./hostfile --hf_model_path=/path/to/shared --mcore_model_path=/path/to/shared --save_ckpt_path=${OUT} --profiling=
+echo RUN_EXIT=$?

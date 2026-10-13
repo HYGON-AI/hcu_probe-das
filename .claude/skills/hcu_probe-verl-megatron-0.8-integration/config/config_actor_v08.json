@@ -1,0 +1,9 @@
+{
+    "task": "statistics",
+    "dump_path": "/path/to/shared/verl_run_v08/dump_actor",
+    "rank": [],
+    "step": [],
+    "level": "L0",
+    "async_dump": false,
+    "statistics": {"scope": [], "list": [], "data_mode": ["all"], "summary_mode": "statistics"}
+}

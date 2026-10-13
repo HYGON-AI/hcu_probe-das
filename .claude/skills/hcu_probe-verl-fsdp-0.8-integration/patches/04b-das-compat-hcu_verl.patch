@@ -1,0 +1,15 @@
+diff --git a/hcu_verl/workers/rollout/vllm_rollout/utils.py b/hcu_verl/workers/rollout/vllm_rollout/utils.py
+index e170ce1..fa1277a 100644
+--- a/hcu_verl/workers/rollout/vllm_rollout/utils.py
++++ b/hcu_verl/workers/rollout/vllm_rollout/utils.py
+@@ -14,4 +14,7 @@ def get_device_uuid(device_id: int) -> str:
+         else:
+             return f"NPU-{device_id}"
+     else:
+-        return f"GPU-{get_torch_device().get_device_properties(device_id).uuid}"
+\ No newline at end of file
++        # das torch 2.5.1 的 device_properties 无 uuid/pci_bus_id,fallback 用 device_id(单节点唯一)
++        props = get_torch_device().get_device_properties(device_id)
++        _uuid = getattr(props, "uuid", None)
++        return f"GPU-{_uuid if _uuid is not None else device_id}"
+\ No newline at end of file

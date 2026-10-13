@@ -1,0 +1,108 @@
+#!/bin/bash
+# ⚠️ 本脚本路径为示例(bw15 环境),复用前改头部 VERL/ASSETS/OUT/MODEL_PATH/config 等为你的环境路径。
+# verl 0.7.1 Megatron 后端 baseline 训练(Qwen2.5-0.5B + GSM8K + GRPO,单节点 8 卡 HCU(路径为示例))
+# 目的:铁律——接 dump 前先验 megatron 后端普通训练健康(无 dump / 无 PROMPTS_ONLY)
+# 容器内执行(路径示例,改头部 VAR 后):bash run_baseline.sh
+set +e
+VERL=/public4/share/tanbo_work/hcu_verl_tanbo
+ASSETS=/public4/share/tanbo_work/verl_assets
+OUT=/public4/share/tanbo_work/verl_mega_run
+MODEL_PATH=${ASSETS}/models/Qwen2.5-0.5B-Instruct
+MCORE_PATH=${ASSETS}/models/Qwen2.5-0.5B-Instruct-mcore
+mkdir -p ${OUT}
+
+echo "==================== [0/4] 清残留 ray/vllm ===================="
+ray stop --force 2>/dev/null || true
+for pat in main_ppo EngineCore vllm_async WorkerDict "ray::" vLLMHttpServer raylet gcs_server; do pkill -9 -f "$pat" 2>/dev/null; done
+sleep 5
+
+echo "==================== [1/4] ray hycu 补丁(ray 认 hcugpu,海光是 hycu)===================="
+RAY_PY=$(pip show ray | grep Location | awk -F 'Location: ' '{print $2}')/ray/_private/thirdparty/pyamdsmi/pyamdsmi.py
+if [[ -f "$RAY_PY" ]]; then
+    sed -i "s|/sys/module/amdgpu/initstate|/sys/module/hycu/initstate|g" "$RAY_PY"
+    sed -i "s|rocm_path = os.environ.get('ROCM_PATH', '/opt/rocm')|rocm_path = os.environ.get('HYHAL_PATH', '/opt/rocm')|g" "$RAY_PY"
+    echo "[ray-patch] applied: $RAY_PY"
+else
+    echo "[ray-patch] WARN not found: $RAY_PY"
+fi
+
+echo "==================== [2/4] hcu_verl patch verl(cp patch_init.py)===================="
+cp ${VERL}/hcu_verl/patch_init.py ${VERL}/verl/verl/__init__.py && echo "[hcu_verl-patch] OK"
+
+echo "==================== [3/4] env ===================="
+export PYTHONWARNINGS=ignore
+export TRANSFORMERS_VERBOSITY=error
+export VERL_PATH=${VERL}
+export PYTHONPATH=${VERL}:${VERL}/verl:${VERL}/Megatron-LM:${PYTHONPATH}
+export VLLM_CUDART_SO_PATH=/opt/dtk/hip/lib/libamdhip64.so
+export HYHAL_PATH=${HYHAL_PATH:-/opt/hyhal}
+export TENSORBOARD_DIR=${OUT}/tensorboard
+unset CUDA_VISIBLE_DEVICES || true
+unset ROCR_VISIBLE_DEVICES || true
+export HIP_VISIBLE_DEVICES=${HIP_VISIBLE_DEVICES:-"0,1,2,3,4,5,6,7"}
+export RAY_EXPERIMENTAL_NOSET_HIP_VISIBLE_DEVICES=${RAY_EXPERIMENTAL_NOSET_HIP_VISIBLE_DEVICES:-"1"}
+export HYDRA_FULL_ERROR=1
+export RAY_DEDUP_LOGS=0
+export HSA_NO_SCRATCH_RECLAIM=1
+export HSA_FORCE_FINE_GRAIN_PCIE=1
+export HIP_FORCE_DEV_KERNARG=1
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+echo "PYTHONPATH=$PYTHONPATH"
+
+echo "==================== [4/4] run 0.5b megatron baseline ===================="
+cd ${VERL}/examples/grpo_trainer || exit 1
+
+python3 -m verl.trainer.main_ppo \
+    --config-path=config \
+    --config-name=ppo_megatron_trainer \
+    data.train_files=${ASSETS}/data/gsm8k/train.parquet \
+    data.val_files=${ASSETS}/data/gsm8k/test.parquet \
+    data.train_batch_size=16 \
+    data.max_prompt_length=512 \
+    data.max_response_length=1024 \
+    data.filter_overlong_prompts=True \
+    data.truncation=error \
+    actor_rollout_ref.model.path=${MODEL_PATH} \
+    algorithm.adv_estimator=grpo \
+    algorithm.kl_ctrl.kl_coef=0.0001 \
+    actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.actor.use_kl_loss=True \
+    actor_rollout_ref.actor.kl_loss_type=low_var_kl \
+    actor_rollout_ref.actor.kl_loss_coef=0.001 \
+    actor_rollout_ref.actor.entropy_coeff=0 \
+    actor_rollout_ref.actor.ppo_mini_batch_size=16 \
+    actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 \
+    actor_rollout_ref.actor.megatron.tensor_model_parallel_size=1 \
+    actor_rollout_ref.actor.megatron.pipeline_model_parallel_size=1 \
+    actor_rollout_ref.actor.megatron.context_parallel_size=1 \
+    actor_rollout_ref.actor.megatron.expert_model_parallel_size=1 \
+    actor_rollout_ref.actor.megatron.param_offload=False \
+    actor_rollout_ref.actor.megatron.optimizer_offload=False \
+    actor_rollout_ref.actor.megatron.grad_offload=False \
+    actor_rollout_ref.actor.megatron.dist_checkpointing_path=${MCORE_PATH} \
+    actor_rollout_ref.actor.megatron.use_dist_checkpointing=True \
+    actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
+    actor_rollout_ref.ref.megatron.param_offload=True \
+    actor_rollout_ref.ref.megatron.dist_checkpointing_path=${MCORE_PATH} \
+    actor_rollout_ref.ref.megatron.use_dist_checkpointing=True \
+    actor_rollout_ref.rollout.name=vllm \
+    actor_rollout_ref.rollout.n=5 \
+    actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 \
+    actor_rollout_ref.rollout.tensor_model_parallel_size=1 \
+    actor_rollout_ref.rollout.gpu_memory_utilization=0.5 \
+    actor_rollout_ref.rollout.enforce_eager=True \
+    actor_rollout_ref.rollout.free_cache_engine=False \
+    +actor_rollout_ref.rollout.enable_sleep_mode=False \
+    trainer.critic_warmup=0 \
+    trainer.logger='["console","tensorboard"]' \
+    trainer.project_name=GRPO-Qwen2.5-0.5B-Megatron \
+    trainer.experiment_name=GRPO-Qwen2.5-0.5B-Megatron-baseline \
+    trainer.nnodes=1 \
+    trainer.n_gpus_per_node=8 \
+    trainer.device=cuda \
+    trainer.total_epochs=15 \
+    trainer.val_before_train=False \
+    trainer.test_freq=-1 \
+    trainer.save_freq=-1 \
+    trainer.default_local_dir=${OUT}/ckpts
+echo "==================== EXIT=$? ===================="

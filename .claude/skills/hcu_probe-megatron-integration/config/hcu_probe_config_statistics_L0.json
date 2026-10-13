@@ -1,0 +1,14 @@
+{
+    "task": "statistics",
+    "dump_path": "./hcu_probe_dump/statistics_L0",
+    "rank": [],
+    "step": [0, 1, 2],
+    "level": "L0",
+    "async_dump": false,
+    "statistics": {
+        "scope": [],
+        "list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}

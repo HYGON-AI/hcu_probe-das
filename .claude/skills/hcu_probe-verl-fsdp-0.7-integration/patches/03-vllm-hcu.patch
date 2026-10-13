@@ -1,0 +1,131 @@
+diff --git a/vllm_hcu/v1/dispatch_logger.py b/vllm_hcu/v1/dispatch_logger.py
+new file mode 100644
+index 0000000..15c7068
+--- /dev/null
++++ b/vllm_hcu/v1/dispatch_logger.py
+@@ -0,0 +1,63 @@
++# vllm_hcu 推理侧 dump ①:DispatchLogger
++# 部署:随 infer-deploy 自动落到容器 vllm_hcu/v1/(或手动 scp 进 site-packages/vllm_hcu/v1/)
++# 作用:每次 execute_model 记一行调度元数据到 {dump_path}/dispatch_log.jsonl,
++#       compare 时选 phase=prefill 且 requests 数=1 的行 → 拿 request_id 关联训练侧 update_actor_log。
++# das 与华为(vllm-ascend)差异:
++#   - is_prefill 用 len(scheduled_new_reqs)>0 替 AscendAttentionState(das v1 无 attn_state 入参)
++#   - scheduled_cached_reqs 用 .resumed_req_ids(das 无华为假设的 .req_ids;decode 才有,prefill 为空)
++import json
++import time
++from pathlib import Path
++
++
++class DispatchLogger:
++    def __init__(self, dump_path: str, pid: int, rank: int = 0):
++        log_dir = Path(dump_path)
++        log_dir.mkdir(parents=True, exist_ok=True)
++        self._fp = open(log_dir / "dispatch_log.jsonl", "w")
++        self._step_counter = 0
++        self._pid = pid
++        self._rank = rank
++
++    @staticmethod
++    def _req_id(req):
++        # das v1 NewRequestData 的 id 字段名兜底(req_id / request_id)
++        return getattr(req, "req_id", None) or getattr(req, "request_id", None)
++
++    def log_step(self, scheduler_output) -> None:
++        new_reqs = scheduler_output.scheduled_new_reqs
++        is_prefill = len(new_reqs) > 0
++        requests = []
++        for req in new_reqs:
++            rid = self._req_id(req)
++            requests.append(
++                {"request_id": rid, "type": "new",
++                 "tokens": scheduler_output.num_scheduled_tokens.get(rid, 0)}
++            )
++        # decode 阶段的 cached reqs(prefill-only 首验通常为空;尽力而为)
++        try:
++            cached = scheduler_output.scheduled_cached_reqs
++            for rid in getattr(cached, "resumed_req_ids", None) or []:
++                requests.append(
++                    {"request_id": rid, "type": "cached",
++                     "tokens": scheduler_output.num_scheduled_tokens.get(rid, 0)}
++                )
++        except Exception:
++            pass
++        record = {
++            "source": "dispatch_logger",
++            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
++            "pid": self._pid,
++            "rank": self._rank,
++            "step": self._step_counter,
++            "phase": "prefill" if is_prefill else "decode",
++            "total_num_scheduled_tokens": scheduler_output.total_num_scheduled_tokens,
++            "requests": requests,
++        }
++        self._fp.write(json.dumps(record, ensure_ascii=False) + "\n")
++        self._fp.flush()
++        self._step_counter += 1
++
++    def close(self):
++        if self._fp and not self._fp.closed:
++            self._fp.close()
+diff --git a/vllm_hcu/v1/hcu_model_runner.py b/vllm_hcu/v1/hcu_model_runner.py
+index 140f7da..0b59a98 100644
+--- a/vllm_hcu/v1/hcu_model_runner.py
++++ b/vllm_hcu/v1/hcu_model_runner.py
+@@ -879,6 +879,31 @@ class GPUModelRunner(
+         self._mamba_copy_bufs: mamba_utils.MambaCopyBuffers | None = None
+         self.layerwise_nvtx_hooks_registered = False
+ 
++        # === hcu_probe 训推一致 dump ②:env DUMP_CONFIG_PATH 开关(das 无 additional_config 故走 env)===
++        import os as _os
++        self._hcu_debugger = None
++        self._hcu_dispatch_logger = None
++        _hcu_cfg = _os.environ.get("DUMP_CONFIG_PATH")
++        if _hcu_cfg:
++            from hcu_probe.pytorch import PrecisionDebugger, seed_all
++            seed_all(mode=True)
++            self._hcu_debugger = PrecisionDebugger(config_path=_hcu_cfg)
++            _hcu_pid = _os.getpid()
++            _hcu_pid_path = _os.path.join(self._hcu_debugger.config.dump_path, str(_hcu_pid))
++            self._hcu_debugger.config.dump_path = _hcu_pid_path  # 多 worker 按 pid 隔离
++            try:
++                self._hcu_debugger.service.config.dump_path = _hcu_pid_path
++            except Exception:
++                pass
++            try:
++                from vllm_hcu.v1.dispatch_logger import DispatchLogger
++                self._hcu_dispatch_logger = DispatchLogger(
++                    dump_path=_hcu_pid_path, pid=_hcu_pid,
++                    rank=torch.distributed.get_rank() if torch.distributed.is_initialized() else 0)
++            except Exception as _e:
++                logger.warning(f"[hcu_probe] DispatchLogger init failed: {_e}")
++            logger.warning(f"[hcu_probe-infer] debugger init pid={_hcu_pid} dump={_hcu_pid_path}")
++
+     def update_max_model_len(self, max_model_len: int) -> None:
+         self.max_model_len = max_model_len
+         if self.speculative_config:
+@@ -4146,6 +4171,10 @@ class GPUModelRunner(
+                 defer_finalize=defer_kv_connector_finalize,
+             ) as kv_connector_output,
+         ):
++            _hcu_on = getattr(self, "_hcu_debugger", None) is not None
++            _hcu_prefill = _hcu_on and len(scheduler_output.scheduled_new_reqs) > 0
++            if _hcu_prefill:
++                self._hcu_debugger.start(model=self.model)
+             model_output = self._model_forward(
+                 input_ids=input_ids,
+                 positions=positions,
+@@ -4153,6 +4182,14 @@ class GPUModelRunner(
+                 inputs_embeds=inputs_embeds,
+                 **model_kwargs,
+             )
++            if _hcu_on and self._hcu_dispatch_logger is not None:
++                try:
++                    self._hcu_dispatch_logger.log_step(scheduler_output)
++                except Exception as _e:
++                    logger.warning(f"[hcu_probe] dispatch log_step failed: {_e}")
++            if _hcu_prefill:
++                self._hcu_debugger.stop()
++                self._hcu_debugger.step()
+ 
+         with record_function_or_nullcontext("gpu_model_runner: postprocess"):
+             if self.use_aux_hidden_state_outputs:
