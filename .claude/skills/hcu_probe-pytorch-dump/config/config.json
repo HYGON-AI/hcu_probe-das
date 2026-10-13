@@ -1,0 +1,17 @@
+{
+    "task": "statistics",
+    "dump_path": "results",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "async_dump": false,
+    "extra_info": true,
+
+    "statistics": {
+        "scope": [],
+        "list": [],
+        "tensor_list": [],
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    }
+}
