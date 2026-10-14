@@ -1,0 +1,213 @@
+name: CI
+
+on:
+  pull_request_target:
+    branches:
+      - 26.2.0-dev
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches:
+      - 26.2.0-dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hcu-probe-ci-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Python syntax and style
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install Ruff
+        run: python -m pip install ruff==0.14.14
+
+      - name: Check Python syntax
+        run: python -m compileall -q python test
+
+      - name: Check Python code
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${EVENT_NAME}" == "pull_request_target" ]]; then
+            base_remote_ref="refs/remotes/ci-base/${BASE_REF}"
+            git fetch --no-tags --force \
+              "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git" \
+              "+refs/heads/${BASE_REF}:${base_remote_ref}"
+            if ! diff_base=$(git merge-base "${HEAD_SHA}" "${BASE_SHA}"); then
+              echo "ERROR: unable to determine the PR merge base." >&2
+              exit 1
+            fi
+          else
+            diff_base="${BASE_SHA}"
+            if [[ -z "${diff_base}" || "${diff_base}" =~ ^0+$ ]]; then
+              diff_base="${HEAD_SHA}^"
+            fi
+          fi
+
+          changed_python_file=$(mktemp)
+          trap 'rm -f -- "${changed_python_file}"' EXIT
+          if ! git diff --name-only --diff-filter=ACMR -z \
+            "${diff_base}" "${HEAD_SHA}" -- 'python/**/*.py' > "${changed_python_file}"; then
+            echo "ERROR: unable to list changed Python files." >&2
+            exit 1
+          fi
+          mapfile -d '' changed_python < "${changed_python_file}"
+
+          if (( ${#changed_python[@]} == 0 )); then
+            echo "No changed production Python files to lint."
+            exit 0
+          fi
+          printf 'Checking %s\n' "${changed_python[@]}"
+          ruff check --config pre-commit/pyproject.toml "${changed_python[@]}"
+          ruff format --check --config pre-commit/pyproject.toml "${changed_python[@]}"
+
+  hcu-unit-tests:
+    name: Build and unit tests on HCU
+    # External fork code may use the self-hosted runner only when a maintainer
+    # applies hcu-ci-approved to the current revision.
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      github.event.pull_request.head.repo.full_name == github.repository ||
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'hcu-ci-approved')
+    runs-on: [self-hosted, Linux, X64, bw1100]
+    timeout-minutes: 90
+    env:
+      HARBOR_SITE: ${{ vars.HARBOR_SITE }}
+      PYPI_URL: ${{ vars.PYPI_URL }}
+      RESOURCE_SERVER_URL: ${{ vars.RESOURCE_SERVER_URL }}
+      CI_IMAGE: ${{ vars.HARBOR_SITE }}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.10-mkl2024.2.0.664
+      PYTORCH_DAS_SPEC: ${{ vars.PYTORCH_DAS_SPEC || 'torch' }}
+      CONTAINER_NAME: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Repair workspace permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${HARBOR_SITE:?Repository variable HARBOR_SITE is required}"
+          docker pull "${CI_IMAGE}"
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            "${CI_IMAGE}" \
+            chown -R "$(id -u):$(id -g)" /workspace
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Run build and tests in HCU container
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${PYPI_URL:?Repository variable PYPI_URL is required}"
+          : "${RESOURCE_SERVER_URL:?Repository variable RESOURCE_SERVER_URL is required}"
+
+          resource_server_url="${RESOURCE_SERVER_URL%/}"
+          pypi_url="${PYPI_URL%/}"
+          dtk_pkg_url="${resource_server_url}/dtk-pkg/dtk26.04/DTK-26.04-rc4-centos8-x86_64.tar.gz"
+          pytorch_das_index_url="${pypi_url}/nightly/dtk2604/+simple/"
+          pypi_authority="${pypi_url#*://}"
+          pypi_authority="${pypi_authority%%/*}"
+          pytorch_das_trusted_host="${pypi_authority%%:*}"
+
+          echo "::add-mask::${RESOURCE_SERVER_URL}"
+          echo "::add-mask::${PYPI_URL}"
+          echo "::add-mask::${dtk_pkg_url}"
+          echo "::add-mask::${pytorch_das_index_url}"
+          echo "::add-mask::${pytorch_das_trusted_host}"
+
+          docker run --detach \
+            --name "${CONTAINER_NAME}" \
+            --network host \
+            --ipc host \
+            --init \
+            --shm-size=32g \
+            --device=/dev/kfd \
+            --device=/dev/dri \
+            --group-add video \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            --volume /opt/hyhal:/opt/hyhal:ro \
+            --volume "${GITHUB_WORKSPACE}:/workspace/hcu_probe-das" \
+            --workdir /workspace/hcu_probe-das \
+            --env "PYTORCH_DAS_INDEX_URL=${pytorch_das_index_url}" \
+            --env "PYTORCH_DAS_TRUSTED_HOST=${pytorch_das_trusted_host}" \
+            --env PYTORCH_DAS_SPEC \
+            "${CI_IMAGE}" tail -f /dev/null
+
+          docker exec --env "DTK_PKG_URL=${dtk_pkg_url}" "${CONTAINER_NAME}" bash -lc '
+            set -euo pipefail
+            dtk_stage="$(mktemp -d /tmp/hcu-probe-dtk.XXXXXX)"
+            trap '\''rm -rf -- "${dtk_stage}"'\'' EXIT
+            mkdir -p "${dtk_stage}/extract"
+            echo "Downloading DTK package from configured resource server."
+            wget --quiet --tries=3 --timeout=120 \
+              --output-document="${dtk_stage}/dtk.tar.gz" -- "${DTK_PKG_URL}"
+            tar -xzf "${dtk_stage}/dtk.tar.gz" -C "${dtk_stage}/extract"
+            version_file="$(find "${dtk_stage}/extract" -type f -path "*/.info/rocm_version" -print -quit)"
+            [[ -n "${version_file}" ]]
+            dtk_source="${version_file%/.info/rocm_version}"
+            rm -rf -- /opt/dtk
+            mkdir -p /opt/dtk
+            cp -a "${dtk_source}/." /opt/dtk/
+            echo "Installed DTK version: $(tr -d "[:space:]" < /opt/dtk/.info/rocm_version)"
+            test -f /opt/dtk/env.sh
+          '
+
+          docker exec "${CONTAINER_NAME}" bash -lc '
+            set -euo pipefail
+            bash scripts/ci/run_hcu_ci.sh
+          '
+
+      - name: Restore workspace permissions
+        if: always()
+        shell: bash
+        run: |
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/workspace" \
+            "${CI_IMAGE}" \
+            chown -R "$(id -u):$(id -g)" /workspace || true
+
+      - name: Upload test and build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test/hcuprobe_test/report/
+            dist/*.whl
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Clean up container
+        if: always()
+        shell: bash
+        run: docker rm --force "${CONTAINER_NAME}" >/dev/null 2>&1 || true
