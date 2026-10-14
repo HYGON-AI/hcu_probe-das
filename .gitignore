@@ -37,6 +37,9 @@ monitor_output_csv2tb
 .coverage
 
 # skill output
-.claude/pytorch-integration/dump/scripts/results
+.claude/skills/hcu_probe-pytorch-dump/scripts/*/results
+.claude/skills/hcu_probe-pytorch-dump/scripts/*/config.json
+.claude/settings.local.json
+
 
 
