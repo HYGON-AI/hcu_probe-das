@@ -14,22 +14,31 @@ permissions:
   contents: read
 
 concurrency:
-  group: hcu-probe-ci-${{ github.event.pull_request.number || github.ref_name }}
-  cancel-in-progress: false
+  # Runs caused by unrelated labels use their own group so they cannot cancel
+  # an approved HCU run for the same pull request.
+  group: hcu-probe-ci-${{ (github.event.action == 'labeled' && github.event.label.name != 'hcu-ci-approved') && github.run_id || github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   quality:
     name: Python syntax and style
+    if: >-
+      github.event_name != 'pull_request_target' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'hcu-ci-approved'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+          # The HCU gate below limits privileged fork execution; this hosted
+          # job only compiles and lints source without retaining credentials.
+          allow-unsafe-pr-checkout: true
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -89,12 +98,14 @@ jobs:
   hcu-unit-tests:
     name: Build and unit tests on HCU
     # External fork code may use the self-hosted runner only when a maintainer
-    # applies hcu-ci-approved to the current revision.
+    # applies hcu-ci-approved to the current revision. A later push requires
+    # the label to be removed and applied again after review.
     if: >-
       github.event_name != 'pull_request_target' ||
-      github.event.pull_request.head.repo.full_name == github.repository ||
-      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
-      (github.event.action == 'labeled' && github.event.label.name == 'hcu-ci-approved')
+      ((github.event.action != 'labeled' || github.event.label.name == 'hcu-ci-approved') &&
+       (github.event.pull_request.head.repo.full_name == github.repository ||
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
+        github.event.action == 'labeled'))
     runs-on: [self-hosted, Linux, X64, bw1100]
     timeout-minutes: 90
     env:
@@ -103,6 +114,7 @@ jobs:
       RESOURCE_SERVER_URL: ${{ vars.RESOURCE_SERVER_URL }}
       CI_IMAGE: ${{ vars.HARBOR_SITE }}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.10-mkl2024.2.0.664
       PYTORCH_DAS_SPEC: ${{ vars.PYTORCH_DAS_SPEC || 'torch' }}
+      LOCAL_REPORT_ROOT: ${{ vars.HCU_CI_REPORT_ROOT || '/ci_public/hcu_probe-das' }}
       CONTAINER_NAME: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Repair workspace permissions
@@ -117,11 +129,14 @@ jobs:
             chown -R "$(id -u):$(id -g)" /workspace
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          # Fork code reaches this self-hosted runner only after the gate above
+          # has accepted a trusted author or a maintainer-applied approval label.
+          allow-unsafe-pr-checkout: true
 
       - name: Run build and tests in HCU container
         shell: bash
@@ -196,8 +211,38 @@ jobs:
             "${CI_IMAGE}" \
             chown -R "$(id -u):$(id -g)" /workspace || true
 
+      - name: Save reports on runner
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          local_run_dir="${LOCAL_REPORT_ROOT}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${local_run_dir}"
+
+          saved=false
+          if [[ -d "${GITHUB_WORKSPACE}/test/hcuprobe_test/report" ]]; then
+            cp -a --no-preserve=ownership \
+              "${GITHUB_WORKSPACE}/test/hcuprobe_test/report" "${local_run_dir}/"
+            saved=true
+          fi
+
+          shopt -s nullglob
+          wheels=("${GITHUB_WORKSPACE}"/dist/*.whl)
+          if (( ${#wheels[@]} > 0 )); then
+            mkdir -p "${local_run_dir}/dist"
+            cp --no-dereference -- "${wheels[@]}" "${local_run_dir}/dist/"
+            saved=true
+          fi
+
+          if [[ "${saved}" == "true" ]]; then
+            echo "Reports saved on runner: ${local_run_dir}"
+          else
+            echo "No test reports or wheels were produced."
+          fi
+
       - name: Upload test and build reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
