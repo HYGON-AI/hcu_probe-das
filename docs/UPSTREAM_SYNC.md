@@ -9,12 +9,10 @@ hcuprobe 是华为 [`mindstudio-probe`（msProbe）](https://gitcode.com/Ascend/
 | 本包 名称 / 版本 | `hcuprobe` / `26.2.0+hcu.0.2.0` |
 | 上游项目 / 版本 | 华为 msProbe（mindstudio-probe）`26.2.0` |
 | 上游仓 | `https://gitcode.com/Ascend/msprobe`（分支 `26.2.0`） |
-| 对齐上游 commit | `76f701cd74b765b98e9652fa0730b377daa25559`（2026-09-23） |
-| 本仓基线 commit | `87dec7eb1602b0b123c312eab0840b1d5ab1fd89`（历史整理后哈希不同，树内容与上游对齐点完全一致） |
+| 对齐上游 commit | `ac322b6f`（2026-09-27） |
+| 本仓基线 commit | `2c7776d5`（历史整理后哈希不同，树内容与上游对齐点完全一致） |
 | 命名空间 | 上游 `msprobe.*` → 本包 `hcuprobe.*` |
 | CLI 命令 | 上游 `msprobe` → 本包 `hcuprobe`（`hcuprobe.cli:main`） |
-
-> **fork 落后上游多少**：本地参考 clone（`upstream_msprobe/`，仅供 diff）当前 `master` HEAD 已前进到 `2fc9d6c`（2026-09-24），领先于对齐点 `76f701cd`。要拉平差异见文末「重新同步」。
 
 ## 子树对齐映射
 
