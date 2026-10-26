@@ -1,87 +1,96 @@
-<div align="center">
+ <div align="center">
 
-<h1 style="text-align: center;">hcuprobe: Training Accuracy Debugging Tool for HYGON HCU</h1>
+# hcuprobe: Hygon HCU Training Accuracy Debugging Tool
 
-<h3 align="center">Layer-by-layer dump · accuracy comparison · training–inference consistency verification for PyTorch distributed training / inference</h3>
+### Layer-by-layer dump · Accuracy comparison · Training–inference consistency validation for PyTorch distributed training and inference
 
-<p align="center">
-| <a href="docs/UPSTREAM_SYNC.md"><b>Upstream Sync</b></a>
-| <a href="docs/offline_analysis/"><b>Offline Analysis</b></a>
-| <a href="docs/infer/"><b>Inference-side Dump</b></a>
-| <a href="docs/FAQ.md"><b>FAQ</b></a>
-|
-</p>
-
-[![version](https://img.shields.io/badge/version-26.2.0%2Bhcu.0.2.0-green)](docs/UPSTREAM_SYNC.md)
-[![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue)](docs/UPSTREAM_SYNC.md#license-与署名)
-[![upstream](https://img.shields.io/badge/upstream-msProbe%2026.2.0-brightgreen)](https://gitcode.com/Ascend/msprobe)
+| [Upstream Synchronization](docs_hcu/UPSTREAM_SYNC.md) | [Quick Start](docs_hcu/zh/quick_start/pytorch_quick_start.md) | [User Guide](docs_hcu/zh/user_guide/README.md) | [FAQ](docs_hcu/zh/support/faq.md) |
 
 </div>
 
+[![version](https://img.shields.io/badge/version-26.2.0%2Bhcu.0.2.0-green)](docs_hcu/UPSTREAM_SYNC.md)
+[![license](https://img.shields.io/badge/license-Mulan%20PSL%20v2-blue)](docs_hcu/UPSTREAM_SYNC.md#license-and-attribution)
+[![upstream](https://img.shields.io/badge/upstream-msProbe%2026.2.0-brightgreen)](https://gitcode.com/Ascend/msprobe)
+
 <div align="left">
 
-[简体中文](README.md) | English
+English | [简体中文](README.md)
 
 ## ℹ️ Introduction
 
-hcuprobe is the training-accuracy debugging Python wheel for the HYGON HCU platform. It gives teams training on HCU a complete "collect → compare → localize" accuracy toolchain: during training it dumps per-layer tensor statistics and monitors gradients / optimizer states / parameters; after training it performs offline two-side accuracy comparison, overflow localization, and API accuracy pre-check, as well as training–inference consistency verification for RL scenarios.
+**hcuprobe** is a Python wheel package for training accuracy debugging on the Hygon HCU platform. It provides teams training on HCU with a set of tools for accuracy debugging through a complete *collect → compare → localize* workflow.
 
-It is adapted from Huawei [`mindstudio-probe` (msProbe)](https://gitcode.com/Ascend/msprobe) `26.2.0`: the core dump / comparison kernels stay aligned with upstream, while the HCU side maintains its own translation layer for multi-framework training integration. Namespace `msprobe.*` → `hcuprobe.*`, CLI command `msprobe` → `hcuprobe`. For version alignment, see the **[Upstream Sync notes](docs/UPSTREAM_SYNC.md)**.
+Its capabilities include layer-by-layer tensor statistics dumping during training, monitoring of gradients, optimizers, and model parameters, offline accuracy comparison between two execution environments, overflow detection and localization, API accuracy prechecks, and training–inference consistency validation for reinforcement learning (RL) scenarios.
+
+![hcuprobe Architecture](docs_hcu/zh/figures/readme/hcuprobe_architecture.jpg)
+
+hcuProbe adopts a layered architecture in which Python core modules work together with native C/C++ extensions to provide accuracy debugging capabilities for training and inference frameworks such as PyTorch, verl, and Megatron-LM. The project covers the complete workflow, including data collection, accuracy analysis, anomaly detection, result visualization, and report generation, and provides corresponding build, test, and delivery tools.
+
+hcuProbe is adapted from Huawei's [`mindstudio-probe` (msProbe)](https://gitcode.com/Ascend/msprobe) version `26.2.0`. The core dump and accuracy comparison implementations remain consistent with upstream, while the HCU-specific translation layer for integrating multiple training frameworks is maintained independently.
+
+The namespace is mapped from `msprobe.*` to `hcuprobe.*`, and the CLI command is changed from `msprobe` to `hcuprobe`. For version alignment details, see **[Upstream Synchronization Guide](docs_hcu/UPSTREAM_SYNC.md)**.
 
 ## ⚙️ Features
 
-hcuProbe provides three core capabilities around model accuracy debugging, covering the full "data collection → accuracy comparison → visualization" workflow:
+hcuProbe provides three core capabilities for model accuracy debugging, covering the complete *data collection → accuracy comparison → visualization* workflow.
 
-| Core capability | Description | Quick entry |
+| Core Feature | Description | Quick Access |
 |---|---|---|
-| Data collection | Driven by a config.json file; collects accuracy data during model training/inference in one step | [PyTorch data collection](.claude/pytorch-integration/dump/SKILL.md) |
-| Accuracy comparison | Compares the collected accuracy data to locate the network layers/operators where accuracy diverges | [PyTorch accuracy comparison](.claude/pytorch-integration/accuracy_compare/SKILL.md) |
-| Visualization | Parses dump data to reconstruct the model graph structure and locates accuracy differences with hierarchical visualization | [Hierarchical graph comparison](.claude/pytorch-integration//visualization/SKILL.md) |
+| Data Collection | Collect accuracy data during model training or inference through a single configuration file, `config.json`. | [PyTorch Data Dump](docs_hcu/zh/user_guide/dump/pytorch_data_dump_instruct.md) |
+| Accuracy Comparison | Compare collected accuracy data to identify network layers and operators where accuracy discrepancies occur. | [PyTorch Accuracy Comparison](docs_hcu/zh/user_guide/accuracy_compare/pytorch_accuracy_compare_instruct.md) |
+| Visualization | Reconstruct the model graph from dump data and use hierarchical visualization to locate accuracy discrepancies. | [Hierarchical Graph Visualization and Comparison](docs_hcu/zh/user_guide/accuracy_compare/pytorch_visualization_instruct.md) |
 
-> The table above lists the most common PyTorch entry points. For more frameworks and usage scenarios, see the [hcuProbe User Guide](.claude/README.md).
+> The table above lists the most commonly used entry points for PyTorch. For additional frameworks and use cases, see the [hcuProbe User Guide](docs_hcu/zh/user_guide/README.md).
 
 ## 🚀 Quick Start
 
-For a one-stop walkthrough of the complete workflow — data collection, HCU/GPU accuracy comparison, and hierarchical graph comparison — see the [hcuProbe Quick Start](.claude/quick_start/SKILL.md).
-
+For an end-to-end walkthrough of data collection, HCU/GPU accuracy comparison, and hierarchical graph visualization and comparison, see the [hcuProbe Quick Start Guide](docs_hcu/zh/quick_start/pytorch_quick_start.md).
 
 ## 📦 Installation
 
 ```bash
-# Option A: build from source (this repo)
-git clone https://github.com/HYGON-AI/hcu_probe-das
+# Option A: Build from source in this repository
+git clone https://github.com/HYGON-AI/hcu_probe-das.git
 cd hcu_probe-das
 pip wheel . --no-deps -w dist/
 pip install dist/hcuprobe-*.whl --no-deps
 
-# Option B: editable install (for development)
+# Option B: Editable installation for development
 pip install -e .
 
-# Option C: download a prebuilt whl from the GitLab Releases page and pip install it
+# Option C: Download a prebuilt wheel from the GitLab Releases page
+# and install it directly with pip
 
-# precheck extras for offline analysis (onnx / onnxruntime / skl2onnx)
-pip install hcuprobe[precheck]
+# Install optional dependencies for offline analysis prechecks
+# (ONNX / ONNX Runtime / skl2onnx)
+pip install 'hcuprobe[precheck]'
 ```
 
-> **Note:** `torch` is not declared as a dependency; provide it yourself in the training environment (the respective torch builds for HCU / NV / H20).
+> **Note:** `torch` is not included in the package dependencies. Users must provide a compatible PyTorch build for their target training environment (HCU, NVIDIA, or H20).
+
 ## 📘 User Guide
 
-For detailed usage of the tool, see the [hcuProbe User Guide](.claude/README.md).
+For detailed instructions on using the tool, see the [hcuProbe User Guide](docs_hcu/zh/user_guide/README.md).
 
+## ❓ FAQ
 
-## 🔄 Upstream Sync
+For common issues and their solutions, see the [FAQ](docs_hcu/zh/support/faq.md).
 
-hcuprobe is an HCU adaptation fork of msProbe. The kernel subtrees `core / pytorch / visualization / overflow_check / msaccucmp` stay aligned with upstream, while `integrations / tools` are maintained on the HCU side. **For upstream features not covered in this repo** (e.g. `checkpoint_compare`, `response_anomaly`, accuracy_checker details), refer to the upstream user_guide — mind the `msprobe` → `hcuprobe` command mapping and skip the NPU / Ascend-specific capabilities.
+## 🔄 Upstream Synchronization
 
-**Baseline commit**: upstream branch `26.2.0`, commit `76f701cd74b765b98e9652fa0730b377daa25559` (2026-09-23); the corresponding commit in this repository's history is `87dec7eb1602b0b123c312eab0840b1d5ab1fd89` (hash differs due to history cleanup; the tree content is identical to the upstream baseline). All commits after the baseline are HYGON-side modifications.
+hcuprobe is the HCU adaptation of msProbe. The `core`, `pytorch`, `visualization`, `overflow_check`, and `msaccucmp` subtrees remain consistent with upstream, while `integrations` and `tools` are maintained independently for HCU-specific requirements.
 
-**→ [Upstream Sync notes: docs/UPSTREAM_SYNC.md](docs/UPSTREAM_SYNC.md)**
+For upstream features not covered by this repository, such as `checkpoint_compare`, `response_anomaly`, and certain `accuracy_checker` details, refer to the upstream user guide. Note that command names must be mapped from `msprobe` to `hcuprobe`, and NPU- or Ascend-specific capabilities should be skipped where they do not apply.
+
+**→ [Upstream Synchronization Guide](docs_hcu/UPSTREAM_SYNC.md)**
 
 ## ⚖️ License
 
-- **Code**: follows upstream msProbe's [Mulan Permissive Software License, Version 2 (Mulan PSL v2)](LICENSE).
-- **Documentation**: upstream `docs/` is CC-BY 4.0 ([docs/LICENSE](docs/LICENSE)); content copied from upstream documentation must retain attribution.
-- **Modification attribution**: HCU adaptation changes and additions on top of the upstream baseline are Hygon Information Technology Co., Ltd., likewise released under Mulan PSL v2.
-- **Third-party notices**: for the sources, pinned versions, copyrights, and licenses of third-party code contained in this repo or referenced at build time, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **Code:** The code follows the upstream msProbe [Mulan Permissive Software License, Version 2 (Mulan PSL v2)](LICENSE).
+- **Documentation:** The upstream `docs/` directory is licensed under CC-BY 4.0 ([docs/LICENSE](docs/LICENSE)). Attribution must be retained when reusing content from upstream documentation.
+- **Modifications:** HCU adaptation changes and newly added content based on the upstream baseline are maintained by Hygon Information Technology Co., Ltd. and are also released under Mulan PSL v2.
+- **Third-party notices:** Sources, pinned versions, copyrights, and licenses of third-party code included in the repository or referenced during the build process are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-See **[Upstream Sync notes · License and attribution](docs/UPSTREAM_SYNC.md#license-与署名)** for details.
+For details, see **[Upstream Synchronization Guide — License and Attribution](docs_hcu/UPSTREAM_SYNC.md#license-and-attribution)**.
+
+</div>
