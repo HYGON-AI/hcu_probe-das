@@ -1079,6 +1079,11 @@ class Match:
 
         npu_df = npu_df[keep_list]
         bench_df = bench_df[keep_list]
+        # 训推一致只比 nn.Module 层级:Triton kernel 级条目(训练侧 cross_entropy_fwd_kernel、推理侧 vllm_hcu 的
+        # kernel_unified_attention_2d / reshape_and_cache_kernel_flash 等)无 layer/module 语义,会在
+        # (call_direction, suffix, layer, module_mapping) 上互相误配,导致 dual_monotonic_sort 顺序冲突。
+        npu_df = npu_df[~npu_df[CompareConst.OP_NAME].astype(str).str.startswith("Triton.")]
+        bench_df = bench_df[~bench_df[CompareConst.OP_NAME].astype(str).str.startswith("Triton.")]
         op_name_npu = npu_df[CompareConst.OP_NAME]
         op_name_bench = bench_df[CompareConst.OP_NAME]
         npu_rank = {v: i for i, v in enumerate(op_name_npu)}

@@ -3,7 +3,7 @@
 import argparse
 from typing import Optional
 
-from hcu_probe.core.parse.parse_cli import parse_cli
+from hcuprobe.core.parse.parse_cli import parse_cli
 
 
 def run(

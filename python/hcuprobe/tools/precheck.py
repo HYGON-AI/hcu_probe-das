@@ -4,7 +4,7 @@
 import argparse
 from typing import Optional, Sequence
 
-from hcu_probe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
+from hcuprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 
 
 def acc_check(
@@ -43,7 +43,7 @@ def api_precision_compare(
     output_path: str,
 ) -> str:
     """对比两端 acc_check 输出 csv,自动 diff 出"HCU 独有劣化 API"等。"""
-    from hcu_probe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
+    from hcuprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
         _api_precision_compare_command,
     )
 

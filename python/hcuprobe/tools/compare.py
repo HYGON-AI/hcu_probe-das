@@ -4,8 +4,8 @@ import argparse
 import sys
 from typing import Optional
 
-from hcu_probe.core.compare.compare_cli import compare_cli
-from hcu_probe.core.compare.utils import _compare_parser
+from hcuprobe.core.compare.compare_cli import compare_cli
+from hcuprobe.core.compare.utils import _compare_parser
 
 
 def run(

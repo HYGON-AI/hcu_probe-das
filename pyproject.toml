@@ -46,6 +46,11 @@ hcuprobe = "hcuprobe.hcuprobe:main"
 Homepage = "https://github.com/HYGON-AI/hcu_probe-das"
 
 [project.optional-dependencies]
+precheck = [
+    "onnx",
+    "onnxruntime",
+    "skl2onnx>=1.14.1",
+]
 test = [
     "h5py",
     "mindspore",

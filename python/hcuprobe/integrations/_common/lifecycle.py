@@ -22,7 +22,7 @@ Hook lifecycle:
 A process-wide singleton getter is exposed at the bottom so per-framework
 namespaces share one instance:
 
-    from hcu_probe.integrations._common.lifecycle import get_dump_lifecycle, get_monitor_lifecycle
+    from hcuprobe.integrations._common.lifecycle import get_dump_lifecycle, get_monitor_lifecycle
 """
 
 from . import config as _cfg
@@ -75,7 +75,7 @@ class DumpLifecycle:
 
         if seed is not None:
             try:
-                from hcu_probe.pytorch import seed_all
+                from hcuprobe.pytorch import seed_all
                 seed_all(seed=seed, mode=reproduce, rm_dropout=reproduce)
                 _log("dump", f"seed fixed to {seed} (mode={reproduce}, rm_dropout={reproduce})")
             except Exception as e:
@@ -83,7 +83,7 @@ class DumpLifecycle:
 
         if self._debugger is None:
             try:
-                from hcu_probe.pytorch import PrecisionDebugger
+                from hcuprobe.pytorch import PrecisionDebugger
                 self._debugger = PrecisionDebugger(config_path=dump_cfg_path)
                 _log("dump", f"PrecisionDebugger initialized with {dump_cfg_path}")
             except Exception as e:
@@ -99,7 +99,7 @@ class DumpLifecycle:
         if self._debugger is None:
             return
         try:
-            from hcu_probe.pytorch import PrecisionDebugger
+            from hcuprobe.pytorch import PrecisionDebugger
             PrecisionDebugger.start(model=model)
         except Exception as e:
             _log("dump", f"start() failed: {e}")
@@ -114,7 +114,7 @@ class DumpLifecycle:
     ):
         if self._debugger is not None:
             try:
-                from hcu_probe.pytorch import PrecisionDebugger
+                from hcuprobe.pytorch import PrecisionDebugger
                 PrecisionDebugger.step()
             except Exception as e:
                 _log("dump", f"step() failed: {e}")
@@ -127,7 +127,7 @@ class DumpLifecycle:
     def on_train_end(self):
         if self._debugger is not None:
             try:
-                from hcu_probe.pytorch import PrecisionDebugger
+                from hcuprobe.pytorch import PrecisionDebugger
                 PrecisionDebugger.stop()
                 _log("dump", "PrecisionDebugger stopped.")
             except Exception as e:
@@ -176,7 +176,7 @@ class MonitorLifecycle:
             _mon_out = _cfg.get_monitor_output_dir_from_cfg(monitor_cfg_path)
             if _mon_out:
                 os.makedirs(_mon_out, exist_ok=True)
-            from hcu_probe.core.monitor_v2.trainer import TrainerMonitorV2
+            from hcuprobe.core.monitor_v2.trainer import TrainerMonitorV2
             self._monitor = TrainerMonitorV2(monitor_cfg_path, fr="pytorch")
             model_obj = models[0] if isinstance(models, (list, tuple)) else models
             self._monitor.start(

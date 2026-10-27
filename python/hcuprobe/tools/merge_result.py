@@ -3,7 +3,7 @@
 import argparse
 from typing import Optional
 
-from hcu_probe.core.compare.merge_result.merge_result_cli import merge_result_cli
+from hcuprobe.core.compare.merge_result.merge_result_cli import merge_result_cli
 
 
 def run(

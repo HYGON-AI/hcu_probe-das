@@ -1,7 +1,7 @@
 """脚本/环境配置采集与比对(环境变量、三方库版本、训练超参、权重、数据集)。"""
 
-from hcu_probe.core.config_check.config_check_cli import compare as _upstream_compare
-from hcu_probe.core.config_check.config_check_cli import pack as _upstream_pack
+from hcuprobe.core.config_check.config_check_cli import compare as _upstream_compare
+from hcuprobe.core.config_check.config_check_cli import pack as _upstream_pack
 
 
 def collect(*, shell_path: str, output_path: str) -> str:

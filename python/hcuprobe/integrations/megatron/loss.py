@@ -1,8 +1,8 @@
 """Backward-compat shim for the loss tracker.
 
-Real implementation moved to `hcu_probe.integrations._common.loss` (framework-
+Real implementation moved to `hcuprobe.integrations._common.loss` (framework-
 agnostic). This module re-exports the same public symbols so existing
-`from hcu_probe.integrations.megatron.loss import LossTracker, get_tracker`
+`from hcuprobe.integrations.megatron.loss import LossTracker, get_tracker`
 imports keep working unchanged.
 
 New code SHOULD import from `_common.loss` directly.
