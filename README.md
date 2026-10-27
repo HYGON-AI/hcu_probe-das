@@ -46,7 +46,7 @@ hcuProbe 围绕模型精度调试提供三大核心能力，覆盖「数据采�
 
 ## 🚀 快速入门
 
-快速一站式体验数据采集、HCU/GPU 精度比对与分级可视化构图比对的完整流程，请参见《[hcuProbe 快速入门](.docs_hcu/zh/quick_start/pytorch_quick_start.md)》。
+快速一站式体验数据采集、HCU/GPU 精度比对与分级可视化构图比对的完整流程，请参见《[hcuProbe 快速入门](docs_hcu/zh/quick_start/pytorch_quick_start.md)》。
 
 
 ## 📦 安装指南
