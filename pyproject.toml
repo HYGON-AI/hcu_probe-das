@@ -40,7 +40,7 @@ dependencies = [
 ]
 
 [project.scripts]
-hcuprobe = "hcuprobe.hcuprobe:main"
+hcuprobe = "hcuprobe.cli:main"   # HCU 自维护入口,转调上游 hcuprobe.hcuprobe:main
 
 [project.urls]
 Homepage = "https://github.com/HYGON-AI/hcu_probe-das"
