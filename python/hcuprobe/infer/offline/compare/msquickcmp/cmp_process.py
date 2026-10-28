@@ -46,7 +46,9 @@ try:
     import acl
 except ImportError:
     acl = None
-    logger.error("Please verify that the CANN environment is properly configured.")
+    # HCU 适配:acl 为昇腾 CANN 模块,HCU 上必然缺失;本模块在 hcuprobe CLI 启动时即被导入(注册 offline_dump),
+    # 原 logger.error 会让每条 hcuprobe 命令都打印误导性的 CANN 报错。本文件并不使用 acl,降为 debug。
+    logger.debug("acl (CANN) not available; Ascend offline OM compare is unsupported on this platform.")
 
 WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 READ_WRITE_FLAGS = os.O_RDWR | os.O_CREAT
