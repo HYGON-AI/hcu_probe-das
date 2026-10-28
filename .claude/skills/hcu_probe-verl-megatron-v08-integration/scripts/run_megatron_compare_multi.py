@@ -49,7 +49,7 @@ print("总配对:", len(common), " token 完全匹配(可用样本):", len(good)
 if not good:
     raise SystemExit("无完整匹配配对")
 
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
+from hcuprobe.integrations.verl import consistent_compare  # 内含 statistics squeeze 容差 + 剔除 Triton 条目,不改上游 core
 import pandas as pd
 
 
@@ -84,7 +84,7 @@ for i, rid in enumerate(good[:N]):
     os.makedirs(out, exist_ok=True)
     for x in glob.glob(out + "/*.xlsx") + glob.glob(out + "/compare_result_*.csv"): os.remove(x)
     try:
-        pt_compare({"npu_path": train[rid], "bench_path": gen[rid]}, out, consistent_check=True, backend="megatron")
+        consistent_compare(train[rid], gen[rid], out, backend="megatron")
         real = real_of(out)
         n = len(real); lt1 = int((real["nerr"] < 1).sum()); med = real["nerr"].median(); mx = real["nerr"].max()
         tk = tok(train[rid], ["word_embeddings", "VocabParallel"])

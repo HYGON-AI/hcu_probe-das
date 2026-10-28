@@ -46,7 +46,7 @@ common = sorted(set(gen) & set(train))
 good = [rid for rid in common if tok(train[rid], ["word_embeddings", "VocabParallel"]) == tok(gen[rid], ["embed_tokens", "VocabParallel"])]
 print("token完全匹配配对:", len(good))
 
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
+from hcuprobe.integrations.verl import consistent_compare  # 内含 statistics squeeze 容差 + 剔除 Triton 条目,不改上游 core
 def p2f(x):
     try: return float(str(x).replace("%", ""))
     except: return None
@@ -56,7 +56,7 @@ for i, rid in enumerate(good[:8]):
     os.makedirs(out, exist_ok=True)
     for x in glob.glob(out + "/*.xlsx") + glob.glob(out + "/compare_result_*.csv"): os.remove(x)
     try:
-        pt_compare({"npu_path": train[rid], "bench_path": gen[rid]}, out, consistent_check=True, backend="megatron")
+        consistent_compare(train[rid], gen[rid], out, backend="megatron")
     except Exception as e:
         print("rid", rid[:8], "compare err", e); continue
     df = _read_result(out)

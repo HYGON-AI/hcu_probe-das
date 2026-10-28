@@ -27,7 +27,7 @@ RL 训练里同一个模型既推理(rollout 生成)又训练(actor 更新)。**
 本镜像相对下文(das1.7 / vllm 0.11 时代记录)的差异:
 - **attn eager/sdpa 先决条件不再必需**:默认 attention 训练健康(下文"硬先决条件"仅针对 das1.7 镜像)。
 - **共享节点显存**:官方 `gpu_memory_utilization=0.5` 在他人占卡时 vLLM `wake_up` OOM,dump run 用 `0.3`。
-- **compare 依赖 hcuprobe 两处修复**:`VERL_STATISTICS_CHECKERS`(修法B)与 consistent_check 跳过 `Triton.*` 条目(推理侧 vllm-hcu 会 dump `kernel_unified_attention_2d` 等 Triton kernel,与训练侧 `cross_entropy_fwd_kernel` 误配 → `dual_monotonic_sort` 报 "Conflicting comparison data")。
+- **compare 用 `hcuprobe.integrations.verl.consistent_compare`**(hcuprobe 自维护封装,内部调用上游原样 `pt_compare`,不改与上游同步的 `core/`):statistics 模式用可忽略 batch=1 维的 `VerlShapeErrChecker`(即下文"修法B"),并在比对前剔除 `Triton.*` kernel 条目(推理侧 vllm-hcu 会 dump `kernel_unified_attention_2d` 等 Triton kernel,与训练侧 `cross_entropy_fwd_kernel` 误配 → `dual_monotonic_sort` 报 "Conflicting comparison data")。`scripts/run_fsdp_compare.py` 已改用它。
 - **结果文件是 CSV**(`compare_out/compare_result_*.csv`,列名 `NPU Name`),`scripts/run_fsdp_compare.py` / `batch_compare.py` 已兼容 csv/xlsx。
 - 完整可复现流程见 `docs_hcu/zh/quick_start/verl_quick_start.md`。
 
@@ -58,7 +58,7 @@ RL 训练里同一个模型既推理(rollout 生成)又训练(actor 更新)。**
 | `patches/02-hcu_verl-constants.patch` | hcu_verl `constants_ppo.py` 透传 `DUMP_*` env 给 ray worker | 顶层仓根 `git apply` |
 | `patches/04a` + `04b` | das torch2.5.1 兼容坑修(同 Megatron) | 各仓 `git apply` |
 | `scripts/patch_gpu_dump.py` + `dispatch_logger.py` | 推理侧注入(上游 vllm `gpu_model_runner.py`,与 Megatron 共用)+ 调度日志 | `docker cp` 进容器后跑 |
-| `scripts/run_fsdp_compare.py` | **compare 主脚本**(官方 `pt_compare(backend=fsdp)` + 排整层/IdentityOp/act_fn + 逐类型统计) | 容器内 `python3 run_fsdp_compare.py <RUN>` |
+| `scripts/run_fsdp_compare.py` | **compare 主脚本**(`consistent_compare(backend=fsdp)` + 排整层/IdentityOp/act_fn + 逐类型统计) | 容器内 `python3 run_fsdp_compare.py <RUN>` |
 | `scripts/batch_compare.py` | 多样本 compare 统计 | 容器内跑 |
 | `scripts/fsdp_nan_class.py` | **dump NaN 分类器**(区分 output[0] 真 NaN vs 良性 CE 缓冲) | 容器内跑,review dump 必用(看实际产物再下结论) |
 | `scripts/run_fsdp_normal_eager.sh` | **阶段0 健康验证**(eager 普通训练,无 dump,看 reward 上升) | 先跑这个确认先决条件 |
@@ -114,10 +114,10 @@ dbg.start(model=model); <前向>; dbg.stop(); dbg.step()
 ```
 config:`task=statistics`、`level=L0`、`dump_path`、`rank=[] step=[]`(全采)。产物 `dump_actor/stepN/rankM/dump.json` + `update_actor_log.jsonl`;推理 `dump_generate/<pid>/stepN/rankM/dump.json` + `dispatch_log.jsonl`。
 
-### B. compare:官方 pt_compare(backend=fsdp)
+### B. compare:consistent_compare(封装官方 pt_compare,backend=fsdp)
 ```python
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
-pt_compare({"npu_path": 训练dump.json, "bench_path": 推理dump.json}, out, consistent_check=True, backend="fsdp")
+from hcuprobe.integrations.verl import consistent_compare
+consistent_compare(训练dump.json, 推理dump.json, out, backend="fsdp")   # = pt_compare(consistent_check=True) + 修法B + 剔除 Triton.*
 ```
 - 内置 `FSDP_MODULE_MAP`(`q/k/v_proj→qkv_proj`、`gate/up→gate_up_proj` 等)做训推命名映射。
 - 封装好的 `scripts/run_fsdp_compare.py` 已含**正确排除口径**(见「三」)+ 逐类型统计,直接用。
@@ -125,7 +125,7 @@ pt_compare({"npu_path": 训练dump.json, "bench_path": 推理dump.json}, out, co
 ## 三、★ compare 正确配置(FSDP 特有,易错)
 
 1. **单 prompt 对齐**:`actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1` + 关 dynamic_bsz(让 `num_requests=1`、训练 `[1,L]` 对齐推理 `[L]`)+ `trainer.balance_batch=False` + `PROMPTS_ONLY=1` + `enforce_eager=True`。
-2. **★ 修法B(hcu_probe FSDP statistics 盲区,必须打)**:FSDP 训练 dump 是 `[1,S,H]`(HF eager `unsqueeze(0)`)vs 推理 vllm `[S,H]`(packed);hcu_probe 的 squeeze 容差 `VerlShapeErrChecker` **只挂 task=tensor**,statistics 模式恒用严格 `ShapeErrChecker` → 全 shape error、配对几乎为 0。**★ 修法B 已合入 hcu_probe 主仓**(`VerlShapeErrChecker` 类 + `VERL_STATISTICS_CHECKERS` 列表 + `calculator._add_algorithm` 的 `if self.consistent_check` 分支)——**用含此修正的 hcu_probe 即可,不必手改**(本次集群容器已含,compare 跑通 98 算子即证)。**验证**:`docker exec <容器> python3 -c "from hcuprobe.core.compare.indicator_analysis.algorithm import VERL_STATISTICS_CHECKERS, VerlShapeErrChecker; print('修法B OK')"`;**ImportError = hcu_probe 太旧 → 按 `references/hcu_probe-fsdp-statistics-fix.md` 手动加这 3 处(给了精确代码)**。**另:`Megatron-LM` 必须在 `PYTHONPATH`**(VerlShapeErrChecker 依赖,compare 脚本已加)。
+2. **★ 修法B(hcu_probe FSDP statistics 盲区)**:FSDP 训练 dump 是 `[1,S,H]`(HF eager `unsqueeze(0)`)vs 推理 vllm `[S,H]`(packed);上游 `pt_compare` 的 squeeze 容差 `VerlShapeErrChecker` **只挂 task=tensor**,statistics 模式恒用严格 `ShapeErrChecker` → 全 shape error、配对几乎为 0。**修法:用 `hcuprobe.integrations.verl.consistent_compare`**,它只在本次调用内把 statistics+consistent_check 的检查器换成含 `VerlShapeErrChecker` 的版本,不改 `core/`(`core/` 与上游 msprobe 保持一致,见 `docs_hcu/UPSTREAM_SYNC.md`)。验证:`python3 -c "from hcuprobe.integrations.verl import consistent_compare"`。**另:`Megatron-LM` 必须在 `PYTHONPATH`**(compare 脚本已加)。
 3. **排除口径(run_fsdp_compare.py 已内置)**:可比叶子算子 = output、非 wrapper、有 NormRelativeErr;**排除** 整层 `Qwen2DecoderLayer`/`Qwen2MLP`/`Qwen2Attention`(残差和,非 normed)+ `IdentityOp` + **`act_fn`/`SiLU`(融合算子:HF `silu(gate)` vs vllm `SiluAndMul=silu(gate)·up`,不同张量)**。
 
 > ⚠️ **FSDP 比 Megatron 少比 qkv / gate_up**:HF 训练侧 `q/k/v_proj`、`gate/up_proj` 是**分开**的,与推理 vllm 的**融合** `qkv_proj`/`gate_up_proj` 配不上(shape/语义不同)→ 不进可比集。可比集只剩 o_proj / down_proj / layernorm / embed / norm。要补需在 compare 侧先把训练分开的 q/k/v cat 成 qkv 再比(`FSDP_MODULE_MAP` 目前未做这层聚合,是可补盲区)。

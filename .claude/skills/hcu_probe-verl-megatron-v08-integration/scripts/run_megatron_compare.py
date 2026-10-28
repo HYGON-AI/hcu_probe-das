@@ -51,11 +51,11 @@ if not good:
 rid = good[0]
 print("选 rid=%s  token=%s" % (rid, tok(train[rid], ["word_embeddings", "VocabParallel"])))
 
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
+from hcuprobe.integrations.verl import consistent_compare  # 内含 statistics squeeze 容差 + 剔除 Triton 条目,不改上游 core
 out = "%s/compare_out" % RUN
 os.makedirs(out, exist_ok=True)
 for x in glob.glob(out + "/*.xlsx") + glob.glob(out + "/compare_result_*.csv"): os.remove(x)
-pt_compare({"npu_path": train[rid], "bench_path": gen[rid]}, out, consistent_check=True, backend="megatron")
+consistent_compare(train[rid], gen[rid], out, backend="megatron")
 
 import pandas as pd
 pd.set_option("display.max_columns", None); pd.set_option("display.width", 340)

@@ -17,7 +17,7 @@
 | 3 | 基线训练（可选） | verl-das 官方脚本 | 先确认不带 hcuprobe 的训练能跑通 |
 | 4 | 接入 hcuprobe | 训练侧 git patch + 推理侧注入脚本 | 由环境变量门控，不开 dump 时行为不变 |
 | 5 | 训推 dump | PrecisionDebugger（L0 statistics） | 训练侧 `dump_actor/`、推理侧 `dump_generate/` |
-| 6 | 训推比对 | `pt_compare(consistent_check=True)` | FSDP：`backend="fsdp"`；Megatron：`backend="megatron"` |
+| 6 | 训推比对 | `hcuprobe.integrations.verl.consistent_compare`（封装上游 `pt_compare`） | FSDP：`backend="fsdp"`；Megatron：`backend="megatron"` |
 
 > 👉 本教程的全部命令、镜像与代码版本均在海光 BW 8 卡节点上实测通过（2026-10）。若只关心某一个后端，完成第 2.1~2.4 节后可直接跳到 2.5（FSDP）或 2.6（Megatron）。
 
@@ -99,12 +99,12 @@ pip install -c /tmp/constraints.txt einops pandas pyyaml tqdm openpyxl matplotli
 
 ```bash
 python3 -c "import torch, vllm, vllm_hcu, hcuprobe; from hcuprobe.pytorch import PrecisionDebugger; \
-from hcuprobe.core.compare.indicator_analysis.algorithm import VERL_STATISTICS_CHECKERS; \
+from hcuprobe.integrations.verl import consistent_compare; \
 assert torch.cuda.device_count()==8; print('torch', torch.__version__, 'vllm', vllm.__version__)" \
 && hcuprobe --help >/dev/null && echo -e "\e[32m[PASS] HCU / vllm-hcu / hcuprobe 环境检查通过\e[0m"
 ```
 
-若 `VERL_STATISTICS_CHECKERS` 导入失败，说明 hcuprobe 版本缺少 verl statistics 模式的比对修复，FSDP 比对会全部报 shape error，请更新 hcu_probe-das 后重新构建 whl。
+若 `consistent_compare` 导入失败，说明 hcu_probe-das 版本过旧（缺少 `hcuprobe.integrations.verl`），请更新后重新构建 whl。
 
 ### 2.2 准备模型与数据
 
@@ -244,9 +244,14 @@ PYTHONPATH=$V:$V/third_party/verl:$V/third_party/Megatron-LM python3 $SKS/run_fs
 `run_fsdp_compare.py` 按 `request_id` 配对两侧 dump，挑选 embed 输入 token 数完全一致的样本，调用：
 
 ```python
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
-pt_compare({"npu_path": 训练侧dump.json, "bench_path": 推理侧dump.json}, out_dir, consistent_check=True, backend="fsdp")
+from hcuprobe.integrations.verl import consistent_compare
+consistent_compare(训练侧dump.json, 推理侧dump.json, out_dir, backend="fsdp")
 ```
+
+`consistent_compare` 是 hcuprobe 在 `integrations/` 下自维护的封装，内部调用上游原样的 `pt_compare(consistent_check=True)`，并补两处 HCU 场景必需的处理（不修改与上游同步的 `core/`）：
+
+- statistics 模式使用可忽略 batch=1 维的 shape 检查（训练侧 `[1,S,H]` 对推理侧 `[S,H]`）；
+- 比对前剔除 `Triton.*` kernel 级条目（vllm-hcu 推理侧的 Triton kernel 会与训练侧 Triton 条目误配）。
 
 **预期结果（实测）**：
 
@@ -308,7 +313,7 @@ bash /workspace/runs/run_megatron.sh --data_path=/workspace/data --host_file=/wo
 SKM=/workspace/src/hcu_probe-das/.claude/skills/hcu_probe-verl-megatron-v08-integration/scripts
 V=/workspace/src/verl-das
 export PYTHONPATH=$V:$V/third_party/verl:$V/third_party/Megatron-LM
-python3 $SKM/run_megatron_compare.py $RUN          # 单样本:pt_compare(..., consistent_check=True, backend="megatron")
+python3 $SKM/run_megatron_compare.py $RUN          # 单样本:consistent_compare(..., backend="megatron")
 python3 $SKM/run_megatron_compare_multi.py $RUN    # 多样本汇总
 ```
 
@@ -334,8 +339,8 @@ embed(word_embeddings ↔ embed_tokens)两侧 l2norm 完全相同
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
 | vLLM `wake_up` 报 `CUDA Error: out of memory` / `Free memory on device ... less than desired GPU memory utilization` | 共享节点上其他任务占用显存 | 降低 `actor_rollout_ref.rollout.gpu_memory_utilization`（FSDP 0.3、Megatron 0.2 实测可用），`hy-smi --showpids` 查看占卡进程 |
-| `pt_compare` 报 `Conflicting comparison data: the two columns cannot be monotonically increasing` | 推理侧 vllm-hcu 的 Triton kernel 条目与训练侧 Triton 条目被误配 | 使用含该修复的 hcu_probe-das（consistent_check 跳过 `Triton.*` 条目） |
-| FSDP 比对几乎全部 shape error | hcuprobe 缺少 `VERL_STATISTICS_CHECKERS`（训练 `[1,S,H]` vs 推理 `[S,H]`） | 更新 hcu_probe-das，按 2.1.5 检查 |
+| 比对报 `Conflicting comparison data: the two columns cannot be monotonically increasing` | 直接调用了上游 `pt_compare`，推理侧 vllm-hcu 的 Triton kernel 条目与训练侧 Triton 条目误配 | 改用 `hcuprobe.integrations.verl.consistent_compare`（skill 比对脚本已使用） |
+| FSDP 比对几乎全部 shape error | 直接调用了上游 `pt_compare`：statistics 模式的 shape 检查不忽略 batch=1 维（训练 `[1,S,H]` vs 推理 `[S,H]`） | 改用 `consistent_compare` |
 | Megatron 比对 <1% 比例只有约 60% | 推理 TP 与训练 TP 不一致 | 设置 `actor_rollout_ref.rollout.tensor_model_parallel_size` 等于 actor TP |
 | `Could not append to config. An item is already at ...sequence_parallel` | 该键在 verl 0.8.0 配置中已存在 | 用 `++` 前缀 |
 | `AssertionError: NVTE_FUSED_ATTN set to 1, but expected 0 for attention backend type flash` | 单独覆盖了 `ref.megatron.override_transformer_config.*`，破坏了对 actor 配置的插值 | 只覆盖 actor 的配置 |

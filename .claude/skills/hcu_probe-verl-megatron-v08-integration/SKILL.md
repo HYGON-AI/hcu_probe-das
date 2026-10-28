@@ -114,12 +114,10 @@ config 关键字段(`config/*.json`):`task=statistics`(只统计量免爆盘)、
 **FSDP skill 当时用自研 `verify_consistency.py`(那时 hcu_probe 没集成 verl compare)。verl 0.8.0 起 hcu_probe 自带 verl 训推一致 compare,直接用官方的**:
 
 ```python
-from hcuprobe.pytorch.compare.pt_compare import pt_compare
-pt_compare(
-    {"npu_path": 训练dump.json, "bench_path": 推理dump.json},   # npu=训练 / bench=推理,反了 module 全 match 不上
-    output_path, consistent_check=True, backend="megatron",
-)
+from hcuprobe.integrations.verl import consistent_compare     # hcuprobe 自维护封装,内部调用上游原样 pt_compare(consistent_check=True)
+consistent_compare(训练dump.json, 推理dump.json, output_path, backend="megatron")   # 训练=npu / 推理=bench,反了 module 全 match 不上
 ```
+> 新镜像推理侧 vllm-hcu 会 dump Triton kernel 条目,直接调上游 `pt_compare` 会报 "Conflicting comparison data";`consistent_compare` 比对前剔除 `Triton.*`,不改 `core/`。
 - 内置 `MEGATRON_MODULE_MAP`(`word_embeddings→embed_tokens` / `linear_qkv→qkv_proj` / `q_layernorm→q_norm` / `linear_fc1→gate_up_proj` / `linear_fc2→down_proj` 等 10 条)自动逐层映射 megatron↔vllm 命名,**无需手写 mapping**。
 - `need_cat`+`BACKEND_CAT_RULES` 自动按 seq 维 **concat** 拼接 SP 切片(**不是**平方和聚合)。
 - 也支持 `--backend fsdp`(有 `FSDP_MODULE_MAP`)——**FSDP 后端现在也该改用官方 pt_compare**,只是 FSDP 映射在 infer 侧、megatron 在 train 侧,npu/bench 方向要另核对。

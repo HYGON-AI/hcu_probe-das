@@ -1,6 +1,6 @@
 # 修法B:hcu_probe FSDP statistics + consistent_check 的 shape squeeze 盲区
 
-> **TL;DR:这个修正已合入 hcu_probe 主仓**(类 `VerlShapeErrChecker` + 列表 `VERL_STATISTICS_CHECKERS` + `calculator._add_algorithm` 的 `consistent_check` 分支)。**用含此修正的 hcu_probe 版本即可,不必手改**。本文档给「验证它在不在」+「老版本没有时怎么手动加」。
+> **TL;DR(2026-10 更新)**:hcu_probe-das 的 `core/` 与上游 msprobe 保持一致,上游**没有**该修正。修正改由 hcuprobe 自维护的 `hcuprobe.integrations.verl.consistent_compare` 提供(调用期间临时使用含 `VerlShapeErrChecker` 的检查器,再调上游原样 `pt_compare`),**skill 的 compare 脚本已改用它,无需手改 `core/`**。下文保留问题分析;"手动加"一节仅作原理参考,不建议再改 `core/`(下次同步上游会被覆盖)。
 
 ## 问题
 
@@ -9,9 +9,9 @@ FSDP 训练侧 dump 的张量是 `[1,S,H]`(HF eager `transformer_impl.py` 的 `u
 ## 验证它在不在(先跑这个)
 
 ```bash
-docker exec <容器> python3 -c "from hcuprobe.core.compare.indicator_analysis.algorithm import VERL_STATISTICS_CHECKERS; from hcuprobe.core.compare.indicator_analysis.algorithm import VerlShapeErrChecker; print('修法B 已在 hcu_probe:OK')"
+docker exec <容器> python3 -c "from hcuprobe.integrations.verl import consistent_compare; print('consistent_compare(含修法B)可用:OK')"
 ```
-- 打印 `OK` → 你的 hcu_probe 已含修法B,**compare 直接能跑,跳过下面**(本次集群容器即此情况,compare 跑通 98 算子即证)。
+- 打印 `OK` → compare 脚本直接能跑(2026-10 bw52 实测 98 可比算子 97/98 <1%)。
 - `ImportError` → hcu_probe 太旧,按下面手动加这 2 处(纯 .py 覆盖容器 dist-packages 即可,不重打 whl)。
 
 ## 老版本手动加(3 处,`hcu_probe/core/compare/indicator_analysis/`)
