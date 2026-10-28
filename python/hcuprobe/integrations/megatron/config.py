@@ -1,7 +1,7 @@
 """Megatron-specific arg translation + backward-compat shim.
 
 Generic JSON config parsing was moved to
-`hcu_probe.integrations._common.config`. This module re-exports the same
+`hcuprobe.integrations._common.config`. This module re-exports the same
 public symbols so existing imports keep working.
 
 Megatron-specific helpers (those reading megatron-style argparse fields)
@@ -24,6 +24,7 @@ from .._common.config import resolve_loss_output_dir as _common_resolve_loss_out
 # ---------------------------------------------------------------------------
 #  Megatron-style facades (preserve backward compatibility)
 # ---------------------------------------------------------------------------
+
 
 def resolve_dump_output_dir(args):
     """Read output directory from `args.hcu_probe_config` JSON (L0/L1 dump)."""

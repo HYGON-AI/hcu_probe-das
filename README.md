@@ -61,7 +61,7 @@ hcuProbe 围绕模型精度调试提供三大核心能力，覆盖「数据采�
 git clone https://github.com/HYGON-AI/hcu_probe-das
 cd hcu_probe-das
 pip wheel . --no-deps -w dist/
-pip install dist/hcuprobe-*.whl --no-deps
+pip install dist/hcu_probe-*.whl --no-deps   # whl 文件名取发行名 hcu-probe;import 名为 hcuprobe
 
 # 方案 B:editable(开发用)
 pip install -e .
@@ -69,7 +69,7 @@ pip install -e .
 # 方案 C:GitLab Releases 页下载 prebuilt whl 直接 pip install
 
 # 离线分析 precheck 扩展(onnx / onnxruntime / skl2onnx)
-pip install hcuprobe[precheck]
+pip install "$(ls dist/hcu_probe-*.whl)[precheck]"   # 发行名为 hcu-probe,已发布到索引时也可 pip install "hcu-probe[precheck]"
 ```
 
 > **注意:** `torch` 不在依赖里,由用户在训练环境自备(HCU / NV / H20 各自的 torch 构建)。

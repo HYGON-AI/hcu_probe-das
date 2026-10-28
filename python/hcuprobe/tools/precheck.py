@@ -1,10 +1,9 @@
-"""API 精度预检三件套(acc_check / multi_acc_check / api_precision_compare)。
-"""
+"""API 精度预检三件套(acc_check / multi_acc_check / api_precision_compare)。"""
 
 import argparse
 from typing import Optional, Sequence
 
-from hcu_probe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
+from hcuprobe.core.acc_check.acc_check_cli import acc_check_cli, multi_acc_check_cli
 
 
 def acc_check(
@@ -43,12 +42,10 @@ def api_precision_compare(
     output_path: str,
 ) -> str:
     """对比两端 acc_check 输出 csv,自动 diff 出"HCU 独有劣化 API"等。"""
-    from hcu_probe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
+    from hcuprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
         _api_precision_compare_command,
     )
 
-    args = argparse.Namespace(
-        hcu_csv_path=hcu_csv, gpu_csv_path=gpu_csv, out_path=output_path
-    )
+    args = argparse.Namespace(hcu_csv_path=hcu_csv, gpu_csv_path=gpu_csv, out_path=output_path)
     _api_precision_compare_command(args)
     return output_path

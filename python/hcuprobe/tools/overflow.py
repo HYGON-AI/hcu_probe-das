@@ -3,7 +3,7 @@
 import argparse
 import os
 
-from hcu_probe.overflow_check.analyzer import _run_overflow_check
+from hcuprobe.overflow_check.analyzer import _run_overflow_check
 
 
 def run(

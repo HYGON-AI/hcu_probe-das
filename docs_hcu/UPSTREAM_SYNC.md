@@ -22,6 +22,16 @@ hcuprobe 是华为 [`mindstudio-probe`（msProbe）](https://gitcode.com/Ascend/
 | `integrations/` | **HCU 侧自维护**的多框架训练接入翻译层（上游无对应，接入操作见各框架 skill） |
 | `tools/` + `cli.py` | HCU 侧离线分析工具封装与 `hcuprobe` CLI 入口 |
 
+### HCU 侧修正的放置原则
+
+上游同步子树(`core/` `pytorch/` `visualization/` `overflow_check/` `msaccucmp/` `infer/` 等)保持与上游一致,HCU 侧修正放在自维护层:
+
+| 问题 | 放置位置 |
+|---|---|
+| 上游 CLI 启动时导入昇腾 `acl` 失败,每条命令打印 "Please verify that the CANN environment is properly configured." | `cli.py`(`pyproject.toml` 的 `hcuprobe` 入口指向 `hcuprobe.cli:main`,导入阶段屏蔽该条报错后转调上游 `hcuprobe.hcuprobe:main`) |
+
+verl 训推一致性比对的 HCU 修正（statistics 模式 squeeze 容差、剔除 `Triton.*` 条目）不改 `core/`，由 `integrations/verl/compare.py` 提供。
+
 ## License 与署名
 
 - **代码**：上游采用[木兰宽松许可证 第2版（Mulan PSL v2）](https://gitcode.com/Ascend/msprobe)。

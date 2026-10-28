@@ -58,7 +58,7 @@ Framework quick starts (verified on official images, with pinned image / code ve
 git clone https://github.com/HYGON-AI/hcu_probe-das.git
 cd hcu_probe-das
 pip wheel . --no-deps -w dist/
-pip install dist/hcuprobe-*.whl --no-deps
+pip install dist/hcu_probe-*.whl --no-deps   # wheel file uses the dist name hcu-probe; import name is hcuprobe
 
 # Option B: Editable installation for development
 pip install -e .
@@ -68,7 +68,7 @@ pip install -e .
 
 # Install optional dependencies for offline analysis prechecks
 # (ONNX / ONNX Runtime / skl2onnx)
-pip install 'hcuprobe[precheck]'
+pip install "$(ls dist/hcu_probe-*.whl)[precheck]"   # dist name is hcu-probe; from an index: pip install "hcu-probe[precheck]"
 ```
 
 > **Note:** `torch` is not included in the package dependencies. Users must provide a compatible PyTorch build for their target training environment (HCU, NVIDIA, or H20).
