@@ -13,7 +13,7 @@ pt_compare(
     backend="megatron",
 )
 ```
-也可走 CLI:`hcuprobe compare -tp <训练> -gp <推理> --consistent_check --backend megatron -o <out>`(`-tp`=npu=训练,`-gp`=bench=推理)。命令名是 **`hcu-probe`**(我们 whl 注册的 console_script,见 `pyproject.toml [project.scripts]`),**不是 `msprobe`**——容器装的是 hcu_probe fork,无 msprobe 命令。
+也可走 CLI:`hcuprobe compare -tp <训练> -gp <推理> --consistent_check --backend megatron -o <out>`(`-tp`=npu=训练,`-gp`=bench=推理)。命令名是 **`hcuprobe`**(我们 whl 注册的 console_script,见 `pyproject.toml [project.scripts]`,入口 `hcuprobe.cli:main`),**不是 `msprobe`**——容器装的是 hcu_probe fork,无 msprobe 命令。
 
 ### 关键点
 - **npu=训练 megatron / bench=推理 vllm**,方向**不能反**。证据:`hcu_probe/core/compare/acc_compare.py:786-787`——`process_module_mapping(npu_df, engine='train', ...)` / `(bench_df, engine='infer', ...)`(:784-785 同处 `get_op_module_and_class` 也成对 train/infer)。反了 module 全 match 不上(报 shape/grad inconsistent)。

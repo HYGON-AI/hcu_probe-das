@@ -11,7 +11,7 @@ hcu_probe 的 precheck 工具**只支持 PyTorch 训练场景**:
 - ✅ dump.json `"framework": "pytorch"`,API 名形如 `Functional.linear.0` / `Tensor.add_.0` / `Torch.matmul.0`
 - ❌ 不支持 **MindSpore 动态图**(`"framework": "mindspore"` + Mint API)— 那是华为生态的训练框架,跟 HCU 走 PyTorch 不是一条路
 - ❌ 不支持 **MSAdapter**(PyTorch→MindSpore 兼容层,实质是为了让 PyTorch 代码跑在 NPU)
-- ❌ 不支持 **推理场景**(vLLM / 离线模型),`offline_dump` 子命令已从 hcu-probe CLI 砍掉
+- ❌ 不支持 **推理场景**(vLLM / 离线模型),`offline_dump` 子命令已从 hcuprobe CLI 砍掉
 
 上游 mindstudio-probe README 列的 5 大场景里 hcu_probe 只对应 1 个:**PyTorch 训练**。
 
