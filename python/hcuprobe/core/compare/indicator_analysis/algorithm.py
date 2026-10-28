@@ -428,7 +428,3 @@ STATISTICS_CHECKERS_PARALLEL_MERGE = [InfNanErrChecker, RelativeErrChecker, Requ
                                       ParametersErrChecker, DTypeErrChecker, RelativeWarnChecker]
 VERL_TENSOR_CHECKERS = [InfNanErrChecker, OneThousandthErrChecker, ParametersErrChecker,
                         DTypeErrChecker, VerlShapeErrChecker, CosineWarnChecker]
-# verl 训推一致(consistent_check)的 statistics 模式:用 VerlShapeErrChecker(squeeze 掉 batch=1 维 + FSDP 跳过 qkv/gate_up 聚合 op)。
-# 否则 FSDP 训练 [1,S,H] vs 推理 packed [S,H] 字符串不等被严格 ShapeErrChecker 全判 error(此前 squeeze 容差只挂 tensor 模式,statistics 漏挂)。
-VERL_STATISTICS_CHECKERS = [InfNanErrChecker, RelativeErrChecker, RequiresGradErrChecker, ParametersErrChecker,
-                            DTypeErrChecker, VerlShapeErrChecker, RelativeWarnChecker]

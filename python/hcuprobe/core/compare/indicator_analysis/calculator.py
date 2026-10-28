@@ -22,7 +22,7 @@ from hcuprobe.core.common.const import Const, CompareConst
 from hcuprobe.core.common.log import logger
 from hcuprobe.core.compare.indicator_analysis.utils import CompareMode, ResultLevel, divide_result_df, IgnoreInfo
 from hcuprobe.core.compare.indicator_analysis.algorithm import BaseAlgorithm, TENSOR_CHECKERS, STATISTICS_CHECKERS, \
-    MD5_CHECKERS, STATISTICS_CHECKERS_PARALLEL_MERGE, VERL_TENSOR_CHECKERS, VERL_STATISTICS_CHECKERS
+    MD5_CHECKERS, STATISTICS_CHECKERS_PARALLEL_MERGE, VERL_TENSOR_CHECKERS
 from hcuprobe.core.compare.indicator_analysis.api_data import ApiData
 
 
@@ -113,14 +113,7 @@ class ApiIndicatorCalculator:
 
     def _add_algorithm(self):
         if self.mode == CompareMode.STATISTICS.value:
-            if self.consistent_check:
-                # verl 训推一致:statistics 模式也用带 squeeze 的 VerlShapeErrChecker(对齐 tensor 分支),
-                # 否则 FSDP 训练 [1,S,H] vs 推理 [S,H] 被严格 ShapeErrChecker 全判 error
-                checkers = VERL_STATISTICS_CHECKERS
-            elif self.parallel_merge:
-                checkers = STATISTICS_CHECKERS_PARALLEL_MERGE
-            else:
-                checkers = STATISTICS_CHECKERS
+            checkers = STATISTICS_CHECKERS_PARALLEL_MERGE if self.parallel_merge else STATISTICS_CHECKERS
             for checker in checkers:
                 self.add_algorithm(checker())
         elif self.mode == CompareMode.TENSOR.value:
