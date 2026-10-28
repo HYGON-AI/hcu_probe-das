@@ -27,7 +27,7 @@ export VLLM_CUDART_SO_PATH=/opt/dtk/hip/lib/libamdhip64.so HYHAL_PATH=${HYHAL_PA
 export HSA_NO_SCRATCH_RECLAIM=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
 echo "=== 环境自检:hcu_probe 修法B / Megatron-LM / openpyxl / pt_compare ==="
-DP=$(python3 -c "import hcuprobe,os;print(os.path.dirname(hcu_probe.__file__))")
+DP=$(python3 -c "import hcuprobe,os;print(os.path.dirname(hcuprobe.__file__))")
 grep -rlq VerlShapeErrChecker "$DP/core/compare/" && echo "  [ok] VerlShapeErrChecker(修法B)在" || echo "  [WARN] 修法B 缺失 → compare 会 shape error 配对≈0"
 python3 -c "import megatron; import openpyxl; from hcuprobe.pytorch.compare.pt_compare import pt_compare; print('  [ok] megatron/openpyxl/pt_compare import OK')"
 

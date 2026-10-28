@@ -166,8 +166,8 @@ functional:
 
 **改哪个文件**(看你怎么装的 hcu_probe):
 - **wheel 装的(常见)**:直接改**安装位置**的 yaml,改完即生效、**不用重打 whl**:
-  `python -c "import hcuprobe,os;print(os.path.dirname(hcu_probe.__file__))"` 找到包目录 → 改其下 `pytorch/dump/api_dump/support_wrap_ops.yaml`。容器里多个 rank 共用一份,改一次即可。
-- **源码 editable(`pip install -e`)装的**:改 `src/hcu_probe/.../support_wrap_ops.yaml` 即生效。
+  `python -c "import hcuprobe,os;print(os.path.dirname(hcuprobe.__file__))"` 找到包目录 → 改其下 `pytorch/dump/api_dump/support_wrap_ops.yaml`。容器里多个 rank 共用一份,改一次即可。
+- **源码 editable(`pip install -e`)装的**:改 `python/hcuprobe/.../support_wrap_ops.yaml` 即生效。
 
 > hcu_probe 主仓 yaml 与上游字字一致(红线),这是 **hcu_megatron 专属本地改**,用完还原(`git checkout` 或反注释),别提交进主仓。
 

@@ -74,7 +74,7 @@ vllm 把多 prompt 的 prefill 拼一批算，训练侧 `micro_batch=1` 是单 p
 
 ## 为什么不直接改 hcu_probe core 去认 fused residual
 
-compare 逻辑（`consistent_match` / verl `mapping.py`）全在 `src/hcu_probe/core/compare/` —— 与华为 msprobe 上游**字字一致**的区。改它技术可行，但**不该直接改 core**：
+compare 逻辑（`consistent_match` / verl `mapping.py`）全在 `python/hcuprobe/core/compare/` —— 与华为 msprobe 上游**字字一致**的区。改它技术可行，但**不该直接改 core**：
 
 1. 破坏 core 字字一致、未来跟上游 merge 冲突；
 2. fused residual 是**社区 vllm 通病、非 HCU 特有**，改在 HCU core 不合理。

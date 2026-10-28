@@ -126,7 +126,7 @@ hcu_probe **vanilla** compare(`hcuprobe compare` CLI 或裸 `pt_compare`,**不�
 
 解法:**只信 normed 算子(layernorm)比对**——fused residual 让整层 output 拆成两半(mlp 输出 + 残差),但 layernorm 内部两侧都算 `rmsnorm(完整残差)`、语义完全一致,**在 norm 这个"检查点"两流凑齐、可比;在整层 output 这个"交接点"才拆开、不可比**。所以专挑每层的 `input_layernorm` / `post_attention_layernorm` output 比就绕开了。**完整原理(三个盲区 + 数据流层面"检查点 vs 交接点"图解)见 [`references/compare-blindspots.md`](references/compare-blindspots.md)。**
 
-> 别直接改 hcu_probe core 去认 fused residual——compare 逻辑在 `src/hcu_probe/core/compare/`,与华为 msprobe 上游字字一致,改了破坏一致性 + 未来 merge 冲突。正道是给华为 msprobe 上游提 PR,HCU 这边把 `verify_consistency.py` 当专用脚本(归 `integrations/verl` 或 examples 仓)。
+> 别直接改 hcu_probe core 去认 fused residual——compare 逻辑在 `python/hcuprobe/core/compare/`,与华为 msprobe 上游字字一致,改了破坏一致性 + 未来 merge 冲突。正道是给华为 msprobe 上游提 PR,HCU 这边把 `verify_consistency.py` 当专用脚本(归 `integrations/verl` 或 examples 仓)。
 
 ### C. compare 只在 L0 可行(L1/tensor 实测受限)
 
