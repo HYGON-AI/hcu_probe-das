@@ -10,8 +10,6 @@
 
 | 框架 · 后端 / 版本 | 验证场景 | 页面组 |
 | --- | --- | --- |
-| verl 0.7.1 · FSDP | 训推一致性 | `verl-0.7-fsdp/` |
-| verl 0.7.1 · Megatron | 训推一致性 | `verl-0.7-megatron/` |
 | verl 0.8.0 · FSDP | 训推一致性 | `verl-0.8-fsdp/` |
 | verl 0.8.0 · Megatron | 训推一致性 | `verl-0.8-megatron/` |
 | hcu_megatron(独立框架) | 精度对比 | `hcu-megatron-lm/` |

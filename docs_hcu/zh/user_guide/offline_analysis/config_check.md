@@ -11,7 +11,7 @@
 ## Python API
 
 ```python
-from hcu_probe.tools import config_check
+from hcuprobe.tools import config_check
 
 # 1. 在 HCU 上采集环境快照
 config_check.collect(
@@ -34,10 +34,10 @@ config_check.compare(
 
 ```bash
 # 采集
-hcu-probe config_check -d ./run_train.sh -o ./hcu_env.zip
+hcuprobe config_check -d ./run_train.sh -o ./hcu_env.zip
 
 # 比对
-hcu-probe config_check -c ./h20_env.zip ./hcu_env.zip -o ./env_diff
+hcuprobe config_check -c ./h20_env.zip ./hcu_env.zip -o ./env_diff
 ```
 
 ## HCU 特有环境变量(对精度有影响)
@@ -58,7 +58,7 @@ hcu-probe config_check -c ./h20_env.zip ./hcu_env.zip -o ./env_diff
 
 ## HCU 上的状态
 
-✅ **2026-05-12 scnet docker 采集 OK**:容器内跑 `hcu-probe config_check -d <path> -o env.zip` 落盘 zip,内含 env / pip / hyperparameters 三段。
+✅ **2026-05-12 scnet docker 采集 OK**:容器内跑 `hcuprobe config_check -d <path> -o env.zip` 落盘 zip,内含 env / pip / hyperparameters 三段。
 
 ⚠️ **HCU 特有环境变量清单尚未沉淀进上游 ConfigChecker**。短期 workaround:跑 `compare()` 后人工 grep 上述变量。长期方案:向上游 PR HCU 环境变量扩展。
 

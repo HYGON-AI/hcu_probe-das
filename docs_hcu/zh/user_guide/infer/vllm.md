@@ -4,7 +4,7 @@
 
 在 vLLM 推理框架中接入 hcu_probe 的 `PrecisionDebugger`，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
 
-完整链路：**接入 → dump → `hcu-probe compare` 比对 → `hcu-probe graph_visualize` 构图 → TensorBoard 浏览**
+完整链路：**接入 → dump → `hcuprobe compare` 比对 → `hcuprobe graph_visualize` 构图 → TensorBoard 浏览**
 
 ## 适用场景
 
@@ -54,7 +54,7 @@ class GPUModelRunner:
         device: torch.device,
     ):
         ################################ hcu_probe ################################
-        from hcu_probe.pytorch import PrecisionDebugger, seed_all
+        from hcuprobe.pytorch import PrecisionDebugger, seed_all
 
         seed_all(mode=True)
         self.debugger = PrecisionDebugger(config_path="./config.json")
@@ -147,7 +147,7 @@ dump 完成后在 HCU 和 baseline 环境各得到一份数据。比对命令和
 
 ```bash
 # 多卡比对
-hcu-probe compare \
+hcuprobe compare \
     -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output \
@@ -166,7 +166,7 @@ hcu-probe compare \
 
 ```bash
 # 生成可视化数据
-hcu-probe graph_visualize \
+hcuprobe graph_visualize \
     -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output

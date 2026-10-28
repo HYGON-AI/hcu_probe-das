@@ -1,6 +1,16 @@
 from ..feature import AbstractFeature
 
 
+def _train_step_target():
+    """hcu_megatron(Megatron-LM-das)的 MegatronBasicFeature 用 hcu_megatron.training.training.train 替换了
+    megatron 的 train,而它调用的是本模块内的 train_step;只 patch megatron.training.training.train_step 不会被调用。"""
+    try:
+        import hcu_megatron.training.training  # noqa: F401
+        return 'hcu_megatron.training.training.train_step'
+    except ImportError:
+        return 'megatron.training.training.train_step'
+
+
 class HcuProbeFeature(AbstractFeature):
     def __init__(self):
         super().__init__('hcu-probe-config', 2)
@@ -24,7 +34,7 @@ class HcuProbeFeature(AbstractFeature):
             )
 
     def register_patches(self, patch_manager, args):
-        from hcu_megatron.adaptor.features_manager.probe.hcu_probe_wrapper import (
+        from hcu_megatron.features_manager.probe.hcu_probe_wrapper import (
             hcu_probe_train_wrapper,
             hcu_probe_train_step_wrapper,
         )
@@ -36,7 +46,7 @@ class HcuProbeFeature(AbstractFeature):
         )
 
         patch_manager.register_patch(
-            'megatron.training.training.train_step',
+            _train_step_target(),
             hcu_probe_train_step_wrapper,
             apply_wrapper=True,
         )

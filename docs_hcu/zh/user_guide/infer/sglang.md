@@ -4,7 +4,7 @@
 
 在 SGLang 推理框架中接入 hcu_probe，采集模型运行时的精度数据（dump），然后与 baseline 数据做精度比对，最后生成 TensorBoard 可视化数据定位精度问题。
 
-完整链路：**接入 → dump → `hcu-probe compare` 比对 → `hcu-probe graph_visualize` 构图 → TensorBoard 浏览**
+完整链路：**接入 → dump → `hcuprobe compare` 比对 → `hcuprobe graph_visualize` 构图 → TensorBoard 浏览**
 
 ## 两种接入方式
 
@@ -16,7 +16,7 @@ SGLang 在不同版本中，接入 hcu_probe 的方式不同：
 | **改动方式** | 修改 `ModelRunner` 源码 ~20 行 | 启动参数 `--msprobe-dump-config` |
 | **源码修改** | 需要 | **不需要** |
 | **PD 分离处理** | 手动判断 `disaggregation_mode` + bootstrap_room 固定 | 只需分别指定 prefill / decode 配置文件 |
-| **hcu_probe 兼容** | 完全兼容（代码中直接 `import hcu_probe`） | 需确认 `hcu_probe` 能否替代 SGLang 内置的 `msprobe` 导入 |
+| **hcu_probe 兼容** | 完全兼容（代码中直接 `import hcuprobe`） | 需确认 `hcu_probe` 能否替代 SGLang 内置的 `msprobe` 导入 |
 
 > 根据你的 SGLang 版本选择对应章节阅读即可。
 
@@ -69,7 +69,7 @@ class ModelRunner(ModelRunnerKVCacheMixin):
     ):
         ...
         ################################ hcu_probe ################################
-        from hcu_probe.pytorch import PrecisionDebugger, seed_all
+        from hcuprobe.pytorch import PrecisionDebugger, seed_all
 
         seed_all(mode=True)
         self.debugger = PrecisionDebugger(config_path="./config.json")
@@ -194,7 +194,7 @@ SGLang 的 Prefill-Decode 分离部署场景需额外处理。
 
 ```python
 ################################ hcu_probe ################################
-from hcu_probe.pytorch import PrecisionDebugger, seed_all
+from hcuprobe.pytorch import PrecisionDebugger, seed_all
 
 seed_all(mode=True)
 config_path = ""
@@ -286,7 +286,7 @@ python3 -m sglang_router.launch_router \
 
 SGLang 0.5.11+ 已内置 msprobe 支持，通过启动参数 `--msprobe-dump-config` 即可启用，**无需修改源码**。
 
-> **hcu_probe 适配说明**：SGLang 原生 flag 内部调用 `msprobe.pytorch.PrecisionDebugger`。如果 HCU 环境中 `import hcu_probe` 的 API 与 `msprobe` 兼容（`PrecisionDebugger` 和 `seed_all` 接口一致），可直接使用此方式。否则请回退到 [方式一](#方式一手动接入sglang--0511)。
+> **hcu_probe 适配说明**：SGLang 原生 flag 内部调用 `msprobe.pytorch.PrecisionDebugger`。如果 HCU 环境中 `import hcuprobe` 的 API 与 `msprobe` 兼容（`PrecisionDebugger` 和 `seed_all` 接口一致），可直接使用此方式。否则请回退到 [方式一](#方式一手动接入sglang--0511)。
 
 ### 1. 创建配置文件
 
@@ -384,19 +384,19 @@ baseline_dump/step0/rank{0..N}/ ← GPU / 另一 HCU（标杆侧, golden）
 
 ```bash
 # 单卡比对
-hcu-probe compare \
+hcuprobe compare \
     -tp ./hcu_dump/step0/rank0/dump.json \
     -gp ./baseline_dump/step0/rank0/dump.json \
     -o ./compare_output
 
 # 多卡比对（自动遍历所有 rank 并合并结果）
-hcu-probe compare \
+hcuprobe compare \
     -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output
 
 # 输出 xlsx 格式（更便于查看）
-hcu-probe compare \
+hcuprobe compare \
     -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./compare_output \
@@ -437,19 +437,19 @@ hcu-probe compare \
 
 ```bash
 # 双图比对（单 rank）
-hcu-probe graph_visualize \
+hcuprobe graph_visualize \
     -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output
 
 # 多 rank 批量比对
-hcu-probe graph_visualize \
+hcuprobe graph_visualize \
     -tp ./hcu_dump/step0 \
     -gp ./baseline_dump/step0 \
     -o ./vis_output
 
 # 开启溢出检测
-hcu-probe graph_visualize \
+hcuprobe graph_visualize \
     -tp ./hcu_dump/step0/rank0 \
     -gp ./baseline_dump/step0/rank0 \
     -o ./vis_output \
@@ -471,7 +471,7 @@ tensorboard --logdir ./vis_output --bind_all
 将多个 step 的 dump 数据导入 SQLite，查看精度数据在 step / rank / 模块三个维度的趋势分布：
 
 ```bash
-hcu-probe data2db --data ./hcu_dump --db ./trend_output
+hcuprobe data2db --data ./hcu_dump --db ./trend_output
 
 tensorboard --logdir ./trend_output --bind_all
 ```

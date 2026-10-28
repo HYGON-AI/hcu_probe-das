@@ -2,7 +2,7 @@
 
 证明:hcu_probe whl 在通用 CV 模型(ResNet50)+ 通用框架(原生 PyTorch)
 + 通用优化器(Adam)上可用。无 Megatron / 无 transformers / 无 trl /
-无 DeepSpeed,只用 hcu_probe.integrations._common.lifecycle 框架
+无 DeepSpeed,只用 hcuprobe.integrations._common.lifecycle 框架
 无关 keyword-only API。
 
 接入方式见本 skill(hcu_probe-pytorch-integration)的 SKILL.md;
@@ -27,11 +27,11 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 
-from hcu_probe.integrations._common.lifecycle import (
+from hcuprobe.integrations._common.lifecycle import (
     get_dump_lifecycle,
     get_monitor_lifecycle,
 )
-from hcu_probe.integrations._common.config import resolve_loss_output_dir
+from hcuprobe.integrations._common.config import resolve_loss_output_dir
 
 
 def parse_args():

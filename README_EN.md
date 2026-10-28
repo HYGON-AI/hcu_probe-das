@@ -46,6 +46,11 @@ hcuProbe provides three core capabilities for model accuracy debugging, covering
 
 For an end-to-end walkthrough of data collection, HCU/GPU accuracy comparison, and hierarchical graph visualization and comparison, see the [hcuProbe Quick Start Guide](docs_hcu/zh/quick_start/pytorch_quick_start.md).
 
+Framework quick starts (verified on official images, with pinned image / code versions; in Chinese):
+
+- [Megatron Quick Start](docs_hcu/zh/quick_start/megatron_quick_start.md): integrate hcuprobe into Megatron-LM-das for L0 data dump and Monitor.
+- [verl Training–Inference Consistency Quick Start](docs_hcu/zh/quick_start/verl_quick_start.md): layer-by-layer comparison for verl-das (verl 0.8.0) with FSDP / Megatron backends.
+
 ## 📦 Installation
 
 ```bash
