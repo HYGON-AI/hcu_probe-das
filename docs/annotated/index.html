@@ -115,6 +115,31 @@
     </div>
   </section>
 
+  <section class="ver">
+    <h2>原生 PyTorch(ResNet50 + Adam)</h2>
+    <p class="lead">任意<b>原生 PyTorch / 自定义 train loop</b>(精度对比 / 采集验证)。<b>最直接的接入</b> —— 直接调 <code>hcu_probe.integrations._common.lifecycle</code> 的 5 个 hook,无 Feature(hcu_megatron)、无源码 patch(verl)、几行即可;这套 <code>_common.lifecycle</code> 是<b>框架无关地基 API</b>,megatron 的 Feature 薄壳、verl 的 patch 最终都调它。对应 skill <code>hcu_probe-pytorch-integration</code>。</p>
+    <div class="cards">
+      <a class="card c1" href="pytorch/instrumentation.html">
+        <div class="tag">接入机制</div>
+        <h3>5-hook lifecycle 直接织入(最简)</h3>
+        <p>在你的训练循环里 import <code>get_dump_lifecycle</code>/<code>get_monitor_lifecycle</code>,按训练阶段调 <code>on_train_start</code>/<code>on_step_start</code>/<code>on_step_end</code>/<code>on_train_end</code>。左真实 ResNet 代码,右说明;三框架接入机制对照。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c2" href="pytorch/capture_modes.html">
+        <div class="tag">采集模式</div>
+        <h3>dump/monitor 采集模式 + argparse CLI</h3>
+        <p>baseline / dump(L0/L1)/ monitor(三通道)/ both 四模式,<code>--dump-cfg</code>/<code>--monitor-cfg</code> 直接 argparse 控制(比 megatron 简单,不穿多层启动脚本)。</p>
+        <div class="go">打开 →</div>
+      </a>
+      <a class="card c3" href="pytorch/pitfalls_verification.html">
+        <div class="tag">坑+验证</div>
+        <h3>4 坑 + 验证三件套 + L0/L1 覆盖</h3>
+        <p>tensorboard 隐性依赖(静默假启动)、cwd/权限、monitor 三通道约束、<b>optimizer 通道需 Adam 有 state</b>(SGD 采不到);验证必看 <code>initialized</code>/<code>started</code> marker。</p>
+        <div class="go">打开 →</div>
+      </a>
+    </div>
+  </section>
+
 </div>
 <footer>hcu_probe · <code>docs/annotated/</code> · 各框架接入样例的「渲染即懂」代码改动点标注页 · HTML 自包含离线可看</footer>
 </body>

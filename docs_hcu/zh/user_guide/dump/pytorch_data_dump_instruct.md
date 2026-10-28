@@ -185,6 +185,12 @@ module.py文件：
 
 </details><br>
 
+#### 快速验证
+可通过 Claude Code Skill 根据用户自动插入所需的采集代码，快速完成采集功能的接入与验证。使用说明详见：
+```text
+.claude/skills/hcu_probe-pytorch-dump/SKILL.md
+```
+
 
 ## 接口介绍
 

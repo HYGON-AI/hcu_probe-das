@@ -13,5 +13,6 @@
 | verl 0.8.0 · FSDP | 训推一致性 | `verl-0.8-fsdp/` |
 | verl 0.8.0 · Megatron | 训推一致性 | `verl-0.8-megatron/` |
 | hcu_megatron(独立框架) | 精度对比 | `hcu-megatron-lm/` |
+| 原生 PyTorch(ResNet50) | 精度对比 | `pytorch/` |
 
 这些标注页与仓库根 README「已适配训练框架」一节列出的各接入 skill 一一对应:skill 讲**怎么动手接入**,标注页讲**改动点的位置与原理**,两者互为补充。

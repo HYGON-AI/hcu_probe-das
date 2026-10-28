@@ -1,0 +1,11 @@
+{
+  "task": "statistics",
+  "dump_path": "./resnet_dump_L0",
+  "rank": [],
+  "step": [0, 1, 2],
+  "level": "L0",
+  "statistics": {
+    "summary_mode": "statistics",
+    "scope": []
+  }
+}
