@@ -1,11 +1,10 @@
 """dump 数据精度比对(HCU vs 标杆 / 任意两端 dump)。"""
 
 import argparse
-import sys
 from typing import Optional
 
-from hcu_probe.core.compare.compare_cli import compare_cli
-from hcu_probe.core.compare.utils import _compare_parser
+from hcuprobe.core.compare.compare_cli import compare_cli
+from hcuprobe.core.compare.utils import _compare_parser
 
 
 def run(
@@ -26,10 +25,14 @@ def run(
     parser = argparse.ArgumentParser()
     _compare_parser(parser)
     sys_argv = [
-        "-tp", target_path,
-        "-gp", golden_path,
-        "-o", output_path,
-        "-m", mode,
+        "-tp",
+        target_path,
+        "-gp",
+        golden_path,
+        "-o",
+        output_path,
+        "-m",
+        mode,
     ]
     if fuzzy_match:
         sys_argv.append("-fm")

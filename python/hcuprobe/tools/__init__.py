@@ -1,6 +1,6 @@
-"""hcu_probe.tools — 离线分析工具便利层(跨框架、纯训练场景)。"""
+"""hcuprobe.tools — 离线分析工具便利层(跨框架、纯训练场景)。"""
 
-from hcu_probe.tools import (
+from hcuprobe.tools import (
     compare,
     config_check,
     data2db,

@@ -3,7 +3,7 @@
 import argparse
 from typing import Optional, Sequence
 
-from hcu_probe.visualization.graph_service import _graph_service_command, _graph_service_parser
+from hcuprobe.visualization.graph_service import _graph_service_command, _graph_service_parser
 
 
 def run(

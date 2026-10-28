@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from hcu_probe.core.compare.data2db import DBImporter
+from hcuprobe.core.compare.data2db import DBImporter
 
 
 def run(
