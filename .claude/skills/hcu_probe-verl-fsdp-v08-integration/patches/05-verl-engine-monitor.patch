@@ -1,0 +1,44 @@
+diff --git a/verl/workers/engine/base.py b/verl/workers/engine/base.py
+index ff72de58..b40e0f17 100644
+--- a/verl/workers/engine/base.py
++++ b/verl/workers/engine/base.py
+@@ -122,14 +122,39 @@ class BaseEngine:
+         """
+         maybe_fix_3d_position_ids(data)
+ 
++        self._hcuprobe_monitor_setup()  # hcuprobe monitor:MONITOR_CONFIG 设了才启,首个训练 step 前懒初始化
+         self.optimizer_zero_grad()
+         outputs = self.forward_backward_batch(data, loss_function, forward_only=False)
+         grad_norm = self.optimizer_step()
++        self._hcuprobe_monitor_step()  # hcuprobe monitor:optimizer.step 之后采集权重梯度 / 优化器状态 / 参数
+         if self.is_mp_src_rank_with_outputs():
+             assert "grad_norm" not in outputs["metrics"]
+             outputs["metrics"]["grad_norm"] = grad_norm
+         return outputs
+ 
++    def _hcuprobe_monitor_setup(self):
++        """hcuprobe TrainerMonitorV2 三通道监控。仅训练(有 optimizer)的 engine 生效,ref 等 forward_only engine 不会进 train_batch。
++        monitor 配置须 "patch_optimizer_step": false(Megatron 嵌套优化器会让自动 patch 落空),由 _hcuprobe_monitor_step 手动驱动。"""
++        import os
++
++        cfg = os.environ.get("MONITOR_CONFIG", "")
++        if not cfg or getattr(self, "_hcuprobe_monitor_inited", False) or getattr(self, "optimizer", None) is None:
++            return
++        self._hcuprobe_monitor_inited = True
++        import atexit
++
++        from hcuprobe.integrations._common.lifecycle import get_monitor_lifecycle
++
++        lifecycle = get_monitor_lifecycle()
++        lifecycle.on_setup_done(models=self.module, optimizer=self.optimizer, monitor_cfg_path=cfg)
++        atexit.register(lifecycle.on_train_end)
++
++    def _hcuprobe_monitor_step(self):
++        if getattr(self, "_hcuprobe_monitor_inited", False):
++            from hcuprobe.integrations._common.lifecycle import get_monitor_lifecycle
++
++            get_monitor_lifecycle().on_step_end()
++
+     def infer_batch(self, data: TensorDict, loss_function: Optional[Callable] = None) -> Any:
+         """
+         Perform inference on a batch of data.

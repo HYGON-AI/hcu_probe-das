@@ -18,6 +18,7 @@
 | 4 | 接入 hcuprobe | 训练侧 git patch + 推理侧注入脚本 | 由环境变量门控，不开 dump 时行为不变 |
 | 5 | 训推 dump | PrecisionDebugger（L0 statistics） | 训练侧 `dump_actor/`、推理侧 `dump_generate/` |
 | 6 | 训推比对 | `hcuprobe.integrations.verl.consistent_compare`（封装上游 `pt_compare`） | FSDP：`backend="fsdp"`；Megatron：`backend="megatron"` |
+| 7 | 训练监控（可选） | `MONITOR_CONFIG`（TrainerMonitorV2） | 权重梯度 / 优化器状态 / 参数三通道 CSV |
 
 > 👉 本教程的全部命令、镜像与代码版本均在海光 BW 8 卡节点上实测通过（2026-10）。若只关心某一个后端，完成第 2.1~2.4 节后可直接跳到 2.5（FSDP）或 2.6（Megatron）。
 
@@ -174,6 +175,7 @@ V=/workspace/src/verl-das
 cd $V/third_party/verl
 git apply $SK/hcu_probe-verl-fsdp-v08-integration/patches/01-verl-fsdp-dump.patch
 git apply $SK/hcu_probe-verl-megatron-v08-integration/patches/01b-verl-megatron-engine-only.patch
+git apply $SK/hcu_probe-verl-fsdp-v08-integration/patches/05-verl-engine-monitor.patch          # 训练监控(2.7 节),不用可不打
 cd $V && git apply $SK/hcu_probe-verl-fsdp-v08-integration/patches/02-hcu_verl-constants.patch
 # 推理侧:vllm-hcu 0.18.1 的 hcu_model_runner 注入(带锚点校验与幂等标记)
 VH=$(python3 -c "import vllm_hcu,os;print(os.path.dirname(vllm_hcu.__file__))")
@@ -334,6 +336,45 @@ embed(word_embeddings ↔ embed_tokens)两侧 l2norm 完全相同
 >
 > 若推理 TP 与训练 TP 不一致（官方默认 rollout TP=2），实测只有约 61% 的算子 <1%：误差集中在 `linear_qkv`、`linear_fc1`、`q/k_layernorm`、`core_attention` 这类列并行输出上，原因是两侧张量切分不同，并非数值问题。
 
+### 2.7 训练三通道监控（Monitor）
+
+Monitor 在每个训练 step 的 `optimizer.step()` 之后记录权重梯度、优化器状态（Adam m/v）、参数的 min/max/mean/norm/nans，用于发现 NaN、梯度爆炸、参数异常。钩子在 `BaseEngine.train_batch`（`05-verl-engine-monitor.patch`），FSDP 与 Megatron 后端共用，由 `MONITOR_CONFIG` 环境变量开启（`02` 补丁负责透传给 ray worker）。
+
+```bash
+mkdir -p /workspace/runs/fsdp_monitor
+python3 -c "
+import json
+c = json.load(open('/workspace/src/hcu_probe-das/.claude/skills/hcu_probe-megatron-integration/config/monitor_v2_config_full_probe.json'))
+c['output_dir'] = '/workspace/runs/fsdp_monitor/monitor'
+json.dump(c, open('/workspace/runs/fsdp_monitor/cfg_monitor.json', 'w'), indent=2)"
+unset DUMP_ON PROMPTS_ONLY DUMP_ACTOR_CONFIG DUMP_CONFIG_PATH      # Monitor 用正常训练,不裁 response
+export MONITOR_CONFIG=/workspace/runs/fsdp_monitor/cfg_monitor.json
+export EXTRA="trainer.total_training_steps=4 actor_rollout_ref.rollout.gpu_memory_utilization=0.3"
+bash /workspace/runs/run_fsdp.sh --data_path=/workspace/data --host_file=/workspace/runs/hostfile \
+  --hf_model_path=/workspace/models --mcore_model_path=/workspace/models --save_ckpt_path=/workspace/runs/fsdp_monitor --profiling=
+```
+
+配置要点：`"patch_optimizer_step": false`（由钩子每步手动驱动）、只开 `weight_grad` / `optimizer` / `param` 三个通道。Megatron 后端用 `run_megatron.sh`，同样只需设置 `MONITOR_CONFIG`。
+
+**预期结果（实测）**：
+
+- 日志出现 `[hcu_probe.monitor] TrainerMonitorV2 initialized and started`（在 `WorkerDict` 进程中）。
+- `monitor/rank_<0..7>/{weight_grad,optimizer,param}_step<N>-<N>.csv`：FSDP 4 步共 96 个文件，Megatron（Qwen3-8B）3 步共 72 个文件；训练 grad_norm 正常。
+
+```text
+# FSDP:按 FSDP 单元聚合(_flat_param,每层一行)
+vpp_stage,step,module_name,scope,micro_step,min,max,mean,norm,nans
+-1,3,_fsdp_wrapped_module.model.layers.0._fsdp_wrapped_module._flat_param,reduced,1,-0.0014,0.0014,4.83e-09,0.0248,0.0
+# Megatron:逐个权重
+-1,2,module.module.output_layer.weight,unreduced,1,-0.0017,0.0019,1.25e-11,0.0130,0.0
+```
+
+> [!NOTE]说明
+>
+> - FSDP1 把每层参数展平为一个 `_flat_param`，所以 FSDP 下的 Monitor 粒度是"每层"，不是"每个权重"；Megatron 下是逐个权重。
+> - ray worker 的日志不一定回传到 driver，判断是否生效以 CSV 产物为准。
+> - GRPO 中若一个 batch 内所有回答得分相同，优势为 0，该步梯度全 0（`norm` 为 0）属正常。
+
 ## 3. 常见问题
 
 | 现象 | 原因 | 处理 |
@@ -345,5 +386,6 @@ embed(word_embeddings ↔ embed_tokens)两侧 l2norm 完全相同
 | `Could not append to config. An item is already at ...sequence_parallel` | 该键在 verl 0.8.0 配置中已存在 | 用 `++` 前缀 |
 | `AssertionError: NVTE_FUSED_ATTN set to 1, but expected 0 for attention backend type flash` | 单独覆盖了 `ref.megatron.override_transformer_config.*`，破坏了对 actor 配置的插值 | 只覆盖 actor 的配置 |
 | 推理侧 dump 为空 | vLLM CUDA Graph 绕过 hook | `actor_rollout_ref.rollout.enforce_eager=True` |
+| Monitor 没有 CSV | 未打 `05-verl-engine-monitor.patch`，或 `MONITOR_CONFIG` 未经 `02` 透传 | 按 2.4 / 2.7 检查；以 `monitor/rank_*/` 下的 CSV 为准 |
 | `pip install dist/hcuprobe-*.whl` 找不到文件 | whl 文件名为 `hcu_probe-*.whl`（发行名 `hcu-probe`） | 用 `dist/hcu_probe-*.whl` |
 | 比对脚本找不到 `*.xlsx` | 新版 hcuprobe 默认输出 CSV，列名为 `NPU Name` | 使用更新后的 skill 脚本（同时兼容 csv/xlsx） |

@@ -1,179 +1,117 @@
 ---
 name: hcu_probe-verl-fsdp-v08-integration
-version: 1.0.0
-description: "在 hcu_verl / verl-das(verl 0.8.0,FSDP 训练后端;推理 das vllm 0.18.1+vllm-hcu(光源 verl-das 镜像,推荐)或 das vllm 0.11)接入 hcu_probe 做训推一致性 dump + 离线 compare:训练侧钩子下沉 FSDPEngine.forward_backward_batch 循环体、推理侧注入 vllm_hcu hcu_model_runner(新镜像)或上游 vllm gpu_model_runner(das vllm 0.11)、用官方 pt_compare(consistent_check + backend=fsdp + FSDP_MODULE_MAP)逐层比对。⚠️ 仅 das1.7 旧镜像需 attn_implementation=eager/sdpa(新镜像默认 attention 已实测健康)。当用户要给 verl 0.8.0 FSDP 后端接入 hcu_probe、定位 FSDP 训练/推理前向钩子、做训练 vs 推理前向数值比对时使用。面向训练已跑通的人(环境/模型/数据/容器就绪),只讲 dump/compare 接入,不含环境搭建。⚠️ 区别于 hcu_probe-verl-megatron-v08-integration(Megatron 后端,默认可用),也区别于 hcu_probe-verl-fsdp-v07-integration(verl 0.7.1 FSDP,推理 vllm-hcu、自研 verify_consistency.py)。"
+version: 2.0.0
+description: "在 verl-das / hcu_verl(verl 0.8.0,FSDP 训练后端,推理 das vLLM 0.18.1 + vllm-hcu)接入 hcuprobe:训推一致性 dump(训练侧 FSDPEngine 钩子 + 推理侧 vllm_hcu hcu_model_runner 注入)、离线逐层比对(hcuprobe.integrations.verl.consistent_compare)、以及训练三通道 monitor(BaseEngine.train_batch 钩子)。当用户要给 verl 0.8.0 FSDP 后端接入 hcuprobe、做训练 vs 推理前向数值比对、或监控训练梯度/优化器/参数时使用。面向训练已跑通的人;环境搭建见 docs_hcu/zh/quick_start/verl_quick_start.md。区别于 hcu_probe-verl-megatron-v08-integration(Megatron 后端)与 hcu_probe-verl-fsdp-v07-integration(verl 0.7.1)。"
 ---
 
-# 在 verl 0.8.0 FSDP 后端接入 hcu_probe 做训推一致性 dump + compare
+# verl 0.8.0 FSDP 后端接入 hcuprobe
 
-> **前置假设(本 skill 范围外,不重复)**:① 容器/das vllm 0.11/**hcu_probe whl 已装**(`docker exec <容器> pip show hcu-probe verl` 验);② 模型 `Qwen2.5-0.5B-Instruct` + `gsm8k` 已就位(放 `<ROOT>/verl_assets/models` 与 `<ROOT>/data`);③ base 训练已能在 HCU 跑起来(环境搭建不在本 skill 范围,另按你的 HCU 环境流程)。**⚠️ 所有 `scripts/run_fsdp_*.sh` 头部的 `ROOT`/`VERL`/`OUT` 是示例(`/public4/share/tanbo_work` = 作者集群),用前必改成你的实际路径;`--data_path`/`--hf_model_path` 同理。**
+**训推一致性**:RL 训练中同一模型既做推理(rollout)又做训练(actor)。本 skill 在训练侧(FSDP)与推理侧(vllm-hcu)各采集 prompt prefill 的 L0 统计量,按 vLLM `request_id` 配对后逐层比对,定界精度差在哪一侧、哪一层。另提供训练三通道 monitor。
 
-## 定位
+完整可复制流程(镜像、代码 commit、模型数据、命令、预期输出):**`docs_hcu/zh/quick_start/verl_quick_start.md`**。
 
-RL 训练里同一个模型既推理(rollout 生成)又训练(actor 更新)。**训推一致性**验证:同一 prompt,训练侧前向 ≈ 推理侧前向(浮点误差内)。本 skill 教:训练侧(FSDP)和推理侧(das vllm)各挂 hcu_probe 钩子 dump 出 **prompt prefill** 的算子统计量,按 `request_id` 配对,用官方 `pt_compare(backend=fsdp)` 逐层比相对误差。
+## 验证状态(2026-10,BW 8 卡)
 
-> **首验配方**:Qwen2.5-0.5B-Instruct + gsm8k + `run_qwen2_5_0.5b.sh`(`--config-name=ppo_trainer` = FSDP 后端)+ Hybrid AgentLoop(共卡)+ `task=statistics level=L0` + 只比 prefill。
-
-## ✅ 2026-10 实测:光源 verl-das 正式镜像(推荐环境,先读这节)
-
-| 项 | 值 |
+| 项 | 环境 / 结果 |
 |---|---|
-| 镜像 | `harbor.sourcefind.cn:5443/hcu/admin/base/custom:verl-das-ubuntu22.04-dtk26.04-py3.10-20260617-2235`(torch 2.10 / **vllm 0.18.1 + vllm-hcu 插件** / TE 2.10) |
-| 代码 | GitHub `HYGON-AI/verl-das` commit **`ca8f078`**(子模块 verl = v0.8.0);main 已升 verl 0.9,本 skill 补丁打不上 |
-| hcuprobe | `hcu_probe-das` 26.2.0-dev 源码构建;whl 文件名 `hcu_probe-*.whl`,**import 名 `hcuprobe`** |
-| 接入 | 训练侧 `patches/01` + `02`(`04a/04b` 是 torch2.5 旧镜像专用,新镜像不打);**推理侧用 `scripts/patch_hcu_dump.py` + `scripts/dispatch_logger_hcu.py`**(注入 `vllm_hcu/v1/hcu_model_runner.py`;本镜像上 `patch_gpu_dump.py` 报 `ANCHOR_NOT_FOUND`) |
-| 结果 | 默认 attention(未改 eager)基线 6 步 grad_norm 全有限;dump run 0 真 NaN;**98 可比叶子算子 97/98 <1%,中位 0.19%**,唯一 >1% 为 layers.22 o_proj 2.79% |
+| 镜像 | `harbor.sourcefind.cn:5443/hcu/admin/base/custom:verl-das-ubuntu22.04-dtk26.04-py3.10-20260617-2235`(torch 2.10、vllm 0.18.1 + vllm-hcu、TE 2.10) |
+| 代码 | GitHub `HYGON-AI/verl-das` commit `ca8f078`(子模块 verl = v0.8.0);verl-das main 已升 0.9,本补丁打不上 |
+| 基线 | Qwen2.5-0.5B-Instruct 官方脚本(默认 attention)6 步 grad_norm 有限 |
+| 训推一致 | 98 个可比叶子算子 **97/98 <1%,中位 0.19%**;唯一 >1% 为 `layers.22.o_proj` 2.79%(attention kernel 差异) |
+| monitor | ✅ 4 步:8 rank × 3 通道 = 96 个 CSV(FSDP 单元 `_flat_param` 粒度),训练正常 |
+| 未验证 | 多机;verl 0.9;L1 / tensor 级训推比对(训练与推理算子集异构,不推荐) |
 
-本镜像相对下文(das1.7 / vllm 0.11 时代记录)的差异:
-- **attn eager/sdpa 先决条件不再必需**:默认 attention 训练健康(下文"硬先决条件"仅针对 das1.7 镜像)。
-- **共享节点显存**:官方 `gpu_memory_utilization=0.5` 在他人占卡时 vLLM `wake_up` OOM,dump run 用 `0.3`。
-- **compare 用 `hcuprobe.integrations.verl.consistent_compare`**(hcuprobe 自维护封装,内部调用上游原样 `pt_compare`,不改与上游同步的 `core/`):statistics 模式用可忽略 batch=1 维的 `VerlShapeErrChecker`(即下文"修法B"),并在比对前剔除 `Triton.*` kernel 条目(推理侧 vllm-hcu 会 dump `kernel_unified_attention_2d` 等 Triton kernel,与训练侧 `cross_entropy_fwd_kernel` 误配 → `dual_monotonic_sort` 报 "Conflicting comparison data")。`scripts/run_fsdp_compare.py` 已改用它。
-- **结果文件是 CSV**(`compare_out/compare_result_*.csv`,列名 `NPU Name`),`scripts/run_fsdp_compare.py` / `batch_compare.py` 已兼容 csv/xlsx。
-- 完整可复现流程见 `docs_hcu/zh/quick_start/verl_quick_start.md`。
+## 文件
 
-## ⚠️ 硬先决条件:attn_implementation 必须 eager / sdpa(本 skill 最关键的一条)
-
-| | 默认 `flash_attention_2` | `eager` / `sdpa` |
+| 文件 | 作用 | 打在哪 |
 |---|---|---|
-| 训练 | **坏**:`grad_norm` 每步 NaN、pg_loss/kl 间歇 NaN、reward 卡 0(被 clip/skip 不学) | **健康且在学**:grad_norm 0.004~1.5 有限、**reward 0.0125→0.21(~15x,学会 gsm8k)** |
-| dump | 311/317 module output NaN(attention 核产 NaN) | 干净(0 真 NaN) |
+| `patches/01-verl-fsdp-dump.patch` | `FSDPEngine.forward_backward_batch` 训练侧 dump、`ray_trainer.py` 的 `PROMPTS_ONLY`、`llm_server.py` 注入 `request_id` | `verl-das/third_party/verl` |
+| `patches/05-verl-engine-monitor.patch` | `BaseEngine.train_batch` monitor 钩子(FSDP / Megatron 共用) | `verl-das/third_party/verl` |
+| `patches/02-hcu_verl-constants.patch` | 把 `DUMP_*`、`MONITOR_CONFIG`、`TORCHDYNAMO_DISABLE` 透传给 ray worker | `verl-das` 根目录 |
+| `scripts/patch_hcu_dump.py` + `dispatch_logger_hcu.py` | 推理侧注入 `vllm_hcu/v1/hcu_model_runner.py`(锚点校验、幂等;不符报 `ANCHOR_NOT_FOUND` 不改) | 容器内 site-packages |
+| `scripts/run_fsdp_compare.py` / `batch_compare.py` | 配对 + `consistent_compare(backend="fsdp")` + 可比集统计 | 容器内运行 |
+| `scripts/fsdp_nan_class.py` | 区分 output[0] 真 NaN 与良性 CE 缓冲 NaN | 容器内运行 |
+| `config/config_actor_v08.json` / `config_generate_v08.json` | L0 statistics 配置模板 | 改 `dump_path` 后使用 |
+| `scripts/patch_gpu_dump.py`、`patches/04a/04b`、`scripts/run_fsdp_*.sh` | 仅旧 das1.7 / vLLM 0.11 / torch 2.5 镜像 | 见 `references/legacy-record.md` |
 
-- **根因(tripwire 钉死)**:FSDP 走 transformers → das `flash_attn_func`(非 varlen),它在 live 多进程 hybrid 运行时(共卡 vllm + scratch 态)产 NaN —— **运行时状态污染,非 kernel 数学 bug**(确切入参 standalone 重放全干净)。eager/sdpa 不调这个 das kernel 故绕开。
-- **对比 Megatron**:Megatron 用 TransformerEngine(TE)融合 attention、根本不碰 das flash_attn 包 → 默认就好。**这是 FSDP 比 Megatron 多的一条先决条件**。
-- **修法**:run 脚本 actor 命令行加 `+actor_rollout_ref.model.override_config.attn_implementation=eager`(或 **sdpa,更贴 vllm、更快、o_proj 尾巴更小**)。
-- **⚠️ 没满足这条,验什么都没意义**(在坏训练上验一致性是浪费、还会误判)。
+## 接入
 
-## 适用范围 + 版本辨析(照搬别的文档/版本必错)
-
-- **后端**:verl 0.8.0 的 **FSDP 训练后端**(`--config-name=ppo_trainer`;Megatron 后端是 `ppo_megatron_trainer`)。FSDP 训练侧 = **HF 风格模型**(`embed_tokens` / `q_proj`/`k_proj`/`v_proj`(分开)/ `gate_proj`/`up_proj`(分开)/ `o_proj` / `down_proj` / `RMSNorm`)。
-- **推理栈**:das vllm **0.11.0**(das1.7 内联进上游 vllm,**无独立 vllm_hcu 包**)——与 Megatron 后端共用同一容器/推理 patch。
-- **训练前向走 0.8.0 的 `FSDPEngine`**,钩子下沉到 **`FSDPEngine.forward_backward_batch` 的 micro_batch 循环体**(vs Megatron 的 `forward_step`,vs 0.7.1 FSDP 的 `dp_actor.compute_log_prob`)。
-- **区别于 `hcu_probe-verl-fsdp-v07-integration`(verl 0.7.1 FSDP)**:那套推理用独立 `vllm-hcu` 包、自研 `verify_consistency.py`(只比 normed 算子、逐 prompt 报 80/80);本套用 das vllm 0.11 内联 + 官方 `pt_compare`(逐算子报、比 normed + o_proj + down_proj)。
-
-## 📦 配套文件 + 怎么接(本 skill 自包含)
-
-| 目录/文件 | 内容 | 怎么用 |
-|---|---|---|
-| `patches/01-verl-fsdp-dump.patch` | 训练侧 dump 钩子(FSDPEngine.forward_backward_batch + PROMPTS_ONLY + request_id) | verl submodule `git apply` |
-| `patches/02-hcu_verl-constants.patch` | hcu_verl `constants_ppo.py` 透传 `DUMP_*` env 给 ray worker | 顶层仓根 `git apply` |
-| `patches/04a` + `04b` | das torch2.5.1 兼容坑修(同 Megatron) | 各仓 `git apply` |
-| `scripts/patch_gpu_dump.py` + `dispatch_logger.py` | 推理侧注入(上游 vllm `gpu_model_runner.py`,与 Megatron 共用)+ 调度日志 | `docker cp` 进容器后跑 |
-| `scripts/run_fsdp_compare.py` | **compare 主脚本**(`consistent_compare(backend=fsdp)` + 排整层/IdentityOp/act_fn + 逐类型统计) | 容器内 `python3 run_fsdp_compare.py <RUN>` |
-| `scripts/batch_compare.py` | 多样本 compare 统计 | 容器内跑 |
-| `scripts/fsdp_nan_class.py` | **dump NaN 分类器**(区分 output[0] 真 NaN vs 良性 CE 缓冲) | 容器内跑,review dump 必用(看实际产物再下结论) |
-| `scripts/run_fsdp_normal_eager.sh` | **阶段0 健康验证**(eager 普通训练,无 dump,看 reward 上升) | 先跑这个确认先决条件 |
-| `scripts/run_fsdp_clean.sh` | **dump run**(eager + PROMPTS_ONLY + 单 prompt,产 dump_actor/dump_generate) | 改头部路径后跑 |
-| `config/config_actor_v08.json` `config_generate_v08.json` | 训练/推理 dump config(L0 statistics) | dump run 内已 inline 生成同款,可直接引用 |
-
-**三仓物理布局**(决定 `git apply` 在哪层 cd):
-```
-<顶层仓根>/            # = hcu_verl_v0.8.0,02/04b apply 在这层(改 hcu_verl/...)
-├── hcu_verl/         #   patch 层(constants_ppo.py 等)
-├── verl/             # verl submodule,01/04a apply 在这层(cd <顶层仓根>/verl)
-└── Megatron-LM/      # 必须在 PYTHONPATH(修法B 的 VerlShapeErrChecker 依赖)
-```
-**接入步骤**(`<容器>`/`<RUN>`/路径按你的环境替换):
 ```bash
-# 1. 训练侧 git apply
-cd <顶层仓根>/verl  && git apply <skill>/patches/01-verl-fsdp-dump.patch  <skill>/patches/04a-das-compat-verl.patch
-cd <顶层仓根>       && git apply <skill>/patches/02-hcu_verl-constants.patch  <skill>/patches/04b-das-compat-hcu_verl.patch
-# 2. 推理侧:脚本 docker cp 进容器再跑(与 Megatron 共用同一 gpu_model_runner patch)
-docker cp <skill>/scripts/dispatch_logger.py <容器>:/usr/local/lib/python3.10/dist-packages/vllm/v1/worker/
-docker cp <skill>/scripts/patch_gpu_dump.py  <容器>:/tmp/ && docker exec <容器> python3 /tmp/patch_gpu_dump.py
-# 3. ★ 修法B:hcu_probe 的 FSDP statistics+consistent_check shape squeeze 盲区(见「三」),覆盖容器 dist-packages
-# 4. 健康验证 → dump → compare(见「四」)
+SK=<hcu_probe-das>/.claude/skills/hcu_probe-verl-fsdp-v08-integration
+cd <verl-das>/third_party/verl && git apply $SK/patches/01-verl-fsdp-dump.patch $SK/patches/05-verl-engine-monitor.patch
+cd <verl-das>                  && git apply $SK/patches/02-hcu_verl-constants.patch
+VH=$(python3 -c "import vllm_hcu,os;print(os.path.dirname(vllm_hcu.__file__))")
+cp $SK/scripts/dispatch_logger_hcu.py $VH/v1/dispatch_logger.py && python3 $SK/scripts/patch_hcu_dump.py   # 预期 PATCHED_HCU_DUMP
 ```
 
-> **⚠️ patch 是什么 + 换版本/换镜像还有效吗(换环境必读)**
-> - **`.patch`(`01/02/04a/04b`)= 标准 git 统一差异**(unified diff:记录对源码文件的增删行 + 上下文),用 `git apply` 打。`01`=verl 训练钩子(ray_trainer PROMPTS_ONLY + transformer_impl FSDPEngine 钩子 + llm_server request_id),`02`=hcu_verl env 透传,`04a/04b`=das torch2.5 兼容坑修。
-> - **训练侧 .patch 打的是 verl/hcu_verl 源码(你自己 git clone 的,不在 docker 镜像里)** → **与 docker 镜像无关,但与 verl/hcu_verl 版本强相关**:这套针对 **verl 0.8.0(hcu_verl 头 commit `91455ac`)**。同版本能 apply;**换 verl 版本 → patch 带的 `index` 哈希/`@@` 行号/上下文对不上,`git apply` 报 "patch does not apply"** → 这时按 §一表里的**钩子落点**(`FSDPEngine.forward_backward_batch` 等,落点稳定、只行号漂)手动改,或在新版本源码上重新 `git diff` 生成 patch。
-> - **推理侧 `patch_gpu_dump.py` 不是 .patch,是锚点注入脚本** —— 打的是**镜像里 das vllm 的 `gpu_model_runner.py`**(dist-packages)。**这部分才是镜像/das vllm 版本相关**:换 das vllm 版本,锚点字符串(`INIT_ANCHOR`/`FWD_ANCHOR`)可能漂移 → 脚本**先校验锚点、不符就报错退出(`SystemExit(1)`,不会静默打错)**,需按新版本的 `gpu_model_runner.py` 重定位锚点(比 .patch 鲁棒,但仍要求锚点字符串存在)。
-> - **一句话**:这套补丁锚定我们的 pinned 版本(**verl 0.8.0 + 该 das vllm 0.11 镜像**),**不是任意版本/镜像通用**。客户换 verl 版本 → 重生成训练侧 patch(§一落点是稳定指引);换 das 镜像 → 推理锚点重定位(脚本会报错提示,§五坑速查有锚点漂移定位)。
+同时接 Megatron 后端时,再打 `hcu_probe-verl-megatron-v08-integration/patches/01b-verl-megatron-engine-only.patch`(两个后端的 01 公共段相同,只能打一份)。
 
-## 一、dump 接入(训练 1 处钩子 + 推理 1 处 + hcu_probe 修法B)
-
-| # | 落点 | 作用 |
+| # | 落点 | 门控 |
 |---|---|---|
-| ① | `verl/workers/engine/fsdp/transformer_impl.py`(`FSDPEngine.forward_backward_batch` micro_batch 循环体)| **核心**:FSDP 训练钩子(懒建 debugger + 每 micro_batch 前向 start/stop/step + 取 request_id) |
-| ② | `verl/trainer/ppo/ray_trainer.py` | `PROMPTS_ONLY` 裁掉 response,训练前向只算 prompt prefill(对齐推理 prefill) |
-| ③ | `verl/workers/rollout/llm_server.py`(或 agent_loop) | 注入 vllm `request_id` 贯穿训推(配对靠它) |
-| ④ | `hcu_verl/trainer/constants_ppo.py` | 透传 `DUMP_ON/DUMP_PHASE/DUMP_ACTOR_CONFIG/DUMP_CONFIG_PATH` env 给 ray worker |
-| 推理 | `vllm/v1/worker/gpu_model_runner.py` | 推理侧 dump(`patch_gpu_dump.py` 注入,门控 `if DUMP_CONFIG_PATH`,与 Megatron 共用)|
+| 训练 dump | `FSDPEngine.forward_backward_batch` 的 micro_batch 循环体:懒建 `PrecisionDebugger`,每个 micro batch `start/stop/step`,写 `update_actor_log.jsonl` | `DUMP_ON=1`,`DUMP_PHASE=log_prob` |
+| 只算 prefill | `RayPPOTrainer` 中裁掉 response | `PROMPTS_ONLY=1` |
+| 配对 | `LLMServerClient` 把 vLLM `request_id` 写入 `extra_fields` | 始终(无副作用) |
+| 推理 dump | `hcu_model_runner.execute_model` 仅在 prefill step `start/stop/step`,dump 目录按 pid 隔离,写 `dispatch_log.jsonl` | `DUMP_CONFIG_PATH` |
+| monitor | `BaseEngine.train_batch`:首个训练 step 前 `on_setup_done(model, optimizer)`,`optimizer_step` 后 `on_step_end`,进程退出 `on_train_end` | `MONITOR_CONFIG` |
 
-**钩子点纠正(照搬必错)**:
-- FSDP 训练钩子在 **`FSDPEngine.forward_backward_batch` 的 micro_batch 循环体内**(0.8.0 Engine 抽象),**不是** Megatron 的 `forward_step`,也不是 0.7.1 FSDP 的 `dp_actor.compute_log_prob`。
-- **import 是 `from hcuprobe.pytorch import PrecisionDebugger, seed_all`**(非 `msprobe` —— 接入先确认导的是 hcu_probe 这个 fork 包)。
+## 训推一致 dump run
 
-## 二、★ hcu_probe 工具 + 官方 compare(backend=fsdp)
-
-### A. dump:PrecisionDebugger(L0 statistics)
-```python
-from hcuprobe.pytorch import PrecisionDebugger, seed_all
-dbg = PrecisionDebugger(config_path="config_actor.json")
-dbg.start(model=model); <前向>; dbg.stop(); dbg.step()
+```bash
+export DUMP_ON=1 PROMPTS_ONLY=1 DUMP_PHASE=log_prob TORCHDYNAMO_DISABLE=1
+export DUMP_ACTOR_CONFIG=<RUN>/cfg_actor.json DUMP_CONFIG_PATH=<RUN>/cfg_generate.json   # dump_path 分别为 <RUN>/dump_actor、<RUN>/dump_generate
+# 在官方 run_qwen2_5_0.5b_fsdp_vllm.sh 的 main_ppo 命令末尾追加:
+  data.train_batch_size=16 actor_rollout_ref.actor.ppo_mini_batch_size=16 \
+  actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1 actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1 \
+  actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1 actor_rollout_ref.actor.use_dynamic_bsz=False \
+  trainer.balance_batch=False actor_rollout_ref.rollout.enforce_eager=True \
+  actor_rollout_ref.rollout.gpu_memory_utilization=0.3 trainer.total_training_steps=2
 ```
-config:`task=statistics`、`level=L0`、`dump_path`、`rank=[] step=[]`(全采)。产物 `dump_actor/stepN/rankM/dump.json` + `update_actor_log.jsonl`;推理 `dump_generate/<pid>/stepN/rankM/dump.json` + `dispatch_log.jsonl`。
 
-### B. compare:consistent_compare(封装官方 pt_compare,backend=fsdp)
+- micro batch=1 + 关 dynamic bsz + 关 balance_batch:训练侧每个 micro batch 只含 1 个 prompt,可与推理侧一对一配对。
+- `enforce_eager=True`:否则 vLLM CUDA Graph 绕过推理侧 hook,dump 为空。
+- `gpu_memory_utilization=0.3`:共享节点上官方 0.5 可能在 vLLM `wake_up` 时 OOM。
+- `PROMPTS_ONLY=1` 会让该 run 的训练退化(grad_norm=0),属预期;训练健康看普通基线。
+
+## 比对
+
+```bash
+export PYTHONPATH=<verl-das>:<verl-das>/third_party/verl:<verl-das>/third_party/Megatron-LM
+python3 $SK/scripts/fsdp_nan_class.py <RUN>     # 预期 output[0] 真 NaN = 0
+python3 $SK/scripts/run_fsdp_compare.py <RUN>
+```
+
 ```python
 from hcuprobe.integrations.verl import consistent_compare
-consistent_compare(训练dump.json, 推理dump.json, out, backend="fsdp")   # = pt_compare(consistent_check=True) + 修法B + 剔除 Triton.*
+consistent_compare(train_dump_json, infer_dump_json, out_dir, backend="fsdp")
 ```
-- 内置 `FSDP_MODULE_MAP`(`q/k/v_proj→qkv_proj`、`gate/up→gate_up_proj` 等)做训推命名映射。
-- 封装好的 `scripts/run_fsdp_compare.py` 已含**正确排除口径**(见「三」)+ 逐类型统计,直接用。
 
-## 三、★ compare 正确配置(FSDP 特有,易错)
+`consistent_compare` 是 hcuprobe 自维护封装(不改与上游同步的 `core/`):调用上游 `pt_compare(consistent_check=True)`,并 ① statistics 模式使用忽略 batch=1 维的 `VerlShapeErrChecker`(训练 `[1,S,H]` vs 推理 `[S,H]`);② 比对前剔除 `Triton.*` kernel 条目(vllm-hcu 的 Triton kernel 会与训练侧误配,报 "Conflicting comparison data")。结果为 `<RUN>/compare_out/compare_result_*.csv`(列名 `NPU Name`=训练侧,`Bench Name`=推理侧)。
 
-1. **单 prompt 对齐**:`actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1` + 关 dynamic_bsz(让 `num_requests=1`、训练 `[1,L]` 对齐推理 `[L]`)+ `trainer.balance_batch=False` + `PROMPTS_ONLY=1` + `enforce_eager=True`。
-2. **★ 修法B(hcu_probe FSDP statistics 盲区)**:FSDP 训练 dump 是 `[1,S,H]`(HF eager `unsqueeze(0)`)vs 推理 vllm `[S,H]`(packed);上游 `pt_compare` 的 squeeze 容差 `VerlShapeErrChecker` **只挂 task=tensor**,statistics 模式恒用严格 `ShapeErrChecker` → 全 shape error、配对几乎为 0。**修法:用 `hcuprobe.integrations.verl.consistent_compare`**,它只在本次调用内把 statistics+consistent_check 的检查器换成含 `VerlShapeErrChecker` 的版本,不改 `core/`(`core/` 与上游 msprobe 保持一致,见 `docs_hcu/UPSTREAM_SYNC.md`)。验证:`python3 -c "from hcuprobe.integrations.verl import consistent_compare"`。**另:`Megatron-LM` 必须在 `PYTHONPATH`**(compare 脚本已加)。
-3. **排除口径(run_fsdp_compare.py 已内置)**:可比叶子算子 = output、非 wrapper、有 NormRelativeErr;**排除** 整层 `Qwen2DecoderLayer`/`Qwen2MLP`/`Qwen2Attention`(残差和,非 normed)+ `IdentityOp` + **`act_fn`/`SiLU`(融合算子:HF `silu(gate)` vs vllm `SiluAndMul=silu(gate)·up`,不同张量)**。
+**可比集口径**(脚本已内置):只统计非 wrapper 的叶子算子 output;排除整层 `Qwen2DecoderLayer` / `Qwen2MLP` / `Qwen2Attention`(含残差)、`IdentityOp`、`act_fn`(HF `silu(gate)` vs vLLM `SiluAndMul`)。HF 的 `q/k/v_proj`、`gate/up_proj` 分开,vLLM 融合,不可比。剩余 `o_proj` / `down_proj` / `input_layernorm` / `post_attention_layernorm` / `model.norm` / `embed` 共 98 个(Qwen2.5-0.5B)。
 
-> ⚠️ **FSDP 比 Megatron 少比 qkv / gate_up**:HF 训练侧 `q/k/v_proj`、`gate/up_proj` 是**分开**的,与推理 vllm 的**融合** `qkv_proj`/`gate_up_proj` 配不上(shape/语义不同)→ 不进可比集。可比集只剩 o_proj / down_proj / layernorm / embed / norm。要补需在 compare 侧先把训练分开的 q/k/v cat 成 qkv 再比(`FSDP_MODULE_MAP` 目前未做这层聚合,是可补盲区)。
+## monitor
 
-## 四、验证(三步:健康 → dump → compare)
-
-### 阶段 0:先验 base 训练健康(eager,无 dump)
 ```bash
-bash scripts/run_fsdp_normal_eager.sh    # eager 普通训练,无 dump/PROMPTS_ONLY
-# 看 tensorboard(EventAccumulator 读):reward 应从 ~0.0125 升到 ~0.2、grad_norm 有限无 NaN
-```
-不健康(默认 flash → grad_norm 每步 NaN)先满足先决条件(改 eager/sdpa),再往下。
-
-### 阶段 1:产可比对 dump(eager + PROMPTS_ONLY + 单 prompt)
-```bash
-bash scripts/run_fsdp_clean.sh           # 内含 attn=eager + DUMP_ON=1 PROMPTS_ONLY=1 + 单 prompt override
-# 产物:<RUN>/dump_actor(训练侧)+ <RUN>/dump_generate(推理侧)+ update_actor_log/dispatch_log
+export MONITOR_CONFIG=<RUN>/cfg_monitor.json   # 模板 hcu_probe-megatron-integration/config/monitor_v2_config_full_probe.json,改 output_dir
+# 正常训练(不设 DUMP_ON / PROMPTS_ONLY)
 ```
 
-### 阶段 2:review dump + compare
-```bash
-# 0. 脚本先 docker cp 进容器(dump.json 是容器 root 0750,compare/NaN 检查必须容器内跑)
-docker cp <skill>/scripts/fsdp_nan_class.py <skill>/scripts/run_fsdp_compare.py <skill>/scripts/batch_compare.py <容器>:/tmp/
-docker exec <容器> pip install -q openpyxl                 # pandas 读 xlsx 后端,缺则 compare 静默崩
-# 1. ★ review dump NaN:区分真 NaN vs 良性 CE 缓冲。传 <RUN>(= dump_path 父目录)
-docker exec <容器> python3 /tmp/fsdp_nan_class.py <RUN>
-#   预期:output[0] 含真 NaN=0;唯一 NaN 是 1 个 Triton.cross_entropy_fwd_kernel(良性未初始化 z_losses)。
-#   ⚠️ 别被 grep -rl NaN 的"全部文件命中"吓到——那全是良性 CE NaN(每文件都有该模块);output[0]>0 才中止。
-# 2. compare(官方 pt_compare backend=fsdp;PYTHONPATH 必须含 Megatron-LM)
-docker exec -e PYTHONPATH=<VERL>:<VERL>/verl:<VERL>/Megatron-LM <容器> python3 /tmp/run_fsdp_compare.py <RUN>
-```
-> 若 compare 配对≈0 / 全 shape error → 修法B 没生效(`references/hcu_probe-fsdp-statistics-fix.md` 验证);若 import 报错 → Megatron-LM 不在 PYTHONPATH。
+产物 `<output_dir>/rank_<r>/{weight_grad,optimizer,param}_step<N>-<N>.csv`,列 `vpp_stage,step,module_name,scope,micro_step,min,max,mean,norm,nans`。FSDP1 下 `module_name` 为每个 FSDP 单元的 `_flat_param`(按层聚合,非逐个权重)。配置必须 `"patch_optimizer_step": false`,不开 `module` 通道。判断是否生效以 CSV 为准(ray worker 日志常不回传 driver)。
 
-**已验证结论(2026-06-21,Qwen2.5-0.5B,排整层+IdentityOp+act_fn 后)**:
-- **可比叶子算子 98 个**(o_proj 24 / down_proj 24 / input_layernorm 24 / post_attention 24 / model.norm 1 / embed 1);**eager 96/98=97.96% &lt;1%、中位 0.199%**;**sdpa 更优 97/98=98.98% &lt;1%、中位 0.121%**。
-- embed 两侧 l2norm 完全相同(误差 0);**唯一 &gt;1% 是 o_proj**(attention 输出,eager 2.67% / sdpa 1.78% = train attn kernel vs vllm attn kernel 的代价,非 bug)。
-- **诚实定界**:一致性 = 可比叶子算子一致,**非逐 tensor 全一致**;不比整层/IdentityOp/融合 act_fn;qkv/gate_up 因 HF 分开 vs vllm 融合不可比。
-- **dump 非侵入**:eager 普通训练 + 训练侧 dump,reward 轨迹与无-dump run 重合、dump 0 真 NaN。
+## 坑速查
 
-## 五、坑速查
+| 现象 | 处理 |
+|---|---|
+| 推理侧 `ANCHOR_NOT_FOUND` | 用 `patch_hcu_dump.py`(vllm-hcu);`patch_gpu_dump.py` 只适用旧 vLLM 0.11 镜像 |
+| 推理 dump 为空 | `actor_rollout_ref.rollout.enforce_eager=True` |
+| vLLM `wake_up` OOM / Free memory 不足 | 降 `rollout.gpu_memory_utilization`;`hy-smi --showpids` 查他人占卡 |
+| 比对几乎全 shape error 或 "Conflicting comparison data" | 直接调了上游 `pt_compare`,改用 `consistent_compare` |
+| `grep NaN` 全部文件命中 | 良性 `Triton.cross_entropy_fwd_kernel` 缓冲,用 `fsdp_nan_class.py` 看 output[0] |
+| monitor 无 CSV | 确认打了 05、`MONITOR_CONFIG` 经 02 透传;`output_dir` 父目录可写 |
+| 旧 das1.7 镜像 grad_norm 每步 NaN | 该镜像需 `+actor_rollout_ref.model.override_config.attn_implementation=eager/sdpa`(新镜像不需要),见 `references/flash-nan-and-sdpa.md` |
 
-- **训练 grad_norm 每步 NaN / dump 大面积 NaN** → 默认 flash_attention_2,改 `attn_implementation=eager`/`sdpa`(本 skill 头号坑)。
-- **`grep -rl NaN` 全部文件命中** → 良性 CE 缓冲(`Triton.cross_entropy_fwd_kernel` 未初始化 z_losses),用 `fsdp_nan_class.py` 看 output[0] 才算真 NaN。
-- **compare 配对几乎为 0 / 全 shape error** → 修法B 没打(FSDP statistics+consistent_check 不 squeeze);且 `Megatron-LM` 要在 PYTHONPATH。
-- **compare 可比算子过少 / qkv 缺失** → 正常:HF 分开的 q/k/v、gate/up 配不上 vllm 融合,不进可比集(非 bug,是 HF 分开 vs vllm 融合的算子对不齐)。
-- **推理 dump 为空** → vllm compile/cudagraph 绕过 hook,`enforce_eager=True`;`self.model` 是 CUDAGraphWrapper 要解包(`patch_gpu_dump.py` 已处理)。
-- **compare 整层 diff 7000%+** → 不是发散:整层 output 含残差(massive activation),与推理捕获点/口径不同,方法学固定排除。
+## 参考
 
-## 范例 + 延伸
-- 深入机制(本 skill 自带):`references/flash-nan-and-sdpa.md`(flash NaN 的 tripwire 定位 + eager/sdpa 对比)、`references/hcu_probe-fsdp-statistics-fix.md`(修法B 精确代码 + 验证)。
-- 相关 skill:`hcu_probe-verl-megatron-v08-integration`(Megatron 后端,默认可用)、`hcu_probe-verl-fsdp-v07-integration`(verl 0.7.1 FSDP,vllm-hcu + 自研 compare)。
+- `references/legacy-record.md`:重构前正文(das1.7 / vLLM 0.11 时代的完整记录与排查过程)
+- `references/flash-nan-and-sdpa.md`:旧镜像 flash attention NaN 定位
+- `references/hcu_probe-fsdp-statistics-fix.md`:statistics 模式 shape 容差问题原理
