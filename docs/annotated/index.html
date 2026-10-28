@@ -41,56 +41,6 @@
 <div class="wrap">
 
   <section class="ver">
-    <h2>verl 0.7.1 · FSDP 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>hcu_probe-verl-fsdp-v07-integration</code>。</p>
-    <div class="cards">
-      <a class="card c1" href="verl-0.7-fsdp/instrumentation.html">
-        <div class="tag">插桩</div>
-        <h3>插桩位置标注</h3>
-        <p>hcu_probe 在哪几个源码文件、哪几行插桩(5 处钩子 + monitor):左边带上下文源码(绿=新增行),右边逐处说明为什么这么钩。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c2" href="verl-0.7-fsdp/compare_logic.html">
-        <div class="tag">compare</div>
-        <h3>run07_filtered.py 逻辑 + pt_compare</h3>
-        <p>compare 脚本 5 步(配对→挑样本→过滤交错模块→调 pt_compare→统计),以及 <code>pt_compare</code> / <code>verify_consistency.py</code> / <code>run07_filtered.py</code> 三者区别。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c3" href="verl-0.7-fsdp/consistent_check_algorithm.html">
-        <div class="tag">算法</div>
-        <h3>consistent_check 比对算法内部</h3>
-        <p>官方 <code>pt_compare(consistent_check=True)</code> 的五段管线:解析裁窗 → 模块名映射 → 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
-        <div class="go">打开 →</div>
-      </a>
-    </div>
-  </section>
-
-  <section class="ver">
-    <h2>verl 0.7.1 · Megatron 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-v07-integration</code>。</p>
-    <div class="cards">
-      <a class="card c1" href="verl-0.7-megatron/instrumentation.html">
-        <div class="tag">插桩</div>
-        <h3>插桩位置标注</h3>
-        <p>训练侧 6 处钩子挂 <code>MegatronPPOActor</code>(megatron_actor.py)+ 推理侧 patch das vllm 0.11 <code>gpu_model_runner</code>:左边带上下文源码(绿=新增行),右边逐处说明。含 <b>★引擎陷阱</b>(别加 <code>use_legacy_worker_impl=disable</code>)。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c2" href="verl-0.7-megatron/compare_logic.html">
-        <div class="tag">compare</div>
-        <h3>run_megatron_compare.py 逻辑 + pt_compare</h3>
-        <p>compare 脚本 4 步(配对→挑样本→调 <code>pt_compare(backend=megatron)</code>→统计),比 FSDP 少一步过滤(das vllm 0.11 模块序干净),以及 <code>MEGATRON_MODULE_MAP</code> 命名映射。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c3" href="verl-0.7-megatron/consistent_check_algorithm.html">
-        <div class="tag">算法</div>
-        <h3>consistent_check 比对算法内部</h3>
-        <p>官方 <code>pt_compare(consistent_check=True, backend=megatron)</code> 的五段管线:解析裁窗 → 模块名映射(mcore/TE ↔ vllm)→ 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
-        <div class="go">打开 →</div>
-      </a>
-    </div>
-  </section>
-
-  <section class="ver">
     <h2>verl 0.8.0 · FSDP 后端</h2>
     <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-v08-integration</code>。</p>
     <div class="cards">
@@ -160,31 +110,6 @@
         <div class="tag">坑+验证</div>
         <h3>6 坑 + 验证三件套 + L0/L1 覆盖</h3>
         <p>tensorboard 隐性依赖(静默假启动)、L1 yaml patch、risk_level 大写、monitor patch_optimizer_step；验证必看 <code>initialized</code>/<code>started</code> marker(只 wrapper applied 是假象)。</p>
-        <div class="go">打开 →</div>
-      </a>
-    </div>
-  </section>
-
-  <section class="ver">
-    <h2>原生 PyTorch(ResNet50 + Adam)</h2>
-    <p class="lead">任意<b>原生 PyTorch / 自定义 train loop</b>(精度对比 / 采集验证)。<b>最直接的接入</b> —— 直接调 <code>hcu_probe.integrations._common.lifecycle</code> 的 5 个 hook,无 Feature(hcu_megatron)、无源码 patch(verl)、几行即可;这套 <code>_common.lifecycle</code> 是<b>框架无关地基 API</b>,megatron 的 Feature 薄壳、verl 的 patch 最终都调它。对应 skill <code>hcu_probe-pytorch-integration</code>。</p>
-    <div class="cards">
-      <a class="card c1" href="pytorch/instrumentation.html">
-        <div class="tag">接入机制</div>
-        <h3>5-hook lifecycle 直接织入(最简)</h3>
-        <p>在你的训练循环里 import <code>get_dump_lifecycle</code>/<code>get_monitor_lifecycle</code>,按训练阶段调 <code>on_train_start</code>/<code>on_step_start</code>/<code>on_step_end</code>/<code>on_train_end</code>。左真实 ResNet 代码,右说明;三框架接入机制对照。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c2" href="pytorch/capture_modes.html">
-        <div class="tag">采集模式</div>
-        <h3>dump/monitor 采集模式 + argparse CLI</h3>
-        <p>baseline / dump(L0/L1)/ monitor(三通道)/ both 四模式,<code>--dump-cfg</code>/<code>--monitor-cfg</code> 直接 argparse 控制(比 megatron 简单,不穿多层启动脚本)。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c3" href="pytorch/pitfalls_verification.html">
-        <div class="tag">坑+验证</div>
-        <h3>4 坑 + 验证三件套 + L0/L1 覆盖</h3>
-        <p>tensorboard 隐性依赖(静默假启动)、cwd/权限、monitor 三通道约束、<b>optimizer 通道需 Adam 有 state</b>(SGD 采不到);验证必看 <code>initialized</code>/<code>started</code> marker。</p>
         <div class="go">打开 →</div>
       </a>
     </div>

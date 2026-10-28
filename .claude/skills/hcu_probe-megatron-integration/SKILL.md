@@ -25,7 +25,6 @@ hcu_megatron 用 `hcu_megatron/features_manager/__init__.py` 里的 **`ADAPTOR_F
 | `hcuprobe overflow_check` | ✅ 注入 NaN 后定位到起点层 |
 | `hcuprobe graph_visualize` | ✅ 单图 / 双图 `.vis.db` |
 | `hcuprobe multi_acc_check` | ✅ L1 输入 6709 API:error 0,warning 为 bf16 舍入 |
-| 未验证 | 多机;MoE / EP 模型(L1 需额外注释 `distributed:` 段,见 runbook) |
 
 ## 接入(一次性)
 
@@ -69,7 +68,7 @@ ADAPTOR_FEATURES = [..., HcuProbeFeature(), MonitorFeature()]
 
 ## L1 前置:修改 `support_wrap_ops.yaml`
 
-L1 会替换 `F.silu`,Megatron MLP 的 `activation_func is F.silu` 判断失败 → `Only support fusion of gelu and swiglu`。注释**已安装** hcuprobe 的 `pytorch/dump/api_dump/support_wrap_ops.yaml` 中 **`functional:` 区**的 `- gelu`、`- silu` 两行(其他区同名条目不动;只改安装位置,不改源码仓);用完还原。命令见 quick_start 2.7 节。副作用:L1 数据中没有 `Functional.silu/gelu`。非 MoE 模型只改这两行;MoE / EP 模型还需注释 `distributed:` 段(runbook 坑 3,未在新环境验证)。
+L1 会替换 `F.silu`,Megatron MLP 的 `activation_func is F.silu` 判断失败 → `Only support fusion of gelu and swiglu`。注释**已安装** hcuprobe 的 `pytorch/dump/api_dump/support_wrap_ops.yaml` 中 **`functional:` 区**的 `- gelu`、`- silu` 两行(其他区同名条目不动;只改安装位置,不改源码仓);用完还原。命令见 quick_start 2.7 节。副作用:L1 数据中没有 `Functional.silu/gelu`。 只改这两行即可,`distributed:` 等其他段不要动。
 
 ## 离线分析
 
@@ -96,5 +95,4 @@ L1 会替换 `F.silu`,Megatron MLP 的 `activation_func is F.silu` 判断失败 
 
 ## 参考
 
-- `references/runbook.md`:6 个核心坑的原理与验证方法
-- `references/legacy-record.md`:重构前正文(dcu_megatron + llama2-7B 时代的 launcher 解析、5 模式 PoC 记录)
+- `references/runbook.md`:核心坑的原理与验证方法

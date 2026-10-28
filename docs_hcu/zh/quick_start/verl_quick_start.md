@@ -34,7 +34,7 @@
 
 > [!NOTE]说明
 >
-> verl-das 主干已升级到 verl 0.9。本教程的训练侧补丁锚定 **verl 0.8.0（verl-das `ca8f078`）**，请务必 checkout 该 commit；在 verl 0.9 上 `git apply` 会失败。
+> 本教程的训练侧补丁锚定 **verl 0.8.0（verl-das `ca8f078`）**，请务必 checkout 该 commit，否则 `git apply` 可能失败。
 
 ## 2. 操作步骤
 
@@ -130,7 +130,7 @@ ls /workspace/data/gsm8k/{train,test}.parquet
 
 ### 2.3 基线训练（可选，推荐）
 
-先用 verl-das 官方脚本确认训练能跑通。官方 `examples/grpo_trainer/run.sh` 面向多机（mpirun + sshd），单机时只需做它的等价步骤：
+先用 verl-das 官方脚本确认训练能跑通。官方 `examples/grpo_trainer/run.sh` 通过 mpirun + sshd 启动 ray，本教程在单机上直接做它的等价步骤：
 
 ```bash
 cd /workspace/src/verl-das/examples/grpo_trainer

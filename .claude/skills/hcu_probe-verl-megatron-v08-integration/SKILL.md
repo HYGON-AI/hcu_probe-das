@@ -17,7 +17,6 @@ description: "在 verl-das / hcu_verl(verl 0.8.0,Megatron 训练后端,推理 da
 | 训推一致 | **7 样本 × 233 可比算子 = 1631 个,100% <1%,中位 0%,最大 0.78%**;embed 两侧 l2norm 完全相同 |
 | rollout TP≠actor TP 时 | 只有 61% <1%(列并行算子切分不同,不是数值问题) |
 | monitor | ✅ Qwen3-8B 3 步:8 rank × 3 通道 = 72 个 CSV(逐个权重粒度),训练正常 |
-| 未验证 | 多机;verl 0.9;Fully Async 模式(需把 `PROMPTS_ONLY` 裁剪移到 `FullyAsyncTrainer._fit_generate`) |
 
 ## 文件
 
@@ -30,7 +29,7 @@ description: "在 verl-das / hcu_verl(verl 0.8.0,Megatron 训练后端,推理 da
 | FSDP skill `scripts/patch_hcu_dump.py` + `dispatch_logger_hcu.py` | 推理侧 vllm-hcu 注入(两后端共用) | 容器内 |
 | `scripts/run_megatron_compare.py` / `run_megatron_compare_multi.py` / `batch_compare.py` / `verify_id_match.py` | 配对 + `consistent_compare(backend="megatron")` + 统计 | 容器内 |
 | `config/config_actor_v08.json` / `config_generate_v08.json` | L0 statistics 模板 | 改 `dump_path` |
-| `scripts/patch_gpu_dump.py`、`patches/04a/04b`、`scripts/run_megatron_bw8.sh.example` | 仅旧 das1.7 / vLLM 0.11 镜像 | 见 `references/legacy-record.md` |
+| `scripts/patch_gpu_dump.py`、`patches/04a/04b`、`scripts/run_megatron_bw8.sh.example` | 仅旧 das1.7 / vLLM 0.11 镜像使用 | — |
 
 ## 接入
 
@@ -72,7 +71,7 @@ export DUMP_ACTOR_CONFIG=<RUN>/cfg_actor.json DUMP_CONFIG_PATH=<RUN>/cfg_generat
 | `++actor...sequence_parallel=False` | 关 SP,否则训练侧输出沿 seq 被切成 1/TP。键已存在须用 `++`;**不要单独覆盖 `ref.megatron.override_transformer_config.*`**(它通过 `oc.select` 继承 actor,单改会替换整个节点、丢 `attention_backend` → `NVTE_FUSED_ATTN` 断言失败)。只改 `actor.megatron.sequence_parallel` 不生效(mbridge 路径只读 override_transformer_config) |
 | `max_num_seqs=1` + 关 chunked prefill | 推理侧每个 prefill step 只含 1 个完整 prompt |
 | `log_prob_micro_batch_size_per_gpu=1` + 关 dynamic bsz | compute_log_prob 走 `infer_batch`,读的是 `log_prob_*`(不是 `ppo_micro_batch_size`) |
-| offload + `gpu_memory_utilization=0.2` | 共享节点上为 vLLM 留显存;仅 2 步 dump run 用,长训见 legacy-record 的已知问题 |
+| offload + `gpu_memory_utilization=0.2` | 共享节点上为 vLLM 留显存;仅用于短的 dump run |
 
 ## 比对
 
@@ -97,10 +96,8 @@ python3 $M/scripts/run_megatron_compare_multi.py <RUN>    # 多样本汇总
 | `NVTE_FUSED_ATTN set to 1, but expected 0 for attention backend type flash` | 去掉对 `ref.megatron.override_transformer_config.*` 的覆盖 |
 | 训练侧 dump 为空 | `use_fused_kernels=False`;`DUMP_PHASE=log_prob` |
 | vLLM 初始化 Free memory 不足 / 权重同步 OOM | 降 `gpu_memory_utilization`、开 actor/ref offload;检查他人占卡 |
-| 长跑在 validation rollout 挂死(旧镜像记录) | `trainer.test_freq=-1`,见 `references/legacy-record.md` |
 
 ## 参考
 
-- `references/legacy-record.md`:重构前正文(das1.7 / vLLM 0.11 时代,含长训挂死与 OOM 根因分析)
 - `references/compare-guide.md`:pt_compare 配置与字段说明
 - `references/env-and-pitfalls.md`:旧镜像环境与锚点定位

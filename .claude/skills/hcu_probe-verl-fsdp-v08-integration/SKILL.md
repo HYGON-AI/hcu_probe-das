@@ -1,7 +1,7 @@
 ---
 name: hcu_probe-verl-fsdp-v08-integration
 version: 2.0.0
-description: "在 verl-das / hcu_verl(verl 0.8.0,FSDP 训练后端,推理 das vLLM 0.18.1 + vllm-hcu)接入 hcuprobe:训推一致性 dump(训练侧 FSDPEngine 钩子 + 推理侧 vllm_hcu hcu_model_runner 注入)、离线逐层比对(hcuprobe.integrations.verl.consistent_compare)、以及训练三通道 monitor(BaseEngine.train_batch 钩子)。当用户要给 verl 0.8.0 FSDP 后端接入 hcuprobe、做训练 vs 推理前向数值比对、或监控训练梯度/优化器/参数时使用。面向训练已跑通的人;环境搭建见 docs_hcu/zh/quick_start/verl_quick_start.md。区别于 hcu_probe-verl-megatron-v08-integration(Megatron 后端)与 hcu_probe-verl-fsdp-v07-integration(verl 0.7.1)。"
+description: "在 verl-das / hcu_verl(verl 0.8.0,FSDP 训练后端,推理 das vLLM 0.18.1 + vllm-hcu)接入 hcuprobe:训推一致性 dump(训练侧 FSDPEngine 钩子 + 推理侧 vllm_hcu hcu_model_runner 注入)、离线逐层比对(hcuprobe.integrations.verl.consistent_compare)、以及训练三通道 monitor(BaseEngine.train_batch 钩子)。当用户要给 verl 0.8.0 FSDP 后端接入 hcuprobe、做训练 vs 推理前向数值比对、或监控训练梯度/优化器/参数时使用。面向训练已跑通的人;环境搭建见 docs_hcu/zh/quick_start/verl_quick_start.md。区别于 hcu_probe-verl-megatron-v08-integration(Megatron 后端)。"
 ---
 
 # verl 0.8.0 FSDP 后端接入 hcuprobe
@@ -15,11 +15,11 @@ description: "在 verl-das / hcu_verl(verl 0.8.0,FSDP 训练后端,推理 das vL
 | 项 | 环境 / 结果 |
 |---|---|
 | 镜像 | `harbor.sourcefind.cn:5443/hcu/admin/base/custom:verl-das-ubuntu22.04-dtk26.04-py3.10-20260617-2235`(torch 2.10、vllm 0.18.1 + vllm-hcu、TE 2.10) |
-| 代码 | GitHub `HYGON-AI/verl-das` commit `ca8f078`(子模块 verl = v0.8.0);verl-das main 已升 0.9,本补丁打不上 |
+| 代码 | GitHub `HYGON-AI/verl-das` commit `ca8f078`(子模块 verl = v0.8.0) |
 | 基线 | Qwen2.5-0.5B-Instruct 官方脚本(默认 attention)6 步 grad_norm 有限 |
 | 训推一致 | 98 个可比叶子算子 **97/98 <1%,中位 0.19%**;唯一 >1% 为 `layers.22.o_proj` 2.79%(attention kernel 差异) |
 | monitor | ✅ 4 步:8 rank × 3 通道 = 96 个 CSV(FSDP 单元 `_flat_param` 粒度),训练正常 |
-| 未验证 | 多机;verl 0.9;L1 / tensor 级训推比对(训练与推理算子集异构,不推荐) |
+| 说明 | 训推比对只用 L0;L1 / tensor 级训练与推理算子集异构,不适合做训推比对 |
 
 ## 文件
 
@@ -32,7 +32,7 @@ description: "在 verl-das / hcu_verl(verl 0.8.0,FSDP 训练后端,推理 das vL
 | `scripts/run_fsdp_compare.py` / `batch_compare.py` | 配对 + `consistent_compare(backend="fsdp")` + 可比集统计 | 容器内运行 |
 | `scripts/fsdp_nan_class.py` | 区分 output[0] 真 NaN 与良性 CE 缓冲 NaN | 容器内运行 |
 | `config/config_actor_v08.json` / `config_generate_v08.json` | L0 statistics 配置模板 | 改 `dump_path` 后使用 |
-| `scripts/patch_gpu_dump.py`、`patches/04a/04b`、`scripts/run_fsdp_*.sh` | 仅旧 das1.7 / vLLM 0.11 / torch 2.5 镜像 | 见 `references/legacy-record.md` |
+| `scripts/patch_gpu_dump.py`、`patches/04a/04b`、`scripts/run_fsdp_*.sh` | 仅旧 das1.7 / vLLM 0.11 / torch 2.5 镜像使用 | — |
 
 ## 接入
 
@@ -112,6 +112,5 @@ export MONITOR_CONFIG=<RUN>/cfg_monitor.json   # 模板 hcu_probe-megatron-integ
 
 ## 参考
 
-- `references/legacy-record.md`:重构前正文(das1.7 / vLLM 0.11 时代的完整记录与排查过程)
 - `references/flash-nan-and-sdpa.md`:旧镜像 flash attention NaN 定位
 - `references/hcu_probe-fsdp-statistics-fix.md`:statistics 模式 shape 容差问题原理
