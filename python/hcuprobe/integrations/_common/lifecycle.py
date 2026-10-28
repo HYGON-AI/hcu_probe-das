@@ -33,6 +33,7 @@ from . import loss as _loss
 #  Logging helper (framework-agnostic; degrades to print)
 # ---------------------------------------------------------------------------
 
+
 def _log(component, msg):
     """Best-effort rank-0 logger.
 
@@ -42,6 +43,7 @@ def _log(component, msg):
     line = f"[hcu_probe.{component}] {msg}"
     try:
         from megatron.training.utils import print_rank_0
+
         print_rank_0(line)
     except Exception:
         print(line)
@@ -50,6 +52,7 @@ def _log(component, msg):
 # ---------------------------------------------------------------------------
 #  Dump lifecycle
 # ---------------------------------------------------------------------------
+
 
 class DumpLifecycle:
     """Encapsulates PrecisionDebugger lifecycle for tensor dump.
@@ -76,6 +79,7 @@ class DumpLifecycle:
         if seed is not None:
             try:
                 from hcuprobe.pytorch import seed_all
+
                 seed_all(seed=seed, mode=reproduce, rm_dropout=reproduce)
                 _log("dump", f"seed fixed to {seed} (mode={reproduce}, rm_dropout={reproduce})")
             except Exception as e:
@@ -84,6 +88,7 @@ class DumpLifecycle:
         if self._debugger is None:
             try:
                 from hcuprobe.pytorch import PrecisionDebugger
+
                 self._debugger = PrecisionDebugger(config_path=dump_cfg_path)
                 _log("dump", f"PrecisionDebugger initialized with {dump_cfg_path}")
             except Exception as e:
@@ -100,6 +105,7 @@ class DumpLifecycle:
             return
         try:
             from hcuprobe.pytorch import PrecisionDebugger
+
             PrecisionDebugger.start(model=model)
         except Exception as e:
             _log("dump", f"start() failed: {e}")
@@ -115,6 +121,7 @@ class DumpLifecycle:
         if self._debugger is not None:
             try:
                 from hcuprobe.pytorch import PrecisionDebugger
+
                 PrecisionDebugger.step()
             except Exception as e:
                 _log("dump", f"step() failed: {e}")
@@ -128,6 +135,7 @@ class DumpLifecycle:
         if self._debugger is not None:
             try:
                 from hcuprobe.pytorch import PrecisionDebugger
+
                 PrecisionDebugger.stop()
                 _log("dump", "PrecisionDebugger stopped.")
             except Exception as e:
@@ -144,6 +152,7 @@ class DumpLifecycle:
 # ---------------------------------------------------------------------------
 #  Monitor V2 lifecycle
 # ---------------------------------------------------------------------------
+
 
 class MonitorLifecycle:
     """Encapsulates TrainerMonitorV2 lifecycle.
@@ -172,16 +181,16 @@ class MonitorLifecycle:
             return
         try:
             import os
+
             # P4:TrainerMonitorV2 不会递归创建 output_dir,缺目录会静默 init 失败、无 csv;这里预先建好。
             _mon_out = _cfg.get_monitor_output_dir_from_cfg(monitor_cfg_path)
             if _mon_out:
                 os.makedirs(_mon_out, exist_ok=True)
             from hcuprobe.core.monitor_v2.trainer import TrainerMonitorV2
+
             self._monitor = TrainerMonitorV2(monitor_cfg_path, fr="pytorch")
             model_obj = models[0] if isinstance(models, (list, tuple)) else models
-            self._monitor.start(
-                model=model_obj, optimizer=optimizer, grad_acc_steps=grad_acc_steps
-            )
+            self._monitor.start(model=model_obj, optimizer=optimizer, grad_acc_steps=grad_acc_steps)
             _log("monitor", f"TrainerMonitorV2 initialized and started (grad_acc_steps={grad_acc_steps}).")
         except Exception as e:
             _log("monitor", f"init/start failed: {e}")
@@ -265,9 +274,11 @@ def reset_lifecycles():
 #  Helpers
 # ---------------------------------------------------------------------------
 
+
 def _fallback_step(tracker):
     """Derive a monotonic step counter from already-recorded rows
-    when the upstream debugger does not expose one."""
+    when the upstream debugger does not expose one.
+    """
     return len({s for (s, _) in tracker._recorded})  # noqa: SLF001
 
 

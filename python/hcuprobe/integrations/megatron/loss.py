@@ -33,6 +33,4 @@ def get_tracker(args):
         dump_cfg_path=getattr(args, "hcu_probe_config", None),
         monitor_cfg_path=getattr(args, "hcu_probe_monitor_config", None),
     )
-    return _common_get_tracker(
-        output_dir=output_dir, is_writing_rank_fn=_is_megatron_dp_rank_0
-    )
+    return _common_get_tracker(output_dir=output_dir, is_writing_rank_fn=_is_megatron_dp_rank_0)

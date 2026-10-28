@@ -1,5 +1,4 @@
-"""API 精度预检三件套(acc_check / multi_acc_check / api_precision_compare)。
-"""
+"""API 精度预检三件套(acc_check / multi_acc_check / api_precision_compare)。"""
 
 import argparse
 from typing import Optional, Sequence
@@ -47,8 +46,6 @@ def api_precision_compare(
         _api_precision_compare_command,
     )
 
-    args = argparse.Namespace(
-        hcu_csv_path=hcu_csv, gpu_csv_path=gpu_csv, out_path=output_path
-    )
+    args = argparse.Namespace(hcu_csv_path=hcu_csv, gpu_csv_path=gpu_csv, out_path=output_path)
     _api_precision_compare_command(args)
     return output_path
