@@ -48,6 +48,11 @@ hcuProbe 围绕模型精度调试提供三大核心能力，覆盖「数据采�
 
 快速一站式体验数据采集、HCU/GPU 精度比对与分级可视化构图比对的完整流程，请参见《[hcuProbe 快速入门](docs_hcu/zh/quick_start/pytorch_quick_start.md)》。
 
+框架场景快速入门（基于光源官方镜像实测，含可复现的镜像 / 代码版本）：
+
+- 《[Megatron 场景快速入门](docs_hcu/zh/quick_start/megatron_quick_start.md)》：Megatron-LM-das 接入 hcuprobe，L0 精度采集与 Monitor 训练监控。
+- 《[verl 训推一致性快速入门](docs_hcu/zh/quick_start/verl_quick_start.md)》：verl-das（verl 0.8.0）FSDP / Megatron 后端训练侧与推理侧逐层比对。
+
 
 ## 📦 安装指南
 

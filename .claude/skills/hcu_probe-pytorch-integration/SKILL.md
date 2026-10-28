@@ -1,11 +1,11 @@
 ---
 name: hcu_probe-pytorch-integration
-description: 在原生 PyTorch / 自定义 train loop(无 Megatron/transformers/trl 专属胶水)接入 hcu_probe 做精度 dump + monitor 三通道监控,直接调 hcu_probe.integrations._common.lifecycle 的 5 个 hook,几行代码即可。当用户问"如何接入 hcu_probe 到原生 PyTorch / 自定义训练循环 / 自己写的 train loop / 怎么用 lifecycle hook / get_dump_lifecycle / get_monitor_lifecycle / PyTorch dump monitor / 没有 Feature 机制的框架怎么接" 时触发。
+description: 在原生 PyTorch / 自定义 train loop(无 Megatron/transformers/trl 专属胶水)接入 hcu_probe 做精度 dump + monitor 三通道监控,直接调 hcuprobe.integrations._common.lifecycle 的 5 个 hook,几行代码即可。当用户问"如何接入 hcu_probe 到原生 PyTorch / 自定义训练循环 / 自己写的 train loop / 怎么用 lifecycle hook / get_dump_lifecycle / get_monitor_lifecycle / PyTorch dump monitor / 没有 Feature 机制的框架怎么接" 时触发。
 ---
 
 # hcu_probe-pytorch-integration(接入教学)
 
-在**原生 PyTorch / 任意自定义 train loop**(没有 Megatron 那种 Feature 机制、没有 transformers Trainer callback)上接入 hcu_probe:**直接调 `hcu_probe.integrations._common.lifecycle` 的 5 个 hook,在你的训练循环里加几行即可。**
+在**原生 PyTorch / 任意自定义 train loop**(没有 Megatron 那种 Feature 机制、没有 transformers Trainer callback)上接入 hcu_probe:**直接调 `hcuprobe.integrations._common.lifecycle` 的 5 个 hook,在你的训练循环里加几行即可。**
 
 > **前置定位**:面向**训练已跑通的人**(环境/模型/数据/HCU 就绪),只讲 hcu_probe 接入,不含环境搭建。
 >
@@ -24,7 +24,7 @@ PyTorch 这条路**比 megatron 更直接** —— 没有 Feature/wrapper/注册
 | 每 step 算完 loss/grad 后 | `dump_lc.on_step_end(step, loss_dict, grad_norm)` | `mon_lc.on_step_end(step, loss_dict, grad_norm)` |
 | 训练结束 | `dump_lc.on_train_end()` | `mon_lc.on_train_end()` |
 
-`dump_lc` = `get_dump_lifecycle()`、`mon_lc` = `get_monitor_lifecycle()`(都从 `hcu_probe.integrations._common.lifecycle` 拿,单例)。**不传 cfg = 不启,原训练**。
+`dump_lc` = `get_dump_lifecycle()`、`mon_lc` = `get_monitor_lifecycle()`(都从 `hcuprobe.integrations._common.lifecycle` 拿,单例)。**不传 cfg = 不启,原训练**。
 
 ---
 
@@ -33,8 +33,8 @@ PyTorch 这条路**比 megatron 更直接** —— 没有 Feature/wrapper/注册
 完整范本 `scripts/train_resnet_hcu_probe.py`,照它改你的脚本。关键 6 处(从范本提炼):
 
 ```python
-from hcu_probe.integrations._common.lifecycle import get_dump_lifecycle, get_monitor_lifecycle
-from hcu_probe.integrations._common.config import resolve_loss_output_dir
+from hcuprobe.integrations._common.lifecycle import get_dump_lifecycle, get_monitor_lifecycle
+from hcuprobe.integrations._common.config import resolve_loss_output_dir
 
 dump_lc = get_dump_lifecycle()
 mon_lc  = get_monitor_lifecycle()
@@ -124,7 +124,7 @@ TrainerMonitorV2 initialized and started          ← monitor 真起
 
 本 skill 只讲**采集**(dump + monitor)。dump 落盘后,用 hcu_probe 自带的**离线分析工具**做精度比对与预检——这些工具在 whl 里、不在本 skill,完整用法见主仓 `docs/offline_analysis/`:
 
-- **两端精度比对**:`hcu-probe compare -tp <目标 dump 的 stepN 目录> -gp <golden dump 的 stepN 目录> -o <out>`,产出 `compare_result_*.xlsx`。**需要两份 dump**——同一段前向单跑只产一份,要比就用同一随机种子在两个 device(如 HCU 与 CPU,`HIP_VISIBLE_DEVICES=` 置空即回落 CPU)各 dump 一次再比。详见 `docs/offline_analysis/compare.md`。
+- **两端精度比对**:`hcuprobe compare -tp <目标 dump 的 stepN 目录> -gp <golden dump 的 stepN 目录> -o <out>`,产出 `compare_result_*.xlsx`。**需要两份 dump**——同一段前向单跑只产一份,要比就用同一随机种子在两个 device(如 HCU 与 CPU,`HIP_VISIBLE_DEVICES=` 置空即回落 CPU)各 dump 一次再比。详见 `docs/offline_analysis/compare.md`。
 - **API 精度预检**:`hcu-probe acc_check -api_info <L1 dump.json> -o <out>`(或 `multi_acc_check -n <进程> -d <卡号>`),逐算子在 HCU 与 CPU fp64 双跑比对,判 Pass/Warning/Error。**输入是 L1 dump**——把上面 dump cfg 的 `level` 改成 `L1`,跑时 `export TORCHDYNAMO_DISABLE=1`。详见 `docs/offline_analysis/precheck.md`。
 
 > 一句话:采集在本 skill,compare / 精度预检 / overflow / graph_visualize 等在 `docs/offline_analysis/`。
@@ -136,9 +136,9 @@ TrainerMonitorV2 initialized and started          ← monitor 真起
 | 项 | 内容 |
 |---|---|
 | 接入范本 | `scripts/train_resnet_hcu_probe.py`(纯 PyTorch + ResNet50,照改你的脚本)|
-| 核心 API | `hcu_probe.integrations._common.lifecycle.{get_dump_lifecycle, get_monitor_lifecycle}` |
+| 核心 API | `hcuprobe.integrations._common.lifecycle.{get_dump_lifecycle, get_monitor_lifecycle}` |
 | 5 hook | `dump.on_train_start/on_step_start/on_step_end/on_train_end` + `monitor.on_setup_done/on_step_end/on_train_end` |
 | cfg 模板 | 本 skill `config/`(L0 dump / monitor 三通道)|
 | 坑 + 验证 + 实测状态 | [`references/runbook.md`](references/runbook.md) |
 
-姊妹 skill:`hcu_probe-megatron-integration`(hcu_megatron Feature 机制)、verl 训推一致性(`hcu_probe-verl-fsdp-0.7-integration` / `hcu_probe-verl-fsdp-0.8-integration` / `hcu_probe-verl-megatron-0.8-integration`)。
+姊妹 skill:`hcu_probe-megatron-integration`(hcu_megatron Feature 机制)、verl 训推一致性(`hcu_probe-verl-fsdp-v07-integration` / `hcu_probe-verl-fsdp-v08-integration` / `hcu_probe-verl-megatron-v08-integration`)。

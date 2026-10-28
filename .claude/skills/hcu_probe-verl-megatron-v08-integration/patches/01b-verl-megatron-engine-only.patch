@@ -1,0 +1,109 @@
+diff --git a/verl/workers/engine/megatron/transformer_impl.py b/verl/workers/engine/megatron/transformer_impl.py
+index 93e98f23..58fd729b 100644
+--- a/verl/workers/engine/megatron/transformer_impl.py
++++ b/verl/workers/engine/megatron/transformer_impl.py
+@@ -97,6 +97,11 @@ class MegatronEngine(BaseEngine):
+         self._is_offload_optimizer = self.engine_config.optimizer_offload
+ 
+         self.mode = None
++        # hcu_probe 训推 dump:占位,debugger 由 _ensure_debugger() 懒加载;_should_dump 供 forward_step 判断
++        self._debugger = None
++        self._update_actor_logger_fp = None
++        self._should_dump = False
++        self.rank = torch.distributed.get_rank()
+ 
+         self.layer_name_mapping = {
+             "qkv_layer_name": "self_attention.linear_qkv.",
+@@ -653,6 +658,11 @@ class MegatronEngine(BaseEngine):
+             logits_processor_func=loss_function,
+             postprocess_micro_batch_func=postprocess_micro_batch_func,
+         )
++        # hcu_probe 训推 dump:megatron 走 PP 调度无显式 micro_batch 循环,钩子下沉 forward_step;此处定门控
++        self._ensure_debugger()
++        dump_phase = os.environ.get("DUMP_PHASE", "log_prob")  # "all" | "log_prob" | "update_actor"
++        phase = "log_prob" if forward_only else "update_actor"
++        self._should_dump = self._debugger is not None and (dump_phase == "all" or dump_phase == phase)
+ 
+         enable_routing_replay = tu.get_non_tensor_data(data, key="enable_routing_replay", default=False)
+ 
+@@ -757,6 +767,58 @@ class MegatronEngine(BaseEngine):
+     def postprocess_micro_batch_func(self, output, data: TensorDict, forward_only: bool, loss_function):
+         raise NotImplementedError("postprocess_micro_batch_func must be implemented in subclass")
+ 
++    def _ensure_debugger(self):
++        """hcu_probe 训推 dump:首次 forward_backward_batch 懒初始化 debugger。仅 actor engine 建(ref forward_only 跳)。"""
++        if self._debugger is not None:
++            return
++        if self.engine_config.forward_only:
++            return
++        if not int(os.environ.get("DUMP_ON", 0)):
++            return
++        from pathlib import Path
++
++        from hcuprobe.pytorch import PrecisionDebugger, seed_all
++
++        seed_all(mode=True)
++        self._debugger = PrecisionDebugger(config_path=os.environ.get("DUMP_ACTOR_CONFIG", "/home/config_actor.json"))
++        try:
++            dump_path = self._debugger.config.dump_path
++            log_dir = Path(dump_path) / str(os.getpid())
++            log_dir.mkdir(parents=True, exist_ok=True)
++            self._update_actor_logger_fp = open(log_dir / "update_actor_log.jsonl", "a")
++        except Exception as e:
++            logger.warning(f"Failed to initialize update_actor_logger: {e}")
++
++    def _log_update_actor_step(self, micro_batch):
++        """hcu_probe 训推 dump:从 micro_batch 提取 request_id,一行写入 update_actor_log.jsonl。"""
++        if self._update_actor_logger_fp is None:
++            return
++        try:
++            req_data = tu.get(micro_batch, key="request_id", default=None)
++            if not req_data:
++                request_ids = []
++            elif isinstance(req_data, list):
++                request_ids = [str(r) for r in req_data]
++            else:
++                request_ids = [str(req_data)]
++        except Exception:
++            request_ids = []
++
++        import json
++        import time
++
++        record = {
++            "source": "update_actor",
++            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
++            "pid": os.getpid(),
++            "rank": self.rank,
++            "step": self._debugger.service.current_iter,
++            "request_ids": request_ids,
++            "num_requests": len(request_ids),
++        }
++        self._update_actor_logger_fp.write(json.dumps(record, ensure_ascii=False) + "\n")
++        self._update_actor_logger_fp.flush()
++
+ 
+ class EngineEvalModeCtx(BaseEngineCtx):
+     def __init__(self, engine: MegatronEngine, **kwargs):
+@@ -950,6 +1012,9 @@ class MegatronEngineWithLMHead(MegatronEngine):
+                 "response_attention_mask": response_attention_mask,
+             }
+ 
++            # hcu_probe 训推 dump:forward_fn 前后包 debugger(仅非 fused 路径;dump 须 use_fused_kernels=False)
++            if self._should_dump:
++                self._debugger.start(model=model)
+             output = forward_fn(
+                 model,
+                 input_ids,
+@@ -962,6 +1027,11 @@ class MegatronEngineWithLMHead(MegatronEngine):
+                 mtp_enable_train=self.model_config.mtp.enable and self.model_config.mtp.enable_train,
+                 local_cp_size=local_cp_size,
+             )
++            if self._should_dump:
++                if not self._debugger.service.should_stop_service:
++                    self._log_update_actor_step(batch)
++                self._debugger.stop()
++                self._debugger.step()
+ 
+         # Router replay: record routing decisions for R2 mode
+         if RouterReplayHelper.is_r2_record_action(self.tf_config, vp_rank):

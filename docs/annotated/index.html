@@ -42,7 +42,7 @@
 
   <section class="ver">
     <h2>verl 0.7.1 · FSDP 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>hcu_probe-verl-fsdp-0.7-integration</code>。</p>
+    <p class="lead">hcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>hcu_probe-verl-fsdp-v07-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.7-fsdp/instrumentation.html">
         <div class="tag">插桩</div>
@@ -67,7 +67,7 @@
 
   <section class="ver">
     <h2>verl 0.7.1 · Megatron 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.7-integration</code>。</p>
+    <p class="lead">hcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-v07-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.7-megatron/instrumentation.html">
         <div class="tag">插桩</div>
@@ -92,7 +92,7 @@
 
   <section class="ver">
     <h2>verl 0.8.0 · FSDP 后端</h2>
-    <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-v08-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-fsdp/instrumentation.html">
         <div class="tag">插桩</div>
@@ -117,7 +117,7 @@
 
   <section class="ver">
     <h2>verl 0.8.0 · Megatron 后端</h2>
-    <p class="lead">hcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-v08-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-megatron/instrumentation.html">
         <div class="tag">插桩</div>

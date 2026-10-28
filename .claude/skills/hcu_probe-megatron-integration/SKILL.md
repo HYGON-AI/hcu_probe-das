@@ -9,13 +9,13 @@ description: 在 hcu_megatron(海光 HCU 版 Megatron-LM fork)训练流程中接
 
 > **前置定位**:面向 **hcu_megatron 训练已跑通的人**(HCU 环境 / 模型 / 数据就绪),只讲 hcu_probe dump/monitor 接入,不含环境搭建。
 >
-> **本 skill 自包含**:接入要写的 4 个薄壳文件在 `scripts/`(拷进你的 hcu_megatron fork 即可,不需翻别的仓);cfg 模板在 `config/`;坑 + 验证在 `references/runbook.md`。hcu_probe whl 本身已带翻译层 `hcu_probe.integrations.megatron.*`(薄壳调它)。
+> **本 skill 自包含**:接入要写的 4 个薄壳文件在 `scripts/`(拷进你的 hcu_megatron fork 即可,不需翻别的仓);cfg 模板在 `config/`;坑 + 验证在 `references/runbook.md`。hcu_probe whl 本身已带翻译层 `hcuprobe.integrations.megatron.*`(薄壳调它)。
 
 ---
 
 ## 接入概述 — 2 个适配点
 
-1. **写 4 个 feature/wrapper 薄壳**(`scripts/` 已备,拷进你的 hcu_megatron fork `hcu_megatron/adaptor/features_manager/probe/`)— 用 hcu_megatron 的 patch 机制把 hcu_probe lifecycle 织进训练 hook。
+1. **写 4 个 feature/wrapper 薄壳**(`scripts/` 已备,拷进你的 hcu_megatron fork `hcu_megatron/features_manager/probe/`)— 用 hcu_megatron 的 patch 机制把 hcu_probe lifecycle 织进训练 hook。
 2. **L1 dump 模式**才需:本地 patch `support_wrap_ops.yaml`(避免 Megatron MLP swiglu fusion identity check 失败)。L0/monitor 不需要。
 
 **机制(为什么 0 行代码改训练脚本)**:hcu_megatron 的 `features_manager` 维护一个 **`ADAPTOR_FEATURES` list**(`features_manager/__init__.py`),启动时遍历它、调每个 Feature 的 `register_patches()` → `patch_manager.register_patch(megatron函数, wrapper)` 用 monkey-patch 把 wrapper 织进 megatron 的 `train`/`train_step`/`setup_model_and_optimizer`。所以**把你的 Feature 加进这个 list** + 训练命令加 flag 就激活,megatron/训练脚本本体 0 改动。`AbstractFeature` / `patch_manager` 都是 hcu_megatron 自带的,你不用建。
@@ -26,16 +26,16 @@ description: 在 hcu_megatron(海光 HCU 版 Megatron-LM fork)训练流程中接
 
 **两步,缺一不可**:① 拷 4 文件 ② 在 `ADAPTOR_FEATURES` 注册(光拷不注册 = 静默无效,无报错、行为同 baseline)。
 
-**① 拷文件**:本 skill `scripts/` 下 4 个薄壳**拷进你的 hcu_megatron fork 的 `hcu_megatron/adaptor/features_manager/probe/`**(它们 `from ..feature import AbstractFeature`,放对位置才能 import):
+**① 拷文件**:本 skill `scripts/` 下 4 个薄壳**拷进你的 hcu_megatron fork 的 `hcu_megatron/features_manager/probe/`**(它们 `from ..feature import AbstractFeature`,放对位置才能 import):
 
 | `scripts/` 文件 | 职责 | 关键契约 |
 |---|---|---|
 | `hcu_probe_feature.py` | 注册 `--hcu-probe-config` + `--hcu-probe-seed` flag,`register_patches()` 把 dump wrapper 挂到 `train` / `train_step` | dump 入口 |
-| `hcu_probe_wrapper.py` | 2 个 dump 薄壳:`train` 包 `dump.on_train_start/on_train_end`、`train_step` 包 `dump.on_step_start/on_step_end` | 薄壳调 `hcu_probe.integrations.megatron.dump.on_*` |
+| `hcu_probe_wrapper.py` | 2 个 dump 薄壳:`train` 包 `dump.on_train_start/on_train_end`、`train_step` 包 `dump.on_step_start/on_step_end` | 薄壳调 `hcuprobe.integrations.megatron.dump.on_*` |
 | `monitor_feature.py` | 注册 `--hcu-probe-monitor-config` flag,`register_patches()` 把 monitor wrapper 挂到 `setup_model_and_optimizer` / `train` / `train_step` | monitor 入口 |
-| `monitor_wrapper.py` | 3 个 monitor 薄壳:`setup` 出口拿 model+optimizer 起 monitor、`train_step` 出口 `monitor.on_step_end`、`train` finally `on_train_end` | 薄壳调 `hcu_probe.integrations.megatron.monitor.on_*` |
+| `monitor_wrapper.py` | 3 个 monitor 薄壳:`setup` 出口拿 model+optimizer 起 monitor、`train_step` 出口 `monitor.on_step_end`、`train` finally `on_train_end` | 薄壳调 `hcuprobe.integrations.megatron.monitor.on_*` |
 
-**② 注册进 `ADAPTOR_FEATURES`**(关键,别漏)—— 编辑 `hcu_megatron/adaptor/features_manager/__init__.py`,仿照里面已有的 9 个 Feature,加 2 行 import + 2 个实例:
+**② 注册进 `ADAPTOR_FEATURES`**(关键,别漏)—— 编辑 `hcu_megatron/features_manager/__init__.py`,仿照里面已有的 9 个 Feature,加 2 行 import + 2 个实例:
 
 ```python
 # __init__.py 顶部 import 区加:
@@ -49,7 +49,7 @@ from .probe.monitor_feature import MonitorFeature
 
 > hcu_megatron **没有自动扫描**,Feature 靠这个 list 显式登记;`probe/` 子目录可不建 `__init__.py`(同仓其他子目录一样走 namespace package)。
 
-**为什么薄壳只有几十行**:业务逻辑(`PrecisionDebugger` init / monitor 启停 / rank 过滤 / cfg 解析)全在 hcu_probe whl 的 `hcu_probe.integrations.megatron.*` 翻译层,薄壳只做"注册 flag + 注册 patch + 透传"。所以 trl / deepspeed / lightning 等其他框架接入也只需类似的几行薄壳。
+**为什么薄壳只有几十行**:业务逻辑(`PrecisionDebugger` init / monitor 启停 / rank 过滤 / cfg 解析)全在 hcu_probe whl 的 `hcuprobe.integrations.megatron.*` 翻译层,薄壳只做"注册 flag + 注册 patch + 透传"。所以 trl / deepspeed / lightning 等其他框架接入也只需类似的几行薄壳。
 
 **要加新 hook 点**(如想在 `pretrain_gpt.forward_step` 也 dump):在对应 `register_patches()` 多注册一条 + 写对应 wrapper 薄壳调 `dump.on_xxx`(若翻译层没 `on_xxx`,先在 hcu_probe whl 那边加)。
 
@@ -166,7 +166,7 @@ functional:
 
 **改哪个文件**(看你怎么装的 hcu_probe):
 - **wheel 装的(常见)**:直接改**安装位置**的 yaml,改完即生效、**不用重打 whl**:
-  `python -c "import hcu_probe,os;print(os.path.dirname(hcu_probe.__file__))"` 找到包目录 → 改其下 `pytorch/dump/api_dump/support_wrap_ops.yaml`。容器里多个 rank 共用一份,改一次即可。
+  `python -c "import hcuprobe,os;print(os.path.dirname(hcu_probe.__file__))"` 找到包目录 → 改其下 `pytorch/dump/api_dump/support_wrap_ops.yaml`。容器里多个 rank 共用一份,改一次即可。
 - **源码 editable(`pip install -e`)装的**:改 `src/hcu_probe/.../support_wrap_ops.yaml` 即生效。
 
 > hcu_probe 主仓 yaml 与上游字字一致(红线),这是 **hcu_megatron 专属本地改**,用完还原(`git checkout` 或反注释),别提交进主仓。
@@ -200,9 +200,9 @@ functional:
 |---|---|
 | 适配文件 | `scripts/{hcu_probe,monitor}_{feature,wrapper}.py`(拷进 fork 的 `features_manager/probe/`) |
 | CLI flag | `--hcu-probe-config=<dump.json>` / `--hcu-probe-monitor-config=<monitor.json>` / `--hcu-probe-seed=42` |
-| 翻译层(whl 自带) | `hcu_probe.integrations.megatron.{dump,monitor}` |
+| 翻译层(whl 自带) | `hcuprobe.integrations.megatron.{dump,monitor}` |
 | cfg 模板 | 本 skill `config/`(L0 / L1 / monitor 三通道) |
 | L1 yaml patch | `support_wrap_ops.yaml` 注释 gelu/silu(**非 MoE 仅此;MoE 才加 distributed 段**) |
 | 6 坑 + 验证 + 实测状态 | [`references/runbook.md`](references/runbook.md) |
 
-姊妹 skill:verl 训推一致性(`hcu_probe-verl-fsdp-0.7-integration` / `hcu_probe-verl-fsdp-0.8-integration` / `hcu_probe-verl-megatron-0.8-integration`)、`hcu_probe-pytorch-integration`(原生 PyTorch / 自定义 train loop)。
+姊妹 skill:verl 训推一致性(`hcu_probe-verl-fsdp-v07-integration` / `hcu_probe-verl-fsdp-v08-integration` / `hcu_probe-verl-megatron-v08-integration`)、`hcu_probe-pytorch-integration`(原生 PyTorch / 自定义 train loop)。
