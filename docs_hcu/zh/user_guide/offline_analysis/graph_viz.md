@@ -28,7 +28,7 @@
 ## Python API
 
 ```python
-from hcu_probe.tools import graph_viz
+from hcuprobe.tools import graph_viz
 
 # 单源
 graph_viz.run(target_path="./hcu_dump/step0", output_path="./vis_out")
@@ -66,10 +66,10 @@ def run(
 
 ```bash
 # 单源
-hcu-probe graph_visualize -tp ./dump -o ./vis_out
+hcuprobe graph_visualize -tp ./dump -o ./vis_out
 
 # 双源
-hcu-probe graph_visualize -tp ./hcu_dump -gp ./h20_dump -o ./vis_diff -oc
+hcuprobe graph_visualize -tp ./hcu_dump -gp ./h20_dump -o ./vis_diff -oc
 
 # tensorboard 浏览
 tensorboard --logdir ./vis_out --bind_all

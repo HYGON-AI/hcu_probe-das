@@ -3,6 +3,8 @@ name: hcu_probe-pytorch-dump
 description: 将 HCU Probe / hcuprobe 的 PyTorch 精度数据采集能力集成到用户的训练或推理代码中。根据代码结构和采集需求生成或放置 config.json，并通过 PrecisionDebugger、module_dump 和 module_dump_end 等接口完成代码插桩。适用于用户要求在 PyTorch 脚本中 dump 精度数据、采集训练过程中的基础数据或函数模块级数据、集成精度调试接口等场景。
 ---
 
+> ⚠️ **复验状态(2026-10)**:本 skill 未纳入本轮(2026-10 Megatron / verl)实跑验证。已在新版本复验的是 `hcu_probe-verl-fsdp-v08-integration`、`hcu_probe-verl-megatron-v08-integration`、`hcu_probe-megatron-integration`,见 `docs_hcu/zh/quick_start/`。
+
 # PyTorch Precision Dump Integration
 
 ## 1. 任务目标

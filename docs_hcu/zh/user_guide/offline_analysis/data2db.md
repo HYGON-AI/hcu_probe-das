@@ -27,7 +27,7 @@
 ## Python API
 
 ```python
-from hcu_probe.tools import data2db
+from hcuprobe.tools import data2db
 
 # 自动识别 dump 或 monitor 数据
 data2db.run(
@@ -55,10 +55,10 @@ def run(
 
 ```bash
 # 1. dump 数据 → trend db
-hcu-probe data2db --data ./hcu_probe_dump --db ./trend_out
+hcuprobe data2db --data ./hcu_probe_dump --db ./trend_out
 
 # 2. monitor v2 数据 → trend db(支持多进程加速)
-hcu-probe data2db --data ./monitor_v2_runs --db ./trend_out --format monitor --process_num 4
+hcuprobe data2db --data ./monitor_v2_runs --db ./trend_out --format monitor --process_num 4
 
 # 3. 浏览(hcu_probe whl 不内置浏览侧插件,见下文"浏览侧"段)
 ```
@@ -119,7 +119,7 @@ Megatron 框架的张量并行 / 流水线并行 / 虚拟流水线并行 / 数�
 | dump 数据 → `data2db` 消费 | L0 dump 已实测(2026-05-12 scnet docker),数据格式跨平台,理论可消费 |
 | monitor v2 数据 → `data2db` 消费 | monitor v2 训练侧已实测产 8 rank csv + loss_log,数据格式跨平台,理论可消费 |
 
-后端实测(`hcu-probe data2db --data <dump> --db <out>` 产 `.trend.db` 文件)**待补做**。
+后端实测(`hcuprobe data2db --data <dump> --db <out>` 产 `.trend.db` 文件)**待补做**。
 
 ## 与其他工具的关系
 

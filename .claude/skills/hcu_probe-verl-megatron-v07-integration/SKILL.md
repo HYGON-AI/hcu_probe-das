@@ -4,6 +4,8 @@ version: 1.0.0
 description: "在 hcu_verl(verl 0.7.1 官方 patch 版,Megatron 训练后端 + das vllm 0.11 推理)接入 hcu_probe 做训推一致性 dump + 离线 compare。训练侧钩子挂 LEGACY 路径的 MegatronPPOActor(megatron_actor.py),推理侧 patch 上游 vllm gpu_model_runner,用官方 pt_compare(consistent_check + backend=megatron)逐层比对。当用户要给 verl 0.7.1 Megatron 后端接入 hcu_probe、定位 megatron 训练/推理前向钩子、做训练 vs 推理前向数值比对时使用。面向训练已跑通的人(环境/模型/数据/容器就绪),只讲 dump/compare 接入,不含环境搭建。⚠️ 区别于 hcu_probe-verl-megatron-v08-integration(0.8.0 钩 NEW engine 的 transformer_impl.py),也区别于 hcu_probe-verl-fsdp-v07-integration(FSDP 后端)。"
 ---
 
+> ⚠️ **复验状态(2026-10)**:本 skill 尚未在 hcu_probe-das 26.2.0(同步上游 msprobe 26.2.0)上重新实跑,内容为旧版 dcu_probe 时期的结论;import 已统一为 `hcuprobe.*`。已在新版本复验的是 `hcu_probe-verl-fsdp-v08-integration`、`hcu_probe-verl-megatron-v08-integration`、`hcu_probe-megatron-integration`,见 `docs_hcu/zh/quick_start/`。
+
 # 在 verl 0.7.1 Megatron 后端接入 hcu_probe 做训推一致性 dump + compare
 
 ## 定位

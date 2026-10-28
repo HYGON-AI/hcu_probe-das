@@ -3,6 +3,8 @@ name: hcu_probe-pytorch-integration
 description: 在原生 PyTorch / 自定义 train loop(无 Megatron/transformers/trl 专属胶水)接入 hcu_probe 做精度 dump + monitor 三通道监控,直接调 hcuprobe.integrations._common.lifecycle 的 5 个 hook,几行代码即可。当用户问"如何接入 hcu_probe 到原生 PyTorch / 自定义训练循环 / 自己写的 train loop / 怎么用 lifecycle hook / get_dump_lifecycle / get_monitor_lifecycle / PyTorch dump monitor / 没有 Feature 机制的框架怎么接" 时触发。
 ---
 
+> ⚠️ **复验状态(2026-10)**:本 skill 尚未在 hcu_probe-das 26.2.0(同步上游 msprobe 26.2.0)上重新实跑,内容为旧版 dcu_probe 时期的结论;import 已统一为 `hcuprobe.*`。已在新版本复验的是 `hcu_probe-verl-fsdp-v08-integration`、`hcu_probe-verl-megatron-v08-integration`、`hcu_probe-megatron-integration`,见 `docs_hcu/zh/quick_start/`。
+
 # hcu_probe-pytorch-integration(接入教学)
 
 在**原生 PyTorch / 任意自定义 train loop**(没有 Megatron 那种 Feature 机制、没有 transformers Trainer callback)上接入 hcu_probe:**直接调 `hcuprobe.integrations._common.lifecycle` 的 5 个 hook,在你的训练循环里加几行即可。**

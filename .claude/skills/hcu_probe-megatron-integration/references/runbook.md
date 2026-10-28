@@ -60,6 +60,9 @@ msprobe ends successfully / [hcu_probe.* stopped]                        ← 收
 
 ## 四、实测状态(诚实标注)
 
+- **2026-10 复验(Megatron-LM-das core_v0.18.2,Qwen3-0.6B TP4,光源 megatron-0.18.2 镜像)**:baseline / L0 / L1(需坑 2 的 yaml patch;未 patch 实测复现 fusion ValueError)/ monitor / combined 均实跑通过,采集不改变 loss;离线 `compare`、`overflow_check`(注入 NaN 定位到起点层)、`graph_visualize`、`multi_acc_check` 均实跑。新增坑:`train_step` 钩子必须挂 `hcu_megatron.training.training.train_step`(见 SKILL.md 顶部),否则 dump/monitor 只 initialized 无数据;GBS=256 时 L0 每采集 step 约 15 min,建议 `step:[0]`。
+- 以下为 2026 上半年旧环境(dcu_megatron + llama2-7B)记录:
+
 - **llama2-7B(TP1/PP2,8 卡)5 模式 PoC**:baseline / L0 / L1 / monitor / combined 均在 HCU 集群实跑通过;L1 注释 distributed 与否逐 iter 数值字字一致(坑 3 的依据)。
 - **MoE/EP 模型**:坑 3 的 distributed 段约束是机制推断 + EP 时序原理,**未在 MoE 上逐项实测**。
 - 具体实测数据表(loss 数值、各模式产物计数)在内部验证记录,非本 skill 范围;本 skill 给方法和坑,数据按你自己的 run 核对。

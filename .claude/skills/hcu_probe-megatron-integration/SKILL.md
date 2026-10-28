@@ -11,6 +11,27 @@ description: 在 hcu_megatron(海光 HCU 版 Megatron-LM fork)训练流程中接
 >
 > **本 skill 自包含**:接入要写的 4 个薄壳文件在 `scripts/`(拷进你的 hcu_megatron fork 即可,不需翻别的仓);cfg 模板在 `config/`;坑 + 验证在 `references/runbook.md`。hcu_probe whl 本身已带翻译层 `hcuprobe.integrations.megatron.*`(薄壳调它)。
 
+## ✅ 2026-10 复验(Megatron-LM-das core_v0.18.2 + 光源镜像,先读这节)
+
+环境:`harbor.sourcefind.cn:5443/hcu/admin/base/custom:megatron-0.18.2-ubuntu22.04-dtk2604-py3.10-20260908-0350` + GitHub `HYGON-AI/Megatron-LM-das@52b4450` + Qwen3-0.6B(官方 `examples/qwen3/train_qwen3_0.6B.sh`,TP4,单机 8 卡)。完整步骤见 `docs_hcu/zh/quick_start/megatron_quick_start.md`。
+
+| 模式 / 工具 | 结果 |
+|---|---|
+| baseline | ✅ loss 11.95→11.39(10 步) |
+| L0 | ✅ 8 rank dump;loss 与基线逐位一致。GBS=256 时每个采集 step 约 15 min(128 micro batch),建议 `step:[0]` 或调小 GBS |
+| L1 | ✅(需 Step 4 yaml patch)。**未 patch 实测复现** `Only support fusion of gelu and swiglu` → 训练崩溃;patch 后正常,dump 不含 silu/gelu |
+| monitor | ✅ 8 rank × 3 通道 × 每步 CSV,loss 不变 |
+| combined(L0 + monitor) | ✅ 两者同时产出 |
+| `hcuprobe compare`(两次同配置 L0) | ✅ 前向 23448 条逐位一致,差异仅在反向梯度(原子加非确定性) |
+| `hcuprobe overflow_check` | ✅ 正常数据报 "Cannot find any anomaly node";注入 NaN 后准确定位到起点 `layers.10.mlp.linear_fc1` |
+| `hcuprobe graph_visualize` | ✅ 单图 / 双图 `.vis.db` |
+| `hcuprobe multi_acc_check`(精度预检,L1 输入) | ✅ 6709 API:pass 3028 / warning 1326(bf16 vs fp32 正常舍入,相对误差 ~2⁻⁸)/ error 0 / SKIP 2355(Distributed.*);8 卡约 12 min |
+
+**相对旧版(dcu_megatron + llama2-7B 时代)的关键差异**:
+1. 路径:`hcu_megatron/features_manager/`(旧为 `hcu_megatron/adaptor/features_manager/`),`ADAPTOR_FEATURES` 现有 15 个 Feature。
+2. **`train_step` 挂点必须是 `hcu_megatron.training.training.train_step`**:Megatron-LM-das 的 `MegatronBasicFeature` 把 megatron 的 `train` 换成 `hcu_megatron.training.training.train`,它调用的是本模块的 `train_step`;只挂 `megatron.training.training.train_step` 时 `train`/`setup_model_and_optimizer` 钩子生效但 `train_step` 钩子永不触发 → dump/monitor **只有 initialized、没有任何数据**。`scripts/*_feature.py` 已用 `_train_step_target()` 自动选择。
+3. import 为 `hcuprobe.*`(whl 文件名 `hcu_probe-*.whl`)。
+
 ---
 
 ## 接入概述 — 2 个适配点
@@ -35,7 +56,7 @@ description: 在 hcu_megatron(海光 HCU 版 Megatron-LM fork)训练流程中接
 | `monitor_feature.py` | 注册 `--hcu-probe-monitor-config` flag,`register_patches()` 把 monitor wrapper 挂到 `setup_model_and_optimizer` / `train` / `train_step` | monitor 入口 |
 | `monitor_wrapper.py` | 3 个 monitor 薄壳:`setup` 出口拿 model+optimizer 起 monitor、`train_step` 出口 `monitor.on_step_end`、`train` finally `on_train_end` | 薄壳调 `hcuprobe.integrations.megatron.monitor.on_*` |
 
-**② 注册进 `ADAPTOR_FEATURES`**(关键,别漏)—— 编辑 `hcu_megatron/features_manager/__init__.py`,仿照里面已有的 9 个 Feature,加 2 行 import + 2 个实例:
+**② 注册进 `ADAPTOR_FEATURES`**(关键,别漏)—— 编辑 `hcu_megatron/features_manager/__init__.py`,仿照里面已有的 Feature(core_v0.18.2 为 15 个),加 2 行 import + 2 个实例:
 
 ```python
 # __init__.py 顶部 import 区加:

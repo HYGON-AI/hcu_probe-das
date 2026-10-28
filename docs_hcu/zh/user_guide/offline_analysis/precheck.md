@@ -25,7 +25,7 @@ scnet docker `hcu_probe_lab`(f09r1n12)+ 主机 conda env `megatron_train`,3 段�
 |---|---|---|
 | **sanity matmul** 30s loop | HCU **80-100%** / 55.37 TFLOPS | hy-smi 工具靠谱 |
 | **`ApiTemplate.forward` 30s loop**(走 acc_check 真实算子路径)| HCU **持续 100%** / 54.25 TFLOPS | acc_check 框架真路径 100% 用 HCU |
-| **`ApiTemplate.forward` monkey-patch trace**(跑 `hcu-probe acc_check`,前 30 次 forward)| 完美交替模式:奇数次 `cpu`(CPU fp64 标杆) / 偶数次 `cuda:0`(HCU 实跑) | 每个 API 真跑 2 次,HCU bf16 vs CPU fp64 真比对 |
+| **`ApiTemplate.forward` monkey-patch trace**(跑 `hcuprobe acc_check`,前 30 次 forward)| 完美交替模式:奇数次 `cpu`(CPU fp64 标杆) / 偶数次 `cuda:0`(HCU 实跑) | 每个 API 真跑 2 次,HCU bf16 vs CPU fp64 真比对 |
 
 docker partial 24986/61618 API(40%)csv:
 - **21378 Pass(85.6%)** + 2082 Warning(8.3%)+ 1525 SKIP(6.1%)
@@ -52,7 +52,7 @@ multi-process 32-64 worker × 8 卡 → 每卡每个采样窗口落在 GPU idle 
 
 | 方法 | 命令 | 验证点 |
 |---|---|---|
-| **trace 法**(最严谨) | monkey-patch `ApiTemplate.forward` 加 `print(args[0].device)`,跑 `hcu-probe acc_check` 30 次 forward | 看到 `cpu` / `cuda:0` 交替模式 → HCU 真用 |
+| **trace 法**(最严谨) | monkey-patch `ApiTemplate.forward` 加 `print(args[0].device)`,跑 `hcuprobe acc_check` 30 次 forward | 看到 `cpu` / `cuda:0` 交替模式 → HCU 真用 |
 | **TFLOPS 法**(简单) | 写脚本 `ApiTemplate.forward` 大算子 loop 30s | HCU 100% / 50+ TFLOPS → cuda dispatch work |
 | **csv 比例对照法**(参考) | 跑完 multi_acc_check 看 csv 第 2 列 SKIP/Pass/Warning 分布 | 跟 2026-04-13 历史比例对齐,印证 HCU bf16 vs CPU fp64 真比对 |
 
@@ -65,7 +65,7 @@ scnet node119 BW200 × 8(单独 conda env + pip install mindstudio-probe==8.3.3)
 ## Python API
 
 ```python
-from hcu_probe.tools import precheck
+from hcuprobe.tools import precheck
 
 # 1. 单进程(慢,~0.6 items/s)
 precheck.acc_check(
@@ -93,13 +93,13 @@ precheck.api_precision_compare(
 
 ```bash
 # 单进程
-hcu-probe acc_check -api_info ./dump.json -o ./out
+hcuprobe acc_check -api_info ./dump.json -o ./out
 
 # 多卡并行
-hcu-probe multi_acc_check -api_info ./dump.json -o ./out -n 32 -d 0 1 2 3 4 5 6 7
+hcuprobe multi_acc_check -api_info ./dump.json -o ./out -n 32 -d 0 1 2 3 4 5 6 7
 
 # 跨端比对
-hcu-probe api_precision_compare -hcu ./hcu.csv -gpu ./h20.csv -o ./diff
+hcuprobe api_precision_compare -hcu ./hcu.csv -gpu ./h20.csv -o ./diff
 ```
 
 ## L1 dump 准备

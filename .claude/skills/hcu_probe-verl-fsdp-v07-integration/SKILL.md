@@ -4,6 +4,8 @@ version: 1.0.0
 description: "在 hcu_verl(>0.7,verl 官方 patch 版,FSDP 后端)接入 hcu_probe 做训推一致性 dump + 离线 compare,以及 monitor 三通道训练监控,用 --hcu-probe 命令行 flag 控制采集模式(off/L0/L1/tensor/monitor/combined)。当用户要给 verl/hcu_verl >0.7 接入 hcu_probe、定位前向/训练钩子、做训练 vs 推理前向数值比对、或接 monitor 时使用。**面向训练已跑通的人**(环境/模型/数据/容器就绪),只讲 dump/compare 接入,不含环境搭建。"
 ---
 
+> ⚠️ **复验状态(2026-10)**:本 skill 尚未在 hcu_probe-das 26.2.0(同步上游 msprobe 26.2.0)上重新实跑,内容为旧版 dcu_probe 时期的结论;import 已统一为 `hcuprobe.*`。已在新版本复验的是 `hcu_probe-verl-fsdp-v08-integration`、`hcu_probe-verl-megatron-v08-integration`、`hcu_probe-megatron-integration`,见 `docs_hcu/zh/quick_start/`。
+
 # 在 hcu_verl(>0.7)上接入 hcu_probe 做训推一致性 dump + compare
 
 ## 定位
