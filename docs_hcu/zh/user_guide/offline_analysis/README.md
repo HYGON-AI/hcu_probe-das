@@ -1,6 +1,6 @@
 # hcu_probe 离线分析工具
 
-`hcu_probe.tools.*` 是 dump 数据**离线**分析工具集(训练之外另跑),用于比对 / 溢出定位 / 可视化 / 精度预检等场景。跨平台、纯 Python,与训练框架无关。
+`hcuprobe.tools.*` 是 dump 数据**离线**分析工具集(训练之外另跑),用于比对 / 溢出定位 / 可视化 / 精度预检等场景。跨平台、纯 Python,与训练框架无关。
 
 > 训练时的 dump / monitor 接入见 [`../integrations/`](../integrations/)。
 
@@ -19,7 +19,7 @@
 
 ## 运行环境(标准:docker 容器)
 
-hcu_probe.tools.* 工具的**标准运行环境是 docker `hcu_probe_lab` 容器**,**不在主机 conda env**。
+hcuprobe.tools.* 工具的**标准运行环境是 docker `hcu_probe_lab` 容器**,**不在主机 conda env**。
 
 | 维度 | docker 容器 | 主机 conda env(`megatron_train`) |
 |---|---|---|
@@ -46,7 +46,7 @@ hcu_probe.tools.* 工具的**标准运行环境是 docker `hcu_probe_lab` 容器
 ### 1. Python API
 
 ```python
-from hcu_probe.tools import compare, overflow, graph_viz, config_check, precheck
+from hcuprobe.tools import compare, overflow, graph_viz, config_check, precheck
 
 compare.run(target_path="./hcu", golden_path="./h20", output_path="./diff")
 overflow.run(input_path="./dump/step_0", output_path="./out")
@@ -55,10 +55,10 @@ overflow.run(input_path="./dump/step_0", output_path="./out")
 ### 2. CLI
 
 ```bash
-hcu-probe compare -tp ./hcu -gp ./h20 -o ./diff
-hcu-probe overflow_check -i ./dump/step_0 -o ./out
-hcu-probe graph_visualize -tp ./dump -o ./vis_out
-hcu-probe acc_check -api_info ./dump.json -o ./out
+hcuprobe compare -tp ./hcu -gp ./h20 -o ./diff
+hcuprobe overflow_check -i ./dump/step_0 -o ./out
+hcuprobe graph_visualize -tp ./dump -o ./vis_out
+hcuprobe acc_check -api_info ./dump.json -o ./out
 # ... 完整子命令列表见各工具文档
 ```
 

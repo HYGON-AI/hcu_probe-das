@@ -11,7 +11,7 @@
 ## Python API
 
 ```python
-from hcu_probe.tools import compare
+from hcuprobe.tools import compare
 
 compare.run(
     target_path="./hcu_dump/step0",
@@ -42,7 +42,7 @@ def run(
 ## CLI
 
 ```bash
-hcu-probe compare \
+hcuprobe compare \
     -tp ./hcu_dump/step0 \
     -gp ./h20_dump/step0 \
     -o ./diff

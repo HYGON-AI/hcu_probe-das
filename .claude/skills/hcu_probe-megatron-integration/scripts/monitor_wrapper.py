@@ -4,7 +4,7 @@ setup_model_and_optimizer(), train() and train_step() via the adaptor
 patch system.
 
 Actual implementation lives in the installed hcu_probe whl package at
-`hcu_probe.integrations.megatron.monitor`. This file is kept intentionally
+`hcuprobe.integrations.megatron.monitor`. This file is kept intentionally
 small so the full contract is visible in ~30 lines.
 """
 
@@ -13,7 +13,7 @@ from functools import wraps
 from megatron.training import get_args
 from megatron.training.utils import print_rank_0
 
-from hcu_probe.integrations.megatron import monitor
+from hcuprobe.integrations.megatron import monitor
 
 
 def monitor_setup_model_and_optimizer_wrapper(original_func):

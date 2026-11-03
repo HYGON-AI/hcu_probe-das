@@ -15,7 +15,7 @@
 ## Python API
 
 ```python
-from hcu_probe.tools import overflow
+from hcuprobe.tools import overflow
 
 overflow.run(
     input_path="./dump/step_0",
@@ -26,7 +26,7 @@ overflow.run(
 ## CLI
 
 ```bash
-hcu-probe overflow_check \
+hcuprobe overflow_check \
     -i ./dump/step_0 \
     -o ./overflow_out
 ```

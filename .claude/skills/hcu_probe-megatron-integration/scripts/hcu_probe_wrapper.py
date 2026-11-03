@@ -3,7 +3,7 @@ Thin adaptor shim: hcu_probe dump lifecycle wired into Megatron's train() and
 train_step() via the adaptor patch system.
 
 Actual implementation lives in the installed hcu_probe whl package at
-`hcu_probe.integrations.megatron.dump`. This file is kept intentionally
+`hcuprobe.integrations.megatron.dump`. This file is kept intentionally
 small so that reading it reveals
 the entire contract at a glance.
 """
@@ -11,7 +11,7 @@ the entire contract at a glance.
 from megatron.training import get_args
 from megatron.training.utils import print_rank_0
 
-from hcu_probe.integrations.megatron import dump
+from hcuprobe.integrations.megatron import dump
 
 
 def hcu_probe_train_wrapper(original_train):

@@ -1,6 +1,0 @@
-{
-    "task": "statistics",
-    "dump_path": "/public4/share/tanbo_work/verl_mega_dump/dump_actor",
-    "rank": [], "step": [], "level": "L0", "async_dump": false,
-    "statistics": {"scope": [], "list": [], "data_mode": ["all"], "summary_mode": "statistics"}
-}

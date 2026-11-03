@@ -1,6 +1,6 @@
 # overflow_check 产物 `anomaly_analyze.json` 分析指南
 
-`hcu-probe overflow_check` 检测到异常时,产 `anomaly_analyze_{timestamp}.json`。本文教你怎么读这份产物。
+`hcuprobe overflow_check` 检测到异常时,产 `anomaly_analyze_{timestamp}.json`。本文教你怎么读这份产物。
 
 ---
 

@@ -41,58 +41,8 @@
 <div class="wrap">
 
   <section class="ver">
-    <h2>verl 0.7.1 · FSDP 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + FSDP 训练后端 + das vllm(<code>vllm_hcu</code>)推理;训推一致性 dump + 离线 compare。对应 skill <code>hcu_probe-verl-fsdp-0.7-integration</code>。</p>
-    <div class="cards">
-      <a class="card c1" href="verl-0.7-fsdp/instrumentation.html">
-        <div class="tag">插桩</div>
-        <h3>插桩位置标注</h3>
-        <p>hcu_probe 在哪几个源码文件、哪几行插桩(5 处钩子 + monitor):左边带上下文源码(绿=新增行),右边逐处说明为什么这么钩。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c2" href="verl-0.7-fsdp/compare_logic.html">
-        <div class="tag">compare</div>
-        <h3>run07_filtered.py 逻辑 + pt_compare</h3>
-        <p>compare 脚本 5 步(配对→挑样本→过滤交错模块→调 pt_compare→统计),以及 <code>pt_compare</code> / <code>verify_consistency.py</code> / <code>run07_filtered.py</code> 三者区别。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c3" href="verl-0.7-fsdp/consistent_check_algorithm.html">
-        <div class="tag">算法</div>
-        <h3>consistent_check 比对算法内部</h3>
-        <p>官方 <code>pt_compare(consistent_check=True)</code> 的五段管线:解析裁窗 → 模块名映射 → 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
-        <div class="go">打开 →</div>
-      </a>
-    </div>
-  </section>
-
-  <section class="ver">
-    <h2>verl 0.7.1 · Megatron 后端</h2>
-    <p class="lead">hcu_verl 0.7.1 + Megatron 训练后端(钩子挂 <b>legacy</b> <code>MegatronPPOActor</code>,别用 new engine)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.7-integration</code>。</p>
-    <div class="cards">
-      <a class="card c1" href="verl-0.7-megatron/instrumentation.html">
-        <div class="tag">插桩</div>
-        <h3>插桩位置标注</h3>
-        <p>训练侧 6 处钩子挂 <code>MegatronPPOActor</code>(megatron_actor.py)+ 推理侧 patch das vllm 0.11 <code>gpu_model_runner</code>:左边带上下文源码(绿=新增行),右边逐处说明。含 <b>★引擎陷阱</b>(别加 <code>use_legacy_worker_impl=disable</code>)。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c2" href="verl-0.7-megatron/compare_logic.html">
-        <div class="tag">compare</div>
-        <h3>run_megatron_compare.py 逻辑 + pt_compare</h3>
-        <p>compare 脚本 4 步(配对→挑样本→调 <code>pt_compare(backend=megatron)</code>→统计),比 FSDP 少一步过滤(das vllm 0.11 模块序干净),以及 <code>MEGATRON_MODULE_MAP</code> 命名映射。</p>
-        <div class="go">打开 →</div>
-      </a>
-      <a class="card c3" href="verl-0.7-megatron/consistent_check_algorithm.html">
-        <div class="tag">算法</div>
-        <h3>consistent_check 比对算法内部</h3>
-        <p>官方 <code>pt_compare(consistent_check=True, backend=megatron)</code> 的五段管线:解析裁窗 → 模块名映射(mcore/TE ↔ vllm)→ 四元组多对一聚合 → 双单调保序 → shape 口径修正。</p>
-        <div class="go">打开 →</div>
-      </a>
-    </div>
-  </section>
-
-  <section class="ver">
     <h2>verl 0.8.0 · FSDP 后端</h2>
-    <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + FSDP 训练后端(0.8.0 统一 Engine 抽象,钩子下沉 <code>FSDPEngine.forward_backward_batch</code> 循环体)+ das vllm 0.11 内联推理(无 <code>vllm_hcu</code>);官方 <code>pt_compare(backend=fsdp)</code> 逐层比对。<b>★ 硬先决条件:<code>attn_implementation=eager/sdpa</code></b>(默认 flash 训练每步 grad_norm NaN)。对应 skill <code>hcu_probe-verl-fsdp-v08-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-fsdp/instrumentation.html">
         <div class="tag">插桩</div>
@@ -117,7 +67,7 @@
 
   <section class="ver">
     <h2>verl 0.8.0 · Megatron 后端</h2>
-    <p class="lead">hcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-0.8-integration</code>。</p>
+    <p class="lead">hcu_verl 0.8.0 + Megatron 训练后端(<b>★ 钩 NEW engine <code>transformer_impl.py</code> 的 <code>MegatronEngineWithLMHead.forward_step</code></b>,与 0.7.1 因 NEW engine 权重未物化 bug 退回 legacy <b>相反</b>)+ das vllm 0.11 推理;官方 <code>pt_compare(backend=megatron)</code> 逐层比对。对应 skill <code>hcu_probe-verl-megatron-v08-integration</code>。</p>
     <div class="cards">
       <a class="card c1" href="verl-0.8-megatron/instrumentation.html">
         <div class="tag">插桩</div>
