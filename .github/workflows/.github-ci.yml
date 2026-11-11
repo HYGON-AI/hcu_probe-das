@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
+  checks: read
 
 concurrency:
   # Runs caused by unrelated labels use their own group so they cannot cancel
@@ -95,8 +97,8 @@ jobs:
           ruff check --config pre-commit/pyproject.toml "${changed_python[@]}"
           ruff format --check --config pre-commit/pyproject.toml "${changed_python[@]}"
 
-  hcu-unit-tests:
-    name: Build and unit tests on HCU
+  build-wheel:
+    name: Build wheel (DTK ${{ matrix.dtk_version }})
     # External fork code may use the self-hosted runner only when a maintainer
     # applies hcu-ci-approved to the current revision. A later push requires
     # the label to be removed and applied again after review.
@@ -106,138 +108,196 @@ jobs:
        (github.event.pull_request.head.repo.full_name == github.repository ||
         contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association) ||
         github.event.action == 'labeled'))
-    runs-on: [self-hosted, Linux, X64, bw1100]
-    timeout-minutes: 90
+    runs-on: hygon-build
+    timeout-minutes: 30
+    container:
+      image: ${{ matrix.python_version == '3.12' && format('{0}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.12-mkl2024.2.0.664', vars.HARBOR_SITE) || format('{0}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.10-mkl2024.2.0.664@sha256:0ca3f9410d9c3af2852ac0fbe018e0ba6a6f973df957a3c4170ef75a15be59b2', vars.HARBOR_SITE) }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - dtk_id: dtk2604
+            dtk_version: 2604
+            python_version: "3.10"
+          - dtk_id: dtk2610
+            dtk_version: 2610
+            python_version: "3.12"
     env:
-      HARBOR_SITE: ${{ vars.HARBOR_SITE }}
-      PYPI_URL: ${{ vars.PYPI_URL }}
-      RESOURCE_SERVER_URL: ${{ vars.RESOURCE_SERVER_URL }}
-      CI_IMAGE: ${{ vars.HARBOR_SITE }}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.10-mkl2024.2.0.664
-      PYTORCH_DAS_SPEC: ${{ vars.PYTORCH_DAS_SPEC || 'torch' }}
-      LOCAL_REPORT_ROOT: ${{ vars.HCU_CI_REPORT_ROOT || '/ci_public/hcu_probe-das' }}
-      CONTAINER_NAME: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      BUILD_RUN_ROOT: /ci_public/hcu_probe-das/runs/${{ github.run_id }}/${{ github.run_attempt }}/build/${{ matrix.dtk_id }}
+      PYTHON_BIN: python${{ matrix.python_version }}
     steps:
-      - name: Repair workspace permissions
-        shell: bash
-        run: |
-          set -euo pipefail
-          : "${HARBOR_SITE:?Repository variable HARBOR_SITE is required}"
-          docker pull "${CI_IMAGE}"
-          docker run --rm \
-            --volume "${GITHUB_WORKSPACE}:/workspace" \
-            "${CI_IMAGE}" \
-            chown -R "$(id -u):$(id -g)" /workspace
-
       - name: Checkout source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-          # Fork code reaches this self-hosted runner only after the gate above
-          # has accepted a trusted author or a maintainer-applied approval label.
           allow-unsafe-pr-checkout: true
 
-      - name: Run build and tests in HCU container
+      - name: Build wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf -- "${BUILD_RUN_ROOT}"
+          mkdir -p "${BUILD_RUN_ROOT}/dist"
+          "${PYTHON_BIN}" -m pip install --disable-pip-version-check build
+          (
+            cd /tmp
+            "${PYTHON_BIN}" -m build --wheel \
+              --outdir "${BUILD_RUN_ROOT}/dist" "${GITHUB_WORKSPACE}"
+          )
+
+  hcu-unit-tests:
+    name: Unit tests on HCU (DTK ${{ matrix.dtk_version }})
+    needs: build-wheel
+    runs-on: hygon-bw1100-1card
+    timeout-minutes: 90
+    container:
+      image: ${{ matrix.python_version == '3.12' && format('{0}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.12-mkl2024.2.0.664', vars.HARBOR_SITE) || format('{0}/dev/dev:rockylinux8.6-mpi5.0-gcc13.3-cmake3.29-py3.10-mkl2024.2.0.664@sha256:0ca3f9410d9c3af2852ac0fbe018e0ba6a6f973df957a3c4170ef75a15be59b2', vars.HARBOR_SITE) }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - dtk_id: dtk2604
+            dtk_version: 2604
+            python_version: "3.10"
+            dtk_pkg_path: dtk-pkg/dtk26.04/DTK-26.04-rc4-centos8-x86_64.tar.gz
+            dtk_pkg_name: DTK-26.04-rc4-centos8-x86_64.tar.gz
+            pytorch_index_suffix: nightly/dtk2604/+simple/
+          - dtk_id: dtk2610
+            dtk_version: 2610
+            python_version: "3.12"
+            dtk_pkg_path: dtk-pkg/dtk26.10/DTK-26.10-CentOS8.5-x86_64.tar.gz
+            dtk_pkg_name: DTK-26.10-CentOS8.5-x86_64.tar.gz
+            pytorch_index_suffix: nightly/dtk2610/+simple/
+    env:
+      PYPI_URL: ${{ vars.PYPI_URL }}
+      RESOURCE_SERVER_URL: ${{ vars.RESOURCE_SERVER_URL }}
+      PYTORCH_DAS_SPEC: ${{ vars.PYTORCH_DAS_SPEC || 'torch' }}
+      PYTHON_BIN: python${{ matrix.python_version }}
+      EXPECTED_PYTHON_VERSION: ${{ matrix.python_version }}
+      BUILD_RUN_ROOT: /ci_public/hcu_probe-das/runs/${{ github.run_id }}/${{ github.run_attempt }}/build/${{ matrix.dtk_id }}
+      LOCAL_RUN_ROOT: /ci_public/hcu_probe-das/runs/${{ github.run_id }}/${{ github.run_attempt }}/${{ matrix.dtk_id }}
+      DTK_PKG_PATH: ${{ matrix.dtk_pkg_path }}
+      DTK_PKG_NAME: ${{ matrix.dtk_pkg_name }}
+      PYTORCH_INDEX_SUFFIX: ${{ matrix.pytorch_index_suffix }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          allow-unsafe-pr-checkout: true
+
+      - name: Install DTK
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${RESOURCE_SERVER_URL:?Repository variable RESOURCE_SERVER_URL is required}"
+
+          resource_server_url="${RESOURCE_SERVER_URL%/}"
+          dtk_pkg_url="${resource_server_url}/${DTK_PKG_PATH#/}"
+          echo "::add-mask::${RESOURCE_SERVER_URL}"
+          echo "::add-mask::${dtk_pkg_url}"
+
+          dtk_stage="$(mktemp -d /tmp/hcu-probe-dtk.XXXXXX)"
+          trap 'rm -rf -- "${dtk_stage}"' EXIT
+          mkdir -p "${dtk_stage}/extract"
+          wget --quiet --tries=3 --timeout=120 \
+            --output-document="${dtk_stage}/dtk.tar.gz" -- "${dtk_pkg_url}"
+          tar -xzf "${dtk_stage}/dtk.tar.gz" -C "${dtk_stage}/extract"
+          version_file="$(find "${dtk_stage}/extract" -type f -path '*/.info/rocm_version' -print -quit)"
+          [[ -n "${version_file}" ]]
+          dtk_source="${version_file%/.info/rocm_version}"
+          rm -rf -- /opt/dtk
+          mkdir -p /opt/dtk
+          cp -a "${dtk_source}/." /opt/dtk/
+          test -f /opt/dtk/env.sh
+          echo "Installed DTK version: $(tr -d '[:space:]' < /opt/dtk/.info/rocm_version)"
+
+      - name: Run unit tests
         shell: bash
         run: |
           set -euo pipefail
           : "${PYPI_URL:?Repository variable PYPI_URL is required}"
-          : "${RESOURCE_SERVER_URL:?Repository variable RESOURCE_SERVER_URL is required}"
 
-          resource_server_url="${RESOURCE_SERVER_URL%/}"
           pypi_url="${PYPI_URL%/}"
-          dtk_pkg_url="${resource_server_url}/dtk-pkg/dtk26.04/DTK-26.04-rc4-centos8-x86_64.tar.gz"
-          pytorch_das_index_url="${pypi_url}/nightly/dtk2604/+simple/"
+          pytorch_das_index_url="${pypi_url}/${PYTORCH_INDEX_SUFFIX#/}"
           pypi_authority="${pypi_url#*://}"
           pypi_authority="${pypi_authority%%/*}"
           pytorch_das_trusted_host="${pypi_authority%%:*}"
-
-          echo "::add-mask::${RESOURCE_SERVER_URL}"
           echo "::add-mask::${PYPI_URL}"
-          echo "::add-mask::${dtk_pkg_url}"
           echo "::add-mask::${pytorch_das_index_url}"
           echo "::add-mask::${pytorch_das_trusted_host}"
 
-          docker run --detach \
-            --name "${CONTAINER_NAME}" \
-            --network host \
-            --ipc host \
-            --init \
-            --shm-size=32g \
-            --device=/dev/kfd \
-            --device=/dev/dri \
-            --group-add video \
-            --security-opt seccomp=unconfined \
-            --cap-add SYS_PTRACE \
-            --volume /opt/hyhal:/opt/hyhal:ro \
-            --volume "${GITHUB_WORKSPACE}:/workspace/hcu_probe-das" \
-            --workdir /workspace/hcu_probe-das \
-            --env "PYTORCH_DAS_INDEX_URL=${pytorch_das_index_url}" \
-            --env "PYTORCH_DAS_TRUSTED_HOST=${pytorch_das_trusted_host}" \
-            --env PYTORCH_DAS_SPEC \
-            "${CI_IMAGE}" tail -f /dev/null
+          shopt -s nullglob
+          wheels=("${BUILD_RUN_ROOT}"/dist/*.whl)
+          if (( ${#wheels[@]} != 1 )); then
+            echo "ERROR: expected one wheel under ${BUILD_RUN_ROOT}/dist, found ${#wheels[@]}." >&2
+            exit 1
+          fi
 
-          docker exec --env "DTK_PKG_URL=${dtk_pkg_url}" "${CONTAINER_NAME}" bash -lc '
-            set -euo pipefail
-            dtk_stage="$(mktemp -d /tmp/hcu-probe-dtk.XXXXXX)"
-            trap '\''rm -rf -- "${dtk_stage}"'\'' EXIT
-            mkdir -p "${dtk_stage}/extract"
-            echo "Downloading DTK package from configured resource server."
-            wget --quiet --tries=3 --timeout=120 \
-              --output-document="${dtk_stage}/dtk.tar.gz" -- "${DTK_PKG_URL}"
-            tar -xzf "${dtk_stage}/dtk.tar.gz" -C "${dtk_stage}/extract"
-            version_file="$(find "${dtk_stage}/extract" -type f -path "*/.info/rocm_version" -print -quit)"
-            [[ -n "${version_file}" ]]
-            dtk_source="${version_file%/.info/rocm_version}"
-            rm -rf -- /opt/dtk
-            mkdir -p /opt/dtk
-            cp -a "${dtk_source}/." /opt/dtk/
-            echo "Installed DTK version: $(tr -d "[:space:]" < /opt/dtk/.info/rocm_version)"
-            test -f /opt/dtk/env.sh
-          '
+          export PYTORCH_DAS_INDEX_URL="${pytorch_das_index_url}"
+          export PYTORCH_DAS_TRUSTED_HOST="${pytorch_das_trusted_host}"
+          export PROJECT_WHEEL="${wheels[0]}"
+          export CI_BUILD_WHEEL=0
+          bash scripts/ci/run_hcu_ci.sh
 
-          docker exec "${CONTAINER_NAME}" bash -lc '
-            set -euo pipefail
-            bash scripts/ci/run_hcu_ci.sh
-          '
-
-      - name: Restore workspace permissions
-        if: always()
+      - name: Repair and upload wheel
+        if: github.event_name == 'push' && github.repository == 'HYGON-AI/hcu_probe-das'
         shell: bash
+        env:
+          PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          docker run --rm \
-            --volume "${GITHUB_WORKSPACE}:/workspace" \
-            "${CI_IMAGE}" \
-            chown -R "$(id -u):$(id -g)" /workspace || true
+          set -euo pipefail
+          : "${PYPI_URL:?Repository variable PYPI_URL is required}"
+          : "${PYPI_PASSWORD:?Repository secret PYPI_PASSWORD is required}"
 
-      - name: Save reports on runner
+          set +u
+          source /opt/dtk/env.sh
+          set -u
+
+          pip_install() {
+            "${PYTHON_BIN}" -m pip install --disable-pip-version-check --no-cache-dir "$@"
+          }
+
+          pip_install CIUpload
+          mkdir -p "${LOCAL_RUN_ROOT}/dist" "${LOCAL_RUN_ROOT}/output"
+          cp --no-dereference -- "${BUILD_RUN_ROOT}"/dist/*.whl "${LOCAL_RUN_ROOT}/dist/"
+
+          TORCH_VERSION="$("${PYTHON_BIN}" -c 'from importlib.metadata import version; print(version("torch").split("+", 1)[0])')"
+          dtk_version="$(tr -d '.[:space:]' < /opt/dtk/.info/rocm_version)"
+          CIUpload REPAIR \
+            --dtk_version "${dtk_version}" \
+            --torch_version "${TORCH_VERSION}" \
+            --git_commit "${GITHUB_SHA:0:6}" \
+            --outputdir "${LOCAL_RUN_ROOT}/output" \
+            -f "${LOCAL_RUN_ROOT}"/dist/*.whl
+          CIUpload NIGHTLY \
+            --devpi_url "${PYPI_URL}" \
+            --password "${PYPI_PASSWORD}" \
+            --dtk_pkg_name "${DTK_PKG_NAME}" \
+            --record \
+            --repo "${GITHUB_WORKSPACE}" \
+            -f "${LOCAL_RUN_ROOT}"/output/*.whl
+
+      - name: Save reports to shared storage
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          local_run_dir="${LOCAL_REPORT_ROOT}/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          mkdir -p "${local_run_dir}"
-
-          saved=false
+          mkdir -p "${LOCAL_RUN_ROOT}"
           if [[ -d "${GITHUB_WORKSPACE}/test/hcuprobe_test/report" ]]; then
+            rm -rf -- "${LOCAL_RUN_ROOT}/report"
             cp -a --no-preserve=ownership \
-              "${GITHUB_WORKSPACE}/test/hcuprobe_test/report" "${local_run_dir}/"
-            saved=true
-          fi
-
-          shopt -s nullglob
-          wheels=("${GITHUB_WORKSPACE}"/dist/*.whl)
-          if (( ${#wheels[@]} > 0 )); then
-            mkdir -p "${local_run_dir}/dist"
-            cp --no-dereference -- "${wheels[@]}" "${local_run_dir}/dist/"
-            saved=true
-          fi
-
-          if [[ "${saved}" == "true" ]]; then
-            echo "Reports saved on runner: ${local_run_dir}"
+              "${GITHUB_WORKSPACE}/test/hcuprobe_test/report" "${LOCAL_RUN_ROOT}/"
+            echo "Reports saved to ${LOCAL_RUN_ROOT}"
           else
-            echo "No test reports or wheels were produced."
+            echo "No test reports were produced."
           fi
 
       - name: Upload test and build reports
@@ -245,14 +305,7 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: hcu-probe-ci-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            test/hcuprobe_test/report/
-            dist/*.whl
+          name: hcu-probe-ci-${{ matrix.dtk_id }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test/hcuprobe_test/report/
           if-no-files-found: warn
           retention-days: 14
-
-      - name: Clean up container
-        if: always()
-        shell: bash
-        run: docker rm --force "${CONTAINER_NAME}" >/dev/null 2>&1 || true
