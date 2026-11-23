@@ -45,10 +45,6 @@ hcuProbe 是 AI 模型精度调试工具。本文以 ResNet-50 模型训练为�
 ```bash
 export MY_STUDY_VAR_PYTORCH_IMAGE="harbor.sourcefind.cn:5443/dcu/admin/base/pytorch:2.9.0-ubuntu22.04-dtk26.04-py3.10"
 ```
-> [!NOTE]说明
->
-> 请手动配置WORKSPACE_HOME
-
 
 #### 2.1.3 宿主机：拉取镜像
 
