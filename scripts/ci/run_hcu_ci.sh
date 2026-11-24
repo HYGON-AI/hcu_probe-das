@@ -4,10 +4,13 @@ set -euo pipefail
 
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 PYTHON_BIN=${PYTHON_BIN:-python3}
+EXPECTED_PYTHON_VERSION=${EXPECTED_PYTHON_VERSION:-3.10}
 PYTORCH_DAS_SPEC=${PYTORCH_DAS_SPEC:-torch}
 CI_TEST_TIMEOUT=${CI_TEST_TIMEOUT:-60m}
 HCUPROBE_TEST_TIMEOUT=${HCUPROBE_TEST_TIMEOUT:-300}
 DTK_ENV_FILE=${DTK_ENV_FILE:-/opt/dtk/env.sh}
+PROJECT_WHEEL=${PROJECT_WHEEL:-}
+CI_BUILD_WHEEL=${CI_BUILD_WHEEL:-1}
 
 cd "${PROJECT_ROOT}"
 
@@ -26,10 +29,16 @@ source "${DTK_ENV_FILE}"
 set -u
 
 "${PYTHON_BIN}" - <<'PY'
+import os
 import sys
 
-if sys.version_info[:2] != (3, 10):
-    raise SystemExit(f"ERROR: Python 3.10 is required, got {sys.version.split()[0]}")
+expected_version = os.environ.get("EXPECTED_PYTHON_VERSION", "3.10")
+expected = tuple(map(int, expected_version.split(".")))
+if sys.version_info[:2] != expected:
+    raise SystemExit(
+        f"ERROR: Python {expected_version} is required, "
+        f"got {sys.version.split()[0]}"
+    )
 print(f"Python: {sys.version.split()[0]}")
 PY
 
@@ -64,7 +73,15 @@ PY
 
 "${PYTHON_BIN}" -m pip install --disable-pip-version-check \
     build onnxruntime protobuf pytest pytest-cov pytest-timeout
-"${PYTHON_BIN}" -m pip install --disable-pip-version-check .
+if [[ -n "${PROJECT_WHEEL}" ]]; then
+    if [[ ! -f "${PROJECT_WHEEL}" ]]; then
+        echo "ERROR: project wheel not found: ${PROJECT_WHEEL}" >&2
+        exit 1
+    fi
+    "${PYTHON_BIN}" -m pip install --disable-pip-version-check "${PROJECT_WHEEL}"
+else
+    "${PYTHON_BIN}" -m pip install --disable-pip-version-check .
+fi
 "${PYTHON_BIN}" -m pip check
 
 "${PYTHON_BIN}" - <<'PY'
@@ -75,12 +92,14 @@ print(f"hcu-probe: {importlib.metadata.version('hcu-probe')}")
 print(f"hcuprobe import: {hcuprobe.__file__}")
 PY
 
-rm -rf dist
-(
-    cd /tmp
-    "${PYTHON_BIN}" -m build --wheel \
-        --outdir "${PROJECT_ROOT}/dist" "${PROJECT_ROOT}"
-)
+if [[ "${CI_BUILD_WHEEL}" == "1" ]]; then
+    rm -rf dist
+    (
+        cd /tmp
+        "${PYTHON_BIN}" -m build --wheel \
+            --outdir "${PROJECT_ROOT}/dist" "${PROJECT_ROOT}"
+    )
+fi
 
 export PYTEST_ADDOPTS="${PYTEST_ADDOPTS:-} --timeout=${HCUPROBE_TEST_TIMEOUT} --durations=20"
 cd "${PROJECT_ROOT}/test/hcuprobe_test"
